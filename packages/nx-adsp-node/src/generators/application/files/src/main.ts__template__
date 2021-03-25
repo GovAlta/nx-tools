@@ -1,0 +1,26 @@
+/**
+ * This is not a production server yet!
+ * This is only a minimal backend to get started.
+ */
+import * as express from 'express';
+import * as passport from 'passport';
+import { createAccessStrategy } from './access';
+
+import { environment } from './environments/environment';
+
+passport.use('jwt', createAccessStrategy(environment));
+
+const app = express();
+app.use(passport.initialize());
+app.use(passport.authenticate(['jwt'], { session: false }));
+
+app.get('/api', (req, res) => {
+  res.send({ message: 'Welcome to ${options.name}!' });
+});
+
+const port = environment.port || 3333;
+
+const server = app.listen(port, () => {
+  console.log(`Listening at http://localhost:${port}/api`);
+});
+server.on('error', console.error);
