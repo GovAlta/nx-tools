@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "projects": {
+    "nx-adsp-node": {
+      "root": "packages/nx-adsp-node",
+      "sourceRoot": "packages/nx-adsp-node/src",
+      "projectType": "library",
+      "targets": {
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-adsp-node/**/*.ts"
+            ]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": [
+            "coverage/packages/nx-adsp-node"
+          ],
+          "options": {
+            "jestConfig": "packages/nx-adsp-node/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "build": {
+          "executor": "@nrwl/node:package",
+          "outputs": [
+            "{options.outputPath}"
+          ],
+          "options": {
+            "outputPath": "dist/packages/nx-adsp-node",
+            "tsConfig": "packages/nx-adsp-node/tsconfig.lib.json",
+            "packageJson": "packages/nx-adsp-node/package.json",
+            "main": "packages/nx-adsp-node/src/index.ts",
+            "assets": [
+              "packages/nx-adsp-node/*.md",
+              {
+                "input": "./packages/nx-adsp-node/src",
+                "glob": "**/*.!(ts)",
+                "output": "./src"
+              },
+              {
+                "input": "./packages/nx-adsp-node",
+                "glob": "generators.json",
+                "output": "."
+              },
+              {
+                "input": "./packages/nx-adsp-node",
+                "glob": "executors.json",
+                "output": "."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "nx-adsp-node-e2e": {
+      "projectType": "application",
+      "root": "e2e/nx-adsp-node-e2e",
+      "sourceRoot": "e2e/nx-adsp-node-e2e/src",
+      "targets": {
+        "e2e": {
+          "executor": "@nrwl/nx-plugin:e2e",
+          "options": {
+            "target": "nx-adsp-node:build",
+            "npmPackageName": "@abgov/nx-adsp-node",
+            "pluginOutputPath": "dist/packages/nx-adsp-node",
+            "jestConfig": "e2e/nx-adsp-node-e2e/jest.config.js"
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "defaultCollection": "@nrwl/workspace"
+  }
+}

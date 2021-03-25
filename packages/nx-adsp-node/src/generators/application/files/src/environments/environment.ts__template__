@@ -1,0 +1,7 @@
+export const environment = {
+  production: false,
+  port: '3333',
+  TENANT_REALM: '<%= tenantRealm %>',
+  ACCESS_SERVICE_URL: '<%= accessServiceUrl %>',
+  ...process.env
+};
