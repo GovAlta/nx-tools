@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "NxOc",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project to add deployment for?"
+    },
+    "frontend": {
+      "type": "boolean",
+      "description": "",
+      "alias": "f",
+      "x-prompt": "Is this a frontend project?"
+    }
+  },
+  "required": ["project"]
+}

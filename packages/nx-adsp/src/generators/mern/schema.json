@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "NxAdspReactExpress",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use?"
+    },
+    "tags": {
+      "type": "string",
+      "description": "Add tags to the project (used for linting)",
+      "alias": "t"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "t"
+    }
+  },
+  "required": ["name", "tenant"]
+}

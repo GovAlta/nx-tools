@@ -1,26 +1,26 @@
 {
   "version": 2,
   "projects": {
-    "nx-adsp-node": {
-      "root": "packages/nx-adsp-node",
-      "sourceRoot": "packages/nx-adsp-node/src",
+    "nx-adsp": {
+      "root": "packages/nx-adsp",
+      "sourceRoot": "packages/nx-adsp/src",
       "projectType": "library",
       "targets": {
         "lint": {
           "executor": "@nrwl/linter:eslint",
           "options": {
             "lintFilePatterns": [
-              "packages/nx-adsp-node/**/*.ts"
+              "packages/nx-adsp/**/*.ts"
             ]
           }
         },
         "test": {
           "executor": "@nrwl/jest:jest",
           "outputs": [
-            "coverage/packages/nx-adsp-node"
+            "coverage/packages/nx-adsp"
           ],
           "options": {
-            "jestConfig": "packages/nx-adsp-node/jest.config.js",
+            "jestConfig": "packages/nx-adsp/jest.config.js",
             "passWithNoTests": true
           }
         },
@@ -30,24 +30,24 @@
             "{options.outputPath}"
           ],
           "options": {
-            "outputPath": "dist/packages/nx-adsp-node",
-            "tsConfig": "packages/nx-adsp-node/tsconfig.lib.json",
-            "packageJson": "packages/nx-adsp-node/package.json",
-            "main": "packages/nx-adsp-node/src/index.ts",
+            "outputPath": "dist/packages/nx-adsp",
+            "tsConfig": "packages/nx-adsp/tsconfig.lib.json",
+            "packageJson": "packages/nx-adsp/package.json",
+            "main": "packages/nx-adsp/src/index.ts",
             "assets": [
-              "packages/nx-adsp-node/*.md",
+              "packages/nx-adsp/*.md",
               {
-                "input": "./packages/nx-adsp-node/src",
+                "input": "./packages/nx-adsp/src",
                 "glob": "**/*.!(ts)",
                 "output": "./src"
               },
               {
-                "input": "./packages/nx-adsp-node",
+                "input": "./packages/nx-adsp",
                 "glob": "generators.json",
                 "output": "."
               },
               {
-                "input": "./packages/nx-adsp-node",
+                "input": "./packages/nx-adsp",
                 "glob": "executors.json",
                 "output": "."
               }
@@ -56,18 +56,89 @@
         }
       }
     },
-    "nx-adsp-node-e2e": {
+    "nx-adsp-e2e": {
       "projectType": "application",
-      "root": "e2e/nx-adsp-node-e2e",
-      "sourceRoot": "e2e/nx-adsp-node-e2e/src",
+      "root": "e2e/nx-adsp-e2e",
+      "sourceRoot": "e2e/nx-adsp-e2e/src",
       "targets": {
         "e2e": {
           "executor": "@nrwl/nx-plugin:e2e",
           "options": {
-            "target": "nx-adsp-node:build",
-            "npmPackageName": "@abgov/nx-adsp-node",
-            "pluginOutputPath": "dist/packages/nx-adsp-node",
-            "jestConfig": "e2e/nx-adsp-node-e2e/jest.config.js"
+            "target": "nx-adsp:build",
+            "npmPackageName": "@abgov/nx-adsp",
+            "pluginOutputPath": "dist/packages/nx-adsp",
+            "jestConfig": "e2e/nx-adsp-e2e/jest.config.js"
+          }
+        }
+      }
+    },
+    "nx-oc": {
+      "root": "packages/nx-oc",
+      "sourceRoot": "packages/nx-oc/src",
+      "projectType": "library",
+      "targets": {
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-oc/**/*.ts"
+            ]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": [
+            "coverage/packages/nx-oc"
+          ],
+          "options": {
+            "jestConfig": "packages/nx-oc/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "build": {
+          "executor": "@nrwl/node:package",
+          "outputs": [
+            "{options.outputPath}"
+          ],
+          "options": {
+            "outputPath": "dist/packages/nx-oc",
+            "tsConfig": "packages/nx-oc/tsconfig.lib.json",
+            "packageJson": "packages/nx-oc/package.json",
+            "main": "packages/nx-oc/src/index.ts",
+            "assets": [
+              "packages/nx-oc/*.md",
+              {
+                "input": "./packages/nx-oc/src",
+                "glob": "**/*.!(ts)",
+                "output": "./src"
+              },
+              {
+                "input": "./packages/nx-oc",
+                "glob": "generators.json",
+                "output": "."
+              },
+              {
+                "input": "./packages/nx-oc",
+                "glob": "executors.json",
+                "output": "."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "nx-oc-e2e": {
+      "projectType": "application",
+      "root": "e2e/nx-oc-e2e",
+      "sourceRoot": "e2e/nx-oc-e2e/src",
+      "targets": {
+        "e2e": {
+          "executor": "@nrwl/nx-plugin:e2e",
+          "options": {
+            "target": "nx-oc:build",
+            "npmPackageName": "@abgov/nx-oc",
+            "pluginOutputPath": "dist/packages/nx-oc",
+            "jestConfig": "e2e/nx-oc-e2e/jest.config.js"
           }
         }
       }

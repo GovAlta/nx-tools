@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "nx-oc",
+  "version": "0.0.1",
+  "generators": {
+    "workspace": {
+      "factory": "./src/generators/workspace/generator",
+      "schema": "./src/generators/workspace/schema.json",
+      "description": "workspace generator"
+    },
+    "deployment": {
+      "factory": "./src/generators/deployment/generator",
+      "schema": "./src/generators/deployment/schema.json",
+      "description": "deployment generator"
+    }
+  }
+}

@@ -1,6 +1,8 @@
 module.exports = {
   projects: [
-    '<rootDir>/packages/nx-adsp-node',
-    '<rootDir>/e2e/nx-adsp-node-e2e',
+    '<rootDir>/packages/nx-adsp',
+    '<rootDir>/e2e/nx-adsp-e2e',
+    '<rootDir>/packages/nx-oc',
+    '<rootDir>/e2e/nx-oc-e2e',
   ],
 };

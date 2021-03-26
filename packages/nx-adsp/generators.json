@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "nx-adsp",
+  "version": "0.0.1",
+  "generators": {
+    "express-service": {
+      "factory": "./src/generators/express-service/generator",
+      "schema": "./src/generators/express-service/schema.json",
+      "description": "express-service generator"
+    },
+    "react-app": {
+      "factory": "./src/generators/react-app/generator",
+      "schema": "./src/generators/react-app/schema.json",
+      "description": "react-app generator"
+    },
+    "mern": {
+      "factory": "./src/generators/mern/generator",
+      "schema": "./src/generators/mern/schema.json",
+      "description": "mern generator"
+    }
+  }
+}
