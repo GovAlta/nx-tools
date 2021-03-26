@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "cli": "nx",
-  "id": "NxOc",
+  "id": "NxOcDeployment",
   "title": "",
   "type": "object",
   "properties": {
@@ -31,5 +31,5 @@
       "x-prompt": "What is the name of your ADSP tenant?"
     }
   },
-  "required": ["project"]
+  "required": ["project", "frontend", "tenant"]
 }

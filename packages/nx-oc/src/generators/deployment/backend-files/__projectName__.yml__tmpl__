@@ -5,6 +5,15 @@ metadata:
 labels:
   app: <%= projectName %>
 parameters:
+  - name: INFRA_PROJECT
+    description: Project used for build infrastructure.
+    displayName: Infrastructure Project
+    value: <%= ocInfraProject %>
+    required: true
+  - name: PROJECT
+    description: Project to set up.
+    displayName: Project
+    required: true
   - name: APP_NAME
     description: Name of the application.
     displayName: Application Name
@@ -20,10 +29,12 @@ objects:
     kind: ImageStream
     metadata:
       name: ${APP_NAME}
+      namespace: ${INFRA_PROJECT}
   - apiVersion: v1
     kind: BuildConfig
     metadata:
       name: ${APP_NAME}
+      namespace: ${INFRA_PROJECT}
     spec:
       output:
         to:
@@ -40,11 +51,12 @@ objects:
               value: <%= projectName %>
           dockerfilePath: .openshift/<%= projectName %>/Dockerfile
         type: Docker
-    triggers: []
+      triggers: []
   - apiVersion: v1
     kind: ConfigMap
     metadata:
       name: ${APP_NAME}
+      namespace: ${PROJECT}
     data:
       TENANT_REALM: <%= tenantRealm %>
       ACCESS_SERVICE_URL: <%= accessServiceUrl %>
@@ -52,6 +64,7 @@ objects:
     kind: DeploymentConfig
     metadata:
       name: ${APP_NAME}
+      namespace: ${PROJECT}
     spec:
       replicas: 1
       selector:
@@ -94,11 +107,13 @@ objects:
             from:
               kind: ImageStreamTag
               name: ${APP_NAME}:${DEPLOY_TAG}
+              namespace: ${INFRA_PROJECT}
           type: ImageChange
   - apiVersion: v1
     kind: Service
     metadata:
       name: ${APP_NAME}
+      namespace: ${PROJECT}
     spec:
       ports:
         - name: http
@@ -113,6 +128,7 @@ objects:
     kind: Route
     metadata:
       name: ${APP_NAME}
+      namespace: ${PROJECT}
     spec:
       port:
         targetPort: http

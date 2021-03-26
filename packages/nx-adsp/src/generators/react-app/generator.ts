@@ -6,7 +6,9 @@ import {
   getWorkspacePath,
   names,
   offsetFromRoot,
+  readProjectConfiguration,
   Tree,
+  updateProjectConfiguration,
 } from '@nrwl/devkit';
 import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
 import * as path from 'path';
@@ -84,6 +86,17 @@ export default async function (host: Tree, options: ReactAppGeneratorSchema) {
   
   addFiles(host, normalizedOptions);
   await formatFiles(host);
+
+  const config = readProjectConfiguration(host, options.name);
+  config.targets.build.options.assets = [
+    ...config.targets.build.options.assets,
+    {
+      "glob": "nginx.conf",
+      "input": `${getWorkspaceLayout(host).appsDir}/${options.name}`,
+      "output": "./"
+    }
+  ]
+  updateProjectConfiguration(host, options.name, config);
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);

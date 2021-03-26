@@ -6,6 +6,6 @@ export interface Schema {
 
 export interface NormalizedSchema extends Schema {
   ocPipelineName: string;
-  ocProjectInfra: string;
-  ocProjectDev: string;
+  ocInfraProject: string;
+  ocDevProject: string;
 }

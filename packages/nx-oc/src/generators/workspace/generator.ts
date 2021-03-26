@@ -6,7 +6,7 @@ import {
 } from '@nrwl/devkit';
 import * as path from 'path';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { runOcCommand } from '../../utils/oc-utils';
+import applyInfraGenerator from '../apply-infra/generator';
 import { Schema, NormalizedSchema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
@@ -21,8 +21,8 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   return {
     ...options,
     ocPipelineName: options.pipeline,
-    ocProjectInfra: options.infra,
-    ocProjectDev: options.dev
+    ocInfraProject: options.infra,
+    ocDevProject: options.dev
   }
 }
 
@@ -40,35 +40,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
-function applyOcResources(host: Tree) {
-
-  const { success: pipelineApplied } = runOcCommand(
-    'apply', 
-    [],
-    host.read('.openshift/pipeline.yml')
-  );
-  
-  const { success: envApplied } = runOcCommand(
-    'apply', 
-    [],
-    host.read('.openshift/environment.dev.yml')
-  );
-
-  if (!pipelineApplied || !envApplied) {
-    console.log('Failed to oc apply pipeline and dev environment.');
-  }
-}
-
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = normalizeOptions(host, options);
   
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
-  const { success } = runOcCommand('project', []);
-  if (success) {
-    applyOcResources(host);
-  } else {
-    console.log('Skipping oc apply; oc login before running to apply.');
-  }
+  await applyInfraGenerator(host);
 }

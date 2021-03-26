@@ -5,7 +5,7 @@ items:
     kind: RoleBinding
     metadata:
       name: jenkins_edit
-      namespace: <%= ocProjectDev %>
+      namespace: <%= ocDevProject %>
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
@@ -13,4 +13,4 @@ items:
     subjects:
       - kind: ServiceAccount
         name: jenkins
-        namespace: <%= ocProjectInfra %>
+        namespace: <%= ocInfraProject %>
