@@ -19,6 +19,16 @@
       "description": "",
       "alias": "f",
       "x-prompt": "Is this a frontend project?"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "t",
+      "x-prompt": "What is the name of your ADSP tenant?"
     }
   },
   "required": ["project"]

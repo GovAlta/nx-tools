@@ -4,9 +4,14 @@
   "main": "src/index.js",
   "generators": "./generators.json",
   "description": "Government of Alberta - DIO - Nx plugin for ADSP apps.",
+  "dependencies": {
+    "@angular-devkit/core": "~11.2.0",
+    "@angular-devkit/schematics": "~11.2.0",
+    "@nrwl/devkit": "~11.5.2"
+  },
   "peerDependencies": {
-    "@abgov/nx-oc": "0.0.1",
-    "@nrwl/express": "^11.5.2",
-    "@nrwl/react": "^11.5.2"
+    "@abgov/nx-oc": "~0.0.1",
+    "@nrwl/express": "~11.5.2",
+    "@nrwl/react": "~11.5.2"
   }
 }

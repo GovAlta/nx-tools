@@ -10,6 +10,14 @@ import { runOcCommand } from '../../utils/oc-utils';
 import { Schema, NormalizedSchema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
+
+  if (
+    !options.pipeline ||
+    !options.infra || 
+    !options.dev) {
+    throw new Error('Pipline, Infra and Dev project values are required.');
+  }
+
   return {
     ...options,
     ocPipelineName: options.pipeline,
@@ -36,12 +44,14 @@ function applyOcResources(host: Tree) {
 
   const { success: pipelineApplied } = runOcCommand(
     'apply', 
-    [`-f ${host}/.openshift/pipeline.yml`]
+    [],
+    host.read('.openshift/pipeline.yml')
   );
   
   const { success: envApplied } = runOcCommand(
     'apply', 
-    [`-f ${host}/.openshift/environment.dev.yml`]
+    [],
+    host.read('.openshift/environment.dev.yml')
   );
 
   if (!pipelineApplied || !envApplied) {

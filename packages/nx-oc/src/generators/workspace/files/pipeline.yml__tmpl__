@@ -7,8 +7,9 @@ items:
       slave-label: node12
     labels:
       role: jenkins-slave
-    name: jenkins-agent-node12
-    namespace: <%= ocProjectInfra %>
+    metadata:
+      name: jenkins-agent-node12
+      namespace: <%= ocProjectInfra %>
   - apiVersion: v1
     kind: BuildConfig
     metadata:
@@ -30,7 +31,8 @@ items:
         type: Docker
     triggers:
       - type: ConfigChange
-  - kind: BuildConfig
+  - apiVersion: v1
+    kind: BuildConfig
     metadata:
       name: <%= ocPipelineName %>
       namespace: <%= ocProjectInfra %>

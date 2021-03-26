@@ -27,7 +27,9 @@ function normalizeOptions(
   return {
     ...options,
     projectName: names(options.project).fileName,
-    appType: options.frontend ? 'frontend' : 'backend'
+    appType: options.frontend ? 'frontend' : 'backend',
+    tenantRealm: names(options.tenant).fileName,
+    accessServiceUrl: 'https://access.alpha.alberta.ca'
   }
 }
 
