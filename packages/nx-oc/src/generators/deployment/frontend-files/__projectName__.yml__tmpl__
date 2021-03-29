@@ -58,8 +58,14 @@ objects:
       name: ${APP_NAME}
       namespace: ${PROJECT}
     data:
-      TENANT_REALM: <%= tenantRealm %>
-      ACCESS_SERVICE_URL: <%= accessServiceUrl %>
+      configuration: |-
+        {
+          "access": {
+            "url": "<%= accessServiceUrl %>"
+            "realm": "<%= tenantRealm %>"
+            "client_id": "${APP_NAME}"
+          }
+        }
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -82,14 +88,6 @@ objects:
         spec:
           containers:
             - name: ${APP_NAME}
-              envFrom:
-                - configMapRef:
-                    name: ${APP_NAME}
-              env:
-                - name: port
-                  value: '3333'
-                - name: LOG_LEVEL
-                  value: info
               imagePullPolicy: IfNotPresent
               ports:
                 - containerPort: 3333
@@ -100,6 +98,17 @@ objects:
           dnsPolicy: ClusterFirst
           restartPolicy: Always
           schedulerName: default-scheduler
+          volumeMounts:
+            - mountPath: /opt/app-root/src/config
+              name: config-volume
+      volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: configuration
+                path: config.json
+            name: ${APP_NAME}
+          name: config-volume
       triggers:
         - imageChangeParams:
             containerNames:

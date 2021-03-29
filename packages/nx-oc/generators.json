@@ -3,20 +3,20 @@
   "name": "nx-oc",
   "version": "0.0.1",
   "generators": {
-    "workspace": {
-      "factory": "./src/generators/workspace/generator",
-      "schema": "./src/generators/workspace/schema.json",
-      "description": "workspace generator"
+    "pipeline": {
+      "factory": "./src/generators/pipeline/pipeline",
+      "schema": "./src/generators/pipeline/schema.json",
+      "description": "Generator that creates OpenShift manifests for pipeline."
     },
     "apply-infra": {
-      "factory": "./src/generators/apply-infra/generator",
+      "factory": "./src/generators/apply-infra/apply-infra",
       "schema": "./src/generators/apply-infra/schema.json",
-      "description": "apply-infra generator"
+      "description": "Generator that applies OpenShift manifests for pipeline."
     },
     "deployment": {
-      "factory": "./src/generators/deployment/generator",
+      "factory": "./src/generators/deployment/deployment",
       "schema": "./src/generators/deployment/schema.json",
-      "description": "deployment generator"
+      "description": "Generator that creates OpenShift manifests for project deployment."
     }
   }
 }

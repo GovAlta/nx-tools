@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/schema",
   "cli": "nx",
-  "id": "NxAdspReactExpress",
+  "id": "NxAdspMern",
   "title": "",
   "type": "object",
   "properties": {
     "name": {
       "type": "string",
-      "description": "",
+      "description": "Name of the MERN stack solution.",
       "$default": {
         "$source": "argv",
         "index": 0
@@ -16,12 +16,13 @@
     },
     "tenant": {
       "type": "string",
-      "description": "",
+      "description": "Name of the ADSP tenant.",
       "$default": {
         "$source": "argv",
         "index": 1
       },
-      "alias": "t"
+      "alias": "t",
+      "x-prompt": "What is the name of your ADSP tenant?"
     }
   },
   "required": ["name", "tenant"]

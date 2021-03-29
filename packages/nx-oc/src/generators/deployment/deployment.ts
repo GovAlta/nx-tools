@@ -10,7 +10,7 @@ import {
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { Schema, NormalizedSchema } from './schema';
+import { NormalizedSchema, Schema } from './schema';
 
 const infraManifestFile = '.openshift/environment.infra.yml';
 
@@ -19,25 +19,38 @@ function normalizeOptions(
   options: Schema
 ): NormalizedSchema {
 
+  const projectName = names(options.project).fileName;
+
   const result = host.read(infraManifestFile).toString();
   const { items } = yaml.parse(result);
   const ocInfraProject = items[0]?.metadata?.namespace || ''
   const ocEnvProjects = items[0]?.subjects?.map(s => s.namespace);
+  
+  // TODO: Find a better way to determine this.
+  const config = readProjectConfiguration(host, projectName);
+  const appType = config.targets.build.executor === '@nrwl/web:build' ?
+    'frontend' : 'backend';
+
+  const tenantRealm = names(options.tenant).fileName;
+  const accessServiceUrl = 'https://access.alpha.alberta.ca';
 
   return {
     ...options,
-    projectName: names(options.project).fileName,
-    appType: options.frontend ? 'frontend' : 'backend',
+    projectName,
+    appType,
     ocInfraProject,
     ocEnvProjects,
-    tenantRealm: names(options.tenant).fileName,
-    accessServiceUrl: 'https://access.alpha.alberta.ca'
+    adsp: {
+      tenantRealm,
+      accessServiceUrl
+    }
   }
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
+    ...options.adsp,
     sourceRepositoryUrl: getGitRemoteUrl(),
     tmpl: ''
   };

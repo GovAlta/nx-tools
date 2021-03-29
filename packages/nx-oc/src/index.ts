@@ -1,1 +1,1 @@
-export { default as deploymentGenerator}  from './generators/deployment/generator';
+export { default as deploymentGenerator}  from './generators/deployment/deployment';

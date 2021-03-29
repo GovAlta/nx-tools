@@ -8,8 +8,9 @@ import {
   Tree,
 } from '@nrwl/devkit';
 import * as path from 'path';
-import initExpressService from '../express-service/generator';
-import initReactApp from '../react-app/generator';
+import { getAdspConfiguration } from '../../utils/adsp-utils';
+import initExpressService from '../express-service/express-service';
+import initReactApp from '../react-app/react-app';
 import { Schema, NormalizedSchema } from './schema';
 
 function normalizeOptions(
@@ -24,7 +25,7 @@ function normalizeOptions(
   const openshiftDirectory = 
     `${path.dirname(getWorkspacePath(host))}/.openshift/${projectDirectory}`
   
-  const tenantRealm = options.tenant;
+  const adsp = getAdspConfiguration(host, options);
 
   return {
     ...options,
@@ -32,8 +33,7 @@ function normalizeOptions(
     projectRoot,
     projectDirectory,
     openshiftDirectory,
-    tenantRealm,
-    accessServiceUrl: 'https://access.alpha.alberta.ca'
+    adsp
   };
 }
 

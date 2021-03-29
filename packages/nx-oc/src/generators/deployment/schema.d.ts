@@ -1,7 +1,6 @@
 export interface Schema {
   project: string;
   tenant: string;
-  frontend: boolean;
 }
 
 export interface NormalizedSchema extends Schema {
@@ -9,6 +8,8 @@ export interface NormalizedSchema extends Schema {
   appType: 'frontend' | 'backend';
   ocInfraProject: string;
   ocEnvProjects: string[];
-  tenantRealm: string;
-  accessServiceUrl: string;
+  adsp: {
+    tenantRealm: string;
+    accessServiceUrl: string;
+  }
 }

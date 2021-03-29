@@ -7,7 +7,7 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "",
+      "description": "Name of the service.",
       "$default": {
         "$source": "argv",
         "index": 0
@@ -16,7 +16,7 @@
     },
     "tenant": {
       "type": "string",
-      "description": "",
+      "description": "Name of the ADSP tenant.",
       "$default": {
         "$source": "argv",
         "index": 1

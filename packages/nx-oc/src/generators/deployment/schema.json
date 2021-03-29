@@ -7,22 +7,16 @@
   "properties": {
     "project": {
       "type": "string",
-      "description": "",
+      "description": "Project to add deployment in.",
       "$default": {
         "$source": "argv",
         "index": 0
       },
       "x-prompt": "Which project to add deployment for?"
     },
-    "frontend": {
-      "type": "boolean",
-      "description": "",
-      "alias": "f",
-      "x-prompt": "Is this a frontend project?"
-    },
     "tenant": {
       "type": "string",
-      "description": "",
+      "description": "Name of the ADSP tenant.",
       "$default": {
         "$source": "argv",
         "index": 1
@@ -31,5 +25,5 @@
       "x-prompt": "What is the name of your ADSP tenant?"
     }
   },
-  "required": ["project", "frontend", "tenant"]
+  "required": ["project", "tenant"]
 }

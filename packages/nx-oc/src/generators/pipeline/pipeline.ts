@@ -6,8 +6,8 @@ import {
 } from '@nrwl/devkit';
 import * as path from 'path';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import applyInfraGenerator from '../apply-infra/generator';
-import { Schema, NormalizedSchema } from './schema';
+import applyInfraGenerator from '../apply-infra/apply-infra';
+import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
@@ -17,12 +17,15 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     !options.dev) {
     throw new Error('Pipline, Infra and Dev project values are required.');
   }
+  
 
   return {
     ...options,
     ocPipelineName: options.pipeline,
     ocInfraProject: options.infra,
-    ocDevProject: options.dev
+    ocDevProject: options.dev,
+    applyPipeline: !!options.apply,
+    pipelineType: 'jenkins' // TODO: Introduce Tekton based pipeline for 4.x
   }
 }
 
@@ -46,5 +49,7 @@ export default async function (host: Tree, options: Schema) {
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
-  await applyInfraGenerator(host);
+  if (normalizedOptions.applyPipeline) {
+    await applyInfraGenerator(host);
+  }
 }

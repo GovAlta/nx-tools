@@ -1,3 +1,5 @@
+import { AdspConfiguration } from "../../utils/adsp";
+
 export interface Schema {
   name: string;
   tenant: string;
@@ -6,6 +8,5 @@ export interface Schema {
 export interface NormalizedSchema extends Schema {
   projectName: string;
   projectRoot: string;
-  tenantRealm: string;
-  accessServiceUrl: string;
+  adsp: AdspConfiguration
 }

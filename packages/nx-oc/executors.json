@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/schema",
   "executors": {
     "apply": {
-      "implementation": "./src/executors/apply/executor",
+      "implementation": "./src/executors/apply/apply",
       "schema": "./src/executors/apply/schema.json",
-      "description": "apply executor"
+      "description": "Executor that applies deployment template to OpenShift."
     }
   }
 }

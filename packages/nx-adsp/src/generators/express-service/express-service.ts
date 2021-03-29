@@ -8,7 +8,7 @@ import {
 } from '@nrwl/devkit';
 import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
 import * as path from 'path';
-import { hasDependency } from '../../utils/adsp-utils';
+import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
 
 function normalizeOptions(
@@ -18,20 +18,20 @@ function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   
-  const tenantRealm = options.tenant;
+  const adsp = getAdspConfiguration(host, options);
 
   return {
     ...options,
     projectName,
     projectRoot,
-    tenantRealm,
-    accessServiceUrl: 'https://access.alpha.alberta.ca'
+    adsp
   };
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
+    ...options.adsp,
     tmpl: ''
   };
   generateFiles(

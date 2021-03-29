@@ -5,28 +5,18 @@ import {
   getWorkspaceLayout,
   getWorkspacePath,
   names,
-  offsetFromRoot,
   readProjectConfiguration,
   Tree,
   updateProjectConfiguration,
 } from '@nrwl/devkit';
 import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
 import * as path from 'path';
-import { hasDependency } from '../../utils/adsp-utils';
-import { ReactAppGeneratorSchema } from './schema';
-
-interface NormalizedSchema extends ReactAppGeneratorSchema {
-  projectName: string;
-  projectRoot: string;
-  projectDirectory: string;
-  openshiftDirectory: string;
-  tenantRealm: string;
-  accessServiceUrl: string;
-}
+import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
+import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(
   host: Tree,
-  options: ReactAppGeneratorSchema
+  options: Schema
 ): NormalizedSchema {
   const name = names(options.name).fileName;
   const projectDirectory = name;
@@ -36,7 +26,7 @@ function normalizeOptions(
   const openshiftDirectory = 
     `${path.dirname(getWorkspacePath(host))}/.openshift/${projectDirectory}`
   
-  const tenantRealm = options.tenant;
+  const adsp = getAdspConfiguration(host, options);
 
   return {
     ...options,
@@ -44,17 +34,15 @@ function normalizeOptions(
     projectRoot,
     projectDirectory,
     openshiftDirectory,
-    tenantRealm,
-    accessServiceUrl: 'https://access.alpha.alberta.ca'
+    adsp
   };
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
-    ...names(options.name),
-    offsetFromRoot: offsetFromRoot(options.projectRoot),
-    template: '',
+    ...options.adsp,
+    tmpl: '',
   };
   generateFiles(
     host,
@@ -64,7 +52,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
-export default async function (host: Tree, options: ReactAppGeneratorSchema) {
+export default async function (host: Tree, options: Schema) {
   
   const normalizedOptions = normalizeOptions(host, options);
   

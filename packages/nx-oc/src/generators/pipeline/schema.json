@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/schema",
   "cli": "nx",
-  "id": "NxOcWorkspace",
+  "id": "NxOcPipeline",
   "title": "",
   "type": "object",
   "properties": {
     "pipeline": {
       "type": "string",
-      "description": "",
+      "description": "Name of the OpenShift Pipeline.",
       "$default": {
         "$source": "argv",
         "index": 0
@@ -16,23 +16,21 @@
     },
     "infra": {
       "type": "string",
-      "description": "",
-      "$default": {
-        "$source": "argv",
-        "index": 1
-      },
+      "description": "Name of the OpenShift Project for build infrastructure.",
       "alias": "i",
       "x-prompt": "What is the oc project used for build infrastructure?"
     },
     "dev": {
       "type": "string",
-      "description": "",
-      "$default": {
-        "$source": "argv",
-        "index": 2
-      },
+      "description": "Name of the OpenShift Project for development environment.",
       "alias": "d",
-      "x-prompt": "What is the oc project use as a dev environment?"
+      "x-prompt": "What is the oc project used as a dev environment?"
+    },
+    "apply": {
+      "type": "boolean",
+      "description": "Flag indicating if the pipeline should be applied.",
+      "alias": "a",
+      "x-prompt": "Apply the pipeline to OpenShift?"
     }
   },
   "required": ["pipeline", "infra", "dev"]
