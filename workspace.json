@@ -57,7 +57,7 @@
         "release": {
           "executor": "@nrwl/workspace:run-commands",
           "options": {
-            "command": "npx semantic-release -e ../../../.releaserc.json --tag-format='nx-adsp-v\\${version}'",
+            "command": "npx semantic-release -e ../../../.releaserc.json --tag-format nx-adsp-v\\${version}",
             "cwd": "dist/packages/nx-adsp"
           }
         }
@@ -135,7 +135,7 @@
         "release": {
           "executor": "@nrwl/workspace:run-commands",
           "options": {
-            "command": "npx semantic-release -e ../../../.releaserc.json --tag-format='nx-oc-v\\${version}'",
+            "command": "npx semantic-release -e ../../../.releaserc.json --tag-format nx-oc-v\\${version}",
             "cwd": "dist/packages/nx-oc"
           }
         }
