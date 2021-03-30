@@ -24,13 +24,15 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
           node-version: '12'
       - run: npm ci
       - name: Lint
-        run: npm run affected:lint
+        run: npm run affected:lint -- --base=origin/main
       - name: Test
-        run: npm run affected:test
+        run: npm run affected:test -- --base=origin/main
       - name: Build
-        run: npm run affected:build
+        run: npm run affected:build -- --base=origin/main
