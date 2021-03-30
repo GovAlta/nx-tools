@@ -31,8 +31,8 @@ jobs:
           node-version: '12'
       - run: npm ci
       - name: Lint
-        run: npm run affected:lint
+        run: npm run affected:lint -- --base=origin/master
       - name: Test
-        run: npm run affected:test
+        run: npm run affected:test -- --base=origin/master
       - name: Build
-        run: npm run affected:build
+        run: npm run affected:build -- --base=origin/master
