@@ -3,6 +3,7 @@ import {
   formatFiles,
   generateFiles,
   getWorkspaceLayout,
+  installPackagesTask,
   names,
   Tree,
 } from '@nrwl/devkit';
@@ -75,5 +76,9 @@ export default async function (host: Tree, options: Schema) {
         frontend: false
       }
     );
+  }
+
+  return () => {
+    installPackagesTask(host);
   }
 }

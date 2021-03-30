@@ -9,11 +9,11 @@ describe('nx-oc e2e', () => {
     ensureNxProject('@abgov/nx-oc', 'dist/packages/nx-oc')
   );
 
-  describe('workspace', () => {
-    it('should create workspace', async (done) => {
-      const plugin = uniq('workspace');
+  describe('pipeline', () => {
+    it('should create pipeline', async (done) => {
+      const plugin = uniq('pipeline');
       const result = await runNxCommandAsync(
-        `generate @abgov/nx-oc:workspace ${plugin}-build ${plugin}-infra ${plugin}-dev`
+        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --e ${plugin}-dev`
       );
   
       expect(result.stderr).toBeFalsy();
@@ -24,7 +24,7 @@ describe('nx-oc e2e', () => {
 
   describe('apply-infra', () => {
     it('should run oc cli', async (done) => {
-      const plugin = uniq('workspace');
+      const plugin = uniq('apply-infra');
       const result = await runNxCommandAsync(
         `generate @abgov/nx-oc:apply-infra`
       );

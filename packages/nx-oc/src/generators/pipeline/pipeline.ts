@@ -11,30 +11,34 @@ import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
-  if (
-    !options.pipeline ||
-    !options.infra || 
-    !options.dev) {
-    throw new Error('Pipline, Infra and Dev project values are required.');
+  const ocEnvProjects = options.envs?.split(' ') || [options.infra];
+
+  const envsProjectsSet = new Set(ocEnvProjects);
+  if (envsProjectsSet.size !== ocEnvProjects.length) {
+    throw new Error('Each environment must be a unique project.');
   }
-  
 
   return {
     ...options,
     ocPipelineName: options.pipeline,
     ocInfraProject: options.infra,
-    ocDevProject: options.dev,
+    ocEnvProjects: ocEnvProjects,
     applyPipeline: !!options.apply,
     pipelineType: 'jenkins' // TODO: Introduce Tekton based pipeline for 4.x
   }
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
+
+  const envs = ['Dev', 'Test', 'Staging', 'Prod'];
+
   const templateOptions = {
     ...options,
     sourceRepositoryUrl: getGitRemoteUrl()?.trim(),
+    envs,
     tmpl: ''
   };
+  
   generateFiles(
     host,
     path.join(__dirname, 'files'),

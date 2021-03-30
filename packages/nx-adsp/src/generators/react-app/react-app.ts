@@ -3,7 +3,7 @@ import {
   formatFiles,
   generateFiles,
   getWorkspaceLayout,
-  getWorkspacePath,
+  installPackagesTask,
   names,
   readProjectConfiguration,
   Tree,
@@ -18,23 +18,27 @@ function normalizeOptions(
   host: Tree,
   options: Schema
 ): NormalizedSchema {
-  const name = names(options.name).fileName;
-  const projectDirectory = name;
-  const projectName = projectDirectory.replace(new RegExp('/', 'g'), '-');
-  const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectDirectory}`;
-  
-  const openshiftDirectory = 
-    `${path.dirname(getWorkspacePath(host))}/.openshift/${projectDirectory}`
+  const projectName = names(options.name).fileName;
+  const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
+  const openshiftDirectory = `.openshift/${projectName}`
   
   const adsp = getAdspConfiguration(host, options);
+
+  const nginxProxies = Array.isArray(options.proxy) ?
+    [...options.proxy] :
+    (
+      options.proxy ? 
+        [options.proxy] : 
+        []
+    );
 
   return {
     ...options,
     projectName,
     projectRoot,
-    projectDirectory,
     openshiftDirectory,
-    adsp
+    adsp,
+    nginxProxies
   };
 }
 
@@ -52,6 +56,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
+function removeFiles(host: Tree, options: NormalizedSchema) {
+  host.delete(`${options.projectRoot}/src/app/logo.svg`);
+  host.delete(`${options.projectRoot}/src/app/star.svg`);
+}
+
 export default async function (host: Tree, options: Schema) {
   
   const normalizedOptions = normalizeOptions(host, options);
@@ -65,25 +74,36 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host, 
     {
-      '@abgov/core-css': '^0.7.56',
-      '@abgov/react-components': '^0.7.56',
     },
     {
+      '@abgov/core-css': '^0.7.56',
+      '@abgov/react-components': '^0.7.56',
+      'html-webpack-plugin': '~4.5.2',
+      'oidc-client': '~1.11.5',
+      'redux-oidc': '~4.0.0-beta1'
     }
   )
   
   addFiles(host, normalizedOptions);
+  removeFiles(host, normalizedOptions);
+
   await formatFiles(host);
 
+  const layout = getWorkspaceLayout(host);
+
   const config = readProjectConfiguration(host, options.name);
-  config.targets.build.options.assets = [
-    ...config.targets.build.options.assets,
-    {
-      "glob": "nginx.conf",
-      "input": `${getWorkspaceLayout(host).appsDir}/${options.name}`,
-      "output": "./"
-    }
-  ]
+  config.targets.build.options = {
+    ...config.targets.build.options,
+    assets: [
+      ...config.targets.build.options.assets,
+      {
+        "glob": "nginx.conf",
+        "input": `${layout.appsDir}/${options.name}`,
+        "output": "./"
+      }
+    ],
+    webpackConfig: `${layout.appsDir}/${options.name}/webpack.conf.js`,
+  }
   updateProjectConfiguration(host, options.name, config);
 
   if (hasDependency(host, '@abgov/nx-oc')) {
@@ -96,5 +116,9 @@ export default async function (host: Tree, options: Schema) {
         frontend: true
       }
     );
+  }
+
+  return () => {
+    installPackagesTask(host);
   }
 }

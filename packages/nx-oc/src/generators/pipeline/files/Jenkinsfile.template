@@ -61,7 +61,11 @@ pipeline {
         }
       }
     }
-    stage('Deploy Dev') {
+<% ocEnvProjects.forEach(function(ocEnvProject, i){ -%>
+    stage('Deploy <%= envs[i] %>') {
+      input {
+        message "Promote to <%= envs[i] %>?"
+      }
       steps {
         script {
           openshift.withCluster() {
@@ -69,7 +73,7 @@ pipeline {
               affectedApps.each { affected ->
                 def is = openshift.selector("is", "${affected}")
                 if ( is.exists() ) {
-                  openshift.tag("${affected}:latest", "${affected}:dev")
+                  openshift.tag("${affected}:latest", "${affected}:<%= envs[i].toLowerCase() %>")
                 }
               }
             }
@@ -77,7 +81,7 @@ pipeline {
         }
         script {
           openshift.withCluster() {
-            openshift.withProject('<%= ocDevProject %>') {
+            openshift.withProject('<%= ocEnvProject %>') {
               affectedApps.each { affected ->
                 def dc = openshift.selector("dc", "${affected}")
                 if ( dc.exists() ) {
@@ -91,5 +95,6 @@ pipeline {
         }
       }
     }
+<% }); -%>
   }
 }

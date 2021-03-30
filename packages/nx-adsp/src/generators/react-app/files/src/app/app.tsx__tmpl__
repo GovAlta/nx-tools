@@ -1,0 +1,33 @@
+import React from 'react';
+
+import styles from './app.module.css';
+import '@abgov/core-css/goa-core.css';
+import '@abgov/react-components/react-components.esm.css';
+
+import { 
+  GoaHeader, 
+  GoaHeroBanner 
+} from '@abgov/react-components';
+
+export function App() {
+  return (
+    <div className={styles.app}>
+      <GoaHeader  
+        serviceLevel="alpha"
+        serviceName="Digital Service Example"
+        serviceHome="/" 
+      />
+      <GoaHeroBanner
+        title="Quick start of a digital service"
+        backgroundUrl={'../assets/banner.jpg'}
+      />
+      <main>
+        <section>
+          Welcome to <%= projectName %>!
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default App;

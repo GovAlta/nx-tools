@@ -4,12 +4,13 @@ import { NormalizedSchema, Schema } from './schema';
 
 function normalizeSchema(options: Schema): NormalizedSchema {
 
-  let ocProjects: string[];
-  if(!Array.isArray(options.ocProject)) {
-    ocProjects = [options.ocProject];
-  } else {
-    ocProjects = [...options.ocProject]
-  }
+  const ocProjects = Array.isArray(options.ocProject) ?
+    [...options.ocProject] :
+    (
+      options.ocProject ? 
+      [options.ocProject] : 
+      []
+    );
 
   return { ocProjects }
 }
@@ -23,16 +24,23 @@ export default async function runExecutor(
   const { ocProjects } = normalizeSchema(options);
 
   const failed = ocProjects.map(ocProject => {
-    const { success, stdout } = runOcCommand(
+    const processResult = runOcCommand(
       'process', 
       [
         `-f .openshift/${projectName}/${projectName}.yml`,
         `-p PROJECT=${ocProject}`
       ]
     );
-  
-    return success && 
-      runOcCommand('apply', [], stdout).success;
+
+    if (!processResult.success) {
+      return false;
+    }
+    else {
+      const { success, stdout } = runOcCommand('apply', [], processResult.stdout);
+      console.log(stdout?.toString());
+
+      return success;
+    }
   }).filter((success) => !success);
 
   return {

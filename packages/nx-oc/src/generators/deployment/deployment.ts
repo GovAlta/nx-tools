@@ -12,7 +12,7 @@ import * as yaml from 'yaml';
 import { getGitRemoteUrl } from '../../utils/git-utils';
 import { NormalizedSchema, Schema } from './schema';
 
-const infraManifestFile = '.openshift/environment.infra.yml';
+const infraManifestFile = '.openshift/environments.yml';
 
 function normalizeOptions(
   host: Tree, 

@@ -23,6 +23,37 @@
       },
       "alias": "t",
       "x-prompt": "What is the name of your ADSP tenant?"
+    },
+    "proxy": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              },
+              "proxyPass": {
+                "type": "string"
+              }
+            },
+            "required": ["location", "proxyPass"]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string"
+            },
+            "proxyPass": {
+              "type": "string"
+            }
+          },
+          "required": ["location", "proxyPass"]
+        }
+      ]
     }
   },
   "required": ["name", "tenant"]

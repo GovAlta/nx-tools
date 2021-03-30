@@ -3,6 +3,7 @@ import {
   generateFiles,
   getWorkspaceLayout,
   getWorkspacePath,
+  installPackagesTask,
   names,
   offsetFromRoot,
   Tree,
@@ -62,9 +63,30 @@ export default async function (host: Tree, options: Schema) {
   
   const normalizedOptions = normalizeOptions(host, options);
   
-  await initExpressService(host, {...options, name: `${options.name}-service`});
-  await initReactApp(host, {...options, name: `${options.name}-app`});
+  await initExpressService(
+    host, 
+    {
+      ...options, 
+      name: `${options.name}-service`
+    }
+  );
+  
+  await initReactApp(
+    host, 
+    {
+      ...options, 
+      name: `${options.name}-app`,
+      proxy: {
+        location: '/api/',
+        proxyPass: `http://${options.name}-service:3333/`
+      }
+    }
+  );
   
   addFiles(host, normalizedOptions);
   await formatFiles(host);
+
+  return () => {
+    installPackagesTask(host);
+  }
 }

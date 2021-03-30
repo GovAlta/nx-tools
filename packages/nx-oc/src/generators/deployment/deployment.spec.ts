@@ -9,7 +9,14 @@ describe('Deployment Generator', () => {
 
   it ('can run', async (done) => {
     const host = createTreeWithEmptyWorkspace();
-    await pipeline(host, { pipeline: 'test', infra: 'test-infra', dev: 'test-dev' });
+    await pipeline(
+      host, 
+      { 
+        pipeline: 'test', 
+        infra: 'test-infra', 
+        envs: 'test-dev' 
+      }
+    );
 
     addProjectConfiguration(host, 'test', {
       root: 'apps/test',
@@ -28,6 +35,7 @@ describe('Deployment Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['apply-envs']).toBeTruthy();
     expect(config.targets['apply-envs'].executor).toBe('@abgov/nx-oc:apply');
+    expect(config.targets['apply-envs'].options.ocProject).toContain('test-dev');
    
     done();
   });

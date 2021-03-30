@@ -17,14 +17,18 @@
     "infra": {
       "type": "string",
       "description": "Name of the OpenShift Project for build infrastructure.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
       "alias": "i",
-      "x-prompt": "What is the oc project used for build infrastructure?"
+      "x-prompt": "What project should be used for build infrastructure?"
     },
-    "dev": {
+    "envs": {
       "type": "string",
-      "description": "Name of the OpenShift Project for development environment.",
-      "alias": "d",
-      "x-prompt": "What is the oc project used as a dev environment?"
+      "description": "Names of the OpenShift Projects for environments.",
+      "alias": "e",
+      "x-prompt": "What projects should be used for environments (dev test staging prod)?"
     },
     "apply": {
       "type": "boolean",
@@ -33,5 +37,5 @@
       "x-prompt": "Apply the pipeline to OpenShift?"
     }
   },
-  "required": ["pipeline", "infra", "dev"]
+  "required": ["pipeline", "infra", "envs"]
 }

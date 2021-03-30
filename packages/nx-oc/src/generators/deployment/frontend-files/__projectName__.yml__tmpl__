@@ -95,20 +95,20 @@ objects:
                   protocol: TCP
               resources: {}
               terminationMessagePath: /dev/termination-log
+              volumeMounts:
+                - mountPath: /opt/app-root/src/config
+                  name: config-volume
           dnsPolicy: ClusterFirst
           restartPolicy: Always
           schedulerName: default-scheduler
-          volumeMounts:
-            - mountPath: /opt/app-root/src/config
+          volumes:
+            - configMap:
+                defaultMode: 420
+                items:
+                  - key: configuration
+                    path: config.json
+                name: ${APP_NAME}
               name: config-volume
-      volumes:
-        - configMap:
-            defaultMode: 420
-            items:
-              - key: configuration
-                path: config.json
-            name: ${APP_NAME}
-          name: config-volume
       triggers:
         - imageChangeParams:
             containerNames:
