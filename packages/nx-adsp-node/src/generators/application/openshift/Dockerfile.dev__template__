@@ -1,8 +1,0 @@
-# This is a minimal Dockerfile for app deployment.
-FROM ubi8/nodejs-12
-
-ARG PROJECT
-COPY . .
-
-ENV PROJECT ${PROJECT}
-CMD npm run -d service dist/apps/${PROJECT}/main.js

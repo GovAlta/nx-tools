@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "nx-adsp",
+  "version": "0.0.1",
+  "generators": {
+    "express-service": {
+      "factory": "./src/generators/express-service/express-service",
+      "schema": "./src/generators/express-service/schema.json",
+      "description": "Generator that creates an Node/Express based backend service."
+    },
+    "react-app": {
+      "factory": "./src/generators/react-app/react-app",
+      "schema": "./src/generators/react-app/schema.json",
+      "description": "Generator that creates a React/Redux based frontend application."
+    },
+    "mern": {
+      "factory": "./src/generators/mern/mern",
+      "schema": "./src/generators/mern/schema.json",
+      "description": "Generator that creates a MERN fullstack solution.",
+      "hidden": true
+    }
+  }
+}

@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-agent-node12
+      namespace: <%= ocInfraProject %>
+      annotations:
+        slave-label: node12
+      labels:
+        role: jenkins-slave
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: jenkins-agent-node12
+      namespace: <%= ocInfraProject %>
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: jenkins-agent-node12:latest
+      runPolicy: Serial
+      source:
+        contextDir: agent-nodejs-12
+        git:
+          uri: 'https://github.com/openshift/jenkins.git'
+        type: Git
+      strategy:
+        dockerStrategy: {}
+        type: Docker
+      triggers:
+        - type: ConfigChange
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: <%= ocPipelineName %>
+      namespace: <%= ocInfraProject %>
+    spec:
+      runPolicy: Serial
+      source:
+        git:
+          uri: '<%= sourceRepositoryUrl %>'
+        type: Git
+      strategy:
+        jenkinsPipelineStrategy:
+          jenkinsfilePath: .openshift/Jenkinsfile
+        type: JenkinsPipeline

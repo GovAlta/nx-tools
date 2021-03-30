@@ -1,0 +1,12 @@
+{
+  "name": "@abgov/nx-adsp",
+  "version": "0.0.2",
+  "main": "src/index.js",
+  "generators": "./generators.json",
+  "description": "Government of Alberta - DIO - Nx plugin for ADSP apps.",
+  "peerDependencies": {
+    "@abgov/nx-oc": "~0.0.1",
+    "@nrwl/express": "~11.5.2",
+    "@nrwl/react": "~11.5.2"
+  }
+}

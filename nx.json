@@ -1,6 +1,6 @@
 {
   "npmScope": "abgov",
-  "affected": { "defaultBase": "master" },
+  "affected": { "defaultBase": "main" },
   "implicitDependencies": {
     "workspace.json": "*",
     "package.json": { "dependencies": "*", "devDependencies": "*" },
@@ -16,8 +16,13 @@
     }
   },
   "projects": {
-    "nx-adsp-node": { "tags": [] },
-    "nx-adsp-node-e2e": { "tags": [], "implicitDependencies": ["nx-adsp-node"] }
+    "nx-adsp": { "tags": [] },
+    "nx-adsp-e2e": {
+      "tags": [],
+      "implicitDependencies": ["nx-adsp"]
+    },
+    "nx-oc": { "tags": [] },
+    "nx-oc-e2e": { "tags": [], "implicitDependencies": ["nx-oc"] }
   },
   "workspaceLayout": { "appsDir": "e2e", "libsDir": "packages" }
 }

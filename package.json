@@ -26,16 +26,19 @@
     "help": "nx help"
   },
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "@nrwl/devkit": "~11.5.2",
+    "yaml": "~1.10.2"
+  },
   "devDependencies": {
     "@nrwl/cli": "11.5.2",
-    "@nrwl/devkit": "11.5.2",
     "@nrwl/eslint-plugin-nx": "11.5.2",
     "@nrwl/express": "11.5.2",
     "@nrwl/jest": "11.5.2",
     "@nrwl/linter": "11.5.2",
     "@nrwl/node": "11.5.2",
-    "@nrwl/nx-plugin": "^11.5.2",
+    "@nrwl/nx-plugin": "11.5.2",
+    "@nrwl/react": "11.5.2",
     "@nrwl/tao": "11.5.2",
     "@nrwl/workspace": "11.5.2",
     "@types/jest": "26.0.8",

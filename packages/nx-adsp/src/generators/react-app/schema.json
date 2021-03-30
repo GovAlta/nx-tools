@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "NxAdspReactApp",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the application.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use?"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "Name of the ADSP tenant.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "t",
+      "x-prompt": "What is the name of your ADSP tenant?"
+    },
+    "proxy": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              },
+              "proxyPass": {
+                "type": "string"
+              }
+            },
+            "required": ["location", "proxyPass"]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string"
+            },
+            "proxyPass": {
+              "type": "string"
+            }
+          },
+          "required": ["location", "proxyPass"]
+        }
+      ]
+    }
+  },
+  "required": ["name", "tenant"]
+}

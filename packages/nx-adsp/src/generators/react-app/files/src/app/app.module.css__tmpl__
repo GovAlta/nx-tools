@@ -1,0 +1,18 @@
+.app {
+  margin: 0
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+}
+
+section {
+  grid-column: 2 / span 2;
+  margin-top: 40px;
+  margin-bottom: 40px;
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "NxOcPipeline",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "pipeline": {
+      "type": "string",
+      "description": "Name of the OpenShift Pipeline.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What should be the name of the oc pipeline?"
+    },
+    "infra": {
+      "type": "string",
+      "description": "Name of the OpenShift Project for build infrastructure.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "i",
+      "x-prompt": "What project should be used for build infrastructure?"
+    },
+    "envs": {
+      "type": "string",
+      "description": "Names of the OpenShift Projects for environments.",
+      "alias": "e",
+      "x-prompt": "What projects should be used for environments (dev test staging prod)?"
+    },
+    "apply": {
+      "type": "boolean",
+      "description": "Flag indicating if the pipeline should be applied.",
+      "alias": "a",
+      "x-prompt": "Apply the pipeline to OpenShift?"
+    }
+  },
+  "required": ["pipeline", "infra", "envs"]
+}
