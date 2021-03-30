@@ -39,4 +39,4 @@ jobs:
       - name: Release
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx nx affected --target release --base=origin/master
+        run: npx nx affected --target release --base=origin/main

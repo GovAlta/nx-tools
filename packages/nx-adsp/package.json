@@ -1,7 +1,7 @@
 {
   "name": "@abgov/nx-adsp",
   "version": "0.0.0",
-  "private": false,
+  "license": "Apache-2.0",
   "main": "src/index.js",
   "generators": "./generators.json",
   "description": "Government of Alberta - DIO - Nx plugin for ADSP apps.",
