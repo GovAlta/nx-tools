@@ -53,6 +53,13 @@
               }
             ]
           }
+        },
+        "release": {
+          "executor": "@nrwl/workspace:run-commands",
+          "options": {
+            "command": "npx semantic-release -e ../../../.releaserc.json",
+            "cwd": "dist/packages/nx-adsp"
+          }
         }
       }
     },
@@ -123,6 +130,13 @@
                 "output": "."
               }
             ]
+          }
+        },
+        "release": {
+          "executor": "@nrwl/workspace:run-commands",
+          "options": {
+            "command": "npx semantic-release -e ../../../.releaserc.json",
+            "cwd": "dist/packages/nx-oc"
           }
         }
       }

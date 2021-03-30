@@ -1,6 +1,7 @@
 {
   "name": "@abgov/nx-oc",
-  "version": "0.0.2",
+  "version": "0.0.0",
+  "private": false,
   "main": "src/index.js",
   "description": "Government of Alberta - DIO - Nx plugin for OpenShift.",
   "generators": "./generators.json",
