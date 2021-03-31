@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - next
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -29,12 +30,14 @@ jobs:
         with:
           node-version: '12'
       - run: npm ci
-      - name: Prepare
+      - id: get_branch_name
+        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+      - name: Get last successful commit
         uses: nrwl/last-successful-commit-action@v1
         id: last_successful_commit
         with:
-          branch: main
-          workflow_id: main.yml
+          branch: ${{ steps.get_branch_name.outputs.short_ref }}
+          workflow_id: release-ci.yml
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Lint
         run: npm run affected:lint -- --base=${{ steps.last_successful_commit.outputs.commit_hash }}
@@ -42,8 +45,7 @@ jobs:
         run: npm run affected:test -- --base=${{ steps.last_successful_commit.outputs.commit_hash }}
       - name: Build
         run: npm run affected:build -- --base=${{ steps.last_successful_commit.outputs.commit_hash }}
-      - name: Set the value
-        run: echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+      - run: echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
