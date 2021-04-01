@@ -1,4 +1,4 @@
-import { AdspConfiguration } from "../../utils/adsp";
+import { AdspConfiguration } from '../../utils/adsp';
 
 export interface Schema {
   name: string;

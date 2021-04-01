@@ -6,6 +6,13 @@ interface AccessStrategyProps {
   TENANT_REALM: string;
 }
 
+export interface AccessUser {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+}
+
 export const createAccessStrategy = ({
   ACCESS_SERVICE_URL,
   TENANT_REALM,
@@ -23,13 +30,13 @@ export const createAccessStrategy = ({
       issuer: `${ACCESS_SERVICE_URL}/auth/realms/${TENANT_REALM}`,
     },
     (payload, done) => {
-      done(null, {
+      const user: AccessUser = {
         id: payload.sub,
         name: payload.name || payload.preferred_username,
         email: payload.email,
         roles: payload.realm_access.roles,
-        organizationId: payload.organizationId,
-      });
+      }
+      done(null, user);
     }
   );
 
