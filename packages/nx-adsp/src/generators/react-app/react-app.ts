@@ -118,10 +118,12 @@ export default async function (host: Tree, options: Schema) {
       '@abgov/core-css': '^0.7.56',
       '@abgov/react-components': '^0.7.56',
       '@types/react-router-dom': '~5.1.7',
+      "@types/redux-mock-store": "~1.0.2",
       'html-webpack-plugin': '~4.5.2',
       'oidc-client': '~1.11.5',
       'redux-oidc': '~4.0.0-beta1',
-      'react-router-dom': '~5.2.0'
+      'react-router-dom': '~5.2.0',
+      'redux-mock-store': '~1.5.4'
     }
   )
   
