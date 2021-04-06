@@ -1,0 +1,51 @@
+import React from 'react';
+import { Provider } from 'react-redux';
+import { getDefaultMiddleware } from '@reduxjs/toolkit';
+import { render } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import configureStore from 'redux-mock-store';
+
+import App from './app';
+
+const mockStore = configureStore(getDefaultMiddleware());
+
+describe('App', () => {
+  let store, userManager; 
+  
+  beforeEach(() => {
+    store = mockStore({
+      user: {},
+      intake: {},
+      start: {}
+    });
+
+    userManager = {
+      signoutRedirect: jest.fn(),
+      signinRedirect: jest.fn()
+    }
+  });
+
+  it('should render successfully', () => {
+    const { baseElement } = render(
+      <BrowserRouter>
+        <Provider store={store}>
+          <App userManager={userManager} />
+        </Provider>
+      </BrowserRouter>
+    );
+
+    expect(baseElement).toBeTruthy();
+  });
+
+  it('should have a greeting as the title', () => {
+    const { getByText } = render(
+      <BrowserRouter>
+        <Provider store={store}>
+          <App userManager={userManager} />
+        </Provider>
+      </BrowserRouter>
+    );
+
+    expect(getByText('Welcome to <%= projectName %>!')).toBeTruthy();
+  });
+});
