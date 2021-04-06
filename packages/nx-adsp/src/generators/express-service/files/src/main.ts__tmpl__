@@ -4,23 +4,43 @@
  */
 import * as express from 'express';
 import * as passport from 'passport';
-import { createAccessStrategy } from './access';
+import { Strategy as AnonymousStrategy } from 'passport-anonymous';
+import { AccessUser, createAccessStrategy } from './access';
 
 import { environment } from './environments/environment';
 
 passport.use('jwt', createAccessStrategy(environment));
+passport.use('anonymous', new AnonymousStrategy());
 
 const app = express();
 app.use(passport.initialize());
-app.use(passport.authenticate(['jwt'], { session: false }));
+app.use(passport.authenticate(['jwt', 'anonymous'], { session: false }));
 
-app.get('/api', (req, res) => {
-  res.send({ message: 'Welcome to ${options.name}!' });
-});
+app.get(
+  '/<%= projectName %>/v1/public', 
+  (_req, res) => {
+    res.send({ message: `Welcome to public API resource!` });
+  }
+);
+
+app.get(
+  '/<%= projectName %>/v1/private', 
+  (req, res, next) => {
+    if (!req.user) {
+      res.sendStatus(401);
+    } else {
+      next();
+    }
+  }, 
+  (req, res) => {
+    const user = req.user as AccessUser;
+    res.send({ message: `Welcome to private API resource! ${user.name}` });
+  }
+);
 
 const port = environment.port || 3333;
 
 const server = app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}/api`);
+  console.log(`Listening at http://localhost:${port}/<%= projectName %>/v1`);
 });
 server.on('error', console.error);

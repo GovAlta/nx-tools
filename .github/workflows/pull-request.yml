@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Main Pull Request
+name: Pull Request Check
 
 # Controls when the action will run. 
 on:
@@ -31,8 +31,8 @@ jobs:
           node-version: '12'
       - run: npm ci
       - name: Lint
-        run: npm run affected:lint -- --base=${{ github.base_ref }}
+        run: npm run affected:lint -- --base=origin/${{ github.base_ref }}
       - name: Test
-        run: npm run affected:test -- --base=${{ github.base_ref }}
+        run: npm run affected:test -- --base=origin/${{ github.base_ref }}
       - name: Build
-        run: npm run affected:build -- --base=${{ github.base_ref }}
+        run: npm run affected:build -- --base=origin/${{ github.base_ref }}

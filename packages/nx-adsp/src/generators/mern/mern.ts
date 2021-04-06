@@ -78,7 +78,7 @@ export default async function (host: Tree, options: Schema) {
       name: `${options.name}-app`,
       proxy: {
         location: '/api/',
-        proxyPass: `http://${options.name}-service:3333/`
+        proxyPass: `http://${options.name}-service:3333/${options.name}-service/`
       }
     }
   );

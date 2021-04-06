@@ -1,0 +1,26 @@
+import { createUserManager as createOidcUserManager } from 'redux-oidc';
+
+interface CreateUserManagerProps {
+  url: string;
+  realm: string;
+  client_id: string;
+}
+
+export function createUserManager({ 
+  url, 
+  realm, 
+  client_id 
+}: CreateUserManagerProps) {
+  
+  const appUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+  const settings = {
+    client_id,
+    redirect_uri: `${appUrl}/auth/callback`,
+    post_logout_redirect_uri: `${appUrl}/signout/callback`,
+    silent_redirect_uri: `${appUrl}/renew.html`,
+    response_type: 'code',
+    authority: `${url}/auth/realms/${realm}`,
+    automaticSilentRenew: true,
+  };
+  return createOidcUserManager(settings);
+}

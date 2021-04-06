@@ -75,4 +75,31 @@ describe('React App Generator', () => {
     
     done();
   });
+
+  it ('can add webpack dev server proxy', async (done) => {
+    const host = createTreeWithEmptyWorkspace();
+    await generator(
+      host, 
+      {
+        ...options, 
+        proxy: {
+          location: '/test/',
+          proxyPass: 'http://test-service:3333/api/'
+        }
+      }
+    );
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.root).toBe('apps/test');
+
+    expect(host.exists('apps/test/proxy.conf.json')).toBeTruthy();
+
+    const proxyConf = JSON.parse(
+      host.read('apps/test/proxy.conf.json').toString()
+    );
+    expect(proxyConf['/test/'].target).toBe('http://test-service:3333');
+    expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
+    
+    done();
+  });
 });
