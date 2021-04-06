@@ -57,8 +57,7 @@
         "release": {
           "executor": "@nrwl/workspace:run-commands",
           "options": {
-            "command": "npx semantic-release -e ../../../packages/nx-adsp/.releaserc.json",
-            "cwd": "dist/packages/nx-adsp"
+            "command": "npx semantic-release -e ./packages/nx-adsp/.releaserc.json"
           }
         }
       }
@@ -135,8 +134,7 @@
         "release": {
           "executor": "@nrwl/workspace:run-commands",
           "options": {
-            "command": "npx semantic-release -e ../../../packages/nx-oc/.releaserc.json",
-            "cwd": "dist/packages/nx-oc"
+            "command": "npx semantic-release -e ./packages/nx-oc/.releaserc.json"
           }
         }
       }
@@ -153,6 +151,77 @@
             "npmPackageName": "@abgov/nx-oc",
             "pluginOutputPath": "dist/packages/nx-oc",
             "jestConfig": "e2e/nx-oc-e2e/jest.config.js"
+          }
+        }
+      }
+    },
+    "nx-release": {
+      "root": "packages/nx-release",
+      "sourceRoot": "packages/nx-release/src",
+      "projectType": "library",
+      "targets": {
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-release/**/*.ts"
+            ]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": [
+            "coverage/packages/nx-release"
+          ],
+          "options": {
+            "jestConfig": "packages/nx-release/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "build": {
+          "executor": "@nrwl/node:package",
+          "outputs": [
+            "{options.outputPath}"
+          ],
+          "options": {
+            "outputPath": "dist/packages/nx-release",
+            "tsConfig": "packages/nx-release/tsconfig.lib.json",
+            "packageJson": "packages/nx-release/package.json",
+            "main": "packages/nx-release/src/index.ts",
+            "assets": [
+              "packages/nx-release/*.md",
+              {
+                "input": "./packages/nx-release/src",
+                "glob": "**/*.!(ts)",
+                "output": "./src"
+              },
+              {
+                "input": "./packages/nx-release",
+                "glob": "generators.json",
+                "output": "."
+              },
+              {
+                "input": "./packages/nx-release",
+                "glob": "executors.json",
+                "output": "."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "nx-release-e2e": {
+      "projectType": "application",
+      "root": "e2e/nx-release-e2e",
+      "sourceRoot": "e2e/nx-release-e2e/src",
+      "targets": {
+        "e2e": {
+          "executor": "@nrwl/nx-plugin:e2e",
+          "options": {
+            "target": "nx-release:build",
+            "npmPackageName": "@abgov/nx-release",
+            "pluginOutputPath": "dist/packages/nx-release",
+            "jestConfig": "e2e/nx-release-e2e/jest.config.js"
           }
         }
       }

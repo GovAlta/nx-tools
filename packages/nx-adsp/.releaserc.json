@@ -1,4 +1,9 @@
 {
   "extends": "../../.releaserc.json",
-  "tagFormat": "nx-adsp-v${version}"
+  "tagFormat": "nx-adsp-v${version}",
+  "plugins": [
+    ["@semantic-release/npm", {
+      "tarballDir": "dist/packages/nx-adsp"
+    }]
+  ]
 }

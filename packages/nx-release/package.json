@@ -1,0 +1,11 @@
+{
+  "name": "@abgov/nx-release",
+  "version": "0.0.1",
+  "main": "src/index.js",
+  "generators": "./generators.json",
+  "dependencies": {
+    "@semantic-release/commit-analyzer": "~8.0.1",
+    "get-stream": "~6.0.0",
+    "split2": "~3.2.2"
+  }
+}
