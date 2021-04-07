@@ -1,5 +1,5 @@
 {
-  "extends": "<%= offsetFromRoot %>/.releaserc.json",
+  "extends": "<%= offsetFromRoot %>.releaserc.json",
   "tagFormat": "<%= project %>-v${version}",
   "plugins": [
     ["@abgov/nx-release", {

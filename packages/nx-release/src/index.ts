@@ -1,1 +1,1 @@
-export * from './commit-analyzer';
+export * from './release-plugin';

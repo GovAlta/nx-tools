@@ -196,6 +196,11 @@
                 "output": "./src"
               },
               {
+                "input": "./packages/nx-release/src",
+                "glob": "**/.*",
+                "output": "./src"
+              },
+              {
                 "input": "./packages/nx-release",
                 "glob": "generators.json",
                 "output": "."

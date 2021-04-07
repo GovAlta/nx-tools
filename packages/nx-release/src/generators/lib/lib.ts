@@ -2,6 +2,7 @@ import {
   addDependenciesToPackageJson,
   formatFiles,
   generateFiles,
+  getWorkspaceLayout,
   installPackagesTask,
   offsetFromRoot,
   readProjectConfiguration,
@@ -42,10 +43,9 @@ export default async function (host: Tree, options: Schema) {
   const { build } = config.targets;
   if (
     config.projectType !== 'library' ||
-    !build || 
-    build.executor !== '@nrwl/node:package'
+    !build
   ) {
-    console.log('This generator can only be run against node libraries.');
+    console.log('This generator can only be run against buildable libraries.');
   } else {
 
     addDependenciesToPackageJson(
@@ -66,10 +66,12 @@ export default async function (host: Tree, options: Schema) {
     
     updateProjectConfiguration(host, options.project, config);
 
+    const { libsDir } = getWorkspaceLayout(host);
     const normalizedOptions = {
       ...options,
       projectRoot: config.root,
-      projectDist: build.options.outputPath
+      projectDist: build.options.outputPath || 
+        `dist/${libsDir}/${options.project}`
     }
   
     addFiles(host, normalizedOptions);
