@@ -1,0 +1,12 @@
+{
+  "extends": "<%= offsetFromRoot %>.releaserc.json",
+  "tagFormat": "<%= project %>-v${version}",
+  "plugins": [
+    ["@abgov/nx-release", {
+      "projectRoot": "<%= projectRoot %>"
+    }],
+    ["@semantic-release/npm", {
+      "tarballDir": "<%= projectDist %>"
+    }]
+  ]
+}

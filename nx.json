@@ -18,12 +18,11 @@
   },
   "projects": {
     "nx-adsp": { "tags": [] },
-    "nx-adsp-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-adsp"]
-    },
+    "nx-adsp-e2e": { "tags": [], "implicitDependencies": ["nx-adsp"] },
     "nx-oc": { "tags": [] },
-    "nx-oc-e2e": { "tags": [], "implicitDependencies": ["nx-oc"] }
+    "nx-oc-e2e": { "tags": [], "implicitDependencies": ["nx-oc"] },
+    "nx-release": { "tags": [] },
+    "nx-release-e2e": { "tags": [], "implicitDependencies": ["nx-release"] }
   },
   "workspaceLayout": { "appsDir": "e2e", "libsDir": "packages" }
 }
