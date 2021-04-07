@@ -11,7 +11,7 @@
     [
       "@semantic-release/npm",
       {
-        "tarballDir": "dist/packages/nx-oc"
+        "pkgRoot": "dist/packages/nx-oc"
       }
     ]
   ]

@@ -6,7 +6,7 @@
       "projectRoot": "<%= projectRoot %>"
     }],
     ["@semantic-release/npm", {
-      "tarballDir": "<%= projectDist %>"
+      "pkgRoot": "<%= projectDist %>"
     }]
   ]
 }
