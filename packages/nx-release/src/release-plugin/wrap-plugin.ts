@@ -19,5 +19,5 @@ export const wrapPlugin = (plugin: PluginFunction) => async (
     }
   );
 
-  await plugin(pluginConfig, {...context, commits: filteredCommits});
+  return await plugin(pluginConfig, {...context, commits: filteredCommits});
 }

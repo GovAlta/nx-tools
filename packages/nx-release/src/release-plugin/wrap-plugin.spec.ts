@@ -16,6 +16,7 @@ describe('wrapPlugin', () => {
 
   it('can filter commits', async (done) => {
     const plugin = jest.fn();
+    plugin.mockReturnValue('result');
     jest.mock('./git-utils');
     const wrapped = wrapPlugin(plugin);
 
@@ -28,7 +29,7 @@ describe('wrapPlugin', () => {
       error: jest.fn()
     }
 
-    await wrapped(
+    const result = await wrapped(
       { projectRoot: 'test', config: 'config' }, 
       {
         commits: [
@@ -41,6 +42,7 @@ describe('wrapPlugin', () => {
       }
     );
 
+    expect(result).toBe('result');
     expect(plugin.mock.calls.length).toBe(1);
     expect(plugin.mock.calls[0][0].config).toBe('config');
     expect(plugin.mock.calls[0][1].commits.length).toBe(1);
