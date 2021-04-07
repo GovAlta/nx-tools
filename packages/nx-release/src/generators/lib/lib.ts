@@ -58,7 +58,7 @@ export default async function (host: Tree, options: Schema) {
     )
 
     config.targets.release = {
-      executor: '@nrwl/workspace:run-command',
+      executor: '@nrwl/workspace:run-commands',
       options: {
         command: `npx semantic-release -e ./${config.root}/.releaserc.json`
       }
