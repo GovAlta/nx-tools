@@ -1,4 +1,3 @@
-import { Context } from '@semantic-release/semantic-release';
 import { ChildProcess, spawn } from 'child_process';
 import { ReadableStreamBuffer } from 'stream-buffers';
 import { mocked } from 'ts-jest/utils'
@@ -18,12 +17,9 @@ describe('getPathCommitHashes', () => {
     mockedSpawn.mockReturnValue({ stdout: stream } as unknown as ChildProcess)
     const commits = await getPathCommitHashes(
       'test', 
-      { 
-        cwd: '.', 
-        env: {}, 
-        lastRelease: null, 
-        nextRelease: { gitHead: 'HEAD' }
-      } as Context
+      ['test'],
+      '',
+      'HEAD'
     );
 
     expect(commits.length).toBe(2);

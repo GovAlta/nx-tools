@@ -1,4 +1,3 @@
-import { Context } from '@semantic-release/semantic-release';
 import { spawn } from 'child_process';
 import { array } from 'get-stream';
 import * as split from 'split2';
@@ -6,28 +5,26 @@ import * as split from 'split2';
 const projectCommits: Record<string, string[]> = {}
 
 export async function getPathCommitHashes(
-  path: string,
-  {cwd, env, lastRelease, nextRelease}: Context
+  project: string,
+  paths: string[],
+  from: string,
+  to = 'HEAD'
 ) {
-  const from = lastRelease?.gitHead;
-  const to = nextRelease?.gitHead || 'HEAD';
-
-  if (!projectCommits[path]) {
+  if (!projectCommits[project]) {
     
     const commits = await array<string>(spawn(
       'git', 
       [
         'log', 
         '--format=%H', 
-        `${from ? from + '..' : ''}${to}`, 
+        `${from ? `${from}..` : ''}${to}`, 
         '--', 
-        path
-      ], 
-      { cwd, env: { ...process.env, ...env }}
+        ...paths
+      ]
     ).stdout.pipe(split()));
 
-    projectCommits[path] = commits;
+    projectCommits[project] = commits;
   }
 
-  return projectCommits[path];
+  return projectCommits[project];
 }

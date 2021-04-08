@@ -1,8 +1,11 @@
 import { Commit } from 'semantic-release';
 import { mocked } from 'ts-jest/utils'
 import { wrapPlugin } from './wrap-plugin';
+import { getProjectChangePaths } from './nx-util';
 import { getPathCommitHashes } from './git-utils';
 
+jest.mock('./nx-util');
+const mockedGetProjectChangePaths = mocked(getProjectChangePaths);
 jest.mock('./git-utils');
 const mockedGetPathCommitHashes = mocked(getPathCommitHashes);
 
@@ -20,6 +23,10 @@ describe('wrapPlugin', () => {
     jest.mock('./git-utils');
     const wrapped = wrapPlugin(plugin);
 
+    mockedGetProjectChangePaths.mockReturnValueOnce(
+      Promise.resolve(['test1'])
+    );
+
     mockedGetPathCommitHashes.mockReturnValue(
       Promise.resolve(['test1'])
     );
@@ -30,7 +37,7 @@ describe('wrapPlugin', () => {
     }
 
     const result = await wrapped(
-      { projectRoot: 'test', config: 'config' }, 
+      { project: 'test', config: 'config' }, 
       {
         commits: [
           { commit: { long: 'test1', short: 'test1' } } as Commit,
