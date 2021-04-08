@@ -8,8 +8,10 @@ declare namespace SemanticRelease {
       commits: Commit[];
    }
 
+   type PluginConfig = Record<string, unknown>
+
    type PluginFunction = 
-      (pluginConfig: Record<string, unknown>, context: Context) => Promise<ReleaseType>
+      (pluginConfig: PluginConfig, context: Context) => Promise<ReleaseType>
 }
 
 declare module '@semantic-release/semantic-release' {

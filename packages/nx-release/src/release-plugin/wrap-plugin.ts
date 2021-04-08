@@ -1,14 +1,26 @@
-import { Context, PluginFunction } from '@semantic-release/semantic-release';
+import { Context, PluginConfig, PluginFunction } from '@semantic-release/semantic-release';
 import { getPathCommitHashes } from './git-utils';
+import { getProjectChangePaths } from './nx-util';
+
+export interface WrappedPluginConfig extends PluginConfig {
+  project: string
+}
 
 export const wrapPlugin = (plugin: PluginFunction) => async (
-  {projectRoot, ...pluginConfig}, 
+  {project, ...pluginConfig} : WrappedPluginConfig, 
   context: Context
 ) => {
   const {commits, logger} = context;
 
-  logger.log(`Filtering commits to those under ${projectRoot}...`);
-  const hashes = await getPathCommitHashes(projectRoot, context);
+  logger.log(`Filtering commits to those affecting ${project}...`);
+  
+  const paths = await getProjectChangePaths(project);
+  logger.log(`Resolved to paths: ${paths.join(', ')}...`);
+
+  const from = context.lastRelease?.gitHead;
+  const to = context.nextRelease?.gitHead;
+
+  const hashes = await getPathCommitHashes(project, paths, from, to);
   const filteredCommits = commits.filter(
     commit => {
       const match = hashes.includes(commit.commit.long);
