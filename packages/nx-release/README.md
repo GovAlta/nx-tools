@@ -9,7 +9,7 @@ There are multiple challenges with using semantic release in a monorepo:
 1. Each release project needs distinct release tags.
 2. Each project should be evaluated based on only commits related to it.
 3. Interdependencies between projects need to be handled.
-4. Interdependencies between publishable/releasable projects require coordinatino of releases.
+4. Interdependencies between publishable/releasable projects require coordination of releases.
 
 For 1, 2, and 3 in part this project uses the approach from [semantic-release-monorepo](https://github.com/pmowrer/semantic-release-monorepo) along with Nx capabilities: 
 - Each project uses a distinct `tagFormat`; 
