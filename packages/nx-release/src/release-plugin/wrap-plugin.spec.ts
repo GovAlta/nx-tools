@@ -57,4 +57,34 @@ describe('wrapPlugin', () => {
 
     done();
   });
+
+  it('can skip filtering if no project configured', async (done) => {
+    const plugin = jest.fn();
+    plugin.mockReturnValue('result');
+    const wrapped = wrapPlugin(plugin);
+    
+    const logger = { 
+      log: jest.fn(),
+      error: jest.fn()
+    }
+
+    const result = await wrapped(
+      { project: null, config: 'config' }, 
+      {
+        commits: [
+          { commit: { long: 'test1', short: 'test1' } } as Commit,
+          { commit: { long: 'test2', short: 'test2' } } as Commit
+        ], 
+        logger, 
+        env: {}, 
+        cwd: ''
+      }
+    );
+
+    expect(result).toBe('result');
+    expect(plugin.mock.calls.length).toBe(1);
+    expect(plugin.mock.calls[0][1].commits.length).toBe(2);
+    
+    done();
+  });
 });
