@@ -5,7 +5,7 @@
     [
       "@abgov/nx-release",
       {
-        "projectRoot": "packages/nx-adsp"
+        "project": "nx-adsp"
       }
     ],
     [

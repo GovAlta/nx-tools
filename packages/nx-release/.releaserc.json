@@ -5,7 +5,7 @@
     [
       "@abgov/nx-release",
       {
-        "projectRoot": "packages/nx-release"
+        "project": "nx-release"
       }
     ],
     [
