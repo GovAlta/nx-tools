@@ -13,6 +13,7 @@
       {
         "pkgRoot": "dist/packages/nx-adsp"
       }
-    ]
+    ],
+    "@semantic-release/github"
   ]
 }
