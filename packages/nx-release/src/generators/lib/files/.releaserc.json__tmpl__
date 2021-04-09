@@ -3,7 +3,7 @@
   "tagFormat": "<%= project %>-v${version}",
   "plugins": [
     ["@abgov/nx-release", {
-      "projectRoot": "<%= projectRoot %>"
+      "project": "<%= project %>"
     }],
     ["@semantic-release/npm", {
       "pkgRoot": "<%= projectDist %>"
