@@ -1,17 +1,17 @@
 {
   "extends": "../../.releaserc.json",
-  "tagFormat": "nx-oc-v${version}",
+  "tagFormat": "nx-release-v${version}",
   "plugins": [
     [
       "@abgov/nx-release",
       {
-        "project": "nx-oc"
+        "project": "nx-release"
       }
     ],
     [
       "@semantic-release/npm",
       {
-        "pkgRoot": "dist/packages/nx-oc"
+        "pkgRoot": "dist/packages/nx-release"
       }
     ]
   ]

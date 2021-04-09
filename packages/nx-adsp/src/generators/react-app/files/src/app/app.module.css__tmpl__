@@ -1,7 +1,3 @@
-.app {
-  margin: 0
-}
-
 body {
   margin: 0;
 }
@@ -15,4 +11,39 @@ section {
   grid-column: 2 / span 2;
   margin-top: 40px;
   margin-bottom: 40px;
+}
+
+.app {
+  margin: 0;
+}
+
+.nextSteps {
+  margin-top: 0;
+}
+
+.nextSteps li {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 50px;
+}
+
+.nextSteps li button { 
+  margin: 20px 0 0 10px;
+}
+
+.github a:before {
+  background: url("data:image/svg+xml,%3Csvg version='1.0' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 255 255'%3E%3Cg transform='translate(0,255) scale(0.8,-0.8)'%0Afill='%23000000' stroke='none'%3E%3Cpath d='M72 300 c-48 -29 -72 -75 -72 -138 0 -60 17 -101 56 -131 35 -28 74%0A-28 74 -1 0 15 -7 20 -24 20 -14 0 -27 4 -30 9 -3 4 6 6 20 3 16 -3 30 1 35 9%0A14 22 11 26 -20 32 -35 7 -59 54 -42 85 6 12 11 30 11 42 0 14 4 19 12 14 18%0A-11 110 -13 131 -2 13 7 17 4 17 -12 0 -12 5 -30 11 -42 17 -31 -7 -78 -43%0A-85 -20 -4 -27 -10 -24 -20 4 -8 6 -28 6 -44 0 -24 4 -29 24 -29 29 0 72 33%0A91 70 8 16 15 53 15 82 0 63 -24 109 -72 138 -45 27 -131 27 -176 0z'/%3E%3C/g%3E%3C/svg%3E")
+    no-repeat center center;
+}
+
+.footer {
+  background-color: #f1f1f1;
+  padding-top: 56px;
+  padding-bottom: 56px;
+  padding-left: 150px;
+  padding-right: 150px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  border-bottom: 16px solid #0081a2
 }

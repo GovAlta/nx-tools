@@ -61,8 +61,8 @@ objects:
       configuration: |-
         {
           "access": {
-            "url": "<%= accessServiceUrl %>"
-            "realm": "<%= tenantRealm %>"
+            "url": "<%= accessServiceUrl %>",
+            "realm": "<%= tenantRealm %>",
             "client_id": "${APP_NAME}"
           }
         }

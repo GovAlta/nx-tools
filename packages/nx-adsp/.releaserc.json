@@ -1,4 +1,18 @@
 {
   "extends": "../../.releaserc.json",
-  "tagFormat": "nx-adsp-v${version}"
+  "tagFormat": "nx-adsp-v${version}",
+  "plugins": [
+    [
+      "@abgov/nx-release",
+      {
+        "project": "nx-adsp"
+      }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "pkgRoot": "dist/packages/nx-adsp"
+      }
+    ]
+  ]
 }

@@ -55,10 +55,12 @@ export default async function (host: Tree, options: Schema) {
     {
       'jwks-rsa': '^2.0.2',
       'passport': '^0.4.1',
+      "passport-anonymous": "^1.0.1",
       'passport-jwt': '^4.0.0',
     },
     {
       '@types/passport': '^1.0.6',
+      "@types/passport-anonymous": "^1.0.3",
       '@types/passport-jwt': '^3.0.5',
     }
   )
