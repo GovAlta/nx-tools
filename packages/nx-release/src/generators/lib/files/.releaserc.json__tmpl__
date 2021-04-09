@@ -7,6 +7,7 @@
     }],
     ["@semantic-release/npm", {
       "pkgRoot": "<%= projectDist %>"
-    }]
+    }],
+    "@semantic-release/github"
   ]
 }
