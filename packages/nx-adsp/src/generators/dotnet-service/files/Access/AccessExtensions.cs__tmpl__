@@ -1,0 +1,22 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace <%= namespace %>.Access
+{
+  public static class AccessExtensions {
+    internal static IServiceCollection AddAccessJwtAuthentication(
+      this IServiceCollection services,
+      AccessConfiguration configuration
+    ) {
+
+      services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(jwt => {
+          jwt.Authority = $"{configuration.Url}/auth/realms/{configuration.Realm}";
+          jwt.Audience = "<%= projectName %>";
+        });
+
+      return services;
+    } 
+  }
+}

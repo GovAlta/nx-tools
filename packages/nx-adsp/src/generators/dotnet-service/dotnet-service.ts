@@ -1,13 +1,14 @@
 import {
   addDependenciesToPackageJson,
+  addProjectConfiguration,
   formatFiles,
   generateFiles,
   getWorkspaceLayout,
   installPackagesTask,
   names,
-  Tree,
+  Tree
 } from '@nrwl/devkit';
-import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
+import camelcase = require('camelcase');
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
@@ -25,7 +26,9 @@ function normalizeOptions(
     ...options,
     projectName,
     projectRoot,
-    adsp
+    adsp,
+    namespace: options.namespace || 
+      camelcase(projectName, {pascalCase: true})
   };
 }
 
@@ -47,40 +50,55 @@ export default async function (host: Tree, options: Schema) {
   
   const normalizedOptions = normalizeOptions(host, options);
   
-  const initExpress = wrapAngularDevkitSchematic('@nrwl/express', 'application');
-  await initExpress(host, options);
-  
   addDependenciesToPackageJson(
     host, 
+    {},
     {
-      'jwks-rsa': '^2.0.2',
-      'passport': '^0.4.1',
-      "passport-anonymous": "^1.0.1",
-      'passport-jwt': '^4.0.0',
-    },
-    {
-      '@types/passport': '^1.0.6',
-      "@types/passport-anonymous": "^1.0.3",
-      '@types/passport-jwt': '^3.0.5',
+      '@abgov/nx-dotnet': '^1.0.0-beta'
     }
   );
-  
+
+  addProjectConfiguration(
+    host, 
+    normalizedOptions.projectName,
+    {
+      root: normalizedOptions.projectRoot,
+      projectType: 'application',
+      targets: {
+        test: {
+          executor: '@abgov/nx-dotnet:test'
+        },
+        build: {
+          executor: '@abgov/nx-dotnet:build',
+          options: {
+            configuration: 'Debug'
+          },
+          configurations: {
+            production: {
+              configuration: 'Release'
+            }
+          }
+        },
+        serve: {
+          executor: '@abgov/nx-dotnet:serve'
+        }
+      }
+    }
+  )
+
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
-  if (hasDependency(host, '@abgov/nx-oc')) {
-    const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(
-      host, 
-      {
-        ...options, 
-        project: normalizedOptions.projectName, 
-        frontend: false
-      }
-    );
+  if (hasDependency(host, '@abgov/nx-dotnet')) {
+    const { workspaceGenerator } = await import(`${'@abgov/nx-dotnet'}`);
+    await workspaceGenerator(host, {});
   }
 
-  return () => {
+  if (hasDependency(host, '@abgov/nx-oc')) {
+    // TODO: apply a deployment for .NET backend.
+  }
+
+  return async () => {
     installPackagesTask(host);
   }
 }

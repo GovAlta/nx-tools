@@ -6,8 +6,12 @@
   "generators": "./generators.json",
   "description": "Government of Alberta - DIO - Nx plugin for ADSP apps.",
   "peerDependencies": {
+    "@abgov/nx-dotnet": "^1.0.0-beta",
     "@abgov/nx-oc": "^1.0.0",
     "@nrwl/express": "~11.5.2",
     "@nrwl/react": "~11.5.2"
+  },
+  "dependencies": {
+    "camelcase": "~5.3.1"
   }
 }

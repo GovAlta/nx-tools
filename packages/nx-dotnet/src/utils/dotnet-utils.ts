@@ -1,17 +1,22 @@
+import { once } from 'events';
 import * as execa from 'execa';
 
 export async function runDotnetCommand(
-  command: 'build' | 'test' | '--info',
+  command: 'build' | 'test' | 'run' | '--info',
   ...params: string[]
 ) {
   try {
-    await execa(
+    const result = execa(
       'dotnet',
       [
         command,
         ...params
       ]
-    )
+    );
+    result.stdout.pipe(process.stdout);
+
+    await once(result, 'close');
+    console.log('what');
     return { success: true }
   } catch (e) {
     console.log(`Failed to execute command: ${command}`, e);

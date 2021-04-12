@@ -10,6 +10,11 @@
       "implementation": "./src/executors/test/test",
       "schema": "./src/executors/test/schema.json",
       "description": "Executor for running dotnet test."
+    },
+    "serve": {
+      "implementation": "./src/executors/serve/serve",
+      "schema": "./src/executors/serve/schema.json",
+      "description": "Executor for running dotnet run."
     }
   }
 }

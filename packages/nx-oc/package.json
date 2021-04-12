@@ -5,5 +5,8 @@
   "main": "src/index.js",
   "description": "Government of Alberta - DIO - Nx plugin for OpenShift.",
   "generators": "./generators.json",
-  "executors": "./executors.json"
+  "executors": "./executors.json",
+  "dependencies": {
+    "yaml": "~1.10.2"
+  }
 }

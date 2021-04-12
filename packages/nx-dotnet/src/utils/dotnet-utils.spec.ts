@@ -8,6 +8,11 @@ const mockedExeca = mocked(execa as
   (file: string, args: readonly string[]) => execa.ExecaChildProcess<string>
 );
 
+import { once } from 'events';
+jest.mock('events');
+
+const mockedOnce = mocked(once);
+
 describe('Test Executor', () => {
   
   beforeEach(() => {
@@ -16,8 +21,12 @@ describe('Test Executor', () => {
   
   it('can run', async (done) => {
     mockedExeca.mockReturnValue(
-      Promise.resolve({success: true}) as unknown as execa.ExecaChildProcess<string>
+      { 
+        stdout: {pipe: jest.fn()}
+      } as unknown as execa.ExecaChildProcess<string>
     );
+
+    mockedOnce.mockImplementation(() => Promise.resolve(null));
 
     const {success} = await runDotnetCommand('build');
 

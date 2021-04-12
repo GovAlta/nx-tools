@@ -15,5 +15,6 @@ describe('nx-dotnet workspace', () => {
   it('should run successfully', async () => {
     await generator(appTree, options);
     expect(appTree.exists('Directory.Build.props')).toBeTruthy();
+    expect(appTree.exists('Directory.Build.targets')).toBeTruthy();
   });
 });
