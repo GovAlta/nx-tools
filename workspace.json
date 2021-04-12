@@ -8,11 +8,17 @@
       "targets": {
         "lint": {
           "executor": "@nrwl/linter:eslint",
-          "options": { "lintFilePatterns": ["packages/nx-adsp/**/*.ts"] }
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-adsp/**/*.ts"
+            ]
+          }
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-adsp"],
+          "outputs": [
+            "coverage/packages/nx-adsp"
+          ],
           "options": {
             "jestConfig": "packages/nx-adsp/jest.config.js",
             "passWithNoTests": true
@@ -20,7 +26,9 @@
         },
         "build": {
           "executor": "@nrwl/node:package",
-          "outputs": ["{options.outputPath}"],
+          "outputs": [
+            "{options.outputPath}"
+          ],
           "options": {
             "outputPath": "dist/packages/nx-adsp",
             "tsConfig": "packages/nx-adsp/tsconfig.lib.json",
@@ -77,11 +85,17 @@
       "targets": {
         "lint": {
           "executor": "@nrwl/linter:eslint",
-          "options": { "lintFilePatterns": ["packages/nx-oc/**/*.ts"] }
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-oc/**/*.ts"
+            ]
+          }
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-oc"],
+          "outputs": [
+            "coverage/packages/nx-oc"
+          ],
           "options": {
             "jestConfig": "packages/nx-oc/jest.config.js",
             "passWithNoTests": true
@@ -89,7 +103,9 @@
         },
         "build": {
           "executor": "@nrwl/node:package",
-          "outputs": ["{options.outputPath}"],
+          "outputs": [
+            "{options.outputPath}"
+          ],
           "options": {
             "outputPath": "dist/packages/nx-oc",
             "tsConfig": "packages/nx-oc/tsconfig.lib.json",
@@ -146,11 +162,17 @@
       "targets": {
         "lint": {
           "executor": "@nrwl/linter:eslint",
-          "options": { "lintFilePatterns": ["packages/nx-release/**/*.ts"] }
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-release/**/*.ts"
+            ]
+          }
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-release"],
+          "outputs": [
+            "coverage/packages/nx-release"
+          ],
           "options": {
             "jestConfig": "packages/nx-release/jest.config.js",
             "passWithNoTests": true
@@ -158,7 +180,9 @@
         },
         "build": {
           "executor": "@nrwl/node:package",
-          "outputs": ["{options.outputPath}"],
+          "outputs": [
+            "{options.outputPath}"
+          ],
           "options": {
             "outputPath": "dist/packages/nx-release",
             "tsConfig": "packages/nx-release/tsconfig.lib.json",
@@ -212,7 +236,80 @@
           }
         }
       }
+    },
+    "nx-dotnet": {
+      "root": "packages/nx-dotnet",
+      "sourceRoot": "packages/nx-dotnet/src",
+      "projectType": "library",
+      "targets": {
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "packages/nx-dotnet/**/*.ts"
+            ]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": [
+            "coverage/packages/nx-dotnet"
+          ],
+          "options": {
+            "jestConfig": "packages/nx-dotnet/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "build": {
+          "executor": "@nrwl/node:package",
+          "outputs": [
+            "{options.outputPath}"
+          ],
+          "options": {
+            "outputPath": "dist/packages/nx-dotnet",
+            "tsConfig": "packages/nx-dotnet/tsconfig.lib.json",
+            "packageJson": "packages/nx-dotnet/package.json",
+            "main": "packages/nx-dotnet/src/index.ts",
+            "assets": [
+              "packages/nx-dotnet/*.md",
+              {
+                "input": "./packages/nx-dotnet/src",
+                "glob": "**/*.!(ts)",
+                "output": "./src"
+              },
+              {
+                "input": "./packages/nx-dotnet",
+                "glob": "generators.json",
+                "output": "."
+              },
+              {
+                "input": "./packages/nx-dotnet",
+                "glob": "executors.json",
+                "output": "."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "nx-dotnet-e2e": {
+      "projectType": "application",
+      "root": "e2e/nx-dotnet-e2e",
+      "sourceRoot": "e2e/nx-dotnet-e2e/src",
+      "targets": {
+        "e2e": {
+          "executor": "@nrwl/nx-plugin:e2e",
+          "options": {
+            "target": "nx-dotnet:build",
+            "npmPackageName": "@abgov/nx-dotnet",
+            "pluginOutputPath": "dist/packages/nx-dotnet",
+            "jestConfig": "e2e/nx-dotnet-e2e/jest.config.js"
+          }
+        }
+      }
     }
   },
-  "cli": { "defaultCollection": "@nrwl/workspace" }
+  "cli": {
+    "defaultCollection": "@nrwl/workspace"
+  }
 }

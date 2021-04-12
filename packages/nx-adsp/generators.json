@@ -18,6 +18,11 @@
       "schema": "./src/generators/mern/schema.json",
       "description": "Generator that creates a MERN fullstack solution.",
       "hidden": true
+    },
+    "dotnet-service": {
+      "factory": "./src/generators/dotnet-service/dotnet-service",
+      "schema": "./src/generators/dotnet-service/schema.json",
+      "description": "Generator that creates a ASP.NET Core backend service."
     }
   }
 }
