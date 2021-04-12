@@ -23,7 +23,7 @@ describe('Serve Executor', () => {
     
     expect(success).toBe(true);
     expect(mockRunDotnetCommand.mock.calls.length).toBe(1);
-    expect(mockRunDotnetCommand.mock.calls[0][0]).toBe('serve');
+    expect(mockRunDotnetCommand.mock.calls[0][0]).toBe('run');
 
     done();
   });
