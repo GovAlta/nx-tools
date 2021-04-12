@@ -54,7 +54,7 @@ export default async function (host: Tree, options: Schema) {
     host, 
     {},
     {
-      '@abgov/nx-dotnet': '^1.0.0-beta'
+      '@abgov/nx-dotnet': '~1.0.0-beta.2'
     }
   );
 
