@@ -289,6 +289,12 @@
               }
             ]
           }
+        },
+        "release": {
+          "executor": "@nrwl/workspace:run-commands",
+          "options": {
+            "command": "npx semantic-release -e ./packages/nx-dotnet/.releaserc.json"
+          }
         }
       }
     },
