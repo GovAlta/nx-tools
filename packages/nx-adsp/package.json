@@ -9,5 +9,9 @@
     "@abgov/nx-oc": "^1.0.0",
     "@nrwl/express": "~11.5.2",
     "@nrwl/react": "~11.5.2"
+  },
+  "dependencies": {
+    "@angular-devkit/core": "~11.2.0",
+    "@angular-devkit/schematics": "~11.2.0"
   }
 }
