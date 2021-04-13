@@ -8,7 +8,7 @@ import {
   names,
   Tree
 } from '@nrwl/devkit';
-import camelcase = require('camelcase');
+import camelcase from 'camelcase';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
@@ -27,8 +27,10 @@ function normalizeOptions(
     projectName,
     projectRoot,
     adsp,
-    namespace: options.namespace || 
-      camelcase(projectName, {pascalCase: true})
+    namespace: camelcase(
+      options.namespace || projectName, 
+      { pascalCase: true }
+    )
   };
 }
 
