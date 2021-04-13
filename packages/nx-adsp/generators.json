@@ -23,6 +23,11 @@
       "factory": "./src/generators/dotnet-service/dotnet-service",
       "schema": "./src/generators/dotnet-service/schema.json",
       "description": "Generator that creates a ASP.NET Core backend service."
+    },
+    "react-dotnet": {
+      "factory": "./src/generators/react-dotnet/react-dotnet",
+      "schema": "./src/generators/react-dotnet/schema.json",
+      "description": "Generator that creates a React-Dotnet fullstack solution."
     }
   }
 }
