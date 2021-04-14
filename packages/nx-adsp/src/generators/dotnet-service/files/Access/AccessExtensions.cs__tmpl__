@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +13,10 @@ namespace <%= namespace %>.Access
       services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(jwt => {
-          jwt.Authority = $"{configuration.Url}/auth/realms/{configuration.Realm}";
+          jwt.Authority = new Uri(
+              configuration.Url, 
+              $"/auth/realms/{configuration.Realm}"
+            ).AbsoluteUri;
           jwt.Audience = "<%= projectName %>";
         });
 

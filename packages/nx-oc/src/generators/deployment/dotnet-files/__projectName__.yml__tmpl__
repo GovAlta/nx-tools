@@ -60,8 +60,24 @@ objects:
       name: ${APP_NAME}
       namespace: ${PROJECT}
     data:
-      TENANT_REALM: <%= tenantRealm %>
-      ACCESS_SERVICE_URL: <%= accessServiceUrl %>
+      configuration: |-
+        {
+          "Logging": {
+            "LogLevel": {
+              "Default": "Information",
+              "Microsoft": "Warning",
+              "Microsoft.Hosting.Lifetime": "Information"
+            }
+          },
+          "Adsp": {
+            "Access": {
+              "Realm": "<%= tenantRealm %>",
+              "Url": "<%= accessServiceUrl %>"
+            }
+          },
+          "AllowedHosts": "*",
+          "Urls": "http://${APP_NAME}:5000"
+        }
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -97,9 +113,18 @@ objects:
                   protocol: TCP
               resources: {}
               terminationMessagePath: /dev/termination-log
+              volumeMounts:
+                - mountPath: /opt/app-root/app/appsettings.json
+                  name: config-volume
+                  subPath: configuration
           dnsPolicy: ClusterFirst
           restartPolicy: Always
           schedulerName: default-scheduler
+          volumes:
+            - configMap:
+                defaultMode: 420
+                name: ${APP_NAME}
+              name: config-volume
       triggers:
         - imageChangeParams:
             containerNames:
