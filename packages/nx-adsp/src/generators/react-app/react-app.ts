@@ -65,9 +65,9 @@ function addFiles(host: Tree, options: NormalizedSchema) {
         const upstreamUrl = new URL(nginxProxy.proxyPass);
         
         const proxy = {
-          target: `${upstreamUrl.protocol}//${upstreamUrl.hostname}${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
+          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
           secure: upstreamUrl.protocol === 'https:',
-          changeOrigin: true,
+          changeOrigin: false,
           pathRewrite: {}
         }
 
@@ -130,8 +130,6 @@ export default async function (host: Tree, options: Schema) {
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
 
-  await formatFiles(host);
-
   const layout = getWorkspaceLayout(host);
 
   const config = readProjectConfiguration(host, options.name);
@@ -158,6 +156,8 @@ export default async function (host: Tree, options: Schema) {
   }
 
   updateProjectConfiguration(host, options.name, config);
+
+  await formatFiles(host);
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
