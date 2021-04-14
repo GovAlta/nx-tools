@@ -97,7 +97,7 @@ describe('React App Generator', () => {
     const proxyConf = JSON.parse(
       host.read('apps/test/proxy.conf.json').toString()
     );
-    expect(proxyConf['/test/'].target).toBe('http://test-service:3333');
+    expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
     
     done();
