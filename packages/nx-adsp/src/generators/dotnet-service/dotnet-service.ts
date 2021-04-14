@@ -97,7 +97,14 @@ export default async function (host: Tree, options: Schema) {
   }
 
   if (hasDependency(host, '@abgov/nx-oc')) {
-    // TODO: apply a deployment for .NET backend.
+    const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
+    await deploymentGenerator(
+      host, 
+      {
+        ...options, 
+        project: normalizedOptions.projectName
+      }
+    );
   }
 
   return async () => {
