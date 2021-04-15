@@ -17,8 +17,7 @@ pipeline {
   stages {
     stage('Prepare') {
       steps {
-        checkout scm
-        sh 'npm install'
+        sh 'npm ci'
         script {
           if (params.affectedBase) {
             baseCommand = affectedBase
@@ -46,7 +45,7 @@ pipeline {
     }
     stage('Build') {
       steps {
-        sh "npx nx affected --target=build ${baseCommand} --parallel"
+        sh "npx nx affected --target=build ${baseCommand} --parallel --configuration=production"
         script {
           openshift.withCluster() {
             openshift.withProject('<%= ocInfraProject %>') {

@@ -74,8 +74,7 @@ export default async function (host: Tree, options: Schema) {
       host, 
       {
         ...options, 
-        project: normalizedOptions.projectName, 
-        frontend: false
+        project: normalizedOptions.projectName
       }
     );
   }
