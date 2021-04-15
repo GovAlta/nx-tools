@@ -1,0 +1,6 @@
+<Project>
+  <!-- Remove the unit test files when building release -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Compile Remove="**/*.Spec.cs" />
+  </ItemGroup>
+</Project>
