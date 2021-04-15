@@ -29,7 +29,12 @@ function normalizeOptions(
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
   const appType = config.targets.build.executor === '@nrwl/web:build' ?
-    'frontend' : 'backend';
+    'frontend' : 
+    (
+      config.targets.build.executor === '@nrwl/node:build' ? 
+        'express' : 
+        'dotnet'
+    );
 
   const tenantRealm = names(options.tenant).fileName;
   const accessServiceUrl = 'https://access.alpha.alberta.ca';

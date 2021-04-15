@@ -32,6 +32,45 @@ items:
       triggers:
         - type: ConfigChange
   - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: jenkins-agent-node12-dotnet5
+      namespace: <%= ocInfraProject %>
+      annotations:
+        slave-label: node12-dotnet5
+      labels:
+        role: jenkins-slave
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: jenkins-agent-node12-dotnet5
+      namespace: <%= ocInfraProject %>
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: jenkins-agent-node12-dotnet5:latest
+      runPolicy: Serial
+      source:
+        dockerfile: |
+          FROM quay.io/openshift/origin-jenkins-agent-base:v4.0
+          
+          USER 0
+          
+          RUN rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm && \
+            DISABLES="--disablerepo=rhel-server-extras --disablerepo=rhel-server --disablerepo=rhel-fast-datapath --disablerepo=rhel-server-optional --disablerepo=rhel-server-ose --disablerepo=rhel-server-rhscl" && \
+            yum $DISABLES install -y --setopt=tsflags=nodocs --disableplugin=subscription-manager dotnet-sdk-5.0 && \
+            yum clean all -y 
+          
+          USER 1001
+        type: Binary
+      strategy:
+        dockerStrategy:
+          from:
+            kind: ImageStreamTag
+            name: jenkins-agent-node12:latest
+        type: Docker
+  - apiVersion: v1
     kind: BuildConfig
     metadata:
       name: <%= ocPipelineName %>

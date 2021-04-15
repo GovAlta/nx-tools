@@ -63,7 +63,7 @@ export default async function (host: Tree, options: Schema) {
       "@types/passport-anonymous": "^1.0.3",
       '@types/passport-jwt': '^3.0.5',
     }
-  )
+  );
   
   addFiles(host, normalizedOptions);
   await formatFiles(host);
@@ -74,8 +74,7 @@ export default async function (host: Tree, options: Schema) {
       host, 
       {
         ...options, 
-        project: normalizedOptions.projectName, 
-        frontend: false
+        project: normalizedOptions.projectName
       }
     );
   }

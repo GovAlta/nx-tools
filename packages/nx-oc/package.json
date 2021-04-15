@@ -10,5 +10,8 @@
     "directory": "packages/nx-oc"
   },
   "generators": "./generators.json",
-  "executors": "./executors.json"
+  "executors": "./executors.json",
+  "dependencies": {
+    "yaml": "^1.10.2"
+  }
 }

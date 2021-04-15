@@ -5,7 +5,7 @@ export interface Schema {
 
 export interface NormalizedSchema extends Schema {
   projectName: string;
-  appType: 'frontend' | 'backend';
+  appType: 'frontend' | 'express' | 'dotnet';
   ocInfraProject: string;
   ocEnvProjects: string[];
   adsp: {
