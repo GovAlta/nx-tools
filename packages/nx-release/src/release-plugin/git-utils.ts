@@ -17,6 +17,7 @@ export async function getPathCommitHashes(
       [
         'log', 
         '--format=%H', 
+        '--full-history',
         `${from ? `${from}..` : ''}${to}`, 
         '--', 
         ...paths
