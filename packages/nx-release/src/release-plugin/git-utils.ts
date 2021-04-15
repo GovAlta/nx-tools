@@ -12,6 +12,7 @@ export async function getPathCommitHashes(
 ) {
   if (!projectCommits[project]) {
     
+    // --full-history to avoid history simplification ignoring commits on some merged branches.
     const commits = await array<string>(spawn(
       'git', 
       [
