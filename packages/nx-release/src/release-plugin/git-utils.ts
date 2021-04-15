@@ -12,11 +12,13 @@ export async function getPathCommitHashes(
 ) {
   if (!projectCommits[project]) {
     
+    // --full-history to avoid history simplification ignoring commits on some merged branches.
     const commits = await array<string>(spawn(
       'git', 
       [
         'log', 
         '--format=%H', 
+        '--full-history',
         `${from ? `${from}..` : ''}${to}`, 
         '--', 
         ...paths
@@ -27,4 +29,22 @@ export async function getPathCommitHashes(
   }
 
   return projectCommits[project];
+}
+
+export async function getMergeCommitHashes(
+  from: string,
+  to = 'HEAD'
+) {
+
+  const commits = await array<string>(spawn(
+    'git', 
+    [
+      'log', 
+      '--format=%H', 
+      '--merges',
+      `${from ? `${from}..` : ''}${to}`, 
+    ]
+  ).stdout.pipe(split()));
+
+  return commits;
 }
