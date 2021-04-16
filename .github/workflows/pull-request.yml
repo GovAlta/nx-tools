@@ -36,8 +36,3 @@ jobs:
         run: npm run affected:test -- --base=origin/${{ github.base_ref }}
       - name: Build
         run: npm run affected:build -- --base=origin/${{ github.base_ref }}
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx nx affected --target release --base=origin/${{ github.base_ref }} --dryRun
