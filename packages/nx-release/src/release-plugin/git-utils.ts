@@ -30,21 +30,3 @@ export async function getPathCommitHashes(
 
   return projectCommits[project];
 }
-
-export async function getMergeCommitHashes(
-  from: string,
-  to = 'HEAD'
-) {
-
-  const commits = await array<string>(spawn(
-    'git', 
-    [
-      'log', 
-      '--format=%H', 
-      '--merges',
-      `${from ? `${from}..` : ''}${to}`, 
-    ]
-  ).stdout.pipe(split()));
-
-  return commits;
-}
