@@ -1,5 +1,5 @@
 import { Context, PluginConfig, PluginFunction } from '@semantic-release/semantic-release';
-import { getMergeCommitHashes, getPathCommitHashes } from './git-utils';
+import { getPathCommitHashes } from './git-utils';
 import { getProjectChangePaths } from './nx-util';
 
 export interface WrappedPluginConfig extends PluginConfig {
@@ -24,13 +24,7 @@ export const wrapPlugin = (plugin: PluginFunction) => async (
     const from = context.lastRelease?.gitHead;
     const to = context.nextRelease?.gitHead;
 
-    // Include merge commits as well as commits impacting particular paths.
-    // Merge commit for channel upgrade (next -> main) is TREESAME, but has to be
-    // analyzed for add channel.
-    const hashes = [
-      ...await getMergeCommitHashes(from, to),
-      ...await getPathCommitHashes(project, paths, from, to)
-    ];
+    const hashes = await getPathCommitHashes(project, paths, from, to);
     
     filteredCommits = commits.filter(
       commit => {
