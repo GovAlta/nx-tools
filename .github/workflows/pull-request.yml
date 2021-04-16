@@ -40,4 +40,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx nx affected --target release --base=origin/${{ github.base_ref }}
+        run: npx nx affected --target release --base=origin/${{ github.base_ref }} --dryRun
