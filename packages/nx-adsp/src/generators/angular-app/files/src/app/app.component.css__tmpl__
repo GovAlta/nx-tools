@@ -1,0 +1,55 @@
+body {
+  margin: 0;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+}
+
+section {
+  font-size:larger;
+  padding-left: 150px;
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+
+h2 {
+  font-size: 36px;
+  font-weight: normal;
+}
+
+h3 {
+  font-size: 24px;
+  font-weight: normal;
+}
+
+.app {
+  margin: 0;
+}
+
+.nextSteps {
+  margin-top: 0;
+}
+
+.nextSteps li {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 50px;
+}
+
+.nextSteps li button {
+  margin: 20px 0 0 10px;
+}
+
+.footer {
+  background-color: #f1f1f1;
+  padding-top: 56px;
+  padding-bottom: 56px;
+  padding-left: 150px;
+  padding-right: 150px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  border-bottom: 16px solid #0081a2;
+}

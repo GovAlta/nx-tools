@@ -1,23 +1,25 @@
 import {
   addDependenciesToPackageJson,
+  addProjectConfiguration,
   formatFiles,
   generateFiles,
   getWorkspaceLayout,
   installPackagesTask,
   names,
+  offsetFromRoot,
   readProjectConfiguration,
   Tree,
   updateProjectConfiguration,
   writeJson,
 } from '@nrwl/devkit';
-import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
-import { NormalizedSchema, Schema } from './schema';
+import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
+import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: AngularAppGeneratorSchema
 ): NormalizedSchema {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
@@ -42,11 +44,11 @@ function normalizeOptions(
     nginxProxies
   };
 }
-
 function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
-    ...options.adsp,
+    ...names(options.name),
+    offsetFromRoot: offsetFromRoot(options.projectRoot),
     tmpl: '',
   };
   generateFiles(
@@ -55,7 +57,6 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     options.projectRoot,
     templateOptions
   );
-
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
     // Add a webpack dev server proxy configuration ...
@@ -85,7 +86,6 @@ function addFiles(host: Tree, options: NormalizedSchema) {
       },
       {}
     );
-
     writeJson(
       host,
       `${options.projectRoot}/proxy.conf.json`,
@@ -100,15 +100,11 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
   host.delete(`${options.projectRoot}/src/app/star.svg`);
 }
 
-export default async function (host: Tree, options: Schema) {
-
+export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = normalizeOptions(host, options);
+  const initAngular = wrapAngularDevkitSchematic('@nrwl/angular', 'application');
 
-  const initReact = wrapAngularDevkitSchematic('@nrwl/react', 'application');
-  const initRedux = wrapAngularDevkitSchematic('@nrwl/react', 'redux');
-
-  await initReact(host, options);
-  await initRedux(host, {...options, name: 'intake', project: options.name});
+  await initAngular(host, options);
 
   addDependenciesToPackageJson(
     host,
@@ -116,14 +112,12 @@ export default async function (host: Tree, options: Schema) {
     },
     {
       '@abgov/core-css': '^0.7.56',
-      '@abgov/react-components': '^0.7.56',
-      '@types/react-router-dom': '~5.1.7',
-      "@types/redux-mock-store": "~1.0.2",
+      // 'webpack': "^5.36.2",
+      // '@angular-devkit/build-angular': '~0.1102.0',
+      // '@angular/cdk': '^11.2.11',
+      '@abgov/angular-components': '1.0.1',
       'html-webpack-plugin': '~4.5.2',
       'oidc-client': '~1.11.5',
-      'redux-oidc': '~4.0.0-beta1',
-      'react-router-dom': '~5.2.0',
-      'redux-mock-store': '~1.5.4'
     }
   )
 
@@ -144,7 +138,6 @@ export default async function (host: Tree, options: Schema) {
         "output": "./"
       }
     ],
-    webpackConfig: `${normalizedOptions.projectRoot}/webpack.conf.js`,
   }
 
   if (addedProxy) {
@@ -161,6 +154,8 @@ export default async function (host: Tree, options: Schema) {
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
+    console.log("Running Deployment Generator");
+    console.log("HOST: " + JSON.stringify(host));
     await deploymentGenerator(
       host,
       {
@@ -168,9 +163,5 @@ export default async function (host: Tree, options: Schema) {
         project: normalizedOptions.projectName
       }
     );
-  }
-
-  return () => {
-    installPackagesTask(host);
   }
 }
