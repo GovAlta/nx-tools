@@ -16,8 +16,8 @@ Stuff inside [] needs to be replaced with your own names
 
 ## To add a plugin to @abgov/nx-adsp
 
-nx g @nrwl/nx-plugin:plugin [pluginName] nx-adsp
-make changes in the plugin directory you've just generated
+nx g @nrwl/nx-plugin:plugin [pluginName] --importPath .
+move the code generated into packages/ns-adsp and make changes in the plugin directory you've just generated
 
 ## To test the plugin locally
 
