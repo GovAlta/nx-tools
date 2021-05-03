@@ -151,8 +151,6 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    console.log("Running Deployment Generator");
-    console.log("HOST: " + JSON.stringify(host));
     await deploymentGenerator(
       host,
       {
