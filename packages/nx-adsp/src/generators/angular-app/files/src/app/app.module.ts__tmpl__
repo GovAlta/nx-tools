@@ -1,0 +1,14 @@
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AngularComponentsModule } from '@abgov/angular-components';
+
+import { AppComponent } from './app.component';
+
+@NgModule({
+  imports: [BrowserModule, AngularComponentsModule],
+  providers: [],
+  declarations: [AppComponent],
+  bootstrap: [AppComponent],
+})
+
+export class AppModule {}

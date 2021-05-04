@@ -1,38 +1,34 @@
-import { readProjectConfiguration } from '@nrwl/devkit';
 import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
-import { Schema } from './schema';
-import generator from './react-app';
+import { Tree, readProjectConfiguration } from '@nrwl/devkit';
 
-describe('React App Generator', () => {
+import angularApp from './angular-app';
+import { AngularAppGeneratorSchema } from './schema';
+
+describe('angular app generator', () => {
+  let appTree: Tree;
+  const options: AngularAppGeneratorSchema = { name: 'test', tenant: 'testtenant' };
+
   beforeEach(() => {
+    appTree = createTreeWithEmptyWorkspace();
     jest.setTimeout(28000)
-  })
-
+  });
   afterAll(() => {
    jest.clearAllTimers()
   })
 
-  const options: Schema = {
-    name: 'test',
-    tenant: 'test',
-  }
-
-  it ('can run', async (done) => {
-    jest.setTimeout(28000)
-    const host = createTreeWithEmptyWorkspace();
-    await generator(host, options);
-
-    const config = readProjectConfiguration(host, 'test');
+  it('should run successfully', async (done) => {
+    await angularApp(appTree, options);
+    const config = readProjectConfiguration(appTree, 'test');
+    expect(config).toBeDefined();
     expect(config.root).toBe('apps/test');
-
-    expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
+    expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
 
     done();
   });
 
   it ('can add nginx proxy', async (done) => {
     const host = createTreeWithEmptyWorkspace();
-    await generator(
+    await angularApp(
       host,
       {
         ...options,
@@ -56,7 +52,7 @@ describe('React App Generator', () => {
 
   it ('can add multiple nginx proxy', async (done) => {
     const host = createTreeWithEmptyWorkspace();
-    await generator(
+    await angularApp(
       host,
       {
         ...options,
@@ -86,7 +82,7 @@ describe('React App Generator', () => {
 
   it ('can add webpack dev server proxy', async (done) => {
     const host = createTreeWithEmptyWorkspace();
-    await generator(
+    await angularApp(
       host,
       {
         ...options,

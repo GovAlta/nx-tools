@@ -28,6 +28,11 @@
       "factory": "./src/generators/react-dotnet/react-dotnet",
       "schema": "./src/generators/react-dotnet/schema.json",
       "description": "Generator that creates a React-Dotnet fullstack solution."
+    },
+    "angular-app": {
+      "factory": "./src/generators/angular-app/angular-app",
+      "schema": "./src/generators/angular-app/schema.json",
+      "description": "Generator that creates a Angular based frontend application."
     }
   }
 }
