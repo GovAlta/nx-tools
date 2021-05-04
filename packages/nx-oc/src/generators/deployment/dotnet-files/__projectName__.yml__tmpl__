@@ -39,7 +39,7 @@ objects:
       output:
         to:
           kind: ImageStreamTag
-          name: ${APP_NAME}:latest
+          name: '${APP_NAME}:latest'
       runPolicy: Serial
       source:
           binary: {}
@@ -131,7 +131,7 @@ objects:
               - ${APP_NAME}
             from:
               kind: ImageStreamTag
-              name: ${APP_NAME}:${DEPLOY_TAG}
+              name: '${APP_NAME}:${DEPLOY_TAG}'
               namespace: ${INFRA_PROJECT}
           type: ImageChange
   - apiVersion: v1
