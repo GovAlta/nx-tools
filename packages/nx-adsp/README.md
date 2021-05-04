@@ -23,12 +23,13 @@ move the code generated into packages/ns-adsp and make changes in the plugin dir
 
 1. Generate a temp folder with a local nx-adsp using `nx run nx-adsp-e2e:e2e`
 2. Generate a new project somewhere with `npx create-nx-workspace`, following the prompts
-3. add the following to the dev dependencies in package.json inside the new workspace (this assumes you an angular plugin)
 
-    "@abgov/nx-adsp": "[location-of-nx-tools]/dist/packages/nx-adsp",
-    "@nrwl/angular": "^12.0.8",
+3. Inside the new workspace, 
+  i) run
+    npm i -D [location-of-nx-tools]/dist/packages/nx-adsp  //to update package.json
+    npm i -D @nrwl/angular   //(this assumes you are building an angular plugin)
 
-4. run npm install
-5. generate the plugin using `npx nx g @abgov/nx-adsp:[pluginName] my-ang-app --tenant tenantName`
-6. run npm install
-7. serve the plugin using `nx serve [pluginName]
+  ii) generate the plugin
+     `npx nx g @abgov/nx-adsp:[pluginName] my-ang-app --tenant tenantName`
+  iii) run `npm install`
+  iv) serve the plugin using `nx serve [pluginName]

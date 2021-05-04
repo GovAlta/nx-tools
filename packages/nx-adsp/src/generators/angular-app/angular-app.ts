@@ -159,4 +159,8 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       }
     );
   }
+
+  // return () => {
+  //   installPackagesTask(host);
+  // }
 }
