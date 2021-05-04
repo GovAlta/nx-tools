@@ -4,14 +4,9 @@ import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { AppModule } from './app/app.module';
 import { environment } from './environments/environment';
 
-import '@abgov/core-css/goa-core.css';
-import '@abgov/core-css/goa-components.css';
-import '@abgov/angular-components/theme.css';
-
 import { goa } from '@abgov/core-css';
 const debug = false;
 goa.init(debug);
-
 
 if (environment.production) {
   enableProdMode();

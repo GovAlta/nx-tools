@@ -1,6 +1,5 @@
 import {
   addDependenciesToPackageJson,
-  addProjectConfiguration,
   formatFiles,
   generateFiles,
   getWorkspaceLayout,
@@ -159,8 +158,4 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       }
     );
   }
-
-  // return () => {
-  //   installPackagesTask(host);
-  // }
 }

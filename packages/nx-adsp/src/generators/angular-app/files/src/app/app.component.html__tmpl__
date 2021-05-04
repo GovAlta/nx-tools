@@ -10,7 +10,7 @@
     title="Quick start of a digital service"
   >
   </goa-hero-banner>
-  <main>
+  <main class="container">
     <section>
       <h2>Welcome to {{ title }}!</h2>
       <p>
@@ -33,7 +33,7 @@
       <div class="goa-title">Connect with us on</div>
       <ul>
         <div>
-          <img src="./assets/github-1.svg" height="15px">
+          <img src="./assets/github-1.svg" height="15px" />
           <a href="https://github.com/abgov" rel="noreferrer" target="_blank">
             GitHub
           </a>

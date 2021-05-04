@@ -1,31 +1,36 @@
-body {
-  margin: 0;
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
 }
 
-main {
-  display: grid;
-  grid-template-columns: repeat(6, auto);
+@media (min-width: 640px) {
+  .container {
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    width: 640px;
+  }
 }
-
-section {
-  font-size:larger;
-  padding-left: 150px;
-  margin-top: 40px;
-  margin-bottom: 40px;
+@media (min-width: 768px) {
+  .container {
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    width: 768px;
+  }
 }
-
-h2 {
-  font-size: 36px;
-  font-weight: normal;
+@media (min-width: 1024px) {
+  .container {
+    padding: 3rem 1rem;
+    margin: 0 auto;
+    width: 1024px;
+  }
 }
-
-h3 {
-  font-size: 24px;
-  font-weight: normal;
-}
-
-.app {
-  margin: 0;
+@media (min-width: 1280px) {
+  .container {
+    padding: 3rem 1rem;
+    margin: 0 auto;
+    width: 1280px;
+  }
 }
 
 .nextSteps {
@@ -41,6 +46,7 @@ h3 {
 .nextSteps li button {
   margin: 20px 0 0 10px;
 }
+
 
 .footer {
   background-color: #f1f1f1;
