@@ -1,0 +1,3 @@
+import 'jest-preset-angular';
+//https://github.com/thymikee/jest-preset-angular/issues/347
+import '@angular/localize/init';
