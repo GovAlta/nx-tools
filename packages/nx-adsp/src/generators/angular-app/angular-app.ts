@@ -22,6 +22,7 @@ function normalizeOptions(
 ): NormalizedSchema {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
+  const projectOrg = getWorkspaceLayout(host).npmScope;
   const openshiftDirectory = `.openshift/${projectName}`
 
   const adsp = getAdspConfiguration(host, options);
@@ -39,6 +40,7 @@ function normalizeOptions(
     projectName,
     projectRoot,
     openshiftDirectory,
+    projectOrg,
     adsp,
     nginxProxies
   };
