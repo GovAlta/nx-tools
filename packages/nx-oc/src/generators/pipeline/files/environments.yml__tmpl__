@@ -12,9 +12,9 @@ items:
       name: 'system:image-puller'
     subjects:
 <% ocEnvProjects.forEach(function(ocEnvProject){ -%>
-      - kind: ServiceAccount
-        name: deployer
-        namespace: <%= ocEnvProject %>
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: 'system:serviceaccounts:<%= ocEnvProject %>'
 <% }); -%>
 <% ocEnvProjects.forEach(function(ocEnvProject){ -%>
   - apiVersion: rbac.authorization.k8s.io/v1
