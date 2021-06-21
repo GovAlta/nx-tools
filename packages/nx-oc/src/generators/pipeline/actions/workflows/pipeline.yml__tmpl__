@@ -1,8 +1,13 @@
 # GitHub Actions pipeline.
+# This pipeline runs application build process in GitHub Actions but runs OpenShift BuildConfig for
+# creating runtime containers. It does not require a container registry accessible to both OpenShift
+# and GitHub.
+#
 # Secrets:
 # GITHUB_ACCESS_TOKEN - GitHub access token for getting workflow history used for last successful commit
 # OPENSHIFT_SERVER    - URL to the OpenShift server.
-# OPENSHIFT_TOKEN     - Token for the service account used for OC cli commands.
+# OPENSHIFT_TOKEN     - Token for the service account (github-actions) used for OC cli commands.
+#
 # Envs:
 # Dev, Test, Staging, Prod
 name: Pipeline
