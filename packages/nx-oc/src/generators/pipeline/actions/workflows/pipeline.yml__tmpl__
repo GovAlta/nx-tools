@@ -3,12 +3,12 @@
 # creating runtime containers. It does not require a container registry accessible to both OpenShift
 # and GitHub.
 #
-# Secrets:
-# GITHUB_ACCESS_TOKEN - GitHub access token for getting workflow history used for last successful commit
-# OPENSHIFT_SERVER    - URL to the OpenShift server.
-# OPENSHIFT_TOKEN     - Token for the service account (github-actions) used for OC cli commands.
+# Secrets (to be manually added):
+# REPO_ACCESS_TOKEN - GitHub access token for getting workflow history used for last successful commit
+# OPENSHIFT_SERVER  - URL to the OpenShift server.
+# OPENSHIFT_TOKEN   - Token for the service account (github-actions) used for OC cli commands.
 #
-# Envs:
+# Envs (auto added but requires manual configuration):
 # Dev, Test, Staging, Prod
 name: Pipeline
 
@@ -18,7 +18,7 @@ on:
       - main
 
   workflow_dispatch:
-    input:
+    inputs:
       SELECTED_BASE:
         description: Value for --base= in nx affected commands
         required: false
@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       AFFECTED_BASE: "origin/main"
+    outputs:
+      affected_apps: ${{ steps.set_outputs.outputs.affected_apps }}
     steps:
       # Checkout the source code.
       - uses: actions/checkout@v2
@@ -47,12 +49,14 @@ jobs:
         with:
           branch: ${{ steps.get_branch_name.outputs.short_ref }}
           workflow_id: pipeline.yml
-          github_token: ${{ secrets.GITHUB_ACCESS_TOKEN }}
-      - if: ${{ steps.last_successful_commit.outputs.commit_hash }} 
+          github_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+      - name: Set AFFECTED_BASE to last successful build commit
+        if: ${{ steps.last_successful_commit.outputs.commit_hash }} 
         run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.commit_hash }}" >> $GITHUB_ENV
       
       # Input for base takes precedence over last successful build.
-      - if: ${{ github.event.inputs.SELECTED_BASE }}
+      - name: Set AFFECTED_BASE to input for SELECTED_BASE
+        if: ${{ github.event.inputs.SELECTED_BASE }}
         run: echo "AFFECTED_BASE=${{ github.event.inputs.SELECTED_BASE }}" >> $GITHUB_ENV
 
       # Project build steps lint, test, and build
@@ -61,10 +65,12 @@ jobs:
       - name: Test
         run: npm run affected:test -- --base=${{ env.AFFECTED_BASE }}
       - name: Build
-        run: npm run affected:build -- --base=${{ env.AFFECTED_BASE }}
+        run: npm run affected:build -- --base=${{ env.AFFECTED_BASE }} --configuration production
+      - run: npm prune --production
+      
       # Set affected apps to env for later steps and jobs.
-      - name: Set affected
-        run: echo "AFFECTED_APPS=$(npm run nx affected:apps -- --plain --base=${{ env.AFFECTED_BASE }})" >> $GITHUB_ENV
+      - name: Set AFFECTED_APPS for OC steps
+        run: echo "AFFECTED_APPS=$(npx nx affected:apps --plain --base=${{ env.AFFECTED_BASE }})" >> $GITHUB_ENV
       
       # Run the OC BuildConfigs for create containers.
       - name: OC login
@@ -80,15 +86,20 @@ jobs:
           # certificate_authority_data: ${{ secrets.CA_DATA }}
       - name: Build containers
         run: |
-          for app in ${{ env.AFFECTED_APPS }}
+          for app in $AFFECTED_APPS
           do 
-            oc start-build $app --from-dir dist/$app --follow 
+            oc start-build $app --from-dir dist/apps/$app --follow 
           done 
+      # Set build job outputs for subsequent jobs.
+      - id: set_outputs
+        run: echo ::set-output name=affected_apps::$AFFECTED_APPS
 <% ocEnvProjects.forEach(function(ocEnvProject, i){ -%>
   
   deploy<%= envs[i] %>:
     runs-on: ubuntu-20.04
     needs: build
+    env: 
+      AFFECTED_APPS: ${{ needs.build.outputs.affected_apps }}
     environment:
       name: <%= envs[i] %>
     steps:
@@ -107,7 +118,7 @@ jobs:
           done 
       - name: Deploy <%= envs[i] %>
         run: |
-          for app in ${{ env.AFFECTED_APPS }}
+          for app in $AFFECTED_APPS
           do 
             oc project <%= ocEnvProject %>
             oc rollout latest dc/$app
