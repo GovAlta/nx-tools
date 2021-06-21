@@ -24,7 +24,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     ocInfraProject: options.infra,
     ocEnvProjects: ocEnvProjects,
     applyPipeline: !!options.apply,
-    pipelineType: 'jenkins' // TODO: Introduce Tekton based pipeline for 4.x
+    pipelineType: options.type === 'jenkins' ? 'jenkins' : 'actions',
   }
 }
 
@@ -39,12 +39,27 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     tmpl: ''
   };
   
-  generateFiles(
-    host,
-    path.join(__dirname, 'files'),
-    `${path.dirname(getWorkspacePath(host))}/.openshift`,
-    templateOptions
-  );
+  if (options.pipelineType === 'jenkins') {
+    generateFiles(
+      host,
+      path.join(__dirname, 'jenkins'),
+      `${path.dirname(getWorkspacePath(host))}/.openshift`,
+      templateOptions
+    );
+  } else if (options.pipelineType === 'actions') {
+    generateFiles(
+      host,
+      path.join(__dirname, 'actions/openshift'),
+      `${path.dirname(getWorkspacePath(host))}/.openshift`,
+      templateOptions
+    );
+    generateFiles(
+      host,
+      path.join(__dirname, 'actions/workflows'),
+      `${path.dirname(getWorkspacePath(host))}/.github/workflows`,
+      templateOptions
+    );
+  }
 }
 
 export default async function (host: Tree, options: Schema) {

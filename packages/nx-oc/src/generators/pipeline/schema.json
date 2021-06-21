@@ -24,6 +24,12 @@
       "alias": "i",
       "x-prompt": "What project should be used for build infrastructure?"
     },
+    "type": {
+      "type": "string",
+      "description": "Jenkins or GitHub Actions based pipeline.",
+      "alias": "t",
+      "x-prompt": "Generate a Jenkins (jenkins) based pipeline or a GitHub Actions (actions) pipeline?"
+    },
     "envs": {
       "type": "string",
       "description": "Names of the OpenShift Projects for environments.",
@@ -37,5 +43,5 @@
       "x-prompt": "Apply the pipeline to OpenShift?"
     }
   },
-  "required": ["pipeline", "infra", "envs"]
+  "required": ["pipeline", "infra", "type", "envs"]
 }

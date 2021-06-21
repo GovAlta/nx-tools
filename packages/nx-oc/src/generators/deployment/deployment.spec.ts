@@ -13,6 +13,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
@@ -44,6 +45,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
@@ -75,6 +77,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
@@ -106,6 +109,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
@@ -137,6 +141,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
@@ -168,6 +173,7 @@ describe('Deployment Generator', () => {
       host, 
       { 
         pipeline: 'test', 
+        type: 'jenkins',
         infra: 'test-infra', 
         envs: 'test-dev' 
       }
