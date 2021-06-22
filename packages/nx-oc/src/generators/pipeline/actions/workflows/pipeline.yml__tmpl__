@@ -4,7 +4,6 @@
 # and GitHub.
 #
 # Secrets (to be manually added):
-# REPO_ACCESS_TOKEN - GitHub access token for getting workflow history used for last successful commit
 # OPENSHIFT_SERVER  - URL to the OpenShift server.
 # OPENSHIFT_TOKEN   - Token for the service account (github-actions) used for OC cli commands.
 #
@@ -49,7 +48,7 @@ jobs:
         with:
           branch: ${{ steps.get_branch_name.outputs.short_ref }}
           workflow_id: pipeline.yml
-          github_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set AFFECTED_BASE to last successful build commit
         if: ${{ steps.last_successful_commit.outputs.commit_hash }} 
         run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.commit_hash }}" >> $GITHUB_ENV
