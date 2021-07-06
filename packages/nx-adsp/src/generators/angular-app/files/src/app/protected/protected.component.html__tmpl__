@@ -1,0 +1,4 @@
+<hr />
+<h1>Admin Area</h1>
+<div>Making a Protected API call to tenant endpoint using access token</div>
+<div>Tenant Name: {{tenant.name}}</div>

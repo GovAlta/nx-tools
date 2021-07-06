@@ -1,0 +1,59 @@
+import { Injectable } from '@angular/core';
+import { UserManager, UserManagerSettings, User } from 'oidc-client';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+
+
+  private manager = new UserManager(getClientSettings());
+  private user: User = null;
+
+  constructor() {
+    this.manager.getUser().then(user => {
+      this.user = user;
+    });
+  }
+
+  isLoggedIn(): boolean {
+    return this.user != null && !this.user.expired;
+  }
+
+  getUser(): User {
+    return this.user;
+  }
+
+  startAuthentication(): Promise<void> {
+    return this.manager.signinRedirect();
+  }
+
+  completeAuthentication(): Promise<void> {
+    return this.manager.signinRedirectCallback().then(user => {
+        this.user = user;
+        console.log(JSON.stringify(this.user));
+    });
+  }
+
+  logout() {
+    return this.manager.signoutRedirect();
+  }
+}
+
+export function getClientSettings(): UserManagerSettings  {
+  const data = JSON.parse(localStorage.getItem('envData'))
+  const appUrl = `${window.location.protocol}//${window.location.hostname}${
+    window.location.port ? `:${window.location.port}` : ''
+  }`;
+
+  const settings = {
+    client_id: data.access.client_id,
+    redirect_uri: `${appUrl}/auth-callback`,
+    post_logout_redirect_uri: `${appUrl}/signout/callback`,
+    silent_redirect_uri: `${appUrl}/auth-callback`,
+    response_type: 'code',
+    authority: `${data.access.url}/auth/realms/${data.access.realm}`,
+    automaticSilentRenew: true,
+  };
+  return settings
+}

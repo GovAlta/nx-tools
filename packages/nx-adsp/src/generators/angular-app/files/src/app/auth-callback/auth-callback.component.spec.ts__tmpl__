@@ -1,0 +1,28 @@
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { AuthCallbackComponent } from './auth-callback.component';
+
+describe('AuthCallbackComponent', () => {
+  let component: AuthCallbackComponent;
+  let fixture: ComponentFixture<AuthCallbackComponent>;
+  let envData = {"production":false,"access":{"url":"https://access-dev.os99.gov.ab.ca","realm":"2a9a2c30-a094-4097-9247-8d41b39cb80e","client_id":"urn:ads:platform:tenant-admin-app"},"tenantApi":{"host":"http://localhost:3333","endpoints":{"tenantNameByRealm":"/api/tenant/v1/realm"}}}
+
+  localStorage.setItem('envData', JSON.stringify(envData));
+
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      declarations: [ AuthCallbackComponent ]
+    })
+    .compileComponents();
+  }));
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(AuthCallbackComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});

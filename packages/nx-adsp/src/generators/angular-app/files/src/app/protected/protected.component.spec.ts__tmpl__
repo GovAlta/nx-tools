@@ -1,0 +1,90 @@
+import { ComponentFixture, TestBed, waitForAsync,inject } from '@angular/core/testing';
+import { ProtectedComponent } from './protected.component';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import TenantService from '../tenant.service';
+
+describe('ProtectedComponent', () => {
+  let component: ProtectedComponent;
+  let tenantService:TenantService
+  let fixture: ComponentFixture<ProtectedComponent>;
+  let httpTestingController: HttpTestingController;
+  let envData = {"production":false,"access":{"url":"https://access-dev.os99.gov.ab.ca","realm":"2a9a2c30-a094-4097-9247-8d41b39cb80e","client_id":"urn:ads:platform:tenant-admin-app"},"tenantApi":{"host":"http://localhost:3333","endpoints":{"tenantNameByRealm":"/api/tenant/v1/realm"}}}
+
+  localStorage.setItem('envData', JSON.stringify(envData));
+  const comp = new ProtectedComponent(tenantService);
+
+  beforeEach(
+    waitForAsync(() => {
+      TestBed.configureTestingModule({
+        declarations: [ProtectedComponent],
+        providers: [ProtectedComponent, TenantService],
+        imports: [HttpClientTestingModule],
+
+      }).compileComponents();
+
+      httpTestingController = TestBed.inject(HttpTestingController);
+      // component = TestBed.get(ProtectedComponent);
+
+    })
+  );
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(ProtectedComponent);
+
+    component = fixture.componentInstance;
+
+    component = TestBed.inject(ProtectedComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    httpTestingController.verify();
+  });
+
+  it('should create', async (inject([TenantService, HttpTestingController],
+    () => {
+    let response: any;
+    let errResponse: any;
+    const mockTenant = { status: 200, statusText: 'OK'}
+    const data = { name: 'Child Services' }
+
+    //component.getTenant().subscribe(res => response = res, err => errResponse = err);
+
+    //expect(component.getTenant()).toEqual('Child Services')
+    //comp.ngOnInit()
+    // component.getTenant()
+    const req = httpTestingController.expectOne(
+     'http://localhost:3333/api/tenant/v1/realm/2a9a2c30-a094-4097-9247-8d41b39cb80e'
+    )
+
+    req.flush(data , mockTenant);
+    ////////////////component.ngOnInit();
+    // console.log(req + "<req")
+
+    //expect(req.request.method).toEqual('GET');
+
+    //expect(req.).toEqual('Child Services3');
+    //expect(fixture).toEqual('Child Services3');
+    //fixture.whenStable().then(() => {
+     // waitForAsync(() => {
+
+
+      //fixture.detectChanges();
+     fixture.whenStable().then(
+
+        () => {
+          expect(component.tenant).toEqual('Child Servicesx');
+        }
+     );
+
+    //expect(fixture.componentInstance.tenant).toEqual('Child Services3');
+    expect(component.tenant).toEqual('Child Services2');
+    // expect(component.tenant.name).toEqual('Child Services');
+
+
+
+   // req.flush(data, mockTenant);
+
+    //expect(req).toBe(data);
+  })));
+});
