@@ -7,25 +7,21 @@ import TenantService from '../tenant.service';
   styleUrls: ['./protected.component.css'],
 })
 export class ProtectedComponent implements OnInit {
-  constructor(private _tenantService: TenantService) { }
+  constructor(private _tenantService: TenantService) {}
 
-  public tenant={name: ''};
+  public tenant = { name: '' };
 
   getTenant() {
-    //console.log(JSON.stringify(this._tenantService) + "<this._tenantService")
-    //console.log(JSON.stringify(this._tenantService.getTenant()) + "this._tenantService.getTenant()")
-    console.log(JSON.stringify("getting tenant2"));
     this._tenantService.getTenant().subscribe(
-      data => {
-        console.log(JSON.stringify(data) + "<data")
-        this.tenant = data["tenant"]},
-        err => console.error(err),
-          () => console.log('done loading tenant')
-        );
-    }
+      (data: any) => {
+        this.tenant = data.tenant;
+      },
+      (err) => console.error(err),
+      () => console.log('done loading tenant')
+    );
+  }
 
   ngOnInit() {
-    console.log(JSON.stringify("getting tenant"));
     this.getTenant();
   }
 }

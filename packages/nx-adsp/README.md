@@ -29,7 +29,7 @@ move the code generated into packages/ns-adsp and make changes in the plugin dir
     npm i -D [location-of-nx-tools]/dist/packages/nx-adsp  //to update package.json
     npm i -D @nrwl/angular   //(this assumes you are building an angular plugin)
 
-  ii) generate the plugin
-     `npx nx g @abgov/nx-adsp:[pluginName] my-ang-app --tenant tenantName`
+  ii) generate the plugin - tenantRealm is the realm UUID used to generate a login feature that will log into that particular tenant (eg '2a9a2c30-a094-4097-9247-8d41b39cb80e')
+     `npx nx g @abgov/nx-adsp:[pluginName] my-ang-app --tenant tenantRealm`
   iii) run `npm install`
   iv) serve the plugin using `nx serve [pluginName]

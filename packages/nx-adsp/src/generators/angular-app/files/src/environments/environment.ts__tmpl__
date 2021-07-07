@@ -1,0 +1,17 @@
+// This file can be replaced during build by using the `fileReplacements` array.
+// When building for production, this file is replaced with `environment.prod.ts`.
+
+export const environment = {
+  production: false,
+  access: {
+    url: '<%= accessServiceUrl %>',
+    realm: '<%= tenantRealm %>',
+    client_id: 'urn:ads:platform:tenant-admin-app'
+  },
+  tenantApi: {
+    host: "http://localhost:3333",
+    endpoints: {
+      tenantNameByRealm: "/api/tenant/v1/realm",
+    }
+  }
+};

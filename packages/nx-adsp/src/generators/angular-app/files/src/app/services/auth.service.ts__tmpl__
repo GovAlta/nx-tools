@@ -2,16 +2,14 @@ import { Injectable } from '@angular/core';
 import { UserManager, UserManagerSettings, User } from 'oidc-client';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
-
-
   private manager = new UserManager(getClientSettings());
-  private user: User = null;
+  private user: User | null = null;
 
   constructor() {
-    this.manager.getUser().then(user => {
+    this.manager.getUser().then((user) => {
       this.user = user;
     });
   }
@@ -20,7 +18,7 @@ export class AuthService {
     return this.user != null && !this.user.expired;
   }
 
-  getUser(): User {
+  getUser(): User | null {
     return this.user;
   }
 
@@ -29,9 +27,9 @@ export class AuthService {
   }
 
   completeAuthentication(): Promise<void> {
-    return this.manager.signinRedirectCallback().then(user => {
-        this.user = user;
-        console.log(JSON.stringify(this.user));
+    return this.manager.signinRedirectCallback().then((user) => {
+      this.user = user;
+      console.log(JSON.stringify(this.user));
     });
   }
 
@@ -40,8 +38,8 @@ export class AuthService {
   }
 }
 
-export function getClientSettings(): UserManagerSettings  {
-  const data = JSON.parse(localStorage.getItem('envData'))
+export function getClientSettings(): UserManagerSettings {
+  const data = JSON.parse(localStorage.getItem('envData') || "\"\"");
   const appUrl = `${window.location.protocol}//${window.location.hostname}${
     window.location.port ? `:${window.location.port}` : ''
   }`;
@@ -55,5 +53,5 @@ export function getClientSettings(): UserManagerSettings  {
     authority: `${data.access.url}/auth/realms/${data.access.realm}`,
     automaticSilentRenew: true,
   };
-  return settings
+  return settings;
 }

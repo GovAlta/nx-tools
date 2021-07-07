@@ -23,7 +23,7 @@ function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   const projectOrg = getWorkspaceLayout(host).npmScope;
-  const openshiftDirectory = `.openshift/${projectName}`
+  const openshiftDirectory = `.openshift/${projectName}`;
 
   const adsp = getAdspConfiguration(host, options);
 
@@ -45,9 +45,11 @@ function normalizeOptions(
     nginxProxies
   };
 }
+
 function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
+    ...options.adsp,
     ...names(options.name),
     offsetFromRoot: offsetFromRoot(options.projectRoot),
     tmpl: '',
@@ -113,9 +115,12 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     },
     {
       '@abgov/core-css': '^0.7.56',
+      '@angular/cdk': "^12.1.0",
       '@abgov/angular-components': '1.0.1',
+      '@angular/localize': '^12.1.1',
       'html-webpack-plugin': '~4.5.2',
       'oidc-client': '~1.11.5',
+      'zone.js': '^0.11.4',
     }
   )
 

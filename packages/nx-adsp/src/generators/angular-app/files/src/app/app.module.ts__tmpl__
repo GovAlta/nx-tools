@@ -1,4 +1,4 @@
-import { NgModule, APP_INITIALIZER  } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AngularComponentsModule } from '@abgov/angular-components';
 
@@ -14,21 +14,32 @@ import { AppComponent } from './app.component';
 import { Config } from '../environments/config';
 
 @NgModule({
-  imports: [AngularComponentsModule, BrowserModule, HttpClientModule, FormsModule, AppRoutingModule],
-  providers: [AuthGuardService, AuthService, Config, {
-    provide: APP_INITIALIZER,
-    useFactory: initializeApp1,
-    deps: [Config],
-    multi: true
-    },{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true}],
+  imports: [
+    AngularComponentsModule,
+    BrowserModule,
+    HttpClientModule,
+    FormsModule,
+    AppRoutingModule,
+  ],
+  providers: [
+    AuthGuardService,
+    AuthService,
+    Config,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeApp1,
+      deps: [Config],
+      multi: true,
+    },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  ],
   declarations: [AppComponent, AuthCallbackComponent, ProtectedComponent],
   bootstrap: [AppComponent],
 })
-
 export class AppModule {}
 
 export function initializeApp1(config: Config) {
   return (): Promise<any> => {
     return config.Init();
-  }
+  };
 }

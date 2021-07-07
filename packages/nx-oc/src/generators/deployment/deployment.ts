@@ -15,7 +15,7 @@ import { NormalizedSchema, Schema } from './schema';
 const infraManifestFile = '.openshift/environments.yml';
 
 function normalizeOptions(
-  host: Tree, 
+  host: Tree,
   options: Schema
 ): NormalizedSchema {
 
@@ -24,12 +24,12 @@ function normalizeOptions(
   const result = host.read(infraManifestFile).toString();
   const { items } = yaml.parse(result);
   const ocInfraProject = items[0]?.metadata?.namespace || ''
-  
+
   const SA_PREFIX = 'system:serviceaccounts:'
   const ocEnvProjects = items[0]?.subjects?.filter(
     (s) => s.kind === 'Group' && s.name.startsWith(SA_PREFIX)
   ).map((s) => s.name.replace(SA_PREFIX, ''));
-  
+
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
   let appType = null;
@@ -94,7 +94,7 @@ export default async function (host: Tree, options: Schema) {
     console.log('Cannot generate deployment for unknown project type.');
     return;
   }
-  
+
   config.targets = {
     ...config.targets,
     'apply-envs': {
@@ -106,7 +106,7 @@ export default async function (host: Tree, options: Schema) {
   }
 
   updateProjectConfiguration(host, options.project, config);
-  
+
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 }

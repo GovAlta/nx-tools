@@ -12,12 +12,12 @@ import { environment } from '../environments/environment'
 export class AppComponent implements OnInit, OnDestroy  {
   title = "<%= projectName %>";
 
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   isLoggedIn(): boolean {
     if (this.authService.isLoggedIn()) {
       return true;
-    } else{
+    } else {
       return false;
     }
   }

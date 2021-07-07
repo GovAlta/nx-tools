@@ -1,34 +1,33 @@
 import { Component, OnInit } from '@angular/core';
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
-
 
 @Component({
-  selector: 'app-logout',
+  selector: '<%= projectName %>-app-logout',
   templateUrl: 'home.component.html',
 })
 export class HomeComponent implements OnInit {
-
-  constructor(private http: HttpClient){}
+  constructor(private http: HttpClient) {}
   public uptime = 0;
 
-  private getHealthUrl = `${environment.tenantApi.host}/health`
+  private getHealthUrl = `${this.configData().tenantApi.host}/health`;
 
   getHealth() {
     const uptimePromise = this.http.get(this.getHealthUrl);
 
     uptimePromise.subscribe(
-      data => {
-        console.log(JSON.stringify(data) + "<data2")
-        this.uptime = data["uptime"]},
-        err => console.error(err),
-          () => console.log('done loading foods')
-        );
-    }
+      (data: any) => {
+        this.uptime = data.uptime;
+      },
+      (err) => console.error(err),
+      () => console.log('done loading uptime')
+    );
+  }
+
+  configData () {
+    return JSON.parse(localStorage.getItem('envData') || "\"\"");
+  }
 
   ngOnInit() {
     this.getHealth();
   }
 }
-
