@@ -1,0 +1,67 @@
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .container {
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    width: 640px;
+  }
+}
+@media (min-width: 768px) {
+  .container {
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    width: 768px;
+  }
+}
+@media (min-width: 1024px) {
+  .container {
+    padding: 3rem 1rem;
+    margin: 0 auto;
+    width: 1024px;
+  }
+}
+@media (min-width: 1280px) {
+  .container {
+    padding: 3rem 1rem;
+    margin: 0 auto;
+    width: 1280px;
+  }
+}
+
+.nextSteps {
+  margin-top: 0;
+}
+
+.nextSteps li {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 50px;
+}
+
+.nextSteps li button {
+  margin: 20px 0 0 10px;
+}
+
+.footer {
+  background-color: #f1f1f1;
+  padding-top: 56px;
+  padding-bottom: 56px;
+  padding-left: 150px;
+  padding-right: 150px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  border-bottom: 16px solid #0081a2;
+}
+
+@media (max-width: 767px) {
+  /* On small screens, the nav menu spans the full width of the screen. Leave a space for it. */
+  .body-content {
+    padding-top: 50px;
+  }
+}
