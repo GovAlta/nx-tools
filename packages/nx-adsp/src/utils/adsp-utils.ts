@@ -1,5 +1,5 @@
 import {
-  readJson, 
+  readJson,
   Tree
 } from '@nrwl/devkit';
 import { AdspConfiguration } from './adsp';
@@ -9,17 +9,17 @@ interface Package {
   devDependencies: Record<string, string>
 }
 export function hasDependency(host: Tree, dependency: string): boolean {
-  const { 
+  const {
     dependencies,
     devDependencies
   }: Package = readJson(host, 'package.json');
 
-  return !!dependencies[dependency] || 
+  return !!dependencies[dependency] ||
     !!devDependencies[dependency];
 }
 
 export function getAdspConfiguration(
-  host: Tree, 
+  host: Tree,
   { tenant }: { tenant: string }
 ): AdspConfiguration {
   return {

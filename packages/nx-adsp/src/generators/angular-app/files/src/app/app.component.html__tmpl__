@@ -27,6 +27,23 @@
         <li>Add requests to private API resources:</li>
       </ul>
     </section>
+    <div class="container-fluid">
+      <div class="row">
+        <h3><a routerLink="/">Home</a> | <a routerLink="/protected">Admin Area</a></h3>
+        <div *ngIf="isLoggedIn(); else elseBlock">
+          <button goa-button (click)="logout()">
+            Sign Out
+          </button>
+        </div>
+        <ng-template #elseBlock>
+          <button goa-button (click)="login()">
+            Sign In
+          </button></ng-template>
+        <div class="col-sm-12 body-content">
+          <router-outlet></router-outlet>
+        </div>
+      </div>
+    </div>
   </main>
   <footer class="footer">
     <div class="goa-socialconnect">

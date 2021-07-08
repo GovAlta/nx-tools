@@ -1,0 +1,9 @@
+import { Component } from '@angular/core';
+
+@Component({
+  selector: '<%= projectOrg %>-app-logout',
+  templateUrl: 'logout.component.html',
+})
+export class LogoutComponent {
+  isAuthenticated = false;
+}
