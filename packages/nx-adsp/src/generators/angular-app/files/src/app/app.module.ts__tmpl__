@@ -27,7 +27,7 @@ import { Config } from '../environments/config';
     Config,
     {
       provide: APP_INITIALIZER,
-      useFactory: initializeApp1,
+      useFactory: initializeApp,
       deps: [Config],
       multi: true,
     },
@@ -38,7 +38,7 @@ import { Config } from '../environments/config';
 })
 export class AppModule {}
 
-export function initializeApp1(config: Config) {
+export function initializeApp(config: Config) {
   return (): Promise<any> => {
     return config.Init();
   };

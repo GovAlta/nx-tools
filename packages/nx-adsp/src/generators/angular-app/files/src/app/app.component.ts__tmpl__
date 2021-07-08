@@ -15,11 +15,7 @@ export class AppComponent implements OnInit, OnDestroy  {
   constructor(private authService: AuthService) {}
 
   isLoggedIn(): boolean {
-    if (this.authService.isLoggedIn()) {
-      return true;
-    } else {
-      return false;
-    }
+    return this.authService.isLoggedIn()
   }
 
   logout() {
