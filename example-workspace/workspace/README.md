@@ -7,6 +7,9 @@ This project was generated using [Nx](https://nx.dev).
 Run `npm run setup` to build the latest distribution from nx-tools and to run npm install.
 Run `npx nx g @abgov/nx-adsp:angular-app my-test-ang-app --tenant 2a9a2c30-a094-4097-9247-8d41b39cb80e` to generate an application.
 
+my-test-ang-app is the app name of the angular app you wish to generate.
+The --tenant flag is used to specify the keycloak realm of the tenant that you wish to be able to log into. A tenant represents a distinct separation of services with the Alberta Digital Service Platform.
+
 There is a sample app in the ./apps/my-ang-app folder
 
 ## Running the sample app
