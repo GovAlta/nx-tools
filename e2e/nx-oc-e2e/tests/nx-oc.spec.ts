@@ -10,10 +10,21 @@ describe('nx-oc e2e', () => {
   );
 
   describe('pipeline', () => {
-    it('should create pipeline', async (done) => {
+    it('should create jenkins pipeline', async (done) => {
       const plugin = uniq('pipeline');
       const result = await runNxCommandAsync(
-        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --e ${plugin}-dev`
+        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t jenkins --e ${plugin}-dev`
+      );
+  
+      expect(result.stderr).toBeFalsy();
+  
+      done();
+    });
+    
+    it('should create github actions pipeline', async (done) => {
+      const plugin = uniq('pipeline');
+      const result = await runNxCommandAsync(
+        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t actions --e ${plugin}-dev`
       );
   
       expect(result.stderr).toBeFalsy();

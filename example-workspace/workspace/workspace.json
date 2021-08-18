@@ -1,0 +1,136 @@
+{
+  "version": 2,
+  "projects": {
+    "test-ang-app": {
+      "projectType": "application",
+      "root": "apps/test-ang-app",
+      "sourceRoot": "apps/test-ang-app/src",
+      "prefix": "workspace",
+      "targets": {
+        "build": {
+          "executor": "@angular-devkit/build-angular:browser",
+          "outputs": ["{options.outputPath}"],
+          "options": {
+            "outputPath": "dist/apps/test-ang-app",
+            "index": "apps/test-ang-app/src/index.html",
+            "main": "apps/test-ang-app/src/main.ts",
+            "polyfills": "apps/test-ang-app/src/polyfills.ts",
+            "tsConfig": "apps/test-ang-app/tsconfig.app.json",
+            "assets": [
+              "apps/test-ang-app/src/favicon.ico",
+              "apps/test-ang-app/src/assets",
+              {
+                "glob": "nginx.conf",
+                "input": "apps/test-ang-app",
+                "output": "./"
+              }
+            ],
+            "styles": ["apps/test-ang-app/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "apps/test-ang-app/src/environments/environment.ts",
+                  "with": "apps/test-ang-app/src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "executor": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": { "browserTarget": "test-ang-app:build:production" },
+            "development": { "browserTarget": "test-ang-app:build:development" }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "executor": "@angular-devkit/build-angular:extract-i18n",
+          "options": { "browserTarget": "test-ang-app:build" }
+        },
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "apps/test-ang-app/src/**/*.ts",
+              "apps/test-ang-app/src/**/*.html"
+            ]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": ["coverage/apps/test-ang-app"],
+          "options": {
+            "jestConfig": "apps/test-ang-app/jest.config.js",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "test-ang-app-e2e": {
+      "root": "apps/test-ang-app-e2e",
+      "sourceRoot": "apps/test-ang-app-e2e/src",
+      "projectType": "application",
+      "targets": {
+        "e2e": {
+          "executor": "@nrwl/cypress:cypress",
+          "options": {
+            "cypressConfig": "apps/test-ang-app-e2e/cypress.json",
+            "tsConfig": "apps/test-ang-app-e2e/tsconfig.e2e.json",
+            "devServerTarget": "test-ang-app:serve:development"
+          },
+          "configurations": {
+            "production": { "devServerTarget": "test-ang-app:serve:production" }
+          }
+        },
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["apps/test-ang-app-e2e/**/*.{js,ts}"]
+          }
+        }
+      }
+    }
+  },
+  "cli": { "defaultCollection": "@nrwl/angular" },
+  "generators": {
+    "@nrwl/angular:application": {
+      "style": "css",
+      "linter": "eslint",
+      "unitTestRunner": "jest",
+      "e2eTestRunner": "cypress"
+    },
+    "@nrwl/angular:library": {
+      "style": "css",
+      "linter": "eslint",
+      "unitTestRunner": "jest"
+    },
+    "@nrwl/angular:component": { "style": "css" }
+  },
+  "defaultProject": "test-ang-app"
+}

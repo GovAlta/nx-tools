@@ -1,0 +1,13 @@
+.info {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.token {
+	font-family: monospace;
+	background-color: beige;
+	width: 600px;
+	text-align: left;
+	word-break: break-all;
+}

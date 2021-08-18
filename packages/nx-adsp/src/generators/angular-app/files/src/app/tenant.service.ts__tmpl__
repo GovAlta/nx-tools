@@ -1,0 +1,19 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+@Injectable({ providedIn: 'root' })
+export default class TenantService {
+
+  private getTenantNameUrl = `${this.configData().tenantApi.host}${this.configData().tenantApi.endpoints.tenantNameByRealm}/${this.configData().access.realm}`;
+
+  constructor(private http: HttpClient) {}
+
+  /** GET tenants from the server */
+  getTenant() {
+    return this.http.get(this.getTenantNameUrl);
+  }
+
+  configData () {
+    return JSON.parse(localStorage.getItem('envData') || "\"\"");
+  }
+}

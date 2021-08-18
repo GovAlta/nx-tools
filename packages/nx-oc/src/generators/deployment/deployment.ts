@@ -15,7 +15,7 @@ import { NormalizedSchema, Schema } from './schema';
 const infraManifestFile = '.openshift/environments.yml';
 
 function normalizeOptions(
-  host: Tree, 
+  host: Tree,
   options: Schema
 ): NormalizedSchema {
 
@@ -24,21 +24,27 @@ function normalizeOptions(
   const result = host.read(infraManifestFile).toString();
   const { items } = yaml.parse(result);
   const ocInfraProject = items[0]?.metadata?.namespace || ''
-  
+
   const SA_PREFIX = 'system:serviceaccounts:'
   const ocEnvProjects = items[0]?.subjects?.filter(
     (s) => s.kind === 'Group' && s.name.startsWith(SA_PREFIX)
   ).map((s) => s.name.replace(SA_PREFIX, ''));
-  
+
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
-  const appType = config.targets.build.executor === '@nrwl/web:build' ?
-    'frontend' : 
-    (
-      config.targets.build.executor === '@nrwl/node:build' ? 
-        'express' : 
-        'dotnet'
-    );
+  let appType = null;
+  switch (config.targets.build.executor) {
+    case '@nrwl/web:build':
+    case '@angular-devkit/build-angular:browser':
+      appType = 'frontend';
+      break;
+    case '@nrwl/node:build':
+      appType = 'express';
+      break;
+    case '@abgov/nx-dotnet:build':
+      appType = 'dotnet';
+      break;
+  }
 
   const tenantRealm = names(options.tenant).fileName;
   const accessServiceUrl = 'https://access.alpha.alberta.ca';
@@ -84,6 +90,10 @@ export default async function (host: Tree, options: Schema) {
   }
 
   const normalizedOptions = normalizeOptions(host, options);
+  if (!normalizedOptions.appType) {
+    console.log('Cannot generate deployment for unknown project type.');
+    return;
+  }
 
   config.targets = {
     ...config.targets,
@@ -96,7 +106,7 @@ export default async function (host: Tree, options: Schema) {
   }
 
   updateProjectConfiguration(host, options.project, config);
-  
+
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 }

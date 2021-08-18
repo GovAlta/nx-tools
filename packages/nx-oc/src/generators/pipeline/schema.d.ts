@@ -1,5 +1,6 @@
 export interface Schema {
   pipeline: string;
+  type: string;
   infra: string;
   envs: string;
   apply?: boolean;
@@ -10,5 +11,5 @@ export interface NormalizedSchema extends Schema {
   ocInfraProject: string;
   ocEnvProjects: string[];
   applyPipeline: boolean;
-  pipelineType: 'jenkins' | 'tekton';
+  pipelineType: 'jenkins' | 'actions';
 }

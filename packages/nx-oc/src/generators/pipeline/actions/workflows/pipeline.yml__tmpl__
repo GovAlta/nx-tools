@@ -1,0 +1,125 @@
+# GitHub Actions pipeline.
+# This pipeline runs application build process in GitHub Actions but runs OpenShift BuildConfig for
+# creating runtime containers. It does not require a container registry accessible to both OpenShift
+# and GitHub.
+#
+# Secrets (to be manually added):
+# OPENSHIFT_SERVER  - URL to the OpenShift server.
+# OPENSHIFT_TOKEN   - Token for the service account (github-actions) used for OC cli commands.
+#
+# Envs (auto added but requires manual configuration):
+# Dev, Test, Staging, Prod
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      SELECTED_BASE:
+        description: Value for --base= in nx affected commands
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    env:
+      AFFECTED_BASE: "origin/main"
+    outputs:
+      affected_apps: ${{ steps.set_outputs.outputs.affected_apps }}
+    steps:
+      # Checkout the source code.
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "12"
+      - run: npm ci
+      
+      # Determine the last successful build of this (pipeline.yml) workflow and set it as the AFFECTED_BASE.
+      - id: get_branch_name
+        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+      - name: Get last successful commit
+        uses: nrwl/last-successful-commit-action@v1
+        id: last_successful_commit
+        with:
+          branch: ${{ steps.get_branch_name.outputs.short_ref }}
+          workflow_id: pipeline.yml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set AFFECTED_BASE to last successful build commit
+        if: ${{ steps.last_successful_commit.outputs.commit_hash }} 
+        run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.commit_hash }}" >> $GITHUB_ENV
+      
+      # Input for base takes precedence over last successful build.
+      - name: Set AFFECTED_BASE to input for SELECTED_BASE
+        if: ${{ github.event.inputs.SELECTED_BASE }}
+        run: echo "AFFECTED_BASE=${{ github.event.inputs.SELECTED_BASE }}" >> $GITHUB_ENV
+
+      # Project build steps lint, test, and build
+      - name: Lint
+        run: npm run affected:lint -- --base=${{ env.AFFECTED_BASE }}
+      - name: Test
+        run: npm run affected:test -- --base=${{ env.AFFECTED_BASE }}
+      - name: Build
+        run: npm run affected:build -- --base=${{ env.AFFECTED_BASE }} --configuration production
+      # Set affected apps to env for later steps and jobs.
+      - name: Set AFFECTED_APPS for OC steps
+        run: echo "AFFECTED_APPS=$(npx nx affected:apps --plain --base=${{ env.AFFECTED_BASE }})" >> $GITHUB_ENV
+      - run: npm prune --production
+      
+      # Run the OC BuildConfigs for create containers.
+      - name: OC login
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: <%= ocInfraProject %>
+
+          # Disables SSL cert checking. Use this if you don't have the certificate authority data.
+          insecure_skip_tls_verify: true
+          # This method is more secure, if the certificate from Step 4 is available.
+          # certificate_authority_data: ${{ secrets.CA_DATA }}
+      - name: Build containers
+        run: |
+          for app in $AFFECTED_APPS
+          do 
+            oc start-build $app --from-dir . --follow 
+          done 
+      # Set build job outputs for subsequent jobs.
+      - id: set_outputs
+        run: echo ::set-output name=affected_apps::$AFFECTED_APPS
+<% ocEnvProjects.forEach(function(ocEnvProject, i){ -%>
+  
+  deploy<%= envs[i] %>:
+    runs-on: ubuntu-20.04
+    needs: build
+    env: 
+      AFFECTED_APPS: ${{ needs.build.outputs.affected_apps }}
+    environment:
+      name: <%= envs[i] %>
+    steps:
+      - name: Oc login
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: <%= ocInfraProject %>
+          insecure_skip_tls_verify: true
+      - name: Tag <%= envs[i] %>
+        run: |
+          for app in $AFFECTED_APPS
+          do 
+            oc tag $app:latest $app:<%= envs[i].toLowerCase() %>
+          done 
+      - name: Deploy <%= envs[i] %>
+        run: |
+          for app in $AFFECTED_APPS
+          do 
+            oc project <%= ocEnvProject %>
+            oc rollout latest dc/$app
+            oc rollout status dc/$app
+          done 
+<% }); -%>

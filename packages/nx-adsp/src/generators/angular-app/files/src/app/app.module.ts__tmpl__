@@ -1,0 +1,45 @@
+import { NgModule, APP_INITIALIZER } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AngularComponentsModule } from '@abgov/angular-components';
+
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { AuthInterceptor } from './auth.interceptor';
+import { FormsModule } from '@angular/forms';
+import { AppRoutingModule } from './app.routes';
+import { ProtectedComponent } from './protected/protected.component';
+import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
+import { AuthGuardService } from './services/auth-guard.service';
+import { AuthService } from './services/auth.service';
+import { AppComponent } from './app.component';
+import { Config } from '../environments/config';
+
+@NgModule({
+  imports: [
+    AngularComponentsModule,
+    BrowserModule,
+    HttpClientModule,
+    FormsModule,
+    AppRoutingModule,
+  ],
+  providers: [
+    AuthGuardService,
+    AuthService,
+    Config,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeApp,
+      deps: [Config],
+      multi: true,
+    },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  ],
+  declarations: [AppComponent, AuthCallbackComponent, ProtectedComponent],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+
+export function initializeApp(config: Config) {
+  return (): Promise<any> => {
+    return config.Init();
+  };
+}

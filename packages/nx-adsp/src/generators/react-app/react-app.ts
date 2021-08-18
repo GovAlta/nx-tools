@@ -22,14 +22,14 @@ function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   const openshiftDirectory = `.openshift/${projectName}`
-  
+
   const adsp = getAdspConfiguration(host, options);
 
   const nginxProxies = Array.isArray(options.proxy) ?
     [...options.proxy] :
     (
-      options.proxy ? 
-        [options.proxy] : 
+      options.proxy ?
+        [options.proxy] :
         []
     );
 
@@ -63,7 +63,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     const devProxyConf = options.nginxProxies.reduce(
       (proxyConf, nginxProxy) => {
         const upstreamUrl = new URL(nginxProxy.proxyPass);
-        
+
         const proxy = {
           target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
           secure: upstreamUrl.protocol === 'https:',
@@ -82,12 +82,12 @@ function addFiles(host: Tree, options: NormalizedSchema) {
           ...proxyConf,
           [nginxProxy.location]: proxy
         }
-      }, 
+      },
       {}
     );
 
     writeJson(
-      host, 
+      host,
       `${options.projectRoot}/proxy.conf.json`,
       devProxyConf
     );
@@ -101,17 +101,17 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  
+
   const normalizedOptions = normalizeOptions(host, options);
-  
+
   const initReact = wrapAngularDevkitSchematic('@nrwl/react', 'application');
   const initRedux = wrapAngularDevkitSchematic('@nrwl/react', 'redux');
-  
+
   await initReact(host, options);
   await initRedux(host, {...options, name: 'intake', project: options.name});
-  
+
   addDependenciesToPackageJson(
-    host, 
+    host,
     {
     },
     {
@@ -126,14 +126,14 @@ export default async function (host: Tree, options: Schema) {
       'redux-mock-store': '~1.5.4'
     }
   )
-  
+
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
 
   const layout = getWorkspaceLayout(host);
 
   const config = readProjectConfiguration(host, options.name);
-  
+
   config.targets.build.options = {
     ...config.targets.build.options,
     assets: [
@@ -162,9 +162,9 @@ export default async function (host: Tree, options: Schema) {
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
     await deploymentGenerator(
-      host, 
+      host,
       {
-        ...options, 
+        ...options,
         project: normalizedOptions.projectName
       }
     );
