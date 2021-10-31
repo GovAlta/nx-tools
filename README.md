@@ -1,6 +1,16 @@
 # About the project
 This is a monorepo of the Government of Alberta's custom plugins for [Nx](https://nx.dev)
 
+Clone the project:
+git clone https://github.com/abgov/nx-tools.git
+
+cd nx-tools
+cd example-workspace
+cd apps
+npm start
+
+
+
 ## Plugins
 
 [Nx OpenShift Plugin](./packages/nx-oc/README.md) - includes generators for setting up OpenShift pipeline and application yaml files, and executors for `oc cli` commands.
