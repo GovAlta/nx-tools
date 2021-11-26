@@ -61,5 +61,5 @@ describe('nx-adsp e2e', () => {
     expect(result.stdout).toContain('Executor ran');
 
     done();
-  });
+  }, 60000);
 });
