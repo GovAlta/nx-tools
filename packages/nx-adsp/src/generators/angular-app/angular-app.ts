@@ -114,10 +114,10 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     {
     },
     {
-      '@abgov/core-css': '^0.7.56',
-      '@angular/cdk': "^12.1.0",
       '@abgov/angular-components': '1.0.1',
-      '@angular/localize': '^12.1.1',
+      '@abgov/core-css': '^0.7.56',
+      '@angular/cdk': "^11.2.0",
+      '@angular/localize': '^11.2.0',
       'html-webpack-plugin': '~4.5.2',
       'oidc-client': '~1.11.5',
       'zone.js': '^0.11.4',
