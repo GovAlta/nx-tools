@@ -55,7 +55,8 @@
             "command": "npx semantic-release -e ./packages/nx-adsp/.releaserc.json"
           }
         }
-      }
+      },
+      "tags": []
     },
     "nx-adsp-e2e": {
       "projectType": "application",
@@ -71,7 +72,9 @@
             "jestConfig": "e2e/nx-adsp-e2e/jest.config.js"
           }
         }
-      }
+      },
+      "tags": [],
+      "implicitDependencies": ["nx-adsp"]
     },
     "nx-dotnet": {
       "root": "packages/nx-dotnet",
@@ -127,7 +130,8 @@
             "command": "npx semantic-release -e ./packages/nx-dotnet/.releaserc.json"
           }
         }
-      }
+      },
+      "tags": []
     },
     "nx-dotnet-e2e": {
       "projectType": "application",
@@ -143,7 +147,9 @@
             "jestConfig": "e2e/nx-dotnet-e2e/jest.config.js"
           }
         }
-      }
+      },
+      "tags": [],
+      "implicitDependencies": ["nx-dotnet"]
     },
     "nx-oc": {
       "root": "packages/nx-oc",
@@ -199,7 +205,8 @@
             "command": "npx semantic-release -e ./packages/nx-oc/.releaserc.json"
           }
         }
-      }
+      },
+      "tags": []
     },
     "nx-oc-e2e": {
       "projectType": "application",
@@ -215,7 +222,9 @@
             "jestConfig": "e2e/nx-oc-e2e/jest.config.js"
           }
         }
-      }
+      },
+      "tags": [],
+      "implicitDependencies": ["nx-oc"]
     },
     "nx-release": {
       "root": "packages/nx-release",
@@ -276,7 +285,8 @@
             "command": "npx semantic-release -e ./packages/nx-release/.releaserc.json"
           }
         }
-      }
+      },
+      "tags": []
     },
     "nx-release-e2e": {
       "projectType": "application",
@@ -292,10 +302,9 @@
             "jestConfig": "e2e/nx-release-e2e/jest.config.js"
           }
         }
-      }
+      },
+      "tags": [],
+      "implicitDependencies": ["nx-release"]
     }
-  },
-  "cli": {
-    "defaultCollection": "@nrwl/workspace"
   }
 }
