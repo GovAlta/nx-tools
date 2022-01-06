@@ -10,7 +10,7 @@ import {
   updateProjectConfiguration,
   writeJson,
 } from '@nrwl/devkit';
-import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
+import { Linter } from '@nrwl/linter';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { NormalizedSchema, Schema } from './schema';
@@ -104,10 +104,19 @@ export default async function (host: Tree, options: Schema) {
 
   const normalizedOptions = normalizeOptions(host, options);
 
-  const initReact = wrapAngularDevkitSchematic('@nrwl/react', 'application');
-  const initRedux = wrapAngularDevkitSchematic('@nrwl/react', 'redux');
+  const { applicationGenerator: initReact } = await import('@nrwl/react');
+  const { reduxGenerator: initRedux } = await import('@nrwl/react');
 
-  await initReact(host, options);
+  await initReact(host, {
+    ...options, 
+    style: 'styled-components', 
+    skipFormat: true, 
+    unitTestRunner: 'jest', 
+    babelJest: false, 
+    e2eTestRunner: 'cypress', 
+    linter:  Linter.EsLint,
+  });
+  
   await initRedux(host, {...options, name: 'intake', project: options.name});
 
   addDependenciesToPackageJson(

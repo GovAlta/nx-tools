@@ -13,7 +13,7 @@ describe('Serve Executor', () => {
     mockRunDotnetCommand.mockReset();
   });
 
-  it('can run', async (done) => {
+  it('can run', async () => {
     mockRunDotnetCommand.mockReturnValue(Promise.resolve({ success: true }));
     
     const { success } = await executor(
@@ -24,7 +24,5 @@ describe('Serve Executor', () => {
     expect(success).toBe(true);
     expect(mockRunDotnetCommand.mock.calls.length).toBe(1);
     expect(mockRunDotnetCommand.mock.calls[0][0]).toBe('run');
-
-    done();
   });
 });

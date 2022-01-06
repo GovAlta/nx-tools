@@ -17,7 +17,7 @@ describe('React App Generator', () => {
     tenant: 'test',
   }
 
-  it ('can run', async (done) => {
+  it ('can run', async () => {
     jest.setTimeout(28000)
     const host = createTreeWithEmptyWorkspace();
     await generator(host, options);
@@ -26,11 +26,9 @@ describe('React App Generator', () => {
     expect(config.root).toBe('apps/test');
 
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
-
-    done();
   });
 
-  it ('can add nginx proxy', async (done) => {
+  it ('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await generator(
       host,
@@ -50,11 +48,9 @@ describe('React App Generator', () => {
     expect(
       host.read('apps/test/nginx.conf').toString()
     ).toContain('http://test-service:3333/');
-
-    done();
   });
 
-  it ('can add multiple nginx proxy', async (done) => {
+  it ('can add multiple nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await generator(
       host,
@@ -80,11 +76,9 @@ describe('React App Generator', () => {
     const nginxConf = host.read('apps/test/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
     expect(nginxConf).toContain('http://test-service2:3333/');
-
-    done();
   });
 
-  it ('can add webpack dev server proxy', async (done) => {
+  it ('can add webpack dev server proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await generator(
       host,
@@ -107,7 +101,5 @@ describe('React App Generator', () => {
     );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
-
-    done();
   });
 });

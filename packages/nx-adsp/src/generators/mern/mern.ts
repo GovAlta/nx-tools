@@ -83,7 +83,8 @@ export default async function (host: Tree, options: Schema) {
     }
   );
   
-  addFiles(host, normalizedOptions);
+  // Currently no files specific to MERN generator.
+  // addFiles(host, normalizedOptions);
   await formatFiles(host);
 
   return () => {
