@@ -10,8 +10,8 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@abgov/nx-dotnet": "^1.0.0",
-    "@abgov/nx-oc": "^1.4.0-beta.0",
+    "@abgov/nx-dotnet": "^2.0.0",
+    "@abgov/nx-oc": "^2.0.0",
     "@nrwl/express": "^12.10.1",
     "@nrwl/react": "^12.10.1",
     "@nrwl/angular": "^12.10.1"
