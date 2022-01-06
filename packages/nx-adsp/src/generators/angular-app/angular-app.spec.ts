@@ -9,7 +9,7 @@ describe('angular app generator', () => {
   const options: AngularAppGeneratorSchema = { name: 'test', tenant: 'testtenant' };
 
   beforeEach(() => {
-    appTree = createTreeWithEmptyWorkspace();
+    appTree = createTreeWithEmptyWorkspace(2);
     jest.setTimeout(28000)
   });
   afterAll(() => {
@@ -25,7 +25,7 @@ describe('angular app generator', () => {
   }, 10000);
 
   it ('can add nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace(2);
     await angularApp(
       host,
       {
@@ -47,7 +47,7 @@ describe('angular app generator', () => {
   });
 
   it ('can add multiple nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace(2);
     await angularApp(
       host,
       {
@@ -75,7 +75,7 @@ describe('angular app generator', () => {
   });
 
   it ('can add webpack dev server proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace(2);
     await angularApp(
       host,
       {
