@@ -10,7 +10,7 @@ describe('Dotnet Service Generator', () => {
     tenant: 'test'
   }
   
-  it ('can run', async (done) => {
+  it ('can run', async () => {
     const host = createTreeWithEmptyWorkspace();
     await generator(host, options);
 
@@ -18,7 +18,5 @@ describe('Dotnet Service Generator', () => {
     expect(config.root).toBe('apps/test');
 
     expect(host.exists('apps/test/test.csproj')).toBeTruthy();
-    
-    done();
   });
 });

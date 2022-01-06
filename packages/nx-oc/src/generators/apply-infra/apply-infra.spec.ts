@@ -13,7 +13,7 @@ describe('Apply Infra Generator', () => {
     mockedRunOcCommand.mockReset();
   });
 
-  it ('can run', async (done) => {
+  it ('can run', async () => {
     const host = createTree();
     writeJson(host, '.openshift/environment.infra.yml', {});
     writeJson(host, '.openshift/environment.env.yml', {});
@@ -26,7 +26,5 @@ describe('Apply Infra Generator', () => {
     expect(mockedRunOcCommand.mock.calls[0][0]).toBe('project');
     expect(mockedRunOcCommand.mock.calls[1][0]).toBe('apply');
     expect(mockedRunOcCommand.mock.calls[2][0]).toBe('apply');
-
-    done();
   });
 });

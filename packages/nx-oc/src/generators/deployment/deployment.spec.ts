@@ -7,7 +7,7 @@ describe('Deployment Generator', () => {
 
   const options: Schema = { project: 'test', tenant: 'test' }
 
-  it ('can run', async (done) => {
+  it ('can run', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -35,11 +35,9 @@ describe('Deployment Generator', () => {
     expect(config.targets['apply-envs']).toBeTruthy();
     expect(config.targets['apply-envs'].executor).toBe('@abgov/nx-oc:apply');
     expect(config.targets['apply-envs'].options.ocProject).toContain('test-dev');
-   
-    done();
   });
 
-  it ('can generate deployment for react', async (done) => {
+  it ('can generate deployment for react', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -67,11 +65,9 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('nginx');
-   
-    done();
   });
 
-  it ('can generate deployment for angular', async (done) => {
+  it ('can generate deployment for angular', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -99,11 +95,9 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('nginx');
-   
-    done();
   });
 
-  it ('can generate deployment for express', async (done) => {
+  it ('can generate deployment for express', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -131,11 +125,9 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('node');
-   
-    done();
   });
 
-  it ('can generate deployment for dotnet', async (done) => {
+  it ('can generate deployment for dotnet', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -163,11 +155,9 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('dotnet');
-   
-    done();
   });
 
-  it ('can skip unknown project type', async (done) => {
+  it ('can skip unknown project type', async () => {
     const host = createTreeWithEmptyWorkspace();
     await pipeline(
       host, 
@@ -195,7 +185,5 @@ describe('Deployment Generator', () => {
     
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['apply-envs']).toBeFalsy();
-    
-    done();
   });
 });
