@@ -109,7 +109,7 @@ export default async function (host: Tree, options: Schema) {
 
   // Setting strict to false because of: https://github.com/nrwl/nx/issues/8180
   await initReact(host, {
-    ...options, 
+    name: options.name, 
     style: 'styled-components', 
     skipFormat: true, 
     unitTestRunner: 'jest', 
@@ -119,7 +119,7 @@ export default async function (host: Tree, options: Schema) {
     strict: false,
   });
   
-  await initRedux(host, {...options, name: 'intake', project: options.name});
+  await initRedux(host, {name: 'intake', project: options.name});
 
   addDependenciesToPackageJson(
     host,

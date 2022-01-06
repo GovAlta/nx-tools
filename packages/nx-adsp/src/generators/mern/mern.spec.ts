@@ -11,7 +11,7 @@ describe('React App Generator', () => {
   }
   
   it ('can run', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace(2);
     await generator(host, options);
 
     const appConfig = readProjectConfiguration(host, 'test-app');

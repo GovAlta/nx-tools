@@ -107,7 +107,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = normalizeOptions(host, options);
   const initAngular = wrapAngularDevkitSchematic('@nrwl/angular', 'application');
 
-  await initAngular(host, options);
+  await initAngular(host, { name: options.name });
 
   addDependenciesToPackageJson(
     host,

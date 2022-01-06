@@ -19,38 +19,9 @@
     "default": {
       "runner": "@nrwl/workspace/tasks-runners/default",
       "options": {
-        "cacheableOperations": ["build", "lint", "test", "e2e"]
+        "cacheableOperations": ["build", "lint", "test", "e2e"],
+        "parallel": 1
       }
-    }
-  },
-  "projects": {
-    "nx-adsp": {
-      "tags": []
-    },
-    "nx-adsp-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-adsp"]
-    },
-    "nx-dotnet": {
-      "tags": []
-    },
-    "nx-dotnet-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-dotnet"]
-    },
-    "nx-oc": {
-      "tags": []
-    },
-    "nx-oc-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-oc"]
-    },
-    "nx-release": {
-      "tags": []
-    },
-    "nx-release-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-release"]
     }
   },
   "workspaceLayout": {
@@ -64,5 +35,8 @@
         "projects": "dependencies"
       }
     ]
+  },
+  "cli": {
+    "defaultCollection": "@nrwl/workspace"
   }
 }
