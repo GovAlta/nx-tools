@@ -107,6 +107,7 @@ export default async function (host: Tree, options: Schema) {
   const { applicationGenerator: initReact } = await import('@nrwl/react');
   const { reduxGenerator: initRedux } = await import('@nrwl/react');
 
+  // Setting strict to false because of: https://github.com/nrwl/nx/issues/8180
   await initReact(host, {
     ...options, 
     style: 'styled-components', 
@@ -114,7 +115,8 @@ export default async function (host: Tree, options: Schema) {
     unitTestRunner: 'jest', 
     babelJest: false, 
     e2eTestRunner: 'cypress', 
-    linter:  Linter.EsLint,
+    linter:  Linter.EsLint, 
+    strict: false,
   });
   
   await initRedux(host, {...options, name: 'intake', project: options.name});
@@ -140,7 +142,6 @@ export default async function (host: Tree, options: Schema) {
   removeFiles(host, normalizedOptions);
 
   const layout = getWorkspaceLayout(host);
-
   const config = readProjectConfiguration(host, options.name);
 
   config.targets.build.options = {
