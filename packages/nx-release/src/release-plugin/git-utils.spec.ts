@@ -14,7 +14,7 @@ describe('git-utils', () => {
 
   describe('getPathCommitHashes', () => {
   
-    it('can get commits', async (done) => {
+    it('can get commits', async () => {
   
       const stream = new ReadableStreamBuffer();
       stream.put('test1\ntest2\n');
@@ -32,8 +32,6 @@ describe('git-utils', () => {
       expect(commits[0]).toBe('test1');
       expect(commits[1]).toBe('test2');
       expect(mockedSpawn.mock.calls.length).toBe(1);
-  
-      done();
     });
   });
 });

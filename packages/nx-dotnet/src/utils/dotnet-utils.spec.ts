@@ -19,7 +19,7 @@ describe('Test Executor', () => {
     mockedExeca.mockReset();
   });
   
-  it('can run', async (done) => {
+  it('can run', async () => {
     mockedExeca.mockReturnValue(
       { 
         stdout: {pipe: jest.fn()}
@@ -31,7 +31,5 @@ describe('Test Executor', () => {
     const {success} = await runDotnetCommand('build');
 
     expect(success).toBeTruthy();
-
-    done();
   });
 });

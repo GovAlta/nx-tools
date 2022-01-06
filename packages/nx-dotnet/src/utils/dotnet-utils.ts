@@ -16,7 +16,6 @@ export async function runDotnetCommand(
     result.stdout.pipe(process.stdout);
 
     await once(result, 'close');
-    console.log('what');
     return { success: true }
   } catch (e) {
     console.log(`Failed to execute command: ${command}`, e);

@@ -22,7 +22,7 @@ describe('wrapPlugin', () => {
     expect(typeof wrapped).toBe('function');
   });
 
-  it('can filter commits', async (done) => {
+  it('can filter commits', async () => {
     const plugin = jest.fn();
     plugin.mockReturnValue('result');
     jest.mock('./git-utils');
@@ -59,11 +59,9 @@ describe('wrapPlugin', () => {
     expect(plugin.mock.calls[0][0].config).toBe('config');
     expect(plugin.mock.calls[0][1].commits.length).toBe(1);
     expect(plugin.mock.calls[0][1].commits[0].commit.long).toBe('test1');
-
-    done();
   });
 
-  it('can skip filtering if no project configured', async (done) => {
+  it('can skip filtering if no project configured', async () => {
     const plugin = jest.fn();
     plugin.mockReturnValue('result');
     const wrapped = wrapPlugin(plugin);
@@ -88,8 +86,6 @@ describe('wrapPlugin', () => {
 
     expect(result).toBe('result');
     expect(plugin.mock.calls.length).toBe(1);
-    expect(plugin.mock.calls[0][1].commits.length).toBe(2);
-    
-    done();
+    expect(plugin.mock.calls[0][1].commits.length).toBe(2);    
   });
 });

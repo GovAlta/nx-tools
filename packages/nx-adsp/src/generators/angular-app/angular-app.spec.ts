@@ -16,17 +16,15 @@ describe('angular app generator', () => {
    jest.clearAllTimers()
   })
 
-  it('should run successfully', async (done) => {
+  it('should run successfully', async () => {
     await angularApp(appTree, options);
     const config = readProjectConfiguration(appTree, 'test');
     expect(config).toBeDefined();
     expect(config.root).toBe('apps/test');
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
+  }, 10000);
 
-    done();
-  });
-
-  it ('can add nginx proxy', async (done) => {
+  it ('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await angularApp(
       host,
@@ -46,11 +44,9 @@ describe('angular app generator', () => {
     expect(
       host.read('apps/test/nginx.conf').toString()
     ).toContain('http://test-service:3333/');
-
-    done();
   });
 
-  it ('can add multiple nginx proxy', async (done) => {
+  it ('can add multiple nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await angularApp(
       host,
@@ -76,11 +72,9 @@ describe('angular app generator', () => {
     const nginxConf = host.read('apps/test/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
     expect(nginxConf).toContain('http://test-service2:3333/');
-
-    done();
   });
 
-  it ('can add webpack dev server proxy', async (done) => {
+  it ('can add webpack dev server proxy', async () => {
     const host = createTreeWithEmptyWorkspace();
     await angularApp(
       host,
@@ -103,7 +97,5 @@ describe('angular app generator', () => {
     );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
-
-    done();
   });
 });
