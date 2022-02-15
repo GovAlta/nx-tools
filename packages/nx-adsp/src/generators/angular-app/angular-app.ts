@@ -104,8 +104,8 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = normalizeOptions(host, options);
+  
   const { applicationGenerator: initAngular } = await import('@nrwl/angular/generators');
-
   await initAngular(host, { name: options.name });
 
   addDependenciesToPackageJson(

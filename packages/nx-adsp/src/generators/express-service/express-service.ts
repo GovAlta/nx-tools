@@ -1,3 +1,4 @@
+import { UnitTestRunner } from '@nrwl/angular/src/utils/test-runners';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -7,7 +8,7 @@ import {
   names,
   Tree,
 } from '@nrwl/devkit';
-import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
+import { Linter } from '@nrwl/linter';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
@@ -44,11 +45,21 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  
   const normalizedOptions = normalizeOptions(host, options);
-  
-  const initExpress = wrapAngularDevkitSchematic('@nrwl/express', 'application');
-  await initExpress(host, options);
+
+  const { applicationGenerator: initExpress } = await import('@nrwl/express');
+  await initExpress(
+    host, 
+    { 
+      ...options, 
+      skipFormat: true, 
+      skipPackageJson: false, 
+      linter: Linter.EsLint, 
+      unitTestRunner: UnitTestRunner.Jest, 
+      pascalCaseFiles: false, 
+      js: false, 
+    }
+  );
   
   addDependenciesToPackageJson(
     host, 
