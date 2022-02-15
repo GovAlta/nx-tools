@@ -1,3 +1,4 @@
+import { E2eTestRunner, UnitTestRunner } from '@nrwl/angular/src/utils/test-runners';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -112,10 +113,10 @@ export default async function (host: Tree, options: Schema) {
     name: options.name, 
     style: 'styled-components', 
     skipFormat: true, 
-    unitTestRunner: 'jest', 
-    babelJest: false, 
-    e2eTestRunner: 'cypress', 
     linter:  Linter.EsLint, 
+    unitTestRunner: UnitTestRunner.Jest, 
+    e2eTestRunner: E2eTestRunner.Cypress, 
+    babelJest: false, 
     strict: false,
   });
   
