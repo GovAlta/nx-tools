@@ -13,7 +13,6 @@ import {
 } from '@nrwl/devkit';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
-import { wrapAngularDevkitSchematic } from '@nrwl/devkit/ngcli-adapter';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 function normalizeOptions(
@@ -105,7 +104,7 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = normalizeOptions(host, options);
-  const initAngular = wrapAngularDevkitSchematic('@nrwl/angular', 'application');
+  const { applicationGenerator: initAngular } = await import('@nrwl/angular/generators');
 
   await initAngular(host, { name: options.name });
 
