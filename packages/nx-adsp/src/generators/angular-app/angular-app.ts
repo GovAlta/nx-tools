@@ -114,8 +114,8 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     {
     },
     {
-      '@abgov/angular-components': '1.0.1',
-      '@abgov/core-css': '^0.7.56',
+      '@abgov/angular-components': '^1.7.1',
+      '@abgov/core-css': '^1.0.0',
       '@angular/cdk': "^11.2.0",
       '@angular/localize': '^11.2.0',
       'html-webpack-plugin': '~4.5.2',

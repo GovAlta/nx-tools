@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { UserManager } from 'oidc-client';
 import { UserState } from 'redux-oidc';
-import { GoAButton, GoaHeader, GoaHeroBanner } from '@abgov/react-components';
+import { GoAButton, GoAHeader, GoAHeroBanner } from '@abgov/react-components';
 
 import styles from './app.module.css';
 import '@abgov/core-css/goa-core.css';
@@ -37,12 +37,12 @@ export function App({ userManager }: AppProps) {
 
   return (
     <div className={styles.app}>
-      <GoaHeader
+      <GoAHeader
         serviceLevel="alpha"
         serviceName="Digital Service Example"
         serviceHome="/"
       />
-      <GoaHeroBanner
+      <GoAHeroBanner
         title="Quick start of a digital service"
         backgroundUrl={'../assets/banner.jpg'}
       />

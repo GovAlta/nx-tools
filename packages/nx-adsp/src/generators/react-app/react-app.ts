@@ -126,8 +126,8 @@ export default async function (host: Tree, options: Schema) {
     {
     },
     {
-      '@abgov/core-css': '^0.7.56',
-      '@abgov/react-components': '^0.7.56',
+      '@abgov/core-css': '^1.0.0',
+      '@abgov/react-components': '^3.1.0',
       '@types/react-router-dom': '~5.1.7',
       "@types/redux-mock-store": "~1.0.2",
       'html-webpack-plugin': '~4.5.2',
