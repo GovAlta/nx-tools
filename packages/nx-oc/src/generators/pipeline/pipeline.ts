@@ -30,7 +30,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
 function addFiles(host: Tree, options: NormalizedSchema) {
 
-  const envs = ['Dev', 'Test', 'Staging', 'Prod'];
+  const envs = ['Dev', 'Test', 'Prod'];
 
   const templateOptions = {
     ...options,

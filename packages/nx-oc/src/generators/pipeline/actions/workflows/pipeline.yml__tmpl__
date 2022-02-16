@@ -60,11 +60,11 @@ jobs:
 
       # Project build steps lint, test, and build
       - name: Lint
-        run: npm run affected:lint -- --base=${{ env.AFFECTED_BASE }}
+        run: npx nx affected --target=lint --base=${{ env.AFFECTED_BASE }}
       - name: Test
-        run: npm run affected:test -- --base=${{ env.AFFECTED_BASE }}
+        run: npx nx affected --target=test --base=${{ env.AFFECTED_BASE }}
       - name: Build
-        run: npm run affected:build -- --base=${{ env.AFFECTED_BASE }} --configuration production
+        run: npx nx affected --target=build --base=${{ env.AFFECTED_BASE }} --configuration production
       # Set affected apps to env for later steps and jobs.
       - name: Set AFFECTED_APPS for OC steps
         run: echo "AFFECTED_APPS=$(npx nx affected:apps --plain --base=${{ env.AFFECTED_BASE }})" >> $GITHUB_ENV
@@ -95,7 +95,7 @@ jobs:
   
   deploy<%= envs[i] %>:
     runs-on: ubuntu-20.04
-    needs: build
+    needs: [build<%= envs[i - 1] ? `, deploy${envs[i - 1]}` : '' %>]
     env: 
       AFFECTED_APPS: ${{ needs.build.outputs.affected_apps }}
     environment:
@@ -112,7 +112,7 @@ jobs:
         run: |
           for app in $AFFECTED_APPS
           do 
-            oc tag $app:latest $app:<%= envs[i].toLowerCase() %>
+            oc tag $app:<%= envs[i - 1] ? envs[i - 1].toLowerCase() : 'latest' %> $app:<%= envs[i].toLowerCase() %>
           done 
       - name: Deploy <%= envs[i] %>
         run: |
