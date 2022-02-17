@@ -86,7 +86,7 @@ jobs:
         run: |
           for app in $AFFECTED_APPS
           do 
-            oc start-build $app --from-dir . --follow 
+            oc start-build $app --from-dir . --follow --wait
           done 
       # Set build job outputs for subsequent jobs.
       - id: set_outputs
@@ -114,11 +114,17 @@ jobs:
           do 
             oc tag $app:<%= envs[i - 1] ? envs[i - 1].toLowerCase() : 'latest' %> $app:<%= envs[i].toLowerCase() %>
           done 
+      - run: oc project <%= ocEnvProject %>
+      - name: Apply Manifests
+        run: |
+          for app in $AFFECTED_APPS
+          do
+            oc process -f .openshift/managed/$app.yml -p NAMESPACE=<%= ocEnvProject %> -p DEPLOY_TAG=<%= envs[i].toLowerCase() %> | oc apply -f -
+          done
       - name: Deploy <%= envs[i] %>
         run: |
           for app in $AFFECTED_APPS
-          do 
-            oc project <%= ocEnvProject %>
+          do            
             oc rollout latest dc/$app
             oc rollout status dc/$app
           done 

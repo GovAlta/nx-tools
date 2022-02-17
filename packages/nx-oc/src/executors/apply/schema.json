@@ -13,11 +13,28 @@
         {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "project": {
+                    "type": "string"
+                  },
+                  "tag": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         }
       ]
     }
   },
-  "required": ["ocProject"] 
+  "required": [
+    "ocProject"
+  ]
 }
