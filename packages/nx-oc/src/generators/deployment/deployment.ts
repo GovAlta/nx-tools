@@ -31,7 +31,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   const config = readProjectConfiguration(host, projectName);
   let appType = null;
   switch (config.targets.build.executor) {
-    case '@nrwl/web:build':
+    case '@nrwl/web:webpack':
     case '@angular-devkit/build-angular:browser':
       appType = 'frontend';
       break;
