@@ -24,7 +24,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/web:build'
+          executor: '@nrwl/web:webpack'
         }
       }
     });
@@ -54,7 +54,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/web:build'
+          executor: '@nrwl/web:webpack'
         }
       }
     });
