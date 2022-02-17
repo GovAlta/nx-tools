@@ -19,8 +19,10 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "cSpell.words": [
+    "abgov",
     "Adsp",
     "nrwl",
+    "openshift",
     "releaserc"
   ]
 }
