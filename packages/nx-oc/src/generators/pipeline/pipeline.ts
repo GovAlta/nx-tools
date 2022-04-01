@@ -5,12 +5,12 @@ import {
   Tree,
 } from '@nrwl/devkit';
 import * as path from 'path';
+import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
 import applyInfraGenerator from '../apply-infra/apply-infra';
 import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
-
   const ocEnvProjects = options.envs?.split(' ') || [options.infra];
 
   const envsProjectsSet = new Set(ocEnvProjects);
@@ -25,20 +25,17 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     ocEnvProjects: ocEnvProjects,
     applyPipeline: !!options.apply,
     pipelineType: options.type === 'jenkins' ? 'jenkins' : 'actions',
-  }
+  };
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
-
-  const envs = ['Dev', 'Test', 'Staging', 'Prod'];
-
   const templateOptions = {
     ...options,
     sourceRepositoryUrl: getGitRemoteUrl()?.trim(),
     envs,
-    tmpl: ''
+    tmpl: '',
   };
-  
+
   if (options.pipelineType === 'jenkins') {
     generateFiles(
       host,
@@ -64,7 +61,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = normalizeOptions(host, options);
-  
+
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
