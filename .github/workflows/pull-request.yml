@@ -2,7 +2,7 @@
 
 name: Pull Request Check
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   pull_request:
@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: "16"
       - run: npm ci
       - name: Lint
         run: npm run affected:lint -- --base=origin/${{ github.base_ref }}
