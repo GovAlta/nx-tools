@@ -9,29 +9,21 @@
         "lint": {
           "executor": "@nrwl/linter:eslint",
           "options": {
-            "lintFilePatterns": [
-              "packages/nx-adsp/**/*.ts"
-            ]
+            "lintFilePatterns": ["packages/nx-adsp/**/*.ts"]
           },
-          "outputs": [
-            "{options.outputFile}"
-          ]
+          "outputs": ["{options.outputFile}"]
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": [
-            "coverage/packages/nx-adsp"
-          ],
+          "outputs": ["coverage/packages/nx-adsp"],
           "options": {
             "jestConfig": "packages/nx-adsp/jest.config.js",
             "passWithNoTests": true
           }
         },
         "build": {
-          "executor": "@nrwl/node:package",
-          "outputs": [
-            "{options.outputPath}"
-          ],
+          "executor": "@nrwl/js:tsc",
+          "outputs": ["{options.outputPath}"],
           "options": {
             "outputPath": "dist/packages/nx-adsp",
             "tsConfig": "packages/nx-adsp/tsconfig.lib.json",
@@ -82,9 +74,7 @@
         }
       },
       "tags": [],
-      "implicitDependencies": [
-        "nx-adsp"
-      ]
+      "implicitDependencies": ["nx-adsp"]
     },
     "nx-dotnet": {
       "root": "packages/nx-dotnet",
@@ -94,29 +84,21 @@
         "lint": {
           "executor": "@nrwl/linter:eslint",
           "options": {
-            "lintFilePatterns": [
-              "packages/nx-dotnet/**/*.ts"
-            ]
+            "lintFilePatterns": ["packages/nx-dotnet/**/*.ts"]
           },
-          "outputs": [
-            "{options.outputFile}"
-          ]
+          "outputs": ["{options.outputFile}"]
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": [
-            "coverage/packages/nx-dotnet"
-          ],
+          "outputs": ["coverage/packages/nx-dotnet"],
           "options": {
             "jestConfig": "packages/nx-dotnet/jest.config.js",
             "passWithNoTests": true
           }
         },
         "build": {
-          "executor": "@nrwl/node:package",
-          "outputs": [
-            "{options.outputPath}"
-          ],
+          "executor": "@nrwl/js:tsc",
+          "outputs": ["{options.outputPath}"],
           "options": {
             "outputPath": "dist/packages/nx-dotnet",
             "tsConfig": "packages/nx-dotnet/tsconfig.lib.json",
@@ -167,9 +149,7 @@
         }
       },
       "tags": [],
-      "implicitDependencies": [
-        "nx-dotnet"
-      ]
+      "implicitDependencies": ["nx-dotnet"]
     },
     "nx-oc": {
       "root": "packages/nx-oc",
@@ -179,29 +159,21 @@
         "lint": {
           "executor": "@nrwl/linter:eslint",
           "options": {
-            "lintFilePatterns": [
-              "packages/nx-oc/**/*.ts"
-            ]
+            "lintFilePatterns": ["packages/nx-oc/**/*.ts"]
           },
-          "outputs": [
-            "{options.outputFile}"
-          ]
+          "outputs": ["{options.outputFile}"]
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": [
-            "coverage/packages/nx-oc"
-          ],
+          "outputs": ["coverage/packages/nx-oc"],
           "options": {
             "jestConfig": "packages/nx-oc/jest.config.js",
             "passWithNoTests": true
           }
         },
         "build": {
-          "executor": "@nrwl/node:package",
-          "outputs": [
-            "{options.outputPath}"
-          ],
+          "executor": "@nrwl/js:tsc",
+          "outputs": ["{options.outputPath}"],
           "options": {
             "outputPath": "dist/packages/nx-oc",
             "tsConfig": "packages/nx-oc/tsconfig.lib.json",
@@ -252,9 +224,7 @@
         }
       },
       "tags": [],
-      "implicitDependencies": [
-        "nx-oc"
-      ]
+      "implicitDependencies": ["nx-oc"]
     },
     "nx-release": {
       "root": "packages/nx-release",
@@ -264,29 +234,21 @@
         "lint": {
           "executor": "@nrwl/linter:eslint",
           "options": {
-            "lintFilePatterns": [
-              "packages/nx-release/**/*.ts"
-            ]
+            "lintFilePatterns": ["packages/nx-release/**/*.ts"]
           },
-          "outputs": [
-            "{options.outputFile}"
-          ]
+          "outputs": ["{options.outputFile}"]
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": [
-            "coverage/packages/nx-release"
-          ],
+          "outputs": ["coverage/packages/nx-release"],
           "options": {
             "jestConfig": "packages/nx-release/jest.config.js",
             "passWithNoTests": true
           }
         },
         "build": {
-          "executor": "@nrwl/node:package",
-          "outputs": [
-            "{options.outputPath}"
-          ],
+          "executor": "@nrwl/js:tsc",
+          "outputs": ["{options.outputPath}"],
           "options": {
             "outputPath": "dist/packages/nx-release",
             "tsConfig": "packages/nx-release/tsconfig.lib.json",
@@ -342,9 +304,7 @@
         }
       },
       "tags": [],
-      "implicitDependencies": [
-        "nx-release"
-      ]
+      "implicitDependencies": ["nx-release"]
     }
   }
 }
