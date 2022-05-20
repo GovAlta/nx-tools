@@ -33,6 +33,11 @@
       "factory": "./src/generators/angular-app/angular-app",
       "schema": "./src/generators/angular-app/schema.json",
       "description": "Generator that creates a Angular based frontend application."
+    },
+    "react-saga-service": {
+      "factory": "./src/generators/react-saga-service/react-saga-service",
+      "schema": "./src/generators/react-saga-service/schema.json",
+      "description": "Generator that creates a sample saga to hook up the back end api."
     }
   }
 }

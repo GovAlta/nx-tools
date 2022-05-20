@@ -1,0 +1,10 @@
+import { all } from 'redux-saga/effects';
+
+import { watch<%= upcaseTitle %>Sagas } from './<%= normalizedTitle %>/sagas';
+
+
+export function* watchSagas() {
+  yield all([
+    watch<%= upcaseTitle %>Sagas(),
+  ]);
+}

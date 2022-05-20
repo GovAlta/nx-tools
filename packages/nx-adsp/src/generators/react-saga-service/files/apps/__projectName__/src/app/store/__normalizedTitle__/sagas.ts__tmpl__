@@ -1,0 +1,122 @@
+import { put, select, call, takeEvery, takeLatest } from 'redux-saga/effects';
+import { ErrorNotification } from '@store/notifications/actions';
+import { SagaIterator } from '@redux-saga/core';
+import {
+  Fetch<%= upcaseTitle %>SucceededService,
+  Fetch<%= upcaseTitle %>Service,
+  Delete<%= upcaseTitle %>Action,
+  Update<%= upcaseTitle %>Action,
+  DELETE_<%= allUpcaseTitle %>,
+  FETCH_<%= allUpcaseTitle %>,
+  FETCH_CORE_<%= allUpcaseTitle %>S,
+  UPDATE_<%= allUpcaseTitle %>,
+} from './actions';
+
+import { RootState } from '../index';
+import axios from 'axios';
+import { EventItem } from './models';
+import { UpdateIndicator } from '@store/session/actions';
+
+export function* fetch<%= upcaseTitle %>s(): SagaIterator {
+  const configBaseUrl: string = yield select(
+    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
+  );
+  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+
+  if (configBaseUrl && token) {
+    try {
+      const { data: configuration } = yield call(
+        axios.get,
+        `${configBaseUrl}/configuration/v2/configuration/platform/<%= title %>-service`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (configuration.latest) {
+        const { contact, ...notificationTypeInfo } = configuration.latest.configuration;
+        yield put(Fetch<%= upcaseTitle %>SucceededService(notificationTypeInfo));
+      }
+    } catch (e) {
+      yield put(ErrorNotification({ message: `${e.message} - fetch<%= upcaseTitle %>s` }));
+    }
+  }
+}
+
+export function* delete<%= upcaseTitle %>s(action: Delete<%= upcaseTitle %>Action): SagaIterator {
+  const notificationType = action.payload;
+
+  const configBaseUrl: string = yield select(
+    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
+  );
+  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+
+  if (configBaseUrl && token) {
+    try {
+      yield call(
+        axios.patch,
+        `${configBaseUrl}/configuration/v2/configuration/platform/<%= title %>-service`,
+        { operation: 'DELETE', property: notificationType.id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      yield put(Fetch<%= upcaseTitle %>Service());
+    } catch (e) {
+      yield put(ErrorNotification({ message: `${e.response.data} - delete<%= upcaseTitle %>s` }));
+    }
+  }
+}
+
+export function* update<%= upcaseTitle %>({ payload }: Update<%= upcaseTitle %>Action): SagaIterator {
+  const configBaseUrl: string = yield select(
+    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
+  );
+  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+
+  if (configBaseUrl && token) {
+    try {
+      const payloadId = payload.id;
+
+      const sanitizedEvents = payload.events.map((eve) => {
+        const eventBuilder: EventItem = {
+          namespace: eve.namespace,
+          name: eve.name,
+          templates: eve.templates,
+        };
+        return eventBuilder;
+      });
+
+      payload.events = sanitizedEvents;
+
+      yield call(
+        axios.patch,
+        `${configBaseUrl}/configuration/v2/configuration/platform/<%= title %>-service`,
+        {
+          operation: 'UPDATE',
+          update: {
+            [payloadId]: {
+              id: payloadId,
+              contactEmail: payload.contactEmail,
+              phoneNumber: payload.phoneNumber,
+              supportInstructions: payload.supportInstructions,
+            },
+          },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      yield put(Fetch<%= upcaseTitle %>Service());
+    } catch (e) {
+      yield put(Error<%= upcaseTitle %>({ message: `${e.message} - update<%= upcaseTitle %>` }));
+    }
+  }
+}
+
+export function* watch<%= upcaseTitle %>Sagas(): Generator {
+  yield takeEvery(FETCH_<%= allUpcaseTitle %>, fetch<%= upcaseTitle %>s);
+  yield takeEvery(DELETE_<%= allUpcaseTitle %>, delete<%= upcaseTitle %>s);
+  yield takeEvery(UPDATE_<%= allUpcaseTitle %>, update<%= upcaseTitle %>);
+}

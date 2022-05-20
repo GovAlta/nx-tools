@@ -1,0 +1,86 @@
+import { <%= upcaseTitle %>Item } from './models';
+
+export const DELETE_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>/delete';
+export const DELETE_<%= allUpcaseTitle %>_FAILED = 'tenant/<%= title %>-service/<%= title %>/delete/fail';
+
+export const FETCH_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>Config/fetch';
+export const FETCH_<%= allUpcaseTitle %>_SUCCEEDED = '<%= title %>-service/space/<%= title %>Config/succeeded';
+
+export const DELETE_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>/delete';
+
+export const UPDATE_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>/update';
+
+// =============
+// Actions Types
+// =============
+
+export type ActionTypes =
+  | Delete<%= upcaseTitle %>FailedAction
+  | Fetch<%= upcaseTitle %>SucceededAction
+  | Fetch<%= upcaseTitle %>Action
+  | Update<%= upcaseTitle %>Action
+  | Delete<%= upcaseTitle %>Action
+
+interface Delete<%= upcaseTitle %>FailedAction {
+  type: typeof DELETE_<%= allUpcaseTitle %>_FAILED;
+  payload: { data: string };
+}
+
+export interface Fetch<%= upcaseTitle %>SucceededAction {
+  type: typeof FETCH_<%= allUpcaseTitle %>_SUCCEEDED;
+  payload: {
+    <%= title %>Info: { data: Record<string, <%= upcaseTitle %>Item> };
+  };
+}
+
+interface Fetch<%= upcaseTitle %>Action {
+  type: typeof FETCH_<%= allUpcaseTitle %>;
+}
+
+export interface Update<%= upcaseTitle %>Action {
+  type: typeof UPDATE_<%= allUpcaseTitle %>;
+  payload: <%= upcaseTitle %>Item;
+}
+
+export interface Delete<%= upcaseTitle %>Action {
+  type: typeof DELETE_<%= allUpcaseTitle %>;
+  payload: <%= upcaseTitle %>Item;
+}
+
+// ==============
+// Action Methods
+// ==============
+
+export const Delete<%= upcaseTitle %>FailedService = (data: string): Delete<%= upcaseTitle %>FailedAction => ({
+  type: DELETE_<%= allUpcaseTitle %>_FAILED,
+  payload: {
+    data,
+  },
+});
+
+export const Fetch<%= upcaseTitle %>SucceededService = (
+  <%= title %>Info: {
+    data: Record<string, <%= upcaseTitle %>Item>;
+  },
+): Fetch<%= upcaseTitle %>SucceededAction => ({
+  type: FETCH_<%= allUpcaseTitle %>_SUCCEEDED,
+  payload: {
+    <%= title %>Info,
+    contact,
+  },
+});
+
+export const Fetch<%= upcaseTitle %>Service = (): Fetch<%= upcaseTitle %>Action => ({
+  type: FETCH_<%= allUpcaseTitle %>,
+});
+
+export const Update<%= upcaseTitle %>Service = (<%= title %>: <%= upcaseTitle %>Item): Update<%= upcaseTitle %>Action => ({
+  type: UPDATE_<%= allUpcaseTitle %>,
+  payload: <%= title %>,
+});
+
+
+export const Delete<%= upcaseTitle %>Service = (<%= title %>: <%= upcaseTitle %>Item): Delete<%= upcaseTitle %>Action => ({
+  type: DELETE_<%= allUpcaseTitle %>,
+  payload: <%= title %>,
+});

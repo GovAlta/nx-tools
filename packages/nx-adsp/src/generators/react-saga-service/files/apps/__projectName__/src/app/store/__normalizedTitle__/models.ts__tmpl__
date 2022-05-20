@@ -1,0 +1,20 @@
+export interface <%= upcaseTitle %>Item {
+  id?: string;
+  contactEmail?: string;
+  phoneNumber?: string;
+  supportInstructions?: string;
+}
+
+export const default<%= upcaseTitle %>: <%= upcaseTitle %>Item = {
+  contactEmail: '',
+  phoneNumber: '',
+  supportInstructions: '',
+}
+
+export interface <%= upcaseTitle %>State {
+  <%= title %>: Record<string, <%= upcaseTitle %>Item>;
+}
+
+export const <%= allUpcaseTitle %>_INIT: <%= upcaseTitle %>State = {
+  <%= title %>: undefined,
+};

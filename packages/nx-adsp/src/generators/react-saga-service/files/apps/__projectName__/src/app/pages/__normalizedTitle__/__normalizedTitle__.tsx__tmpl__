@@ -1,0 +1,74 @@
+import React, { FunctionComponent, useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { GoAButton } from '@abgov/react-components';
+import { <%= upcaseTitle %>List } from './<%= title %>List';
+import { Fetch<%= upcaseTitle %>Service, Delete<%= upcaseTitle %>Service, Update<%= upcaseTitle %>Service } from '../../store/<%= title %>/actions';
+import { <%= upcaseTitle %>Item, default<%= upcaseTitle %> } from '../../store/<%= title %>/models';
+import { DeleteModal } from '@components/DeleteModal';
+import Edit<%= title %>ModalForm from './edit';
+
+export const <%= upcaseTitle %>: FunctionComponent = () => {
+  const dispatch = useDispatch();
+  const [selected<%= upcaseTitle %>, setSelected<%= upcaseTitle %>] = useState<<%= upcaseTitle %>>(default<%= upcaseTitle %>);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+
+  useEffect(() => {
+    dispatch(Fetch<%= upcaseTitle %>Service());
+  }, []);
+
+  const resetState = () => {
+    dispatch(Fetch<%= upcaseTitle %>Service());
+    setSelected<%= upcaseTitle %>(default<%= upcaseTitle %>);
+  };
+
+  return (
+    <>
+      <GoAButton
+        data-testid="add-<%= title %>"
+        onClick={() => {
+          setSelected<%= upcaseTitle %>(default<%= upcaseTitle %>);
+          setIsEdit(true);
+        }}
+      >
+        Add <%= upcaseTitle %>
+      </GoAButton>
+
+      <<%= upcaseTitle %>List
+        onDelete={(sub: <%= upcaseTitle %>Item, type: string) => {
+          setSelected<%= upcaseTitle %>(sub);
+          setShowDeleteConfirmation(true);
+        }}
+      />
+
+      {/* Delete confirmation */}
+      {showDeleteConfirmation && (
+        <DeleteModal
+          isOpen={showDeleteConfirmation}
+          title="Delete <%= title %>"
+          content="Delete this item"
+          onCancel={() => setShowDeleteConfirmation(false)}
+          onDelete={() => {
+            setShowDeleteConfirmation(false);
+            dispatch(Delete<%= upcaseTitle %>Service(selected<%= upcaseTitle %>));
+          }}
+        />
+      )}
+      {isEdit && (
+        <Edit<%= upcaseTitle %>ModalForm
+          open={isEdit}
+          initialValue={selectedNotix}
+          onCancel={() => {
+            resetState();
+          }}
+          onSave={(data) => {
+            dispatch(Update<%= upcaseTitle %>Service(data))
+            resetState();
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+export default <%= upcaseTitle %>s;

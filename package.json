@@ -27,8 +27,8 @@
   },
   "private": true,
   "dependencies": {
-    "@nrwl/devkit": "13.8.1",
-    "@angular/core": "13.2.2"
+    "@angular/core": "13.2.2",
+    "@nrwl/devkit": "13.8.1"
   },
   "devDependencies": {
     "@abgov/nx-release": "^3.0.0",

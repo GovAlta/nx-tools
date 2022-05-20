@@ -1,0 +1,158 @@
+import React, { FunctionComponent, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import DataTable from '@components/DataTable';
+import { RootState } from '@store/index';
+import type { <%= upcaseTitle %> } from '../store/<%= title %>/models';
+import { Update<%= upcaseTitle %>Service } from '../../<%= title %>/actions';
+import styled from 'styled-components';
+import { Edit<%= upcaseTitle %>ModalForm } from './edit';
+import { GoAIconButton } from '@abgov/react-components/experimental';
+import { GoAContextMenuIcon } from '@components/ContextMenu';
+
+interface <%= upcaseTitle %>Props {
+  <%= title %>: <%= upcaseTitle %>;
+  onDelete: (<%= title %>Item: <%= upcaseTitle %>) => void;
+  onEdit: (<%= title %>Item: <%= upcaseTitle %>) => void;
+}
+
+const <%= upcaseTitle %>Component: FunctionComponent<<%= upcaseTitle %>Props> = ({ <%= title %>, onDelete, onEdit }) => {
+  return (
+    <>
+      <tr>
+        <td headers="userName" data-testid="contactEmail">
+          {<%= title %>?.contactEmail}
+        </td>
+        <td headers="userName" data-testid="phoneNumber">
+          {<%= title %>?.phoneNumber}
+        </td>
+        <td headers="userName" data-testid="supportInstructions">
+          {<%= title %>?.supportInstructions}
+        </td>
+         <td headers="actions" data-testid="actions">
+          <div style={{ display: 'flex', flexDirection: 'row-reverse' }}>
+            <GoAIconButton
+              data-testid={`delete-subscription-${notix.id}`}
+              size="medium"
+              type="trash"
+              onClick={() => onDelete(notix)}
+            />
+            <GoAContextMenuIcon type="create" onClick={() => onEdit(notix)} testId="edit-details" />
+          </div>
+        </td>
+      </tr>
+    </>
+  );
+};
+
+interface <%= upcaseTitle %>sListComponentProps {
+  onDelete: (<%= title %>: <%= upcaseTitle %>Item) => void;
+}
+
+const <%= upcaseTitle %>sListComponent: FunctionComponent<<%= upcaseTitle %>sListComponentProps> = ({
+  onDelete,
+}) => {
+  const dispatch = useDispatch();
+  const Notixs = useSelector((state: RootState) => state.notix.notix);
+  const { groups, type<%= upcaseTitle %>s } = useSelector(type<%= upcaseTitle %>sSelector);
+  const [edit<%= upcaseTitle %>, setEdit<%= upcaseTitle %>] = useState(false);
+  const [selected<%= upcaseTitle %>, setSelected<%= upcaseTitle %>] = useState(null);
+
+  const openModalFunction = (<%= title %>) => {
+    setSelected<%= upcaseTitle %>(<%= title %>);
+    setEdit<%= upcaseTitle %>(true);
+  };
+
+  function reset() {
+    setEdit<%= upcaseTitle %>(false);
+  }
+
+  if (!groups) {
+    return (
+      <div>
+        {' '}
+        <GoAPageLoader visible={true} message="Loading..." type="infinite" pagelock={false} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <div>
+        <DataTable data-testid={`<%= title %>-table`}>
+          <thead>
+            <tr>
+              <th className="address-as" id="userName">
+                Contact email
+              </th>
+              <th id="phoneNumber">Phone number</th>
+              <th id="supportInstructions">Support instructions</th>
+              <th id="actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+           {<%= upcaseTitle %>s && Object.keys(<%= upcaseTitle %>s).map((<%= title %>) => {
+             const <%= title %> = %= upcaseTitle %>s[key];
+              return <<%= upcaseTitle %>Component <%= title %>={<%= title %>} onEdit={openModalFunction} onDelete={onDelete} />
+           })}
+          </tbody>
+        </DataTable>
+      </div>
+
+      {/* Form */}
+      <Edit<%= upcaseTitle %>ModalForm
+        open={edit<%= upcaseTitle %>}
+        initialValue={selected<%= upcaseTitle %>}
+        onSave={(<%= title %>) => {
+          dispatch(Update<%= upcaseTitle %>Service(<%= title %>));
+          reset();
+        }}
+        onCancel={() => {
+          reset();
+        }}
+      />
+    </div>
+  );
+};
+
+export const <%= upcaseTitle %>List = styled(<%= upcaseTitle %>sListComponent)`
+  display: flex-inline-table;
+  & .group-name {
+    text-transform: capitalize;
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+  }
+
+  & .address-as {
+    min-width: 180px;
+  }
+
+  & td:first-child {
+    width: 100px;
+    white-space: nowrap;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & td:last-child {
+    width: 40px;
+    white-space: nowrap;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & .payload-details {
+    div {
+      background: #f3f3f3;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 16px;
+      padding: 16px;
+    }
+    padding: 0;
+  }
+
+  table {
+    margin-bottom: 2rem;
+  }
+`;

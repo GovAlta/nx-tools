@@ -1,0 +1,135 @@
+import React, { FunctionComponent, useEffect, useState } from 'react';
+import type { <%= upcaseTitle %> } from '../../store/<%= title %>/models';
+import { GoAButton } from '@abgov/react-components';
+import { GoAModal, GoAModalActions, GoAModalContent, GoAModalTitle } from '@abgov/react-components/experimental';
+import { GoAForm, GoAFormItem, GoAInputEmail, GoAInput } from '@abgov/react-components/experimental';
+import styled from 'styled-components';
+import { isSmsValid, emailError, smsError } from '@lib/inputValidation';
+
+interface <%= upcaseTitle %>FormProps {
+  initialValue?: <%= upcaseTitle %>Item;
+  onCancel?: () => void;
+  onSave?: (type: <%= upcaseTitle %>Item) => void;
+  open: boolean;
+  errors?: Record<string, string>;
+}
+
+export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upcaseTitle %>FormProps> = ({
+  initialValue,
+  onCancel,
+  onSave,
+  errors,
+  open,
+}) => {
+  const x = JSON.stringify(initialValue);
+  const [<%= title %>, set<%= upcaseTitle %>] = useState(JSON.parse(x));
+  const [formErrors, setFormErrors] = useState(null);
+
+  useEffect(() => {
+    const x = JSON.stringify(initialValue);
+    set<%= upcaseTitle %>(JSON.parse(x));
+  }, [initialValue]);;
+
+  const trySave = (<%= title %>) => {
+    let formErrorList = {};
+    formErrorList = Object.assign(formErrorList, emailError(email));
+    formErrorList = Object.assign(formErrorList, smsError(phone));
+
+    if (Object.keys(formErrorList).length === 0) {
+      setFormErrors(null);
+      onSave(<%= title %>);
+    } else {
+      setFormErrors(formErrorList);
+    }
+  };
+
+  const tryCancel = () => {
+    setFormErrors(null);
+    onCancel();
+  };
+
+  return (
+    <EditStyles>
+      <GoAModal testId="notification-types-form" isOpen={open}>
+        <GoAModalTitle>Edit <%= title %></GoAModalTitle>
+        <GoAModalContent>
+          <GoAForm>
+            <ErrorWrapper>
+              <GoAFormItem error={formErrors?.['email']}>
+                <label>Email</label>
+                <GoAInputEmail
+                  name="email"
+                  data-testid="form-email"
+                  value={<%= title %>?.contactEmail || ''}
+                  aria-label="email"
+                  onChange={(_, value) => {
+                    set<%= upcaseTitle %>({ ...<%= title %>, contactEmail: value });
+                  }}
+                />
+              </GoAFormItem>
+              <GoAFormItem error={formErrors?.['sms']}>
+                <label>
+                  Phone number <em>optional</em>
+                </label>
+                <GoAInput
+                  type="text"
+                  aria-label="sms"
+                  name="sms"
+                  value={<%= title %>?.phoneNumber || ''}
+                  data-testid="contact-sms-input"
+                  onChange={(_, value) => {
+                    if (isSmsValid(value)) {
+                      set<%= upcaseTitle %>({ ...<%= title %>, phoneNumber: value.substring(0, 10) });
+                    }
+                  }}
+                  trailingIcon="close"
+                  onTrailingIconClick={() => {
+                    set<%= upcaseTitle %>({ ...<%= title %>, phoneNumber: '' });
+                  }}
+                />
+              </GoAFormItem>
+              <GoAFormItem error={formErrors?.['supportInstructions']}>
+                <label>Support instructions</label>
+                <textarea
+                  rows={7}
+                  name="supportInstruction"
+                  value={<%= title %>?.supportInstructions || ''}
+                  data-testid="form-support-instructions"
+                  aria-label="name"
+                  onChange={(e) => set<%= upcaseTitle %>({ ...<%= title %>, supportInstructions: e.target.value })}
+                />
+              </GoAFormItem>
+            </ErrorWrapper>
+          </GoAForm>
+        </GoAModalContent>
+        <GoAModalActions>
+          <GoAButton data-testid="form-cancel" buttonType="secondary" type="button" onClick={tryCancel}>
+            Cancel
+          </GoAButton>
+          <GoAButton buttonType="primary" data-testid="form-save" type="submit" onClick={(e) => trySave(<%= title %>)}>
+            Save
+          </GoAButton>
+        </GoAModalActions>
+      </GoAModal>
+    </EditStyles>
+  );
+};
+
+const EditStyles = styled.div`
+  ul {
+    margin-left: 0;
+  }
+
+  li {
+    border: 1px solid #f1f1f1;
+  }
+`;
+
+export const ErrorWrapper = styled.div`
+  .goa-state--error {
+    input,
+    textarea {
+      border-color: var(--color-red);
+    }
+  }
+`;

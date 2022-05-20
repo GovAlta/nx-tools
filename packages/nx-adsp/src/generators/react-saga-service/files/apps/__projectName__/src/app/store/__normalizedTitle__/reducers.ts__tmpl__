@@ -1,0 +1,21 @@
+import {
+  ActionTypes,
+  FETCH_<%= allUpcaseTitle %>_SUCCEEDED,
+} from './actions';
+import { <%= allUpcaseTitle %>_INIT, <%= upcaseTitle %>State, <%= upcaseTitle %>Item } from './models';
+
+
+export default function (state = <%= allUpcaseTitle %>_INIT, action: ActionTypes): <%= upcaseTitle %>State {
+  switch (action.type) {
+    case FETCH_<%= allUpcaseTitle %>_SUCCEEDED: {
+      const info: Record<string, <%= upcaseTitle %>> = action.payload.notixInfo;
+
+      return {
+        ...state,
+        <%= title %>: info,
+      };
+    }
+    default:
+      return state;
+  }
+}

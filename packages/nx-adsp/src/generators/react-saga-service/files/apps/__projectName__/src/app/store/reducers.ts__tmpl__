@@ -1,0 +1,6 @@
+import { combineReducers } from 'redux';
+import <%= upcaseTitle %> from './<%= normalizedTitle %>/reducers';
+
+export const rootReducer = combineReducers({
+  <%= title %>: <%= upcaseTitle %>,
+});
