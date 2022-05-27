@@ -8,7 +8,7 @@ import { <%= allUpcaseTitle %>_INIT, <%= upcaseTitle %>State, <%= upcaseTitle %>
 export default function (state = <%= allUpcaseTitle %>_INIT, action: ActionTypes): <%= upcaseTitle %>State {
   switch (action.type) {
     case FETCH_<%= allUpcaseTitle %>_SUCCEEDED: {
-      const info: Record<string, <%= upcaseTitle %>> = action.payload.notixInfo;
+      const info: Record<string, <%= upcaseTitle %>Item> = action.payload.<%= title %>Info;
 
       return {
         ...state,

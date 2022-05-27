@@ -1,0 +1,18 @@
+import React, { FunctionComponent } from 'react';
+
+interface ParentCompProps {
+  setActiveEdit?: (boolean) => void;
+  disabled?: boolean;
+}
+
+export const Overview: FunctionComponent<ParentCompProps> = (props) => {
+  return (
+    <div>
+      <section>
+        <p>
+          Some service provides the ability to do something.
+        </p>
+      </section>
+    </div>
+  );
+};

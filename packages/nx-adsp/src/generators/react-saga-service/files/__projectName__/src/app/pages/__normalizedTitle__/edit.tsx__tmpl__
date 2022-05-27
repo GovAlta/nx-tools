@@ -1,10 +1,10 @@
 import React, { FunctionComponent, useEffect, useState } from 'react';
-import type { <%= upcaseTitle %> } from '../../store/<%= title %>/models';
+import type { <%= upcaseTitle %>Item } from '../../store/<%= title %>/models';
 import { GoAButton } from '@abgov/react-components';
 import { GoAModal, GoAModalActions, GoAModalContent, GoAModalTitle } from '@abgov/react-components/experimental';
 import { GoAForm, GoAFormItem, GoAInputEmail, GoAInput } from '@abgov/react-components/experimental';
 import styled from 'styled-components';
-import { isSmsValid, emailError, smsError } from '@lib/inputValidation';
+import { isSmsValid, emailError, smsError } from '../../components/inputValidation';
 
 interface <%= upcaseTitle %>FormProps {
   initialValue?: <%= upcaseTitle %>Item;
@@ -14,7 +14,7 @@ interface <%= upcaseTitle %>FormProps {
   errors?: Record<string, string>;
 }
 
-export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upcaseTitle %>FormProps> = ({
+export const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upcaseTitle %>FormProps> = ({
   initialValue,
   onCancel,
   onSave,
@@ -22,7 +22,7 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
   open,
 }) => {
   const x = JSON.stringify(initialValue);
-  const [<%= title %>, set<%= upcaseTitle %>] = useState(JSON.parse(x));
+  const [<%= title %>, set<%= upcaseTitle %>] = useState<<%= upcaseTitle %>Item>(JSON.parse(x));
   const [formErrors, setFormErrors] = useState(null);
 
   useEffect(() => {
@@ -32,8 +32,8 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
 
   const trySave = (<%= title %>) => {
     let formErrorList = {};
-    formErrorList = Object.assign(formErrorList, emailError(email));
-    formErrorList = Object.assign(formErrorList, smsError(phone));
+    formErrorList = Object.assign(formErrorList, emailError(<%= title %>.contactEmail));
+    formErrorList = Object.assign(formErrorList, smsError(<%= title %>.phoneNumber));
 
     if (Object.keys(formErrorList).length === 0) {
       setFormErrors(null);
@@ -50,11 +50,16 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
 
   return (
     <EditStyles>
+      {/* @ts-ignore */}
       <GoAModal testId="notification-types-form" isOpen={open}>
+        {/* @ts-ignore */}
         <GoAModalTitle>Edit <%= title %></GoAModalTitle>
+        {/* @ts-ignore */}
         <GoAModalContent>
+          {/* @ts-ignore */}
           <GoAForm>
             <ErrorWrapper>
+              {/* @ts-ignore */}
               <GoAFormItem error={formErrors?.['email']}>
                 <label>Email</label>
                 <GoAInputEmail
@@ -67,6 +72,7 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
                   }}
                 />
               </GoAFormItem>
+              {/* @ts-ignore */}
               <GoAFormItem error={formErrors?.['sms']}>
                 <label>
                   Phone number <em>optional</em>
@@ -88,6 +94,7 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
                   }}
                 />
               </GoAFormItem>
+              {/* @ts-ignore */}
               <GoAFormItem error={formErrors?.['supportInstructions']}>
                 <label>Support instructions</label>
                 <textarea
@@ -102,6 +109,7 @@ export default const Edit<%= upcaseTitle %>ModalForm: FunctionComponent<<%= upca
             </ErrorWrapper>
           </GoAForm>
         </GoAModalContent>
+        {/* @ts-ignore */}
         <GoAModalActions>
           <GoAButton data-testid="form-cancel" buttonType="secondary" type="button" onClick={tryCancel}>
             Cancel

@@ -11,9 +11,9 @@
         "index": 0
       }
     },
-    "author": {
-      "type": "string",
-      "description": "The name of the author"
+    "addAuth": {
+      "type": "boolean",
+      "description": "Add authentication"
     },
     "projectName": {
       "type": "string",

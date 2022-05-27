@@ -6,8 +6,6 @@ export const DELETE_<%= allUpcaseTitle %>_FAILED = 'tenant/<%= title %>-service/
 export const FETCH_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>Config/fetch';
 export const FETCH_<%= allUpcaseTitle %>_SUCCEEDED = '<%= title %>-service/space/<%= title %>Config/succeeded';
 
-export const DELETE_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>/delete';
-
 export const UPDATE_<%= allUpcaseTitle %> = 'tenant/<%= title %>-service/<%= title %>/update';
 
 // =============
@@ -66,7 +64,6 @@ export const Fetch<%= upcaseTitle %>SucceededService = (
   type: FETCH_<%= allUpcaseTitle %>_SUCCEEDED,
   payload: {
     <%= title %>Info,
-    contact,
   },
 });
 

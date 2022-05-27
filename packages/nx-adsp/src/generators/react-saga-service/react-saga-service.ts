@@ -11,7 +11,6 @@ import { libraryGenerator } from '@nrwl/workspace/generators';
 
 interface NewArticleSchemaOptions {
   title: string;
-  author: string;
   projectName: string;
   excerpt?: string;
 }
@@ -25,7 +24,7 @@ export default async function (host: Tree, schema: NewArticleSchemaOptions) {
     joinPathFragments(__dirname, './files'),
 
     // where the files should be generated
-    './src',
+    './apps',
 
     // the variables to be substituted in the template
     {
@@ -33,7 +32,6 @@ export default async function (host: Tree, schema: NewArticleSchemaOptions) {
       projectName: schema.projectName,
       upcaseTitle: schema.title.charAt(0).toUpperCase() + schema.title.slice(1),
       allUpcaseTitle: schema.title.toUpperCase(),
-      author: schema.author,
       excerpt: schema.excerpt || '',
       tmpl: '',
       normalizedTitle: names(schema.title).fileName,
@@ -48,6 +46,8 @@ export default async function (host: Tree, schema: NewArticleSchemaOptions) {
     pkgJson.dependencies['redux-saga'] = '1.1.3';
     pkgJson.dependencies['axios'] = '^0.21.4';
     pkgJson.dependencies['@abgov/react-components'] = '^3.4.0-beta.65';
+    pkgJson.dependencies['react-tooltip'] = '^4.2.21';
+    pkgJson.dependencies['redux-devtools-extension'] = '^2.13.9';
     return pkgJson;
   });
   return () => {

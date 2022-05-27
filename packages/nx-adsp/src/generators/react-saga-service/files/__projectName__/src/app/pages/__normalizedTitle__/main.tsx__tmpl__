@@ -1,22 +1,20 @@
 import { Aside, Main, Page } from '@components/Html';
-import SupportLinks from '@components/SupportLinks';
-import { Tab, Tabs } from '@components/Tabs';
-import { RootState } from '@store/index';
+import SupportLinks from '../../components/SupportLinks';
+import { Tab, Tabs } from '../../components/Tabs';
+import { RootState } from '../../store/index';
 import ReactTooltip from 'react-tooltip';
 import React, { FunctionComponent, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Overview } from './overview';
-import { NotificationTypes } from './notificationTypes';
-import { Subscriptions } from './subscriptions';
-import { Subscribers } from './subscribers';
 import { GoAButton } from '@abgov/react-components';
 import { subscriberAppUrlSelector } from './selectors';
+import { <%= upcaseTitle %> } from './<%= title %>';
 
 export const Notifications: FunctionComponent = () => {
-  const docBaseUrl = useSelector((state: RootState) => state.config.serviceUrls?.docServiceApiUrl);
-  const tenantName = useSelector((state: RootState) => state.tenant.name);
+  const docBaseUrl = "http://www.google.com";
+  const tenantName = "Test tenant";
 
-  const loginUrl = useSelector(subscriberAppUrlSelector);
+  const loginUrl = "login.google.com"
 
   const [activateEditState, setActivateEditState] = useState<boolean>(false);
   const [activeIndex, setActiveIndex] = useState<number>(0);
@@ -45,7 +43,7 @@ export const Notifications: FunctionComponent = () => {
             <Overview setActiveEdit={activateEdit} />
           </Tab>
           <Tab label="<%= title %>">
-            <<%= title %> />
+            <<%= upcaseTitle %> />
           </Tab>
         </Tabs>
       </Main>

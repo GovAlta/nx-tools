@@ -1,18 +1,19 @@
 import React, { FunctionComponent, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import DataTable from '@components/DataTable';
-import { RootState } from '@store/index';
-import type { <%= upcaseTitle %> } from '../store/<%= title %>/models';
-import { Update<%= upcaseTitle %>Service } from '../../<%= title %>/actions';
+import DataTable from '../../components/DataTable';
+import { RootState } from '../../../store/index';
+import type { <%= upcaseTitle %>Item } from '../store/<%= title %>/models';
+import { default<%= upcaseTitle %> } from '../../store/face/models';
+import { Update<%= upcaseTitle %>Service } from '../../store/<%= title %>/actions';
 import styled from 'styled-components';
 import { Edit<%= upcaseTitle %>ModalForm } from './edit';
 import { GoAIconButton } from '@abgov/react-components/experimental';
-import { GoAContextMenuIcon } from '@components/ContextMenu';
+import { GoAContextMenuIcon } from '../../components/ContextMenu';
 
 interface <%= upcaseTitle %>Props {
-  <%= title %>: <%= upcaseTitle %>;
-  onDelete: (<%= title %>Item: <%= upcaseTitle %>) => void;
-  onEdit: (<%= title %>Item: <%= upcaseTitle %>) => void;
+  <%= title %>: <%= upcaseTitle %>Item;
+  onDelete: (<%= title %>Item: <%= upcaseTitle %>Item) => void;
+  onEdit: (<%= title %>Item: <%= upcaseTitle %>Item) => void;
 }
 
 const <%= upcaseTitle %>Component: FunctionComponent<<%= upcaseTitle %>Props> = ({ <%= title %>, onDelete, onEdit }) => {
@@ -31,12 +32,12 @@ const <%= upcaseTitle %>Component: FunctionComponent<<%= upcaseTitle %>Props> = 
          <td headers="actions" data-testid="actions">
           <div style={{ display: 'flex', flexDirection: 'row-reverse' }}>
             <GoAIconButton
-              data-testid={`delete-subscription-${notix.id}`}
+              data-testid={`delete-subscription-${<%= title %>.id}`}
               size="medium"
               type="trash"
-              onClick={() => onDelete(notix)}
+              onClick={() => onDelete(<%= title %>)}
             />
-            <GoAContextMenuIcon type="create" onClick={() => onEdit(notix)} testId="edit-details" />
+            <GoAContextMenuIcon type="create" onClick={() => onEdit(<%= title %>)} testId="edit-details" />
           </div>
         </td>
       </tr>
@@ -52,10 +53,9 @@ const <%= upcaseTitle %>sListComponent: FunctionComponent<<%= upcaseTitle %>sLis
   onDelete,
 }) => {
   const dispatch = useDispatch();
-  const Notixs = useSelector((state: RootState) => state.notix.notix);
-  const { groups, type<%= upcaseTitle %>s } = useSelector(type<%= upcaseTitle %>sSelector);
+  const <%= upcaseTitle %>s = useSelector((state: RootState) => state.<%= title %> && state.<%= title %>.<%= title %>);
   const [edit<%= upcaseTitle %>, setEdit<%= upcaseTitle %>] = useState(false);
-  const [selected<%= upcaseTitle %>, setSelected<%= upcaseTitle %>] = useState(null);
+  const [selected<%= upcaseTitle %>, setSelected<%= upcaseTitle %>] = useState(default<%= upcaseTitle %>);
 
   const openModalFunction = (<%= title %>) => {
     setSelected<%= upcaseTitle %>(<%= title %>);
@@ -66,17 +66,8 @@ const <%= upcaseTitle %>sListComponent: FunctionComponent<<%= upcaseTitle %>sLis
     setEdit<%= upcaseTitle %>(false);
   }
 
-  if (!groups) {
-    return (
-      <div>
-        {' '}
-        <GoAPageLoader visible={true} message="Loading..." type="infinite" pagelock={false} />
-      </div>
-    );
-  }
-
   return (
-    <div className={className}>
+    <div>
       <div>
         <DataTable data-testid={`<%= title %>-table`}>
           <thead>
@@ -91,8 +82,8 @@ const <%= upcaseTitle %>sListComponent: FunctionComponent<<%= upcaseTitle %>sLis
           </thead>
           <tbody>
            {<%= upcaseTitle %>s && Object.keys(<%= upcaseTitle %>s).map((<%= title %>) => {
-             const <%= title %> = %= upcaseTitle %>s[key];
-              return <<%= upcaseTitle %>Component <%= title %>={<%= title %>} onEdit={openModalFunction} onDelete={onDelete} />
+             const <%= title %>Data = <%= upcaseTitle %>s[<%= title %>];
+              return <<%= upcaseTitle %>Component <%= title %>={<%= title %>Data} onEdit={openModalFunction} onDelete={onDelete} />
            })}
           </tbody>
         </DataTable>

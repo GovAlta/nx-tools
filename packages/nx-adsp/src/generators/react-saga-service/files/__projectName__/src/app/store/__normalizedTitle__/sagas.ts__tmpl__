@@ -1,5 +1,4 @@
 import { put, select, call, takeEvery, takeLatest } from 'redux-saga/effects';
-import { ErrorNotification } from '@store/notifications/actions';
 import { SagaIterator } from '@redux-saga/core';
 import {
   Fetch<%= upcaseTitle %>SucceededService,
@@ -8,20 +7,16 @@ import {
   Update<%= upcaseTitle %>Action,
   DELETE_<%= allUpcaseTitle %>,
   FETCH_<%= allUpcaseTitle %>,
-  FETCH_CORE_<%= allUpcaseTitle %>S,
   UPDATE_<%= allUpcaseTitle %>,
 } from './actions';
 
 import { RootState } from '../index';
 import axios from 'axios';
-import { EventItem } from './models';
-import { UpdateIndicator } from '@store/session/actions';
+
+const configBaseUrl = 'http://localhost:3339';
 
 export function* fetch<%= upcaseTitle %>s(): SagaIterator {
-  const configBaseUrl: string = yield select(
-    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
-  );
-  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+  const token: string = yield select((state: RootState) => state.user?.user?.token);
 
   if (configBaseUrl && token) {
     try {
@@ -38,7 +33,7 @@ export function* fetch<%= upcaseTitle %>s(): SagaIterator {
         yield put(Fetch<%= upcaseTitle %>SucceededService(notificationTypeInfo));
       }
     } catch (e) {
-      yield put(ErrorNotification({ message: `${e.message} - fetch<%= upcaseTitle %>s` }));
+      console.log(`message: + ${e.response.data} - fetch<%= upcaseTitle %>s`);
     }
   }
 }
@@ -46,10 +41,7 @@ export function* fetch<%= upcaseTitle %>s(): SagaIterator {
 export function* delete<%= upcaseTitle %>s(action: Delete<%= upcaseTitle %>Action): SagaIterator {
   const notificationType = action.payload;
 
-  const configBaseUrl: string = yield select(
-    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
-  );
-  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+  const token: string = yield select((state: RootState) => state.user?.user?.token);
 
   if (configBaseUrl && token) {
     try {
@@ -63,31 +55,17 @@ export function* delete<%= upcaseTitle %>s(action: Delete<%= upcaseTitle %>Actio
       );
       yield put(Fetch<%= upcaseTitle %>Service());
     } catch (e) {
-      yield put(ErrorNotification({ message: `${e.response.data} - delete<%= upcaseTitle %>s` }));
+      console.log(`message: + ${e.response.data} - delete<%= upcaseTitle %>s`);
     }
   }
 }
 
 export function* update<%= upcaseTitle %>({ payload }: Update<%= upcaseTitle %>Action): SagaIterator {
-  const configBaseUrl: string = yield select(
-    (state: RootState) => state.config.serviceUrls?.configurationServiceApiUrl
-  );
-  const token: string = yield select((state: RootState) => state.session.credentials?.token);
+  const token: string = yield select((state: RootState) => state.user?.user?.token);
 
   if (configBaseUrl && token) {
     try {
-      const payloadId = payload.id;
-
-      const sanitizedEvents = payload.events.map((eve) => {
-        const eventBuilder: EventItem = {
-          namespace: eve.namespace,
-          name: eve.name,
-          templates: eve.templates,
-        };
-        return eventBuilder;
-      });
-
-      payload.events = sanitizedEvents;
+      const payloadId = payload.id || payload.contactEmail;
 
       yield call(
         axios.patch,
@@ -110,7 +88,7 @@ export function* update<%= upcaseTitle %>({ payload }: Update<%= upcaseTitle %>A
 
       yield put(Fetch<%= upcaseTitle %>Service());
     } catch (e) {
-      yield put(Error<%= upcaseTitle %>({ message: `${e.message} - update<%= upcaseTitle %>` }));
+      console.log(`message: + ${e.response.data} - update<%= upcaseTitle %>s`);
     }
   }
 }
