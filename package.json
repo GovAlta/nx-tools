@@ -65,7 +65,7 @@
     "nx": "13.10.5",
     "prettier": "2.5.1",
     "react-test-renderer": "18.0.0",
-    "semantic-release": "^19.0.2",
+    "semantic-release": "^19.0.3",
     "split2": "^3.2.2",
     "stream-buffers": "^3.0.2",
     "ts-jest": "27.0.5",
