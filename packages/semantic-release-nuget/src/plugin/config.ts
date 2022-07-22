@@ -7,9 +7,7 @@ export interface NugetPluginConfig extends PluginConfig {
   serviceable: boolean;
   nupkgRoot: string;
   source: string;
-  apiKey: string;
   symbolSource: string;
-  symbolApiKey: string;
   skipDuplicate: boolean;
   timeout: number;
 }

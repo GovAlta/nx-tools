@@ -10,9 +10,7 @@ export const publish: PluginFunction = async (
   const {
     nupkgRoot,
     source,
-    apiKey,
     symbolSource,
-    symbolApiKey,
     skipDuplicate,
     timeout,
   } = config;
@@ -25,9 +23,9 @@ export const publish: PluginFunction = async (
     'push',
     '*.nupkg',
     source ? `--source ${source}` : null,
-    apiKey ? `--api-key ${apiKey}` : null,
+    env.NUGET_API_KEY ? `--api-key ${env.NUGET_API_KEY}` : null,
     symbolSource ? `--symbol-source ${symbolSource}` : null,
-    symbolApiKey ? `--symbol-api-key ${symbolApiKey}` : null,
+    env.NUGET_API_KEY ? `--symbol-api-key ${env.NUGET_API_KEY}` : null,
     skipDuplicate ? '--skip-duplicate' : null,
     timeout ? `--timeout ${timeout}` : null,
   ].filter((v) => !!v);
