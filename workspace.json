@@ -305,6 +305,46 @@
       },
       "tags": [],
       "implicitDependencies": ["nx-release"]
+    },
+    "semantic-release-nuget": {
+      "root": "packages/semantic-release-nuget",
+      "sourceRoot": "packages/semantic-release-nuget/src",
+      "projectType": "library",
+      "targets": {
+        "lint": {
+          "executor": "@nrwl/linter:eslint",
+          "outputs": ["{options.outputFile}"],
+          "options": {
+            "lintFilePatterns": ["packages/semantic-release-nuget/**/*.ts"]
+          }
+        },
+        "test": {
+          "executor": "@nrwl/jest:jest",
+          "outputs": ["coverage/packages/semantic-release-nuget"],
+          "options": {
+            "jestConfig": "packages/semantic-release-nuget/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "build": {
+          "executor": "@nrwl/js:tsc",
+          "outputs": ["{options.outputPath}"],
+          "options": {
+            "outputPath": "dist/packages/semantic-release-nuget",
+            "tsConfig": "packages/semantic-release-nuget/tsconfig.lib.json",
+            "packageJson": "packages/semantic-release-nuget/package.json",
+            "main": "packages/semantic-release-nuget/src/index.ts",
+            "assets": ["packages/semantic-release-nuget/*.md"]
+          }
+        },
+        "release": {
+          "executor": "@nrwl/workspace:run-commands",
+          "options": {
+            "command": "npx semantic-release -e ./packages/semantic-release-nuget/.releaserc.json"
+          }
+        }
+      },
+      "tags": []
     }
   }
 }
