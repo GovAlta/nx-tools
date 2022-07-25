@@ -3,3 +3,5 @@ This is the Government of Alberta - Semantic Release plugin for Nuget.
 
 This plugin is intended for CI environments and runs `dotnet pack` with `--no-build` and `/p:Version={semVer}` in `prepare`.
 Note that this means it only sets the Nuget package version and does not handle assembly version(s).
+
+The environment variable `NUGET_API_KEY` is used as the API key for pushing to the Nuget source.
