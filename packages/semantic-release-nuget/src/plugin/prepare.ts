@@ -6,7 +6,9 @@ export const prepare: PluginFunction = async (
   config: NugetPluginConfig,
   context
 ) => {
-  const { configuration, includeSymbols, includeSource, serviceable } = config;
+  const { configuration, noBuild, includeSymbols, includeSource, serviceable } =
+    config;
+
   const {
     cwd,
     env,
@@ -17,11 +19,11 @@ export const prepare: PluginFunction = async (
 
   const args = [
     'pack',
-    '--no-build',
+    noBuild ? '--no-build' : null,
     includeSymbols ? '--include-symbols' : null,
     includeSource ? '--include-source' : null,
     serviceable ? '----serviceable' : null,
-    `--configuration ${configuration || 'Release'}`,
+    !noBuild ? `--configuration ${configuration || 'Release'}` : null,
     `/p:Version=${version}`,
   ].filter((v) => !!v);
 
