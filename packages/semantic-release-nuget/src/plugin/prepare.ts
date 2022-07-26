@@ -24,7 +24,7 @@ export const prepare: PluginFunction = async (
     includeSymbols ? '--include-symbols' : null,
     includeSource ? '--include-source' : null,
     serviceable ? '----serviceable' : null,
-    `/p:Configuration ${configuration || 'Release'}`,
+    `/p:Configuration=${configuration || 'Release'}`,
     `/p:Version=${version}`,
   ].filter((v) => !!v);
 
