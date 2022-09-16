@@ -20,11 +20,12 @@ export function hasDependency(host: Tree, dependency: string): boolean {
 
 export function getAdspConfiguration(
   host: Tree,
-  { tenant }: { tenant: string }
+  { tenant, realm }: { tenant: string, realm?: string }
 ): AdspConfiguration {
   return {
     tenant,
-    tenantRealm: tenant,
-    accessServiceUrl: 'https://access.alpha.alberta.ca'
+    tenantRealm: realm,
+    accessServiceUrl: 'https://access.alberta.ca',
+    directoryServiceUrl: 'https://directory-service.adsp.alberta.ca',
   }
 }

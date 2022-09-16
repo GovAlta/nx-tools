@@ -11,10 +11,10 @@
   },
   "peerDependencies": {
     "@abgov/nx-dotnet": "^3.0.0",
-    "@abgov/nx-oc": "^3.0.0",
+    "@nrwl/angular": "^13.4.3",
+    "@nrwl/devkit": "^13.4.3",
     "@nrwl/express": "^13.4.3",
-    "@nrwl/react": "^13.4.3",
-    "@nrwl/angular": "^13.4.3"
+    "@nrwl/react": "^13.4.3"
   },
   "dependencies": {
     "@angular-devkit/core": "^13.1.0",
