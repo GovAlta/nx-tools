@@ -64,15 +64,14 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host, 
     {
-      'jwks-rsa': '^2.0.2',
-      'passport': '^0.4.1',
-      "passport-anonymous": "^1.0.1",
-      'passport-jwt': '^4.0.0',
+      '@abgov/adsp-service-sdk': '^1.18.0',
+      'dotenv': '^16.0.0',
+      'passport': '^0.6.0',
+      'passport-anonymous': '^1.0.1',
     },
     {
-      '@types/passport': '^1.0.6',
-      "@types/passport-anonymous": "^1.0.3",
-      '@types/passport-jwt': '^3.0.5',
+      '@types/passport': '^1.0.9',
+      '@types/passport-anonymous': '^1.0.3',
     }
   );
   
