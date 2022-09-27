@@ -1,5 +1,5 @@
 # About this project
-This is the Government of Alberta - DIO - Nx plugin for Semantic Release.
+This is the Government of Alberta - Nx plugin for Semantic Release.
 
 The project contains both the Nx plugin generator for setting up a monorepo with semantic release
 configuration as well as a plugin for semantic release. 

@@ -11,7 +11,7 @@ describe('React App Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyWorkspace(2);
+    const host = createTreeWithEmptyWorkspace();
     await generator(host, options);
 
     const appConfig = readProjectConfiguration(host, 'test-app');
@@ -23,5 +23,5 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test-app/nginx.conf')).toBeTruthy();
     const nginxConf = host.read('apps/test-app/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
-  });
+  }, 30000);
 });

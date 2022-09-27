@@ -1,4 +1,5 @@
-module.exports = {
+/* eslint-disable */
+export default {
   displayName: 'semantic-release-nuget',
   preset: '../../jest.preset.js',
   globals: {

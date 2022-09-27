@@ -1,5 +1,5 @@
 # About this project
-This is the Government of Alberta - DIO - Nx plugin for ADSP apps.
+This is the Government of Alberta - Nx plugin for ADSP apps.
 
 The plugin includes generators for application, service, and fullstack solution quick starts. If the peer dependency `@abgov/nx-oc` is found, then OpenShift yml files are also included in the quickstarts. Application stack peer dependencies are required for the associated ADSP application type; for example, `@nrwl/angular` is required for the angular-app, and `@abgov/nx-dotnet` is required for dotnet-service.
 
