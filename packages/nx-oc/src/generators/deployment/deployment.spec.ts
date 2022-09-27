@@ -2,7 +2,7 @@ import {
   addProjectConfiguration,
   readProjectConfiguration,
 } from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
 import pipeline from '../pipeline/pipeline';
 import { Schema } from './schema';
 import generator from './deployment';
@@ -10,7 +10,7 @@ describe('Deployment Generator', () => {
   const options: Schema = { project: 'test', tenant: 'test' };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',
@@ -41,7 +41,7 @@ describe('Deployment Generator', () => {
   });
 
   it('can generate deployment for react', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',
@@ -68,7 +68,7 @@ describe('Deployment Generator', () => {
   });
 
   it('can generate deployment for angular', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',
@@ -95,7 +95,7 @@ describe('Deployment Generator', () => {
   });
 
   it('can generate deployment for express', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',
@@ -122,7 +122,7 @@ describe('Deployment Generator', () => {
   });
 
   it('can generate deployment for dotnet', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',
@@ -149,7 +149,7 @@ describe('Deployment Generator', () => {
   });
 
   it('can skip unknown project type', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
       type: 'jenkins',

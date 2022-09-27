@@ -1,4 +1,5 @@
-module.exports = {
+/* eslint-disable */
+export default {
   displayName: 'nx-adsp',
   preset: '../../jest.preset.js',
   globals: {
@@ -7,7 +8,10 @@ module.exports = {
   transform: {
     '^.+\\.[tj]sx?$': 'ts-jest',
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  moduleNameMapper: {
+    '@nrwl/angular/src/utils/test-runners': '<rootDir>/../../node_modules/@nrwl/angular/src/utils/test-runners.js',
+  },
   coverageDirectory: '../../coverage/packages/nx-adsp',
   testEnvironment: 'node',
 };

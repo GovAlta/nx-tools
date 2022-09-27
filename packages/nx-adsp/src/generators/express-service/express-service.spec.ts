@@ -1,5 +1,5 @@
 import { readProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
 import { Schema } from './schema';
 import generator from './express-service';
 
@@ -11,7 +11,7 @@ describe('Express Service Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyV1Workspace();
     await generator(host, options);
 
     const config = readProjectConfiguration(host, 'test');

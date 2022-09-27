@@ -1,6 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { ReadableStreamBuffer } from 'stream-buffers';
-import { mocked } from 'ts-jest/utils'
+import { mocked } from 'jest-mock'
 import { getPathCommitHashes } from './git-utils';
 
 jest.mock('child_process');

@@ -1,5 +1,5 @@
 import { createTree } from '@nrwl/devkit/testing';
-import { mocked } from 'ts-jest/utils'
+import { mocked } from 'jest-mock'
 import generator from './apply-infra';
 import { runOcCommand } from '../../utils/oc-utils';
 import { writeJson } from '@nrwl/devkit';

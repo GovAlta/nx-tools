@@ -1,5 +1,5 @@
 import { Commit } from 'semantic-release';
-import { mocked } from 'ts-jest/utils'
+import { mocked } from 'jest-mock'
 import { wrapPlugin } from './wrap-plugin';
 import { getProjectChangePaths } from './nx-util';
 import { getPathCommitHashes } from './git-utils';

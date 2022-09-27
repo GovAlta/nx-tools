@@ -1,5 +1,5 @@
 # About this project
-This is the Government of Alberta - DIO - Nx plugin for OpenShift.
+This is the Government of Alberta - Nx plugin for OpenShift.
 
 The plugin includes generators for setting up OpenShift pipeline and application yaml files, and executors for `oc cli` commands.
 

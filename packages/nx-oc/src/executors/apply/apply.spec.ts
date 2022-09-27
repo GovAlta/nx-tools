@@ -1,5 +1,5 @@
 import { ExecutorContext } from '@nrwl/devkit';
-import { mocked } from 'ts-jest/utils'
+import { mocked } from 'jest-mock'
 import { Schema } from './schema';
 import executor from './apply';
 import { runOcCommand } from '../../utils/oc-utils';

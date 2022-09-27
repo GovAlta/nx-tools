@@ -1,5 +1,6 @@
-module.exports = {
-  displayName: 'nx-release',
+/* eslint-disable */
+export default {
+  displayName: 'nx-dotnet',
   preset: '../../jest.preset.js',
   globals: {
     'ts-jest': { tsconfig: '<rootDir>/tsconfig.spec.json' },
@@ -8,6 +9,7 @@ module.exports = {
     '^.+\\.[tj]sx?$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-  coverageDirectory: '../../coverage/packages/nx-release',
+  coverageDirectory: '../../coverage/packages/nx-dotnet',
   testEnvironment: 'node',
+  testMatch: ['**/(*.)+(spec|test).[jt]s?(x)'],
 };
