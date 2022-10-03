@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { readFile } from 'fs';
+import { resolve } from 'path';
 import { promisify } from 'util';
 
 interface ProjectNode {
@@ -20,11 +21,11 @@ interface DependencyGraph {
 
 const paths: Record<string, string[]> = {}
 
-export const getProjectChangePaths = async (project: string) => {
+export const getProjectChangePaths = async (cwd: string, project: string) => {
   
   if (!paths[project]) {
     
-    const file = `tmp/${project}-deps.json`;
+    const file = resolve(cwd, `tmp/${project}-deps.json`);
     await promisify(exec)(
       [
         'npx',

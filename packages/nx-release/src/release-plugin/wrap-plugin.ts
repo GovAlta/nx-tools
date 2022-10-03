@@ -10,7 +10,7 @@ export const wrapPlugin = (plugin: PluginFunction) => async (
   {project, ...pluginConfig} : WrappedPluginConfig, 
   context: Context
 ) => {
-  const {commits, logger} = context;
+  const {commits, cwd, logger} = context;
   let filteredCommits = commits;
 
   if (!project) {
@@ -18,7 +18,7 @@ export const wrapPlugin = (plugin: PluginFunction) => async (
   } else {
     logger.log(`Filtering commits to those affecting ${project}...`);
     
-    const paths = await getProjectChangePaths(project);
+    const paths = await getProjectChangePaths(cwd, project);
     logger.log(`Resolved to paths: ${paths.join(', ')}...`);
 
     const from = context.lastRelease?.gitHead;
