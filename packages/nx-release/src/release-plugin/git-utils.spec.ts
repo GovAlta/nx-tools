@@ -22,6 +22,7 @@ describe('git-utils', () => {
       
       mockedSpawn.mockReturnValue({ stdout: stream } as unknown as ChildProcess)
       const commits = await getPathCommitHashes(
+        '/repo',
         'test', 
         ['test'],
         '',
