@@ -6,15 +6,14 @@ import { AngularAppGeneratorSchema } from './schema';
 
 describe('angular app generator', () => {
   let appTree: Tree;
-  const options: AngularAppGeneratorSchema = { name: 'test', tenant: 'testtenant' };
+  const options: AngularAppGeneratorSchema = {
+    name: 'test',
+    tenant: 'testtenant',
+  };
 
   beforeEach(() => {
-    appTree = createTreeWithEmptyWorkspace(2);
-    jest.setTimeout(28000)
+    appTree = createTreeWithEmptyWorkspace();
   });
-  afterAll(() => {
-   jest.clearAllTimers()
-  })
 
   it('should run successfully', async () => {
     await angularApp(appTree, options);
@@ -22,48 +21,42 @@ describe('angular app generator', () => {
     expect(config).toBeDefined();
     expect(config.root).toBe('apps/test');
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
-  }, 10000);
+  }, 30000);
 
-  it ('can add nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace(2);
-    await angularApp(
-      host,
-      {
-        ...options,
-        proxy: {
-          location: '/test/',
-          proxyPass: 'http://test-service:3333/'
-        }
-      }
-    );
+  it('can add nginx proxy', async () => {
+    const host = createTreeWithEmptyWorkspace();
+    await angularApp(host, {
+      ...options,
+      proxy: {
+        location: '/test/',
+        proxyPass: 'http://test-service:3333/',
+      },
+    });
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.root).toBe('apps/test');
 
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
-    expect(
-      host.read('apps/test/nginx.conf').toString()
-    ).toContain('http://test-service:3333/');
+    expect(host.read('apps/test/nginx.conf').toString()).toContain(
+      'http://test-service:3333/'
+    );
   });
 
-  it ('can add multiple nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace(2);
-    await angularApp(
-      host,
-      {
-        ...options,
-        proxy: [
-          {
-            location: '/test/',
-            proxyPass: 'http://test-service:3333/'
-          },
-          {
-            location: '/test2/',
-            proxyPass: 'http://test-service2:3333/'
-          }
-        ]
-      }
-    );
+  it('can add multiple nginx proxy', async () => {
+    const host = createTreeWithEmptyWorkspace();
+    await angularApp(host, {
+      ...options,
+      proxy: [
+        {
+          location: '/test/',
+          proxyPass: 'http://test-service:3333/',
+        },
+        {
+          location: '/test2/',
+          proxyPass: 'http://test-service2:3333/',
+        },
+      ],
+    });
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.root).toBe('apps/test');
@@ -74,18 +67,15 @@ describe('angular app generator', () => {
     expect(nginxConf).toContain('http://test-service2:3333/');
   });
 
-  it ('can add webpack dev server proxy', async () => {
-    const host = createTreeWithEmptyWorkspace(2);
-    await angularApp(
-      host,
-      {
-        ...options,
-        proxy: {
-          location: '/test/',
-          proxyPass: 'http://test-service:3333/api/'
-        }
-      }
-    );
+  it('can add webpack dev server proxy', async () => {
+    const host = createTreeWithEmptyWorkspace();
+    await angularApp(host, {
+      ...options,
+      proxy: {
+        location: '/test/',
+        proxyPass: 'http://test-service:3333/api/',
+      },
+    });
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.root).toBe('apps/test');

@@ -2,7 +2,7 @@
 
 name: Release CI
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: "16"
       - run: npm ci
       - id: get_branch_name
         run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}

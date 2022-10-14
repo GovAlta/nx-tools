@@ -3,15 +3,15 @@
   "version": "0.0.0",
   "license": "Apache-2.0",
   "main": "src/index.js",
-  "description": "Government of Alberta - DIO - Nx plugin for Semantic Release.",
+  "description": "Government of Alberta - Nx plugin for Semantic Release.",
   "repository": {
     "type": "git",
     "url": "https://github.com/abgov/nx-tools.git",
     "directory": "packages/nx-release"
   },
   "dependencies": {
-    "@semantic-release/commit-analyzer": "~8.0.1",
-    "@semantic-release/release-notes-generator": "~9.0.2",
+    "@semantic-release/commit-analyzer": "~9.0.2",
+    "@semantic-release/release-notes-generator": "~10.0.3",
     "get-stream": "~6.0.0",
     "split2": "~3.2.2"
   },

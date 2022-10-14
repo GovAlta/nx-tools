@@ -34,7 +34,7 @@
       "type": "string",
       "description": "Names of the OpenShift Projects for environments.",
       "alias": "e",
-      "x-prompt": "What projects should be used for environments (dev test staging prod)?"
+      "x-prompt": "What projects should be used for environments (dev test prod)?"
     },
     "apply": {
       "type": "boolean",

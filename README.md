@@ -5,7 +5,7 @@ This is a monorepo of the Government of Alberta's custom plugins for [Nx](https:
 
 [Nx OpenShift Plugin](./packages/nx-oc/README.md) - includes generators for setting up OpenShift pipeline and application yaml files, and executors for `oc cli` commands.
 
-[Nx Dotnet Plugin](./packages/nx-dotnet/README.md) - includes generators for setting up dotnet workspace configuration, and executors for `dotnet` cli commands.
+[Nx Dotnet Plugin](./packages/nx-dotnet/README.md) - **Deprecated** - Use [nx-dotnet/core](https://github.com/nx-dotnet/nx-dotnet) for dotnet generators and executors.
 
 [Nx Release Plugin](./packages/nx-release/README.md) - includes generators for adding [semantic-release](https://github.com/semantic-release/semantic-release) based release targets.
 
@@ -19,10 +19,10 @@ This is a monorepo of the Government of Alberta's custom plugins for [Nx](https:
     cd my-project
 
     # Install @abgov plugins.
-    npm i -D @abgov/nx-oc @abgov/nx-dotnet @abgov/nx-adsp
+    npm i -D @abgov/nx-oc @abgov/nx-adsp
 
     # Install peer dependencies depending on desired frameworks.
-    npm i -D @nrwl/angular@^11.5.2  
+    npm i -D @nrwl/angular @nx-dotnet/core
     ```
 
 2. Generate `oc` pipeline manifests and resources. *Apply the pipeline to OpenShift* requires `oc` cli to be installed and already logged in.
@@ -36,20 +36,15 @@ This is a monorepo of the Government of Alberta's custom plugins for [Nx](https:
     ? Apply the pipeline to OpenShift? No
     ```
 
-3. Generate `dotnet` workspace.
-    ```bash
-    npx nx g @abgov/nx-dotnet:workspace
-    ```
-
-4. List the available application generators.
+3. List the available application generators.
     ```bash
     npx nx list @abgov/nx-adsp
     ```
-5. Generate an application.
+4. Generate an application.
     ```bash
     npx nx g @abgov/nx-adsp:angular-app my-angular-app
     ```
-6. Generate a backend service.
+5. Generate a backend service.
    ```bash
    npx nx g @abgov/nx-adsp:dotnet-service my-dotnet-service
    ```

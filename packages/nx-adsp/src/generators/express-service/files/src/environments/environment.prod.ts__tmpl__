@@ -1,4 +1,13 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 export const environment = {
   production: true,
+  TENANT_REALM: '<%= tenantRealm %>',
+  ACCESS_SERVICE_URL: '<%= accessServiceUrl %>',
+  DIRECTORY_SERVICE_URL: '<%= directoryServiceUrl %>',
+  CLIENT_ID: 'urn:ads:<%= tenant %>:<%= projectName %>',
+  CLIENT_SECRET: '',
+  LOG_LEVEL: 'info',
   ...process.env,
 };

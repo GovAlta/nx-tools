@@ -3,22 +3,21 @@
   "version": "0.0.0",
   "license": "Apache-2.0",
   "main": "src/index.js",
-  "description": "Government of Alberta - DIO - Nx plugin for ADSP apps.",
+  "description": "Government of Alberta - Nx plugin for ADSP apps.",
   "repository": {
     "type": "git",
     "url": "https://github.com/abgov/nx-tools.git",
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@abgov/nx-dotnet": "^3.0.0",
-    "@abgov/nx-oc": "^3.0.0",
-    "@nrwl/express": "^13.4.3",
-    "@nrwl/react": "^13.4.3",
-    "@nrwl/angular": "^13.4.3"
+    "@nrwl/angular": "^14.0.0",
+    "@nrwl/devkit": "^14.0.0",
+    "@nrwl/express": "^14.0.0",
+    "@nrwl/react": "^14.0.0"
   },
   "dependencies": {
-    "@angular-devkit/core": "^13.1.0",
-    "@angular-devkit/schematics": "^13.1.0",
+    "@angular-devkit/core": "^14.0.0",
+    "@angular-devkit/schematics": "^14.0.0",
     "camelcase": "^5.3.1"
   },
   "generators": "./generators.json"

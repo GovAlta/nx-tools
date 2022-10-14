@@ -1,6 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { ReadableStreamBuffer } from 'stream-buffers';
-import { mocked } from 'ts-jest/utils'
+import { mocked } from 'jest-mock'
 import { getPathCommitHashes } from './git-utils';
 
 jest.mock('child_process');
@@ -22,6 +22,7 @@ describe('git-utils', () => {
       
       mockedSpawn.mockReturnValue({ stdout: stream } as unknown as ChildProcess)
       const commits = await getPathCommitHashes(
+        '/repo',
         'test', 
         ['test'],
         '',

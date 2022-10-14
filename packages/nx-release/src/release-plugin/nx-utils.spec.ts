@@ -1,38 +1,45 @@
 import { getProjectChangePaths } from './nx-util';
 jest.mock('child_process', () => ({
-  exec: jest.fn((_c, cb) => cb(null))
+  exec: jest.fn((_c, cb) => cb(null)),
 }));
 jest.mock('fs', () => ({
-  readFile: jest.fn((_f, _e, cb) => 
+  readFile: jest.fn((_f, _e, cb) =>
     cb(
-      null, 
+      null,
       Buffer.from(
         JSON.stringify({
           graph: {
             nodes: {
               test: { data: { root: 'libs/test' } },
-              dep: { data: { root: 'libs/dep' } }
+              dep: { data: { root: 'libs/dep' } },
             },
             dependencies: {
               test: [
                 {
                   type: 'static',
-                  target: 'dep'
-                }
-              ]
-            }
-          }
-        }), 
+                  target: 'dep',
+                },
+              ],
+            },
+          },
+        }),
         'utf-8'
       )
     )
-  )
+  ),
 }));
 
 describe('getProjectChangePaths', () => {
-  
   it('can get paths', async () => {
-    const paths = await getProjectChangePaths('test');
+    const paths = await getProjectChangePaths('', 'test');
+
+    expect(paths.length).toBe(2);
+    expect(paths[0]).toBe('libs/test');
+    expect(paths[1]).toBe('libs/dep');
+  });
+
+  it('can get paths with working directory', async () => {
+    const paths = await getProjectChangePaths('libs/test', 'test');
 
     expect(paths.length).toBe(2);
     expect(paths[0]).toBe('libs/test');
