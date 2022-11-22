@@ -50,7 +50,7 @@
           }
         },
         "release": {
-          "executor": "@nrwl/workspace:run-commands",
+          "executor": "nx:run-commands",
           "options": {
             "command": "npx semantic-release -e ./packages/nx-adsp/.releaserc.json"
           }
@@ -125,7 +125,7 @@
           }
         },
         "release": {
-          "executor": "@nrwl/workspace:run-commands",
+          "executor": "nx:run-commands",
           "options": {
             "command": "npx semantic-release -e ./packages/nx-dotnet/.releaserc.json"
           }
@@ -200,7 +200,7 @@
           }
         },
         "release": {
-          "executor": "@nrwl/workspace:run-commands",
+          "executor": "nx:run-commands",
           "options": {
             "command": "npx semantic-release -e ./packages/nx-oc/.releaserc.json"
           }
@@ -280,7 +280,7 @@
           }
         },
         "release": {
-          "executor": "@nrwl/workspace:run-commands",
+          "executor": "nx:run-commands",
           "options": {
             "command": "npx semantic-release -e ./packages/nx-release/.releaserc.json"
           }
@@ -338,7 +338,7 @@
           }
         },
         "release": {
-          "executor": "@nrwl/workspace:run-commands",
+          "executor": "nx:run-commands",
           "options": {
             "command": "npx semantic-release -e ./packages/semantic-release-nuget/.releaserc.json"
           }
