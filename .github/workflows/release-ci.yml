@@ -31,7 +31,7 @@ jobs:
           node-version: "16"
       - run: npm ci
       - id: get_branch_name
-        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+        run: echo "short_ref=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get last successful commit
         uses: nrwl/last-successful-commit-action@v1
         id: last_successful_commit
