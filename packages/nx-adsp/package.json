@@ -10,14 +10,14 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@nrwl/angular": "^14.0.0",
-    "@nrwl/devkit": "^14.0.0",
-    "@nrwl/express": "^14.0.0",
-    "@nrwl/react": "^14.0.0"
+    "@nrwl/angular": "^15.0.0",
+    "@nrwl/devkit": "^15.0.0",
+    "@nrwl/express": "^15.0.0",
+    "@nrwl/react": "^15.0.0"
   },
   "dependencies": {
-    "@angular-devkit/core": "^14.0.0",
-    "@angular-devkit/schematics": "^14.0.0",
+    "@angular-devkit/core": "^15.0.0",
+    "@angular-devkit/schematics": "^15.0.0",
     "camelcase": "^5.3.1"
   },
   "generators": "./generators.json"

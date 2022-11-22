@@ -15,7 +15,7 @@
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-adsp"],
+          "outputs": ["{workspaceRoot}/coverage/packages/nx-adsp"],
           "options": {
             "jestConfig": "packages/nx-adsp/jest.config.ts",
             "passWithNoTests": true
@@ -90,7 +90,7 @@
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-dotnet"],
+          "outputs": ["{workspaceRoot}/coverage/packages/nx-dotnet"],
           "options": {
             "jestConfig": "packages/nx-dotnet/jest.config.ts",
             "passWithNoTests": true
@@ -165,7 +165,7 @@
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-oc"],
+          "outputs": ["{workspaceRoot}/coverage/packages/nx-oc"],
           "options": {
             "jestConfig": "packages/nx-oc/jest.config.ts",
             "passWithNoTests": true
@@ -240,7 +240,7 @@
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/nx-release"],
+          "outputs": ["{workspaceRoot}/coverage/packages/nx-release"],
           "options": {
             "jestConfig": "packages/nx-release/jest.config.ts",
             "passWithNoTests": true
@@ -320,7 +320,9 @@
         },
         "test": {
           "executor": "@nrwl/jest:jest",
-          "outputs": ["coverage/packages/semantic-release-nuget"],
+          "outputs": [
+            "{workspaceRoot}/coverage/packages/semantic-release-nuget"
+          ],
           "options": {
             "jestConfig": "packages/semantic-release-nuget/jest.config.ts",
             "passWithNoTests": true

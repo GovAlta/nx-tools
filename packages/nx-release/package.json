@@ -10,7 +10,7 @@
     "directory": "packages/nx-release"
   },
   "peerDependencies": {
-    "@nrwl/devkit": "^14.0.0"
+    "@nrwl/devkit": "^15.0.0"
   },
   "dependencies": {
     "@semantic-release/commit-analyzer": "~9.0.2",
