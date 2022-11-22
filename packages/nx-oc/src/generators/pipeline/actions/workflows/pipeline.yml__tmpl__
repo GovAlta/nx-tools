@@ -41,7 +41,7 @@ jobs:
       
       # Determine the last successful build of this (pipeline.yml) workflow and set it as the AFFECTED_BASE.
       - id: get_branch_name
-        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+        run: echo "short_ref::${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get last successful commit
         uses: nrwl/last-successful-commit-action@v1
         id: last_successful_commit
@@ -90,7 +90,7 @@ jobs:
           done 
       # Set build job outputs for subsequent jobs.
       - id: set_outputs
-        run: echo ::set-output name=affected_apps::$AFFECTED_APPS
+        run: echo "affected_apps=$AFFECTED_APPS" >> $GITHUB_OUTPUT
 <% ocEnvProjects.forEach(function(ocEnvProject, i){ -%>
   
   deploy<%= envs[i] %>:
