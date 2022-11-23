@@ -1,4 +1,7 @@
-import { readProjectConfiguration } from '@nrwl/devkit';
+import {
+  addDependenciesToPackageJson,
+  readProjectConfiguration,
+} from '@nrwl/devkit';
 import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
 import { Schema } from './schema';
 import generator from './dotnet-service';
@@ -9,8 +12,15 @@ describe('Dotnet Service Generator', () => {
     tenant: 'test',
   };
 
-  it('can run', async () => {
+  it.skip('can run', async () => {
     const host = createTreeWithEmptyV1Workspace();
+    addDependenciesToPackageJson(
+      host,
+      {},
+      {
+        '@nx-dotnet/core': '^1.15.0',
+      }
+    );
     await generator(host, options);
 
     const config = readProjectConfiguration(host, 'test');

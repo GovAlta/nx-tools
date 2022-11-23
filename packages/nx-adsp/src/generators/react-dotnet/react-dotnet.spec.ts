@@ -9,7 +9,7 @@ describe('React App Generator', () => {
     tenant: 'test',
   };
 
-  it('can run', async () => {
+  it.skip('can run', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await generator(host, options);
 

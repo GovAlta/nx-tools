@@ -135,7 +135,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@abgov/nx-dotnet:build',
+          executor: '@nx-dotnet/core:build',
         },
       },
     });
