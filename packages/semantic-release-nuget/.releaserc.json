@@ -14,6 +14,12 @@
         "pkgRoot": "dist/packages/semantic-release-nuget"
       }
     ],
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "releasedLabels": false,
+        "successComment": false
+      }
+    ]
   ]
 }
