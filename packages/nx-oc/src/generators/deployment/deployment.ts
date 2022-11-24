@@ -38,7 +38,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     case '@nrwl/node:build':
       appType = 'express';
       break;
-    case '@abgov/nx-dotnet:build':
+    case '@nx-dotnet/core:build':
       appType = 'dotnet';
       break;
   }

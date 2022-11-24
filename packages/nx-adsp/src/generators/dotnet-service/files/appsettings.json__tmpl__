@@ -2,15 +2,15 @@
   "Logging": {
     "LogLevel": {
       "Default": "Information",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
+      "Microsoft.AspNetCore": "Warning"
     }
   },
   "Adsp": {
-    "Access": {
-      "Realm": "<%= tenantRealm %>",
-      "Url": "<%= accessServiceUrl %>"
-    }
+    "AccessServiceUrl": "<%= accessServiceUrl %>",
+    "Realm": "<%= tenantRealm %>",
+    "DirectoryUrl": "<%= directoryServiceUrl %>",
+    "ClientId": "",
+    "ClientSecret": ""
   },
   "AllowedHosts": "*"
 }
