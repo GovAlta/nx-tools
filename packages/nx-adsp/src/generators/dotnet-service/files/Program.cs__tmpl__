@@ -25,7 +25,7 @@ builder.Services.AddAdspForService(options =>
   var serviceId = AdspId.Parse(adspConfiguration.GetValue<string>("ClientId"));
   options.ServiceId = serviceId;
   options.DisplayName = "<%= projectName %>";
-  
+
   // 3b. Register configuration definition.
   options.Configuration = new ConfigurationDefinition<HelloWorldConfiguration>(
     "Configuration of the hello world sample service.",
@@ -34,7 +34,7 @@ builder.Services.AddAdspForService(options =>
   // Enable / disable socket.io based configuration invalidation.
   // Include `urn:ads:platform:push-service` audience in access token; e.g use an audience mapper on the associated client.
   options.EnableConfigurationInvalidation = false;
-  
+
   // 3c. Register service roles.
   options.Roles = new[] {
     new ServiceRole {
@@ -42,7 +42,7 @@ builder.Services.AddAdspForService(options =>
       Description = "Hello worlder role that allows user to post a message to the API."
     }
   };
-  
+
   // 3d. Register domain events.
   options.Events = new[] {
     new DomainEventDefinition<HelloWorldEvent>(
@@ -60,7 +60,8 @@ app.UseHttpsRedirection();
 // 4. Add ADSP middleware.
 app.UseAdsp();
 app.UseAuthorization();
-app.UseAdspMetadata(new AdspMetadataOptions {
+app.UseAdspMetadata(new AdspMetadataOptions
+{
   ApiPath = "WeatherForecast"
 });
 

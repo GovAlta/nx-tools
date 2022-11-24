@@ -2,19 +2,19 @@ using System.Text.Json.Serialization;
 
 namespace Adsp.Sdk.Examples;
 
-public class HelloWorldEvent {
+public class HelloWorldEvent
+{
   public const string EventName = "hello-world-event";
 
- [JsonPropertyName("fromUserId")]
+  [JsonPropertyName("fromUserId")]
   public string? FromUserId { get; set; }
 
-
- [JsonPropertyName("fromUser")]
+  [JsonPropertyName("fromUser")]
   public string? FromUser { get; set; }
 
- [JsonPropertyName("message")]
+  [JsonPropertyName("message")]
   public string? Message { get; set; }
 
- [JsonPropertyName("response")]
+  [JsonPropertyName("response")]
   public string? Response { get; set; }
 }

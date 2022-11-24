@@ -1,7 +1,4 @@
-import {
-  addDependenciesToPackageJson,
-  readProjectConfiguration,
-} from '@nrwl/devkit';
+import { addDependenciesToPackageJson } from '@nrwl/devkit';
 import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
 import appGenerator from '@nx-dotnet/core/src/generators/app/generator';
 import refGenerator from '@nx-dotnet/core/src/generators/nuget-reference/generator';
