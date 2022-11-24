@@ -1,5 +1,4 @@
 import {
-  formatFiles,
   generateFiles,
   getWorkspaceLayout,
   installPackagesTask,
@@ -34,7 +33,12 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     ...options.adsp,
     tmpl: '',
   };
-  generateFiles(host, path.join(__dirname, 'files'), '', templateOptions);
+  generateFiles(
+    host,
+    path.join(__dirname, 'files'),
+    options.projectRoot,
+    templateOptions
+  );
 }
 
 export default async function (host: Tree, options: Schema) {
@@ -43,8 +47,6 @@ export default async function (host: Tree, options: Schema) {
   }
 
   const normalizedOptions = normalizeOptions(host, options);
-
-  // addFiles(host, normalizedOptions);
 
   const { default: appGenerator } = await import(
     `${'@nx-dotnet/core/src/generators/app/generator'}`
@@ -69,6 +71,8 @@ export default async function (host: Tree, options: Schema) {
     packageName: 'Adsp.Sdk',
     version: '1.*',
   });
+
+  addFiles(host, normalizedOptions);
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);

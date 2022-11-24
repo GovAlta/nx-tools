@@ -2,6 +2,12 @@ import { readProjectConfiguration } from '@nrwl/devkit';
 import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
 import { Schema } from './schema';
 import generator from './react-dotnet';
+import serviceGenerator from '../dotnet-service/dotnet-service';
+
+jest.mock('../dotnet-service/dotnet-service');
+const serviceGeneratorMock = serviceGenerator as jest.Mocked<
+  typeof serviceGenerator
+>;
 
 describe('React App Generator', () => {
   const options: Schema = {
@@ -9,15 +15,14 @@ describe('React App Generator', () => {
     tenant: 'test',
   };
 
-  it.skip('can run', async () => {
+  it('can run', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await generator(host, options);
 
     const appConfig = readProjectConfiguration(host, 'test-app');
     expect(appConfig.root).toBe('apps/test-app');
 
-    const serviceConfig = readProjectConfiguration(host, 'test-service');
-    expect(serviceConfig.root).toBe('apps/test-service');
+    expect(serviceGeneratorMock).toHaveBeenCalled();
 
     expect(host.exists('apps/test-app/nginx.conf')).toBeTruthy();
     const nginxConf = host.read('apps/test-app/nginx.conf').toString();

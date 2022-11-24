@@ -1,0 +1,8 @@
+using System.Text.Json.Serialization;
+
+namespace Adsp.Sdk.Examples;
+
+public class HelloWorldConfiguration {
+  [JsonPropertyName("responses")]
+  public Dictionary<string, string>? Responses { get; set; }
+}

@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Adsp": {
+    "AccessServiceUrl": "<%= accessServiceUrl %>",
+    "Realm": "<%= tenantRealm %>",
+    "DirectoryUrl": "<%= directoryServiceUrl %>",
+    "ClientId": "",
+    "ClientSecret": ""
+  },
+  "AllowedHosts": "*"
+}
