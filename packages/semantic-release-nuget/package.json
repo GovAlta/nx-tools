@@ -7,6 +7,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/abgov/nx-tools.git",
-    "directory": "packages/nx-dotnet"
+    "directory": "packages/semantic-release-nuget"
   }
 }
