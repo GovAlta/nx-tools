@@ -1,0 +1,16 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { reducer as oidcReducer } from 'redux-oidc';
+import { START_FEATURE_KEY, startReducer } from './app/start.slice';
+import { INTAKE_FEATURE_KEY, intakeReducer } from './app/intake.slice';
+
+export const store = configureStore({
+  reducer: {
+    user: oidcReducer,
+    [START_FEATURE_KEY]: startReducer,
+    [INTAKE_FEATURE_KEY]: intakeReducer,
+  },
+  devTools: process.env.NODE_ENV !== 'production',
+  // Optional Redux store enhancers
+  enhancers: [],
+});
+export type AppDispatch = typeof store.dispatch;
