@@ -8,7 +8,8 @@ describe('angular app generator', () => {
   let appTree: Tree;
   const options: AngularAppGeneratorSchema = {
     name: 'test',
-    tenant: 'testtenant',
+    env: 'dev',
+    realm: 'testtenant',
   };
 
   beforeEach(() => {

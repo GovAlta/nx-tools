@@ -78,19 +78,20 @@ export async function getAdspConfiguration(
   let tenant = '';
   const environment = environments[env || 'prod'];
 
-  const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
-    new URL(
-      '/directory/v2/namespaces/platform/entries',
-      environment.directoryServiceUrl
-    ).href
-  );
-
-  const urls = entries.reduce(
-    (values, item) => ({ ...values, [item.urn]: item.url }),
-    {}
-  );
-
   if (login) {
+    const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
+      new URL(
+        '/directory/v2/namespaces/platform/entries',
+        environment.directoryServiceUrl
+      ).href,
+      { decompress: true, responseEncoding: 'utf8', responseType: 'json' }
+    );
+
+    const urls = entries.reduce(
+      (values, item) => ({ ...values, [item.urn]: item.url }),
+      {}
+    );
+    
     const token = await tenantLogin(environment.accessServiceUrl, realm);
 
     const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];

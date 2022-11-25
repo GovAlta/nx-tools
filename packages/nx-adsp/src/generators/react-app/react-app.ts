@@ -118,20 +118,18 @@ export default async function (host: Tree, options: Schema) {
 
   addDependenciesToPackageJson(
     host,
+    {},
     {
-    },
-    {
-      '@abgov/core-css': '^1.0.0',
-      '@abgov/react-components': '^3.1.0',
-      '@types/react-router-dom': '~5.1.7',
-      "@types/redux-mock-store": "~1.0.2",
-      'html-webpack-plugin': '~4.5.2',
+      '@abgov/react-components': '^4.1.0',
+      '@types/react-router-dom': '~5.3.3',
+      '@types/redux-mock-store': '~1.0.2',
+      'html-webpack-plugin': '~5.5.0',
       'oidc-client': '~1.11.5',
       'redux-oidc': '~4.0.0-beta1',
       'react-router-dom': '~5.2.0',
-      'redux-mock-store': '~1.5.4'
+      'redux-mock-store': '~1.5.4',
     }
-  )
+  );
 
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
