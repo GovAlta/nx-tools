@@ -81,6 +81,8 @@
     "yaml": "~1.10.2"
   },
   "overrides": {
-    "@nrwl/devkit": "15.2.1"
+    "@nrwl/devkit": "15.2.1",
+    "semver": "^7.3.4",
+    "fast-glob": "^3.2.11"
   }
 }
