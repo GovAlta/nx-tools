@@ -2,12 +2,11 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { UserManager } from 'oidc-client';
 import { UserState } from 'redux-oidc';
-import { GoAButton, GoAHeader, GoAHeroBanner } from '@abgov/react-components';
+import { GoAAppHeader, GoAButton, GoAMicrositeHeader, GoAHeroBanner } from '@abgov/react-components';
 
+import { AppDispatch } from '../store';
 import styles from './app.module.css';
-import '@abgov/core-css/goa-core.css';
-import '@abgov/core-css/goa-components.css';
-import '@abgov/react-components/react-components.esm.css';
+import '@abgov/styles/styles.esm.css';
 import { 
   fetchPrivateResource, 
   fetchPublicResource, 
@@ -26,7 +25,7 @@ export function App({ userManager }: AppProps) {
   const publicResource = useSelector(publicResourceSelector);
   const privateResource = useSelector(privateResourceSelector);
 
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     dispatch(fetchPublicResource());
@@ -37,13 +36,13 @@ export function App({ userManager }: AppProps) {
 
   return (
     <div className={styles.app}>
-      <GoAHeader
-        serviceLevel="alpha"
-        serviceName="Digital Service Example"
-        serviceHome="/"
+      <GoAMicrositeHeader type="alpha" />
+      <GoAAppHeader
+        url="/"
+        heading="Digital Service Example"
       />
       <GoAHeroBanner
-        title="Quick start of a digital service"
+        heading="Quick start of a digital service"
         backgroundUrl={'../assets/banner.jpg'}
       />
       <main>
