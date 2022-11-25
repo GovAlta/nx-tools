@@ -6,7 +6,8 @@ import generator from './react-app';
 describe('React App Generator', () => {
   const options: Schema = {
     name: 'test',
-    tenant: 'test',
+    env: 'dev',
+    realm: 'test',
   };
 
   it('can run', async () => {

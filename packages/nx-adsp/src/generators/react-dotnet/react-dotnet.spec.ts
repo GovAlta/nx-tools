@@ -12,7 +12,8 @@ const serviceGeneratorMock = serviceGenerator as jest.Mocked<
 describe('React App Generator', () => {
   const options: Schema = {
     name: 'test',
-    tenant: 'test',
+    env: 'dev',
+    realm: 'test',
   };
 
   it('can run', async () => {

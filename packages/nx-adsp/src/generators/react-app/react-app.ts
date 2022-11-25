@@ -1,4 +1,3 @@
-import { E2eTestRunner, UnitTestRunner } from '@nrwl/angular/src/utils/test-runners';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -16,23 +15,21 @@ import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { NormalizedSchema, Schema } from './schema';
 
-function normalizeOptions(
+async function normalizeOptions(
   host: Tree,
   options: Schema
-): NormalizedSchema {
+): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
-  const openshiftDirectory = `.openshift/${projectName}`
+  const openshiftDirectory = `.openshift/${projectName}`;
 
-  const adsp = getAdspConfiguration(host, options);
+  const adsp = await getAdspConfiguration(host, options);
 
-  const nginxProxies = Array.isArray(options.proxy) ?
-    [...options.proxy] :
-    (
-      options.proxy ?
-        [options.proxy] :
-        []
-    );
+  const nginxProxies = Array.isArray(options.proxy)
+    ? [...options.proxy]
+    : options.proxy
+    ? [options.proxy]
+    : [];
 
   return {
     ...options,
@@ -40,7 +37,7 @@ function normalizeOptions(
     projectRoot,
     openshiftDirectory,
     adsp,
-    nginxProxies
+    nginxProxies,
   };
 }
 
@@ -66,32 +63,30 @@ function addFiles(host: Tree, options: NormalizedSchema) {
         const upstreamUrl = new URL(nginxProxy.proxyPass);
 
         const proxy = {
-          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
+          target: `${upstreamUrl.protocol}//localhost${
+            upstreamUrl.port ? ':' + upstreamUrl.port : ''
+          }`,
           secure: upstreamUrl.protocol === 'https:',
           changeOrigin: false,
-          pathRewrite: {}
-        }
+          pathRewrite: {},
+        };
 
         // If there is a path on the upstream url, then add a rewrite.
         if (upstreamUrl.pathname.length > 1) {
           proxy.pathRewrite = {
-            [`^${nginxProxy.location}`]: upstreamUrl.pathname
-          }
+            [`^${nginxProxy.location}`]: upstreamUrl.pathname,
+          };
         }
 
         return {
           ...proxyConf,
-          [nginxProxy.location]: proxy
-        }
+          [nginxProxy.location]: proxy,
+        };
       },
       {}
     );
 
-    writeJson(
-      host,
-      `${options.projectRoot}/proxy.conf.json`,
-      devProxyConf
-    );
+    writeJson(host, `${options.projectRoot}/proxy.conf.json`, devProxyConf);
   }
   return addProxyConf;
 }
@@ -102,42 +97,39 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-
-  const normalizedOptions = normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initReact } = await import('@nrwl/react');
   const { reduxGenerator: initRedux } = await import('@nrwl/react');
 
   // Setting strict to false because of: https://github.com/nrwl/nx/issues/8180
   await initReact(host, {
-    name: options.name, 
-    style: 'styled-components', 
-    skipFormat: true, 
-    linter:  Linter.EsLint, 
-    unitTestRunner: UnitTestRunner.Jest, 
-    e2eTestRunner: E2eTestRunner.Cypress, 
-    babelJest: false, 
+    name: options.name,
+    style: 'styled-components',
+    skipFormat: true,
+    linter: Linter.EsLint,
+    unitTestRunner: 'jest',
+    e2eTestRunner: 'cypress',
+    babelJest: false,
     strict: false,
   });
-  
-  await initRedux(host, {name: 'intake', project: options.name});
+
+  await initRedux(host, { name: 'intake', project: options.name });
 
   addDependenciesToPackageJson(
     host,
+    {},
     {
-    },
-    {
-      '@abgov/core-css': '^1.0.0',
-      '@abgov/react-components': '^3.1.0',
-      '@types/react-router-dom': '~5.1.7',
-      "@types/redux-mock-store": "~1.0.2",
-      'html-webpack-plugin': '~4.5.2',
+      '@abgov/react-components': '^4.1.0',
+      '@types/react-router-dom': '~5.3.3',
+      '@types/redux-mock-store': '~1.0.2',
+      'html-webpack-plugin': '~5.5.0',
       'oidc-client': '~1.11.5',
       'redux-oidc': '~4.0.0-beta1',
       'react-router-dom': '~5.2.0',
-      'redux-mock-store': '~1.5.4'
+      'redux-mock-store': '~1.5.4',
     }
-  )
+  );
 
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
@@ -150,20 +142,20 @@ export default async function (host: Tree, options: Schema) {
     assets: [
       ...config.targets.build.options.assets,
       {
-        "glob": "nginx.conf",
-        "input": `${layout.appsDir}/${options.name}`,
-        "output": "./"
-      }
+        glob: 'nginx.conf',
+        input: `${layout.appsDir}/${options.name}`,
+        output: './',
+      },
     ],
     webpackConfig: `${normalizedOptions.projectRoot}/webpack.conf.js`,
-  }
+  };
 
   if (addedProxy) {
     // Add the webpack dev server proxy if there is proxy configuration.
     config.targets.serve.options = {
       ...config.targets.serve.options,
-      proxyConfig: `${normalizedOptions.projectRoot}/proxy.conf.json`
-    }
+      proxyConfig: `${normalizedOptions.projectRoot}/proxy.conf.json`,
+    };
   }
 
   updateProjectConfiguration(host, options.name, config);
@@ -172,16 +164,13 @@ export default async function (host: Tree, options: Schema) {
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(
-      host,
-      {
-        ...options,
-        project: normalizedOptions.projectName
-      }
-    );
+    await deploymentGenerator(host, {
+      ...options,
+      project: normalizedOptions.projectName,
+    });
   }
 
   return () => {
     installPackagesTask(host);
-  }
+  };
 }

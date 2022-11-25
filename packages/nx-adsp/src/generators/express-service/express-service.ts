@@ -13,20 +13,20 @@ import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
 
-function normalizeOptions(
+async function normalizeOptions(
   host: Tree,
   options: Schema
-): NormalizedSchema {
+): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
-  
-  const adsp = getAdspConfiguration(host, options);
+
+  const adsp = await getAdspConfiguration(host, options);
 
   return {
     ...options,
     projectName,
     projectRoot,
-    adsp
+    adsp,
   };
 }
 
@@ -34,7 +34,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
     ...options.adsp,
-    tmpl: ''
+    tmpl: '',
   };
   generateFiles(
     host,
@@ -45,28 +45,25 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  const normalizedOptions = normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initExpress } = await import('@nrwl/express');
-  await initExpress(
-    host, 
-    { 
-      ...options, 
-      skipFormat: true, 
-      skipPackageJson: false, 
-      linter: Linter.EsLint, 
-      unitTestRunner: UnitTestRunner.Jest, 
-      pascalCaseFiles: false, 
-      js: false, 
-    }
-  );
-  
+  await initExpress(host, {
+    ...options,
+    skipFormat: true,
+    skipPackageJson: false,
+    linter: Linter.EsLint,
+    unitTestRunner: UnitTestRunner.Jest,
+    pascalCaseFiles: false,
+    js: false,
+  });
+
   addDependenciesToPackageJson(
-    host, 
+    host,
     {
       '@abgov/adsp-service-sdk': '^1.18.0',
-      'dotenv': '^16.0.0',
-      'passport': '^0.6.0',
+      dotenv: '^16.0.0',
+      passport: '^0.6.0',
       'passport-anonymous': '^1.0.1',
     },
     {
@@ -74,22 +71,19 @@ export default async function (host: Tree, options: Schema) {
       '@types/passport-anonymous': '^1.0.3',
     }
   );
-  
+
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(
-      host, 
-      {
-        ...options, 
-        project: normalizedOptions.projectName
-      }
-    );
+    await deploymentGenerator(host, {
+      ...options,
+      project: normalizedOptions.projectName,
+    });
   }
 
   return () => {
     installPackagesTask(host);
-  }
+  };
 }

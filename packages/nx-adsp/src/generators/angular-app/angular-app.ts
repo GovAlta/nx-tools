@@ -15,24 +15,22 @@ import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
-function normalizeOptions(
+async function normalizeOptions(
   host: Tree,
   options: AngularAppGeneratorSchema
-): NormalizedSchema {
+): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   const projectOrg = getWorkspaceLayout(host).npmScope;
   const openshiftDirectory = `.openshift/${projectName}`;
 
-  const adsp = getAdspConfiguration(host, options);
+  const adsp = await getAdspConfiguration(host, options);
 
-  const nginxProxies = Array.isArray(options.proxy) ?
-    [...options.proxy] :
-    (
-      options.proxy ?
-        [options.proxy] :
-        []
-    );
+  const nginxProxies = Array.isArray(options.proxy)
+    ? [...options.proxy]
+    : options.proxy
+    ? [options.proxy]
+    : [];
 
   return {
     ...options,
@@ -41,7 +39,7 @@ function normalizeOptions(
     openshiftDirectory,
     projectOrg,
     adsp,
-    nginxProxies
+    nginxProxies,
   };
 }
 
@@ -68,31 +66,29 @@ function addFiles(host: Tree, options: NormalizedSchema) {
         const upstreamUrl = new URL(nginxProxy.proxyPass);
 
         const proxy = {
-          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
+          target: `${upstreamUrl.protocol}//localhost${
+            upstreamUrl.port ? ':' + upstreamUrl.port : ''
+          }`,
           secure: upstreamUrl.protocol === 'https:',
           changeOrigin: false,
-          pathRewrite: {}
-        }
+          pathRewrite: {},
+        };
 
         // If there is a path on the upstream url, then add a rewrite.
         if (upstreamUrl.pathname.length > 1) {
           proxy.pathRewrite = {
-            [`^${nginxProxy.location}`]: upstreamUrl.pathname
-          }
+            [`^${nginxProxy.location}`]: upstreamUrl.pathname,
+          };
         }
 
         return {
           ...proxyConf,
-          [nginxProxy.location]: proxy
-        }
+          [nginxProxy.location]: proxy,
+        };
       },
       {}
     );
-    writeJson(
-      host,
-      `${options.projectRoot}/proxy.conf.json`,
-      devProxyConf
-    );
+    writeJson(host, `${options.projectRoot}/proxy.conf.json`, devProxyConf);
   }
   return addProxyConf;
 }
@@ -103,25 +99,26 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
-  const normalizedOptions = normalizeOptions(host, options);
-  
-  const { applicationGenerator: initAngular } = await import('@nrwl/angular/generators');
+  const normalizedOptions = await normalizeOptions(host, options);
+
+  const { applicationGenerator: initAngular } = await import(
+    '@nrwl/angular/generators'
+  );
   await initAngular(host, { name: options.name });
 
   addDependenciesToPackageJson(
     host,
-    {
-    },
+    {},
     {
       '@abgov/angular-components': '^1.7.1',
       '@abgov/core-css': '^1.0.0',
-      '@angular/cdk': "^11.2.0",
+      '@angular/cdk': '^11.2.0',
       '@angular/localize': '^11.2.0',
       'html-webpack-plugin': '~4.5.2',
       'oidc-client': '~1.11.5',
       'zone.js': '^0.11.4',
     }
-  )
+  );
 
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
@@ -135,19 +132,19 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     assets: [
       ...config.targets.build.options.assets,
       {
-        "glob": "nginx.conf",
-        "input": `${layout.appsDir}/${options.name}`,
-        "output": "./"
-      }
+        glob: 'nginx.conf',
+        input: `${layout.appsDir}/${options.name}`,
+        output: './',
+      },
     ],
-  }
+  };
 
   if (addedProxy) {
     // Add the webpack dev server proxy if there is proxy configuration.
     config.targets.serve.options = {
       ...config.targets.serve.options,
-      proxyConfig: `${normalizedOptions.projectRoot}/proxy.conf.json`
-    }
+      proxyConfig: `${normalizedOptions.projectRoot}/proxy.conf.json`,
+    };
   }
 
   updateProjectConfiguration(host, options.name, config);
@@ -156,16 +153,13 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(
-      host,
-      {
-        ...options,
-        project: normalizedOptions.projectName
-      }
-    );
+    await deploymentGenerator(host, {
+      ...options,
+      project: normalizedOptions.projectName,
+    });
   }
 
   return () => {
     installPackagesTask(host);
-  }
+  };
 }

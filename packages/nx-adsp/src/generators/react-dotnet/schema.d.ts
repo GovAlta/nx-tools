@@ -1,4 +1,7 @@
+import { EnvironmentName } from '../../utils/environments';
+
 export interface Schema {
   name: string;
-  tenant: string;
+  env: EnvironmentName;
+  realm: string;
 }

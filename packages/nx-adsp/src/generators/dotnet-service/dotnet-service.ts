@@ -5,25 +5,24 @@ import {
   names,
   Tree,
 } from '@nrwl/devkit';
-import camelcase from 'camelcase';
 import * as path from 'path';
 import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
 
-function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
+async function normalizeOptions(
+  host: Tree,
+  options: Schema
+): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
 
-  const adsp = getAdspConfiguration(host, options);
+  const adsp = await getAdspConfiguration(host, options);
 
   return {
     ...options,
     projectName,
     projectRoot,
     adsp,
-    namespace: camelcase(options.namespace || projectName, {
-      pascalCase: true,
-    }),
   };
 }
 
@@ -46,7 +45,7 @@ export default async function (host: Tree, options: Schema) {
     throw new Error('nx-dotnet/core is required to generate dotnet service');
   }
 
-  const normalizedOptions = normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options);
 
   const { default: appGenerator } = await import(
     `${'@nx-dotnet/core/src/generators/app/generator'}`
