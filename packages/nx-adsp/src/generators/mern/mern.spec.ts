@@ -6,7 +6,7 @@ import generator from './mern';
 describe('React App Generator', () => {
   const options: Schema = {
     name: 'test',
-    tenant: 'test',
+    env: 'dev',
     realm: 'test',
   };
 

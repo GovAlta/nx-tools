@@ -14,7 +14,8 @@ const refGeneratorMock = refGenerator as jest.Mocked<typeof refGenerator>;
 describe('Dotnet Service Generator', () => {
   const options: Schema = {
     name: 'test',
-    tenant: 'test',
+    env: 'dev',
+    realm: 'test',
   };
 
   it('can run', async () => {

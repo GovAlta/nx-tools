@@ -6,7 +6,7 @@ import generator from './express-service';
 describe('Express Service Generator', () => {
   const options: Schema = {
     name: 'test',
-    tenant: 'test',
+    env: 'dev',
     realm: 'test',
   };
 

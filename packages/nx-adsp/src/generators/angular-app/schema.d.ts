@@ -1,15 +1,17 @@
+import { EnvironmentName } from '../../utils/environments';
+
 export interface AngularAppGeneratorSchema {
   name: string;
-  tenant: string;
-  proxy?: NginxProxyConfiguration | NginxProxyConfiguration[]
+  env: EnvironmentName;
+  realm: string;
+  proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
 }
-
 
 export interface NormalizedSchema extends AngularAppGeneratorSchema {
   projectName: string;
   projectRoot: string;
   projectOrg: string;
   openshiftDirectory: string;
-  adsp: AdspConfiguration
+  adsp: AdspConfiguration;
   nginxProxies: NginxProxyConfiguration[];
 }

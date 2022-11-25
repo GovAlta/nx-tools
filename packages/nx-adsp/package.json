@@ -18,7 +18,9 @@
   "dependencies": {
     "@angular-devkit/core": "^15.0.0",
     "@angular-devkit/schematics": "^15.0.0",
-    "camelcase": "^5.3.1"
+    "axios": "^1.2.0",
+    "express": "4.18.1",
+    "open": "^8.4.0"
   },
   "generators": "./generators.json"
 }
