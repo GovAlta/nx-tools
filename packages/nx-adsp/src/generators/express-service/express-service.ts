@@ -1,4 +1,3 @@
-import { UnitTestRunner } from '@nrwl/angular/src/utils/test-runners';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -53,7 +52,7 @@ export default async function (host: Tree, options: Schema) {
     skipFormat: true,
     skipPackageJson: false,
     linter: Linter.EsLint,
-    unitTestRunner: UnitTestRunner.Jest,
+    unitTestRunner: 'jest',
     pascalCaseFiles: false,
     js: false,
   });
