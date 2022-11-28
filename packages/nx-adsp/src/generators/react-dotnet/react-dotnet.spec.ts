@@ -1,8 +1,20 @@
 import { readProjectConfiguration } from '@nrwl/devkit';
 import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+
+import * as utils from '../../utils/adsp-utils';
+import { environments } from '../../utils/environments';
+import serviceGenerator from '../dotnet-service/dotnet-service';
 import { Schema } from './schema';
 import generator from './react-dotnet';
-import serviceGenerator from '../dotnet-service/dotnet-service';
+
+jest.mock('../../utils/adsp-utils');
+const utilsMock = utils as jest.Mocked<typeof utils>;
+utilsMock.getAdspConfiguration.mockResolvedValue({
+  tenant: 'test',
+  tenantRealm: 'test',
+  accessServiceUrl: environments.test.accessServiceUrl,
+  directoryServiceUrl: environments.test.directoryServiceUrl,
+});
 
 jest.mock('../dotnet-service/dotnet-service');
 const serviceGeneratorMock = serviceGenerator as jest.Mocked<
@@ -13,7 +25,6 @@ describe('React App Generator', () => {
   const options: Schema = {
     name: 'test',
     env: 'dev',
-    realm: 'test',
   };
 
   it('can run', async () => {

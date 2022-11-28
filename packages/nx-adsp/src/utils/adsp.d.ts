@@ -4,3 +4,7 @@ export interface AdspConfiguration {
   accessServiceUrl: string;
   directoryServiceUrl: string;
 }
+
+export type AdspOptions = {
+  adsp: AdspConfiguration;
+};

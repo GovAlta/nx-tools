@@ -31,21 +31,10 @@
           "prod"
         ]
       }
-    },
-    "realm": {
-      "type": "string",
-      "description": "Realm of the ADSP tenant.",
-      "$default": {
-        "$source": "argv",
-        "index": 2
-      },
-      "alias": "r",
-      "x-prompt": "What is the realm of your ADSP tenant?"
     }
   },
   "required": [
     "name",
-    "env",
-    "realm"
+    "env"
   ]
 }

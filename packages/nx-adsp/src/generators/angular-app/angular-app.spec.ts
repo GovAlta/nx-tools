@@ -1,15 +1,25 @@
 import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import { Tree, readProjectConfiguration } from '@nrwl/devkit';
 
+import * as utils from '../../utils/adsp-utils';
+import { environments } from '../../utils/environments';
 import angularApp from './angular-app';
 import { AngularAppGeneratorSchema } from './schema';
+
+jest.mock('../../utils/adsp-utils');
+const utilsMock = utils as jest.Mocked<typeof utils>;
+utilsMock.getAdspConfiguration.mockResolvedValue({
+  tenant: 'test',
+  tenantRealm: 'test',
+  accessServiceUrl: environments.test.accessServiceUrl,
+  directoryServiceUrl: environments.test.directoryServiceUrl,
+});
 
 describe('angular app generator', () => {
   let appTree: Tree;
   const options: AngularAppGeneratorSchema = {
     name: 'test',
     env: 'dev',
-    realm: 'testtenant',
   };
 
   beforeEach(() => {
