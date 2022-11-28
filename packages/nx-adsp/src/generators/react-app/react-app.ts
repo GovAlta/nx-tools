@@ -166,7 +166,7 @@ export default async function (host: Tree, options: Schema) {
   if (hasDependency(host, '@abgov/nx-oc')) {
     const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
     await deploymentGenerator(host, {
-      ...options,
+      ...normalizedOptions,
       project: normalizedOptions.projectName,
     });
   }
