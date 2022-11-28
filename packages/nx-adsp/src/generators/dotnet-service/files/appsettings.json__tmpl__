@@ -9,7 +9,7 @@
     "AccessServiceUrl": "<%= accessServiceUrl %>",
     "Realm": "<%= tenantRealm %>",
     "DirectoryUrl": "<%= directoryServiceUrl %>",
-    "ClientId": "",
+    "ClientId": "urn:ads:<%= tenant %>:<%= projectName %>",
     "ClientSecret": ""
   },
   "AllowedHosts": "*"

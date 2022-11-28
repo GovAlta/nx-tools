@@ -64,12 +64,12 @@ export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   await initExpressService(host, {
-    ...options,
+    ...normalizedOptions,
     name: `${options.name}-service`,
   });
 
   await initReactApp(host, {
-    ...options,
+    ...normalizedOptions,
     name: `${options.name}-app`,
     proxy: {
       location: '/api/',

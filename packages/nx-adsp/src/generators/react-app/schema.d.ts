@@ -5,7 +5,6 @@ import { NginxProxyConfiguration } from '../../utils/nginx';
 export interface Schema {
   name: string;
   env: EnvironmentName;
-  realm: string;
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
 }
 

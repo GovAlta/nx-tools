@@ -1,9 +1,9 @@
+import { AdspConfiguration } from '../../utils/adsp';
 import { EnvironmentName } from '../../utils/environments';
 
 export interface AngularAppGeneratorSchema {
   name: string;
   env: EnvironmentName;
-  realm: string;
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
 }
 

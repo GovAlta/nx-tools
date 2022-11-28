@@ -1,15 +1,17 @@
-import { readJson, Tree } from '@nrwl/devkit';
+import { names, readJson, Tree } from '@nrwl/devkit';
 import axios from 'axios';
+import { prompt } from 'enquirer';
 import * as express from 'express';
 import * as open from 'open';
 import { AccessToken, AuthorizationCode } from 'simple-oauth2';
-import { AdspConfiguration } from './adsp';
+import { AdspConfiguration, AdspOptions } from './adsp';
 import { EnvironmentName, environments } from './environments';
 
 interface Package {
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
 }
+
 export function hasDependency(host: Tree, dependency: string): boolean {
   const { dependencies, devDependencies }: Package = readJson(
     host,
@@ -19,7 +21,7 @@ export function hasDependency(host: Tree, dependency: string): boolean {
   return !!dependencies[dependency] || !!devDependencies[dependency];
 }
 
-async function tenantLogin(
+async function realmLogin(
   accessServiceUrl: string,
   realm: string
 ): Promise<string> {
@@ -38,20 +40,28 @@ async function tenantLogin(
   const redirect_uri = 'http://localhost:3000/callback';
   const authorizationUri = client.authorizeURL({
     redirect_uri,
-    scope: 'profile email',
+    scope: 'email',
   });
 
   const app = express();
-  const tokenPromise = new Promise<AccessToken>((resolve) => {
+  const tokenPromise = new Promise<AccessToken>((resolve, reject) => {
     app.get('/callback', function (req, res) {
-      res.send('Successfully signed in. You can close the browser.');
+      const { code, error } = req.query;
 
-      resolve(
-        client.getToken({
-          code: req.query.code as string,
-          redirect_uri,
-        })
-      );
+      if (error) {
+        res.send('Login failed.');
+        reject(new Error(`Error encountered during login. ${error}`));
+      } else {
+        res.send(
+          'Successfully signed in. You can close this browser tab or window.'
+        );
+        resolve(
+          client.getToken({
+            code: code as string,
+            redirect_uri,
+          })
+        );
+      }
     });
   });
 
@@ -72,13 +82,15 @@ async function tenantLogin(
 
 export async function getAdspConfiguration(
   _host: Tree,
-  { env, realm }: { env?: EnvironmentName; realm: string },
-  login = false
+  options: { env?: EnvironmentName; realm?: string }
 ): Promise<AdspConfiguration> {
-  let tenant = '';
+  const { env, realm } = options;
   const environment = environments[env || 'prod'];
 
-  if (login) {
+  if (isAdspOptions(options)) {
+    // If Adsp configuration is already been resolved, then no need to retrieve gain.
+    return options.adsp;
+  } else {
     const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
       new URL(
         '/directory/v2/namespaces/platform/entries',
@@ -91,22 +103,37 @@ export async function getAdspConfiguration(
       (values, item) => ({ ...values, [item.urn]: item.url }),
       {}
     );
-    
-    const token = await tenantLogin(environment.accessServiceUrl, realm);
+
+    const token = await realmLogin(environment.accessServiceUrl, 'core');
 
     const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
-    const { data: tenants } = await axios.get<{ results: { name: string }[] }>(
-      new URL('v2/tenants', tenantServiceUrl).href,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const { data: tenants } = await axios.get<{
+      results: { name: string; realm: string }[];
+    }>(new URL('v2/tenants', tenantServiceUrl).href, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    tenant = tenants.results[0].name;
+    const choices = tenants.results
+      .map((r) => r.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    const result = await prompt<{ tenant: string }>({
+      type: 'autocomplete',
+      name: 'tenant',
+      message: 'Which tenant is the application or service for?',
+      choices,
+    });
+
+    return {
+      tenant: names(result.tenant).fileName,
+      tenantRealm:
+        tenants.results.find((r) => r.name === result.tenant)?.realm || realm,
+      accessServiceUrl: environment.accessServiceUrl,
+      directoryServiceUrl: environment.directoryServiceUrl,
+    };
   }
+}
 
-  return {
-    tenant,
-    tenantRealm: realm,
-    accessServiceUrl: environment.accessServiceUrl,
-    directoryServiceUrl: environment.directoryServiceUrl,
-  };
+export function isAdspOptions(options: unknown): options is AdspOptions {
+  return !!(options as AdspOptions)?.adsp?.tenantRealm;
 }

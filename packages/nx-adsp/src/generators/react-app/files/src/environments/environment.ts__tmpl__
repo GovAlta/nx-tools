@@ -6,6 +6,6 @@ export const environment = {
   access: {
     url: '<%= accessServiceUrl %>',
     realm: '<%= tenantRealm %>',
-    client_id: '<%= projectName %>'
+    client_id: 'urn:ads:<%= tenant %>:<%= projectName %>'
   }
 };
