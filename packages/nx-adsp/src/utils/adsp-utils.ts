@@ -18,7 +18,7 @@ export function hasDependency(host: Tree, dependency: string): boolean {
     'package.json'
   );
 
-  return !!dependencies[dependency] || !!devDependencies[dependency];
+  return !!dependencies?.[dependency] || !!devDependencies?.[dependency];
 }
 
 async function realmLogin(
