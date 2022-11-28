@@ -7,7 +7,12 @@ import pipeline from '../pipeline/pipeline';
 import { Schema } from './schema';
 import generator from './deployment';
 describe('Deployment Generator', () => {
-  const options: Schema = { project: 'test', tenant: 'test' };
+  const options: Schema & Record<string, unknown> = {
+    project: 'test',
+    tenant: 'test',
+    tenantRealm: 'test',
+    accessServiceUrl: 'https://access-uat.alberta.ca',
+  };
 
   it('can run', async () => {
     const host = createTreeWithEmptyV1Workspace();
