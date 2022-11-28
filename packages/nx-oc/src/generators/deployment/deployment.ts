@@ -42,19 +42,12 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
       break;
   }
 
-  const tenantRealm = names(options.tenant).fileName;
-  const accessServiceUrl = 'https://access.alpha.alberta.ca';
-
   return {
     ...options,
     projectName,
     appType,
     ocInfraProject,
     ocEnvProjects,
-    adsp: {
-      tenantRealm,
-      accessServiceUrl,
-    },
   };
 }
 

@@ -8,8 +8,5 @@ export interface NormalizedSchema extends Schema {
   appType: 'frontend' | 'express' | 'dotnet';
   ocInfraProject: string;
   ocEnvProjects: string[];
-  adsp: {
-    tenantRealm: string;
-    accessServiceUrl: string;
-  }
+  adsp?: Record<string, unknown>;
 }

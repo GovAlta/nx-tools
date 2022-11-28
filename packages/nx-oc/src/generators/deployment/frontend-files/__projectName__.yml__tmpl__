@@ -63,7 +63,7 @@ objects:
           "access": {
             "url": "<%= accessServiceUrl %>",
             "realm": "<%= tenantRealm %>",
-            "client_id": "${APP_NAME}"
+            "client_id": "urn:ads:<%= tenant %>:<%= projectName %>"
           }
         }
   - apiVersion: v1
