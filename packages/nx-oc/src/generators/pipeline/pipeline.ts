@@ -1,7 +1,6 @@
 import {
   formatFiles,
   generateFiles,
-  getWorkspacePath,
   Tree,
 } from '@nrwl/devkit';
 import * as path from 'path';
@@ -40,20 +39,20 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     generateFiles(
       host,
       path.join(__dirname, 'jenkins'),
-      `${path.dirname(getWorkspacePath(host))}/.openshift`,
+      `./.openshift`,
       templateOptions
     );
   } else if (options.pipelineType === 'actions') {
     generateFiles(
       host,
       path.join(__dirname, 'actions/openshift'),
-      `${path.dirname(getWorkspacePath(host))}/.openshift`,
+      `./.openshift`,
       templateOptions
     );
     generateFiles(
       host,
       path.join(__dirname, 'actions/workflows'),
-      `${path.dirname(getWorkspacePath(host))}/.github/workflows`,
+      `./.github/workflows`,
       templateOptions
     );
   }

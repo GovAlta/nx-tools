@@ -1,7 +1,6 @@
 import {
   formatFiles,
   generateFiles,
-  getWorkspacePath,
   names,
   readProjectConfiguration,
   Tree,
@@ -69,7 +68,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   generateFiles(
     host,
     path.join(__dirname, `${options.appType}-files`),
-    `${path.dirname(getWorkspacePath(host))}/.openshift/${options.projectName}`,
+    `./.openshift/${options.projectName}`,
     templateOptions
   );
 }
