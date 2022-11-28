@@ -110,7 +110,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     host,
     {},
     {
-      '@abgov/angular-components': '^2.0.0',
+      '@abgov/angular-components': '^1.7.1',
       '@abgov/core-css': '^1.0.0',
       '@angular/cdk': '^15.0.0',
       '@angular/localize': '^15.0.0',
