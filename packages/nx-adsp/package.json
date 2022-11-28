@@ -22,7 +22,8 @@
     "axios": "^0.27.0",
     "enquirer": "^2.3.6",
     "express": "^4.18.1",
-    "open": "^8.4.0"
+    "open": "^8.4.0",
+    "simple-oauth2": "^5.0.0"
   },
   "generators": "./generators.json"
 }
