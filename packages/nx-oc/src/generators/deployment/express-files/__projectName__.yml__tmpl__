@@ -40,10 +40,17 @@ objects:
         to:
           kind: ImageStreamTag
           name: '${APP_NAME}:latest'
+      resources:
+        limits:
+          cpu: 300m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 200Mi
       runPolicy: Serial
       source:
-          binary: {}
-          type: Binary
+        binary: {}
+        type: Binary
       strategy:
         dockerStrategy:
           buildArgs:
@@ -73,7 +80,13 @@ objects:
         activeDeadlineSeconds: 21600
         recreateParams:
           timeoutSeconds: 600
-        resources: {}
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
         type: Recreate
       template:
         metadata:
@@ -95,7 +108,13 @@ objects:
                 - containerPort: 3333
                   name: http
                   protocol: TCP
-              resources: {}
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 200Mi
+                requests:
+                  cpu: 20m
+                  memory: 50Mi
               terminationMessagePath: /dev/termination-log
           dnsPolicy: ClusterFirst
           restartPolicy: Always
