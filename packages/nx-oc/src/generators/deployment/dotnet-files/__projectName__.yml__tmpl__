@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: <%= projectName %>
@@ -25,12 +25,12 @@ parameters:
     value: latest
     required: true
 objects:
-  - apiVersion: v1
+  - apiVersion: image.openshift.io/v1
     kind: ImageStream
     metadata:
       name: ${APP_NAME}
       namespace: ${INFRA_PROJECT}
-  - apiVersion: v1
+  - apiVersion: build.openshift.io/v1
     kind: BuildConfig
     metadata:
       name: ${APP_NAME}
@@ -85,7 +85,7 @@ objects:
           "AllowedHosts": "*",
           "Urls": "http://${APP_NAME}:5000"
         }
-  - apiVersion: v1
+  - apiVersion: apps.openshift.io/v1
     kind: DeploymentConfig
     metadata:
       name: ${APP_NAME}
@@ -168,7 +168,7 @@ objects:
         name: ${APP_NAME}
       sessionAffinity: None
       type: ClusterIP
-  - apiVersion: v1
+  - apiVersion: route.openshift.io/v1
     kind: Route
     metadata:
       name: ${APP_NAME}
