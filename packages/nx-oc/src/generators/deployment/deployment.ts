@@ -40,6 +40,12 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     case '@nx-dotnet/core:build':
       appType = 'dotnet';
       break;
+    case '@nrwl/webpack:webpack': {
+      // More recent version of NX switched to use a generic webpack executor for builds.
+      appType =
+        config.targets.build.options.target === 'node' ? 'express' : 'frontend';
+      break;
+    }
   }
 
   return {
