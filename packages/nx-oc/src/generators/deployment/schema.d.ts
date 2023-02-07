@@ -3,9 +3,11 @@ export interface Schema {
   tenant: string;
 }
 
+export type ApplicationType = 'node' | 'dotnet' | 'frontend';
+
 export interface NormalizedSchema extends Schema {
   projectName: string;
-  appType: 'frontend' | 'express' | 'dotnet';
+  appType: ApplicationType;
   ocInfraProject: string;
   ocEnvProjects: string[];
   adsp?: Record<string, unknown>;

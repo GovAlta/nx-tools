@@ -45,7 +45,7 @@ describe('Deployment Generator', () => {
     );
   });
 
-  it('can generate deployment for react', async () => {
+  it('can generate deployment for react from nx pre 13.8', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
@@ -60,6 +60,36 @@ describe('Deployment Generator', () => {
       targets: {
         build: {
           executor: '@nrwl/web:webpack',
+        },
+      },
+    });
+
+    await generator(host, options);
+    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
+    expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
+
+    const dockerfile = host.read('.openshift/test/Dockerfile').toString();
+    expect(dockerfile).toContain('nginx');
+  });
+
+  it('can generate deployment for react', async () => {
+    const host = createTreeWithEmptyV1Workspace();
+    await pipeline(host, {
+      pipeline: 'test',
+      type: 'jenkins',
+      infra: 'test-infra',
+      envs: 'test-dev',
+    });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nrwl/webpack:webpack',
+          options: {
+            compiler: 'babel'
+          },
         },
       },
     });
@@ -99,7 +129,7 @@ describe('Deployment Generator', () => {
     expect(dockerfile).toContain('nginx');
   });
 
-  it('can generate deployment for express', async () => {
+  it('can generate deployment for node from nx pre 13.8', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
       pipeline: 'test',
@@ -114,6 +144,37 @@ describe('Deployment Generator', () => {
       targets: {
         build: {
           executor: '@nrwl/node:build',
+        },
+      },
+    });
+
+    await generator(host, options);
+    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
+    expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
+
+    const dockerfile = host.read('.openshift/test/Dockerfile').toString();
+    expect(dockerfile).toContain('node');
+  });
+
+  it('can generate deployment for node', async () => {
+    const host = createTreeWithEmptyV1Workspace();
+    await pipeline(host, {
+      pipeline: 'test',
+      type: 'jenkins',
+      infra: 'test-infra',
+      envs: 'test-dev',
+    });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nrwl/webpack:webpack',
+          options: {
+            compiler: 'tsc',
+            target: 'node',
+          },
         },
       },
     });
