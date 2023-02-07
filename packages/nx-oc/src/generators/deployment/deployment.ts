@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { NormalizedSchema, Schema } from './schema';
+import { ApplicationType, NormalizedSchema, Schema } from './schema';
 
 const infraManifestFile = '.openshift/environments.yml';
 
@@ -28,14 +28,14 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
-  let appType = null;
+  let appType: ApplicationType;
   switch (config.targets.build.executor) {
     case '@nrwl/web:webpack':
     case '@angular-devkit/build-angular:browser':
       appType = 'frontend';
       break;
     case '@nrwl/node:build':
-      appType = 'express';
+      appType = 'node';
       break;
     case '@nx-dotnet/core:build':
       appType = 'dotnet';
@@ -43,7 +43,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     case '@nrwl/webpack:webpack': {
       // More recent version of NX switched to use a generic webpack executor for builds.
       appType =
-        config.targets.build.options.target === 'node' ? 'express' : 'frontend';
+        config.targets.build.options.target === 'node' ? 'node' : 'frontend';
       break;
     }
   }
