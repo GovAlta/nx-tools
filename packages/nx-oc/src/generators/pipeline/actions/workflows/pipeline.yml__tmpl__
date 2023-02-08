@@ -31,27 +31,22 @@ jobs:
       affected_apps: ${{ steps.set_outputs.outputs.affected_apps }}
     steps:
       # Checkout the source code.
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: "16"
+          cache: "npm"
       - run: npm ci
       
       # Determine the last successful build of this (pipeline.yml) workflow and set it as the AFFECTED_BASE.
-      - id: get_branch_name
-        run: echo "short_ref=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get last successful commit
-        uses: nrwl/last-successful-commit-action@v1
         id: last_successful_commit
-        with:
-          branch: ${{ steps.get_branch_name.outputs.short_ref }}
-          workflow_id: pipeline.yml
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        uses: nrwl/nx-set-shas@v3
       - name: Set AFFECTED_BASE to last successful build commit
-        if: ${{ steps.last_successful_commit.outputs.commit_hash }} 
-        run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.commit_hash }}" >> $GITHUB_ENV
+        if: ${{ steps.last_successful_commit.outputs.base }} 
+        run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.base }}" >> $GITHUB_ENV
       
       # Input for base takes precedence over last successful build.
       - name: Set AFFECTED_BASE to input for SELECTED_BASE
@@ -102,7 +97,7 @@ jobs:
       name: <%= envs[i] %>
     steps:
       # Checkout the source code for manifests
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Oc login
         uses: redhat-actions/oc-login@v1
         with:
