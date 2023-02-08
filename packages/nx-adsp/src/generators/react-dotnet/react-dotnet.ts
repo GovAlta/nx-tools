@@ -1,11 +1,9 @@
 import {
-  getWorkspaceLayout,
-  getWorkspacePath,
+  getWorkspaceLayout,  
   installPackagesTask,
   names,
   Tree,
 } from '@nrwl/devkit';
-import * as path from 'path';
 import { getAdspConfiguration } from '../../utils/adsp-utils';
 import initDotnetService from '../dotnet-service/dotnet-service';
 import initReactApp from '../react-app/react-app';
@@ -19,10 +17,7 @@ async function normalizeOptions(
   const projectDirectory = name;
   const projectName = projectDirectory.replace(new RegExp('/', 'g'), '-');
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectDirectory}`;
-
-  const openshiftDirectory = `${path.dirname(
-    getWorkspacePath(host)
-  )}/.openshift/${projectDirectory}`;
+  const openshiftDirectory = `.openshift/${projectDirectory}`;
 
   const adsp = await getAdspConfiguration(host, options);
 
