@@ -1,8 +1,7 @@
 import {
   formatFiles,
   generateFiles,
-  getWorkspaceLayout,
-  getWorkspacePath,
+  getWorkspaceLayout,  
   installPackagesTask,
   names,
   offsetFromRoot,
@@ -22,10 +21,7 @@ async function normalizeOptions(
   const projectDirectory = name;
   const projectName = projectDirectory.replace(new RegExp('/', 'g'), '-');
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectDirectory}`;
-
-  const openshiftDirectory = `${path.dirname(
-    getWorkspacePath(host)
-  )}/.openshift/${projectDirectory}`;
+  const openshiftDirectory = `.openshift/${projectDirectory}`;
 
   const adsp = await getAdspConfiguration(host, options);
 
