@@ -6,7 +6,7 @@ import { GoAAppHeader, GoAButton, GoAMicrositeHeader, GoAHeroBanner } from '@abg
 
 import { AppDispatch } from '../store';
 import styles from './app.module.css';
-import '@abgov/styles/styles.esm.css';
+import '@abgov/web-components/index.css';
 import { 
   fetchPrivateResource, 
   fetchPublicResource, 
@@ -57,7 +57,7 @@ export function App({ userManager }: AppProps) {
               Create the '<%= projectName %>' client in your realm to let users 
               {
                 user ?
-                <GoAButton onClick={() => userManager.signoutRedirect()}>
+                <GoAButton ml="s" onClick={() => userManager.signoutRedirect()}>
                   Sign Out
                 </GoAButton> :
                 <GoAButton onClick={() => userManager.signinRedirect()}>
