@@ -1,3 +1,4 @@
+import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -9,7 +10,6 @@ import {
 } from '@nrwl/devkit';
 import { Linter } from '@nrwl/linter';
 import * as path from 'path';
-import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -74,13 +74,11 @@ export default async function (host: Tree, options: Schema) {
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
-  if (hasDependency(host, '@abgov/nx-oc')) {
-    const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(host, {
-      ...normalizedOptions,
-      project: normalizedOptions.projectName,
-    });
-  }
+  await deploymentGenerator(host, {
+    ...normalizedOptions,
+    appType: 'node',
+    project: normalizedOptions.projectName,
+  });
 
   return () => {
     installPackagesTask(host);

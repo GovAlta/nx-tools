@@ -1,14 +1,14 @@
 import {
   formatFiles,
   generateFiles,
-  getWorkspaceLayout,  
+  getWorkspaceLayout,
   installPackagesTask,
   names,
   offsetFromRoot,
   Tree,
 } from '@nrwl/devkit';
 import * as path from 'path';
-import { getAdspConfiguration } from '../../utils/adsp-utils';
+import { getAdspConfiguration } from '@abgov/nx-oc';
 import initExpressService from '../express-service/express-service';
 import initReactApp from '../react-app/react-app';
 import { Schema, NormalizedSchema } from './schema';

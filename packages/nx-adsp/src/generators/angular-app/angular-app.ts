@@ -1,3 +1,4 @@
+import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -12,7 +13,6 @@ import {
   writeJson,
 } from '@nrwl/devkit';
 import * as path from 'path';
-import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 async function normalizeOptions(
@@ -151,13 +151,11 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   await formatFiles(host);
 
-  if (hasDependency(host, '@abgov/nx-oc')) {
-    const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(host, {
-      ...normalizedOptions,
-      project: normalizedOptions.projectName,
-    });
-  }
+  await deploymentGenerator(host, {
+    ...normalizedOptions,
+    appType: 'frontend',
+    project: normalizedOptions.projectName,
+  });
 
   return () => {
     installPackagesTask(host);
