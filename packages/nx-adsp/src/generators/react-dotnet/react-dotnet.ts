@@ -1,10 +1,10 @@
+import { getAdspConfiguration } from '@abgov/nx-oc';
 import {
-  getWorkspaceLayout,  
+  getWorkspaceLayout,
   installPackagesTask,
   names,
   Tree,
 } from '@nrwl/devkit';
-import { getAdspConfiguration } from '../../utils/adsp-utils';
 import initDotnetService from '../dotnet-service/dotnet-service';
 import initReactApp from '../react-app/react-app';
 import { NormalizedSchema, Schema } from './schema';

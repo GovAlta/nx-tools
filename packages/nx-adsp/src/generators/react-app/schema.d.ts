@@ -1,5 +1,4 @@
-import { AdspConfiguration } from '../../utils/adsp';
-import { EnvironmentName } from '../../utils/environments';
+import { AdspConfiguration, EnvironmentName } from '@abgov/nx-oc';
 import { NginxProxyConfiguration } from '../../utils/nginx';
 
 export interface Schema {

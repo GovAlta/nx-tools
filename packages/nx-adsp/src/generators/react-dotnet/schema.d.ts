@@ -1,4 +1,4 @@
-import { EnvironmentName } from '../../utils/environments';
+import type { AdspConfiguration, EnvironmentName } from '@abgov/nx-oc';
 
 export interface Schema {
   name: string;

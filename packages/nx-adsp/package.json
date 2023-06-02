@@ -17,6 +17,7 @@
     "@nx-dotnet/core": "^1.16.0"
   },
   "dependencies": {
+    "@abgov/nx-oc": "^5.2.0",
     "@angular-devkit/core": "^15.0.0",
     "@angular-devkit/schematics": "^15.0.0",
     "axios": "^0.27.0",

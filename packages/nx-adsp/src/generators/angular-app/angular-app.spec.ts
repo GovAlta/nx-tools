@@ -1,12 +1,12 @@
 import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import { Tree, readProjectConfiguration } from '@nrwl/devkit';
 
-import * as utils from '../../utils/adsp-utils';
-import { environments } from '../../utils/environments';
+import * as utils from '@abgov/nx-oc';
+import { environments } from '@abgov/nx-oc';
 import angularApp from './angular-app';
 import { AngularAppGeneratorSchema } from './schema';
 
-jest.mock('../../utils/adsp-utils');
+jest.mock('@abgov/nx-oc');
 const utilsMock = utils as jest.Mocked<typeof utils>;
 utilsMock.getAdspConfiguration.mockResolvedValue({
   tenant: 'test',

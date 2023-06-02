@@ -1,4 +1,9 @@
 import {
+  deploymentGenerator,
+  getAdspConfiguration,
+  hasDependency,
+} from '@abgov/nx-oc';
+import {
   generateFiles,
   getWorkspaceLayout,
   installPackagesTask,
@@ -6,7 +11,6 @@ import {
   Tree,
 } from '@nrwl/devkit';
 import * as path from 'path';
-import { getAdspConfiguration, hasDependency } from '../../utils/adsp-utils';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -73,13 +77,11 @@ export default async function (host: Tree, options: Schema) {
 
   addFiles(host, normalizedOptions);
 
-  if (hasDependency(host, '@abgov/nx-oc')) {
-    const { deploymentGenerator } = await import(`${'@abgov/nx-oc'}`);
-    await deploymentGenerator(host, {
-      ...normalizedOptions,
-      project: normalizedOptions.projectName,
-    });
-  }
+  await deploymentGenerator(host, {
+    ...normalizedOptions,
+    appType: 'dotnet',
+    project: normalizedOptions.projectName,
+  });
 
   return async () => {
     installPackagesTask(host);

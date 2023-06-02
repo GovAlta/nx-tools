@@ -1,5 +1,5 @@
-import { AdspConfiguration } from '../../utils/adsp';
-import { EnvironmentName } from '../../utils/environments';
+import { AdspConfiguration } from '../../../../plugin-common/src/lib/adsp';
+import { EnvironmentName } from '../../../../plugin-common/src/lib/environments';
 
 export interface Schema {
   name: string;
