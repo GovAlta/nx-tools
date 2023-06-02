@@ -1,14 +1,18 @@
-export interface Schema {
-  project: string;
-  tenant: string;
-}
+import { AdspConfiguration } from '../../adsp';
 
 export type ApplicationType = 'node' | 'dotnet' | 'frontend';
+
+export interface Schema {
+  project: string;
+  appType?: ApplicationType;
+  env: EnvironmentName;
+  adsp?: AdspConfiguration;
+}
 
 export interface NormalizedSchema extends Schema {
   projectName: string;
   appType: ApplicationType;
   ocInfraProject: string;
   ocEnvProjects: string[];
-  adsp?: Record<string, unknown>;
+  adsp: AdspConfiguration;
 }

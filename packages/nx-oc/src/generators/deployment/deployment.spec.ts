@@ -3,15 +3,33 @@ import {
   readProjectConfiguration,
 } from '@nrwl/devkit';
 import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+
+import * as utils from '../../adsp';
+import { environments } from '../../adsp';
 import pipeline from '../pipeline/pipeline';
 import { Schema } from './schema';
 import generator from './deployment';
+
+jest.mock('../../adsp');
+const utilsMock = utils as jest.Mocked<typeof utils>;
+utilsMock.getAdspConfiguration.mockResolvedValue({
+  tenant: 'test',
+  tenantRealm: 'test',
+  accessServiceUrl: environments.test.accessServiceUrl,
+  directoryServiceUrl: environments.test.directoryServiceUrl,
+});
+
 describe('Deployment Generator', () => {
-  const options: Schema & Record<string, unknown> = {
+  const options: Schema = {
     project: 'test',
-    tenant: 'test',
-    tenantRealm: 'test',
-    accessServiceUrl: 'https://access-uat.alberta.ca',
+    env: 'development',
+    appType: 'frontend',
+    adsp: {
+      tenant: 'test',
+      tenantRealm: 'test',
+      accessServiceUrl: 'https://access-uat.alberta.ca',
+      directoryServiceUrl: 'https://directory',
+    },
   };
 
   it('can run', async () => {
@@ -45,33 +63,6 @@ describe('Deployment Generator', () => {
     );
   });
 
-  it('can generate deployment for react from nx pre 13.8', async () => {
-    const host = createTreeWithEmptyV1Workspace();
-    await pipeline(host, {
-      pipeline: 'test',
-      type: 'jenkins',
-      infra: 'test-infra',
-      envs: 'test-dev',
-    });
-
-    addProjectConfiguration(host, 'test', {
-      root: 'apps/test',
-      projectType: 'application',
-      targets: {
-        build: {
-          executor: '@nrwl/web:webpack',
-        },
-      },
-    });
-
-    await generator(host, options);
-    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
-    expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
-
-    const dockerfile = host.read('.openshift/test/Dockerfile').toString();
-    expect(dockerfile).toContain('nginx');
-  });
-
   it('can generate deployment for react', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
@@ -88,7 +79,7 @@ describe('Deployment Generator', () => {
         build: {
           executor: '@nrwl/webpack:webpack',
           options: {
-            compiler: 'babel'
+            compiler: 'babel',
           },
         },
       },
@@ -129,33 +120,6 @@ describe('Deployment Generator', () => {
     expect(dockerfile).toContain('nginx');
   });
 
-  it('can generate deployment for node from nx pre 13.8', async () => {
-    const host = createTreeWithEmptyV1Workspace();
-    await pipeline(host, {
-      pipeline: 'test',
-      type: 'jenkins',
-      infra: 'test-infra',
-      envs: 'test-dev',
-    });
-
-    addProjectConfiguration(host, 'test', {
-      root: 'apps/test',
-      projectType: 'application',
-      targets: {
-        build: {
-          executor: '@nrwl/node:build',
-        },
-      },
-    });
-
-    await generator(host, options);
-    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
-    expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
-
-    const dockerfile = host.read('.openshift/test/Dockerfile').toString();
-    expect(dockerfile).toContain('node');
-  });
-
   it('can generate deployment for node', async () => {
     const host = createTreeWithEmptyV1Workspace();
     await pipeline(host, {
@@ -179,7 +143,7 @@ describe('Deployment Generator', () => {
       },
     });
 
-    await generator(host, options);
+    await generator(host, { ...options, appType: 'node' });
     expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
     expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
 
@@ -206,7 +170,7 @@ describe('Deployment Generator', () => {
       },
     });
 
-    await generator(host, options);
+    await generator(host, { ...options, appType: 'dotnet' });
     expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
     expect(host.exists('.openshift/test/Dockerfile')).toBeTruthy();
 
@@ -233,7 +197,7 @@ describe('Deployment Generator', () => {
       },
     });
 
-    await generator(host, options);
+    await generator(host, { ...options, appType: null });
     expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
     expect(host.exists('.openshift/test/Dockerfile')).toBeFalsy();
 

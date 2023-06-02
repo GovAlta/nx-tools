@@ -11,10 +11,14 @@ import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
 import { ApplicationType, NormalizedSchema, Schema } from './schema';
+import { getAdspConfiguration } from '../../adsp';
 
 const infraManifestFile = '.openshift/environments.yml';
 
-function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
+async function normalizeOptions(
+  host: Tree,
+  options: Schema
+): Promise<NormalizedSchema> {
   const projectName = names(options.project).fileName;
 
   const result = host.read(infraManifestFile).toString();
@@ -28,30 +32,35 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
-  let appType: ApplicationType;
-  switch (config.targets.build.executor) {
-    case '@nrwl/web:webpack':
-    case '@angular-devkit/build-angular:browser':
-      appType = 'frontend';
-      break;
-    case '@nrwl/node:build':
-      appType = 'node';
-      break;
-    case '@nx-dotnet/core:build':
-      appType = 'dotnet';
-      break;
-    case '@nrwl/webpack:webpack': {
-      // More recent version of NX switched to use a generic webpack executor for builds.
-      appType =
-        config.targets.build.options.target === 'node' ? 'node' : 'frontend';
-      break;
+  let appType: ApplicationType = options.appType;
+  if (!appType) {
+    switch (config.targets.build.executor) {
+      case '@nrwl/web:webpack':
+      case '@angular-devkit/build-angular:browser':
+        appType = 'frontend';
+        break;
+      case '@nrwl/node:build':
+        appType = 'node';
+        break;
+      case '@nx-dotnet/core:build':
+        appType = 'dotnet';
+        break;
+      case '@nrwl/webpack:webpack': {
+        // More recent version of NX switched to use a generic webpack executor for builds.
+        appType =
+          config.targets.build.options.target === 'node' ? 'node' : 'frontend';
+        break;
+      }
     }
   }
 
+  const adsp = options.adsp || (await getAdspConfiguration(host, options));
+
   return {
     ...options,
-    projectName,
     appType,
+    adsp,
+    projectName,
     ocInfraProject,
     ocEnvProjects,
   };
@@ -86,7 +95,7 @@ export default async function (host: Tree, options: Schema) {
     return;
   }
 
-  const normalizedOptions = normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options);
   if (!normalizedOptions.appType) {
     console.log('Cannot generate deployment for unknown project type.');
     return;
