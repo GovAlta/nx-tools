@@ -54,7 +54,7 @@ async function normalizeOptions(
     }
   }
 
-  const adsp = options.adsp || (await getAdspConfiguration(host, options));
+  const adsp = await getAdspConfiguration(host, options);
 
   return {
     ...options,
