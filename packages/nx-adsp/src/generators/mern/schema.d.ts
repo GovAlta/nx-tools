@@ -4,6 +4,7 @@ import { EnvironmentName } from '../../../../plugin-common/src/lib/environments'
 export interface Schema {
   name: string;
   env: EnvironmentName;
+  accessToken?: string;
 }
 
 export interface NormalizedSchema extends Schema {

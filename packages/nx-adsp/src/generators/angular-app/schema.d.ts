@@ -3,6 +3,7 @@ import type { AdspConfiguration, EnvironmentName } from '@abgov/nx-oc';
 export interface AngularAppGeneratorSchema {
   name: string;
   env: EnvironmentName;
+  accessToken?: string;
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
 }
 

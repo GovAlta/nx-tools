@@ -7,6 +7,7 @@ export interface Schema {
   appType?: ApplicationType;
   env: EnvironmentName;
   adsp?: AdspConfiguration;
+  accessToken?: string;
 }
 
 export interface NormalizedSchema extends Schema {

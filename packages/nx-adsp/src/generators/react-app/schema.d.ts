@@ -4,6 +4,7 @@ import { NginxProxyConfiguration } from '../../utils/nginx';
 export interface Schema {
   name: string;
   env: EnvironmentName;
+  accessToken?: string;
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
 }
 
