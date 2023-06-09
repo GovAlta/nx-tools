@@ -31,6 +31,11 @@
           "prod"
         ]
       }
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
     }
   },
   "required": [

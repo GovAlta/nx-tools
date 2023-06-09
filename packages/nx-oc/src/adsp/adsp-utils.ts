@@ -82,9 +82,9 @@ async function realmLogin(
 
 export async function getAdspConfiguration(
   _host: Tree,
-  options: { env: EnvironmentName }
+  options: { env: EnvironmentName; accessToken?: string }
 ): Promise<AdspConfiguration> {
-  const { env } = options;
+  const { env, accessToken } = options;
   const environment = environments[env || 'prod'];
 
   if (isAdspOptions(options)) {
@@ -104,7 +104,8 @@ export async function getAdspConfiguration(
       {}
     );
 
-    const token = await realmLogin(environment.accessServiceUrl, 'core');
+    const token =
+      accessToken || (await realmLogin(environment.accessServiceUrl, 'core'));
 
     const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
     const { data: tenants } = await axios.get<{
