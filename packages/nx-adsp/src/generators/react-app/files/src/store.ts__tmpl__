@@ -1,5 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { reducer as oidcReducer } from 'redux-oidc';
+import {
+  reducer as oidcReducer,
+  LOAD_USER_ERROR,
+  LOADING_USER,
+  USER_EXPIRED,
+  USER_EXPIRING,
+  USER_FOUND,
+  USER_LOADED,
+  USER_SIGNED_OUT,
+} from 'redux-oidc';
 import { START_FEATURE_KEY, startReducer } from './app/start.slice';
 import { INTAKE_FEATURE_KEY, intakeReducer } from './app/intake.slice';
 
@@ -12,5 +21,20 @@ export const store = configureStore({
   devTools: process.env.NODE_ENV !== 'production',
   // Optional Redux store enhancers
   enhancers: [],
+  middleware: (getDefault) =>
+    getDefault({
+      serializableCheck: {
+        ignoredActions: [
+          LOAD_USER_ERROR,
+          LOADING_USER,
+          USER_EXPIRED,
+          USER_EXPIRING,
+          USER_FOUND,
+          USER_LOADED,
+          USER_SIGNED_OUT,
+        ],
+        ignoredPaths: ['user'],
+      },
+    }),
 });
 export type AppDispatch = typeof store.dispatch;
