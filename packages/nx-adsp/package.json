@@ -17,12 +17,13 @@
     "@nx-dotnet/core": "^1.16.0"
   },
   "dependencies": {
-    "@abgov/nx-oc": "^5.2.0",
+    "@abgov/nx-oc": "^5.5.0",
     "@angular-devkit/core": "^15.0.0",
     "@angular-devkit/schematics": "^15.0.0",
     "axios": "^0.27.0",
     "enquirer": "^2.3.6",
     "express": "^4.18.1",
+    "json-schema-to-typescript": "^13.0.1",
     "open": "^8.4.0",
     "simple-oauth2": "^5.0.0"
   },

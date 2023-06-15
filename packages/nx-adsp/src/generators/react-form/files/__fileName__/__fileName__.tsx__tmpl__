@@ -1,0 +1,121 @@
+import {
+  GoAButton,
+  GoACheckbox,
+  GoAFormItem,
+  GoAFormStep,
+  GoAFormStepper,
+  GoAInput,
+  GoASpinner,
+} from '@abgov/react-components';
+import { FunctionComponent, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch } from '../../store';
+import {
+  getFormBusy,
+  getFormComplete,
+  getFormErrors,
+  getFormValues,
+  initializeForm,
+  updateForm,
+} from './<%= fileName %>.slice';
+import styles from './<%= fileName %>.module.css';
+
+interface FieldSetProps {
+  value: Record<string, unknown>;
+  errors: Record<string, boolean>;
+  onChange: (value: Record<string, unknown>) => void;
+}
+
+<% Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { %>
+const <%= sectionKey %>FieldSet: FunctionComponent<FieldSetProps> = ({
+  value,
+  errors,
+  onChange,
+}) => {
+  return (
+    <fieldset>
+      <legend><%= section.title || sectionKey %></legend>
+      <%_ Object.entries(section.properties).forEach(function([key, value]) { _%>
+      <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
+      <%_ switch(value.type) { 
+        case 'string': _%>
+        <GoAInput
+          type="text"
+          error={errors['<%= key %>']}
+          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+          value={`${value.<%= key %> || ''}`}
+          name="<%= key %>"
+        />
+      <%_ break;
+        case 'number': _%>
+        <GoAInput
+          type="number"
+          error={errors['<%= key %>']}
+          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+          value={`${value.<%= key %> || ''}`}
+          name="<%= key %>"
+        />
+      <%_ break;
+        case 'boolean': _%>
+        <GoACheckbox
+          checked={value.<%= key %> as any || false}
+          onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
+          name="<%= key %>"
+        />
+      <%_ break;
+        default:
+        break; _%>
+      <%_ } _%>
+      </GoAFormItem>
+      <%_ }); _%>
+    </fieldset>
+  );
+};
+<% }); %>
+
+export const <%= className %>Form: FunctionComponent = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const user = useSelector((state) => state['user'].user);
+  useEffect(() => {
+    dispatch(initializeForm());
+  }, [dispatch, user]);
+
+  const formData = useSelector(getFormValues);
+  const formErrors = useSelector(getFormErrors);
+  const formBusy = useSelector(getFormBusy);
+  const formComplete = useSelector(getFormComplete);
+
+  return (
+    <form>
+      <GoAFormStepper testId="<%= fileName %>>">
+      <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+        <GoAFormStep 
+          text="<%= section.title || sectionKey %>" 
+          status={formComplete['<%= sectionKey %>'] ? 'complete' : null} />
+      <%_ }); _%>
+        <GoAFormStep text="Review" />
+      </GoAFormStepper>
+      {formBusy.loading ? (
+        <div className={styles.load}>
+          <GoASpinner type="infinite" size="large" />
+        </div>
+      ) : (
+        <>
+        <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+          <<%= section.className %>FieldSet            
+            value={formData.<%= sectionKey %> as any || {}}
+            errors={formErrors['<%= sectionKey %>'] || {}}
+            onChange={(value) =>
+              dispatch(updateForm({ ...formData, '<%= sectionKey %>': value as any }))
+            }
+          />
+        <%_ }); _%>
+        </>
+      )}
+      <div className={styles.formActions}>
+        <GoAButton type="secondary">Back</GoAButton>
+        <GoAButton type="primary">Next</GoAButton>
+      </div>
+    </form>
+  );
+};
