@@ -29,6 +29,11 @@
       "schema": "./src/generators/react-dotnet/schema.json",
       "description": "Generator that creates a React-Dotnet fullstack solution."
     },
+    "react-form": {
+      "factory": "./src/generators/react-form/react-form",
+      "schema": "./src/generators/react-form/schema.json",
+      "description": "Generator that creates a React component based on an ADSP Form Definition."
+    },
     "angular-app": {
       "factory": "./src/generators/angular-app/angular-app",
       "schema": "./src/generators/angular-app/schema.json",

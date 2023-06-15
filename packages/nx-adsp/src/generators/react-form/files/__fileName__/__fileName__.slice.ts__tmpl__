@@ -1,0 +1,320 @@
+import {
+  createAction,
+  createAsyncThunk,
+  createSelector,
+  createSlice,
+} from '@reduxjs/toolkit';
+import axios from 'axios';
+import { debounce } from 'lodash';
+import { UserState } from 'redux-oidc';
+
+export const <%= constantName %>_FEATURE_KEY = '<%= fileName %>';
+const FORM_DEFINITION_ID = '<%= fileName %>';
+const FORM_SERVICE_URL = '<%= formServiceUrl %>';
+
+/*
+ * Update these interfaces according to your requirements.
+ */
+<%= interfaceDefinition %>
+
+const rules: Record<string, Record<string, RegExp>> = {
+  <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+  <%= sectionKey %>: {
+  <%_ Object.entries(section.properties).filter(([_, { pattern }]) => !!pattern).forEach(function([key, value]) { _%>
+    <%= key %>: new RegExp('<%- value.pattern %>')
+  <%_ }); _%>
+  },
+  <%_ }); _%>
+};
+
+const required: Record<string, string[]> = {
+  <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+    <%= sectionKey %>: [<%- section.required?.map(req => `'${req}'`) || "" %>],
+  <%_ }); _%>
+};
+
+export interface <%= className %>State {
+  formId: string;
+  values: <%= className %>;
+  errors: Record<string, Record<string, boolean>>;
+  complete: Record<string, boolean>;
+  review: boolean;
+  busy: {
+    loading: boolean;
+    saving: boolean;
+    submitting: boolean;
+  };
+}
+
+/**
+ * Export an effect using createAsyncThunk from
+ * the Redux Toolkit: https://redux-toolkit.js.org/api/createAsyncThunk
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(fetchIntake())
+ * }, [dispatch]);
+ * ```
+ */
+export const initializeForm = createAsyncThunk(
+  '<%= propertyName %>/initialize',
+  async (_, { getState }) => {
+    const { user }: UserState = getState()['user'];
+    if (!user) {
+      throw new Error('No active user session.');
+    }
+
+    const { data: forms } = await axios.get<{ results: { id: string }[] }>(
+      `${FORM_SERVICE_URL}/form/v1/forms`,
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+        params: {
+          criteria: {
+            createdByIdEquals: user.profile.sub,
+            definitionIdEquals: FORM_DEFINITION_ID,
+          },
+        },
+      }
+    );
+
+    let formId = forms.results?.[0]?.id;
+    if (!formId) {
+      const { data: form } = await axios.post<{ id: string }>(
+        `${FORM_SERVICE_URL}/form/v1/forms`,
+        {
+          definitionId: FORM_DEFINITION_ID,
+          applicant: {
+            userId: user.profile.sub,
+            addressAs: user.profile.name,
+            channels: [
+              {
+                channel: 'email',
+                address: user.profile.email,
+              },
+            ],
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+          },
+        }
+      );
+      formId = form.id;
+    }
+
+    const { data } = await axios.get<{
+      id: string;
+      data: <%= className %>;
+    }>(`${FORM_SERVICE_URL}/form/v1/forms/${formId}/data`, {
+      headers: {
+        Authorization: `Bearer ${user.access_token}`,
+      },
+    });
+
+    return data;
+  }
+);
+
+const formSaved = createAction(
+  '<%= propertyName %>/saved',
+  (values: <%= className %>) => ({ payload: values })
+);
+
+const queueSaveForm = createAsyncThunk(
+  '<%= propertyName %>/queue-save',
+  debounce(
+    async (values: <%= className %>, { dispatch, getState }) => {
+      const state = getState();
+      const { user }: UserState = state['user'];
+      const { formId }: <%= className %>State =
+        state[<%= constantName %>_FEATURE_KEY];
+
+      await axios.put(
+        `${FORM_SERVICE_URL}/form/v1/forms/${formId}/data`,
+        { data: values },
+        { headers: { Authorization: `Bearer ${user.access_token}` } }
+      );
+
+      dispatch(formSaved(values));
+    },
+    2000,
+    { trailing: true, leading: false }
+  )
+);
+
+export const updateForm = createAsyncThunk(
+  '<%= propertyName %>/update',
+  async (values: <%= className %>, { dispatch }) => {
+    const errors: Record<string, Record<string, boolean>> = {};
+    let hasError = false;
+    Object.entries(rules).forEach(([section, sectionRules]) => {
+      const sectionValue = values[section] || {};
+      const sectionErrors = Object.entries(sectionRules).reduce(
+        (results, [key, valueRule]) => {
+          const value = sectionValue[key] || '';
+          const isError = !!value && !valueRule.test(value);
+          hasError = hasError || isError;
+          return { ...results, [key]: isError };
+        },
+        {}
+      );
+
+      errors[section] = sectionErrors;
+    });
+
+    const complete: Record<string, boolean> = {};
+    Object.entries(required).forEach(([section, requiredValues]) => {
+      const sectionValue = values[section] || {};
+      complete[section] =
+        Object.values(errors[section]).filter((error) => error).length < 1 &&
+        requiredValues
+          .map(
+            (required) =>
+              sectionValue[required] !== undefined &&
+              sectionValue[required] !== null && 
+              sectionValue[required] !== ''
+          )
+          .filter((hasValue) => !hasValue).length < 1;
+    });
+
+    if (!hasError) {
+      dispatch(queueSaveForm(values));
+    }
+
+    return { values, complete, errors };
+  }
+);
+
+export const submitForm = createAsyncThunk(
+  '<%= propertyName %>/submit',
+  async (formId: string) => {
+    const { data } = await axios.post(
+      `${FORM_SERVICE_URL}/form/v1/forms/${formId}`,
+      { operation: 'submit' },
+      { headers: {} }
+    );
+    return data;
+  }
+);
+
+export const initial<%= className %>State: <%= className %>State = {
+  formId: null,
+  values: {} as <%= className %>,
+  errors: {},
+  complete: {},
+  review: false,
+  busy: {
+    loading: false,
+    saving: false,
+    submitting: false,
+  },
+};
+
+export const <%= propertyName %>Slice = createSlice({
+  name: <%= constantName %>_FEATURE_KEY,
+  initialState: initial<%= className %>State,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(initializeForm.pending, (state) => {
+        state.busy.loading = true;
+      })
+      .addCase(initializeForm.fulfilled, (state, action) => {
+        state.formId = action.payload.id;
+        state.values = action.payload.data;
+        state.busy.loading = false;
+      })
+      .addCase(initializeForm.rejected, (state) => {
+        state.busy.loading = false;
+      })
+      .addCase(updateForm.fulfilled, (state, action) => {
+        state.values = action.payload.values;
+        state.complete = action.payload.complete;
+        state.errors = action.payload.errors;
+      })
+      .addCase(queueSaveForm.pending, (state) => {
+        state.busy.saving = true;
+      })
+      .addCase(formSaved, (state) => {
+        state.busy.saving = false;
+      })
+      .addCase(queueSaveForm.rejected, (state) => {
+        state.busy.saving = false;
+      });
+  },
+});
+
+/*
+ * Export reducer for store configuration.
+ */
+export const <%= propertyName %>Reducer = <%= propertyName %>Slice.reducer;
+
+/*
+ * Export action creators to be dispatched. For use with the `useDispatch` hook.
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(intakeActions.add({ id: 1 }))
+ * }, [dispatch]);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#usedispatch
+ */
+export const <%= propertyName %>Actions = <%= propertyName %>Slice.actions;
+
+/*
+ * Export selectors to query state. For use with the `useSelector` hook.
+ *
+ * e.g.
+ * ```
+ * import { useSelector } from 'react-redux';
+ *
+ * // ...
+ *
+ * const entities = useSelector(selectAllIntake);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#useselector
+ */
+// const { selectAll, selectEntities } = intakeAdapter.getSelectors();
+
+export const get<%= className %>State = (
+  rootState: unknown
+): <%= className %>State => rootState[<%= constantName %>_FEATURE_KEY];
+
+export const getFormValues = createSelector(
+  get<%= className %>State,
+  (state) => state.values
+);
+
+export const getFormErrors = createSelector(
+  get<%= className %>State,
+  (state) => state.errors
+);
+
+export const getFormBusy = createSelector(
+  get<%= className %>State,
+  (state) => state.busy
+);
+
+export const getFormComplete = createSelector(
+  get<%= className %>State,
+  (state) => state.complete
+);
