@@ -99,7 +99,7 @@ async function normalizeOptions(
     const environmentFile = `${projectRoot}/src/environments/environment.ts`;
 
     const result = host.read(environmentFile)?.toString();
-    let realm = /realm: ('[a-zA-Z0-9-]{36}'),/.exec(result)?.[0];
+    let realm = /realm: '([a-zA-Z0-9-]{36})',/.exec(result)?.[1];
     if (!realm) {
       const token = await realmLogin(environment.accessServiceUrl, 'core');
       const tenant = await selectTenant(tenantServiceUrl, token);
@@ -146,8 +146,7 @@ async function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
   await addFiles(host, normalizedOptions);
+  await formatFiles(host);
 
-  return () => {
-    formatFiles(host);
-  };
+  return;
 }

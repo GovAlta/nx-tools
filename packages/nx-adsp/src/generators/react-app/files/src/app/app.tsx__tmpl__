@@ -60,7 +60,7 @@ export function App({ userManager }: AppProps) {
                 <GoAButton ml="s" onClick={() => userManager.signoutRedirect()}>
                   Sign Out
                 </GoAButton> :
-                <GoAButton onClick={() => userManager.signinRedirect()}>
+                <GoAButton ml="s" onClick={() => userManager.signinRedirect()}>
                   Sign In
                 </GoAButton>
               }
