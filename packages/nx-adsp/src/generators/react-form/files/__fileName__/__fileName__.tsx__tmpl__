@@ -27,7 +27,7 @@ interface FieldSetProps {
 }
 
 <% Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { %>
-const <%= sectionKey %>FieldSet: FunctionComponent<FieldSetProps> = ({
+const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
   value,
   errors,
   onChange,
