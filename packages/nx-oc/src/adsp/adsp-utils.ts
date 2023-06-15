@@ -21,7 +21,7 @@ export function hasDependency(host: Tree, dependency: string): boolean {
   return !!dependencies?.[dependency] || !!devDependencies?.[dependency];
 }
 
-async function realmLogin(
+export async function realmLogin(
   accessServiceUrl: string,
   realm: string
 ): Promise<string> {
@@ -80,6 +80,42 @@ async function realmLogin(
   return token['access_token'];
 }
 
+export async function getServiceUrls(directoryUrl: string) {
+  const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
+    new URL('/directory/v2/namespaces/platform/entries', directoryUrl).href,
+    { decompress: true, responseEncoding: 'utf8', responseType: 'json' }
+  );
+
+  const urls: Record<string, string> = entries.reduce(
+    (values, item) => ({ ...values, [item.urn]: item.url }),
+    {}
+  );
+
+  return urls;
+}
+
+export async function selectTenant(tenantServiceUrl: string, token: string) {
+  const { data: tenants } = await axios.get<{
+    results: { name: string; realm: string }[];
+  }>(new URL('v2/tenants', tenantServiceUrl).href, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const choices = tenants.results
+    .map((r) => r.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const result = await prompt<{ tenant: string }>({
+    type: 'autocomplete',
+    name: 'tenant',
+    message: 'Which tenant is the application or service for?',
+    choices,
+  });
+
+  const tenant = tenants.results.find((r) => r.name === result.tenant);
+  return tenant;
+}
+
 export async function getAdspConfiguration(
   _host: Tree,
   options: { env: EnvironmentName; accessToken?: string }
@@ -91,44 +127,17 @@ export async function getAdspConfiguration(
     // If Adsp configuration is already been resolved, then no need to retrieve gain.
     return options.adsp;
   } else {
-    const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
-      new URL(
-        '/directory/v2/namespaces/platform/entries',
-        environment.directoryServiceUrl
-      ).href,
-      { decompress: true, responseEncoding: 'utf8', responseType: 'json' }
-    );
-
-    const urls: Record<string, string> = entries.reduce(
-      (values, item) => ({ ...values, [item.urn]: item.url }),
-      {}
-    );
+    const urls = await getServiceUrls(environment.directoryServiceUrl);
 
     const token =
       accessToken || (await realmLogin(environment.accessServiceUrl, 'core'));
 
     const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
-    const { data: tenants } = await axios.get<{
-      results: { name: string; realm: string }[];
-    }>(new URL('v2/tenants', tenantServiceUrl).href, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const choices = tenants.results
-      .map((r) => r.name)
-      .sort((a, b) => a.localeCompare(b));
-
-    const result = await prompt<{ tenant: string }>({
-      type: 'autocomplete',
-      name: 'tenant',
-      message: 'Which tenant is the application or service for?',
-      choices,
-    });
+    const tenant = await selectTenant(tenantServiceUrl, token);
 
     return {
-      tenant: names(result.tenant).fileName,
-      tenantRealm:
-        tenants.results.find((r) => r.name === result.tenant)?.realm || '',
+      tenant: names(tenant.name).fileName,
+      tenantRealm: tenant.realm,
       accessServiceUrl: environment.accessServiceUrl,
       directoryServiceUrl: environment.directoryServiceUrl,
     };
