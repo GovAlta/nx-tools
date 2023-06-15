@@ -89,7 +89,7 @@ async function normalizeOptions(
   if (!accessToken) {
     const token = await realmLogin(environment.accessServiceUrl, 'core');
     const tenant = await selectTenant(
-      urls['urn:ads:platform:tenant-service'],
+      urls['urn:ads:platform:tenant-service:v2'],
       token
     );
     tenantToken = await realmLogin(environment.accessServiceUrl, tenant.realm);
