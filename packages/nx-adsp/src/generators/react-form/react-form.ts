@@ -18,16 +18,20 @@ import { NormalizedSchema, Schema } from './schema';
 import { FormDefinition, generateFormInterface } from '../../utils/form';
 
 async function getFormDefinition(
-  formServiceUrl: string,
+  configurationServiceUrl: string,
   token: string
 ): Promise<FormDefinition> {
-  const { data: definitions } = await axios.get<FormDefinition[]>(
-    new URL('form/v1/definitions', formServiceUrl).href,
+  const { data } = await axios.get<Record<string, FormDefinition>>(
+    new URL(
+      'configuration/v2/configuration/platform/form-service/latest',
+      configurationServiceUrl
+    ).href,
     {
       headers: { Authorization: `Bearer ${token}` },
     }
   );
 
+  const definitions = Object.values(data);
   const choices = definitions
     .filter((r) => !!r.dataSchema)
     .map((r) => r.name)
@@ -79,23 +83,36 @@ async function normalizeOptions(
   options: Schema
 ): Promise<NormalizedSchema> {
   const { env, accessToken } = options;
+
   const projectName = names(options.project).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
 
   const environment = environments[env || 'prod'];
   const urls = await getServiceUrls(environment.directoryServiceUrl);
+  const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
+  const formServiceUrl = urls['urn:ads:platform:form-service'];
+  const configurationServiceUrl =
+    urls['urn:ads:platform:configuration-service'];
 
   let tenantToken = accessToken;
   if (!accessToken) {
-    const token = await realmLogin(environment.accessServiceUrl, 'core');
-    const tenant = await selectTenant(
-      urls['urn:ads:platform:tenant-service:v2'],
-      token
-    );
-    tenantToken = await realmLogin(environment.accessServiceUrl, tenant.realm);
+    const environmentFile = `${projectRoot}/src/environments/environment.ts`;
+
+    const result = host.read(environmentFile)?.toString();
+    let realm = /realm: ('[a-zA-Z0-9-]{36}'),/.exec(result)?.[0];
+    if (!realm) {
+      const token = await realmLogin(environment.accessServiceUrl, 'core');
+      const tenant = await selectTenant(tenantServiceUrl, token);
+      realm = tenant.realm;
+    }
+
+    tenantToken = await realmLogin(environment.accessServiceUrl, realm);
   }
-  const formServiceUrl = urls['urn:ads:platform:form-service'];
-  const formDefinition = await getFormDefinition(formServiceUrl, tenantToken);
+
+  const formDefinition = await getFormDefinition(
+    configurationServiceUrl,
+    tenantToken
+  );
 
   return {
     ...options,
@@ -121,7 +138,7 @@ async function addFiles(host: Tree, options: NormalizedSchema) {
   generateFiles(
     host,
     path.join(__dirname, 'files'),
-    options.projectRoot,
+    `${options.projectRoot}/src/app`,
     templateOptions
   );
 }

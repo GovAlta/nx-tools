@@ -52,8 +52,9 @@ const formDefinition: FormDefinition = {
 jest.mock('@abgov/nx-oc');
 const utilsMock = utils as jest.Mocked<typeof utils>;
 utilsMock.getServiceUrls.mockResolvedValue({
-  'urn:ads:platform:tenant-service': 'https://tenant-service',
+  'urn:ads:platform:tenant-service:v2': 'https://tenant-service/tenant/v2',
   'urn:ads:platform:form-service': 'https://form-service',
+  'urn:ads:platform:configuration-service': 'https://configuration-service',
 });
 
 utilsMock.realmLogin.mockResolvedValue('token');
@@ -61,7 +62,9 @@ utilsMock.selectTenant.mockResolvedValue({ name: 'demo', realm: 'demo' });
 
 jest.mock('axios');
 const axiosMock = axios as jest.Mocked<typeof axios>;
-axiosMock.get.mockResolvedValueOnce({ data: [formDefinition] });
+axiosMock.get.mockResolvedValueOnce({
+  data: { 'some-intake': formDefinition },
+});
 
 jest.mock('enquirer', () => ({ prompt: jest.fn() }));
 const promptMock = prompt as jest.Mock;
@@ -87,8 +90,12 @@ describe('React Form Generator', () => {
     });
 
     await generator(host, options);
-    expect(host.exists('apps/test/some-intake/some-intake.tsx')).toBeTruthy();
-    expect(host.exists('apps/test/some-intake/some-intake.slice.ts')).toBeTruthy();
-    expect(host.exists('apps/test/some-intake/some-intake.module.css')).toBeTruthy();
+    expect(host.exists('apps/test/src/app/some-intake/some-intake.tsx')).toBeTruthy();
+    expect(
+      host.exists('apps/test/src/app/some-intake/some-intake.slice.ts')
+    ).toBeTruthy();
+    expect(
+      host.exists('apps/test/src/app/some-intake/some-intake.module.css')
+    ).toBeTruthy();
   }, 30000);
 });

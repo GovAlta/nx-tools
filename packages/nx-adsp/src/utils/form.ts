@@ -11,6 +11,8 @@ export async function generateFormInterface({
 }: FormDefinition): Promise<string> {
   const types = await compile(dataSchema, name, {
     additionalProperties: false,
+    bannerComment: '',
+    format: false,
   });
 
   return types;
