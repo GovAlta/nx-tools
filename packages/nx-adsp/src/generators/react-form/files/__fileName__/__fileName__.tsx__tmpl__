@@ -1,10 +1,16 @@
 import {
   GoAButton,
   GoACheckbox,
+  GoADropdown,
+  GoADropdownItem,
   GoAFormItem,
   GoAFormStep,
   GoAFormStepper,
   GoAInput,
+  GoAInputDate,
+  GoAInputDateTime,
+  GoAInputTime,
+  GoANotification,
   GoASpinner,
 } from '@abgov/react-components';
 import { FunctionComponent, useEffect } from 'react';
@@ -12,15 +18,21 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../../store';
 import {
   getFormBusy,
+  getFormCanSubmit,
   getFormComplete,
   getFormErrors,
+  getFormStep,
   getFormValues,
   initializeForm,
+  submitForm,
+  testIntakeActions,
   updateForm,
 } from './<%= fileName %>.slice';
 import styles from './<%= fileName %>.module.css';
 
 interface FieldSetProps {
+  className?: string;
+  isReadOnly?: boolean;
   value: Record<string, unknown>;
   errors: Record<string, boolean>;
   onChange: (value: Record<string, unknown>) => void;
@@ -28,45 +40,103 @@ interface FieldSetProps {
 
 <% Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { %>
 const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
+  className,
+  isReadOnly,
   value,
   errors,
   onChange,
 }) => {
   return (
-    <fieldset>
+    <fieldset className={className}>
       <legend><%= section.title || sectionKey %></legend>
+      <p><%= section.description %></p>
       <%_ Object.entries(section.properties).forEach(function([key, value]) { _%>
-      <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
-      <%_ switch(value.type) { 
-        case 'string': _%>
-        <GoAInput
-          type="text"
-          error={errors['<%= key %>']}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-          value={`${value.<%= key %> || ''}`}
-          name="<%= key %>"
-        />
-      <%_ break;
-        case 'number': _%>
-        <GoAInput
-          type="number"
-          error={errors['<%= key %>']}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-          value={`${value.<%= key %> || ''}`}
-          name="<%= key %>"
-        />
-      <%_ break;
-        case 'boolean': _%>
-        <GoACheckbox
-          checked={value.<%= key %> as any || false}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
-          name="<%= key %>"
-        />
-      <%_ break;
-        default:
-        break; _%>
-      <%_ } _%>
-      </GoAFormItem>
+        <%_ if (!value.type) { _%>
+          <%_ if (value.constant) { _%>
+          <p><%= value.constant %></p>
+          <%_ } _%>
+        <%_ } else { _%>
+          <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
+          <%_ switch(value.type) { 
+            case 'string': _%>
+            <%_ if (value.enum) { _%>
+              <GoADropdown 
+                name="<%= key %>"
+                disabled={isReadOnly}
+                onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+                value={`${value.<%= key %> || ''}`}
+              >
+                <%_ value.enum.forEach((enumValue) => { _%>
+                  <GoADropdownItem value="<%= enumValue %>" label="<%= enumValue %>" />
+                <%_ }); _%>
+              </GoADropdown>
+            <%_ } else { _%>
+              <%_ switch(value.format) { 
+                case 'date-time': _%>
+                <GoAInputDateTime
+                  name="<%= key %>"
+                  disabled={isReadOnly}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                case 'date': _%>
+                <GoAInputDate
+                  name="<%= key %>"
+                  disabled={isReadOnly}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                case 'time': _%>
+                <GoAInputTime
+                  name="<%= key %>"
+                  step={1}
+                  disabled={isReadOnly}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                default: _%>
+                <GoAInput
+                  type="text"
+                  disabled={isReadOnly}
+                  error={errors['<%= key %>']}
+                  placeholder="<%= value?.examples?.join(', ') || '' %>"
+                  onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+                  value={`${value.<%= key %> || ''}`}
+                  name="<%= key %>"
+                />
+              <%_ break;
+                } _%>
+            <%_ } _%>
+          <%_ break;
+            case 'number': _%>
+            <GoAInput
+              type="number"
+              disabled={isReadOnly}
+              error={errors['<%= key %>']}
+              placeholder="<%= value?.examples || []%>"
+              onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+              value={`${value.<%= key %> || ''}`}
+              name="<%= key %>"
+            />
+          <%_ break;
+            case 'boolean': _%>
+            <GoACheckbox
+              disabled={isReadOnly}
+              checked={value.<%= key %> as any || false}
+              onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
+              name="<%= key %>"
+            />
+          <%_ break;
+            case 'array': _%>
+          <%_ break;
+            default:
+            break; _%>
+          <%_ } _%>
+          </GoAFormItem>
+        <%_ } _%>
       <%_ }); _%>
     </fieldset>
   );
@@ -80,15 +150,25 @@ export const <%= className %>Form: FunctionComponent = () => {
     dispatch(initializeForm());
   }, [dispatch, user]);
 
+  const formStep = useSelector(getFormStep);
   const formData = useSelector(getFormValues);
   const formErrors = useSelector(getFormErrors);
   const formBusy = useSelector(getFormBusy);
   const formComplete = useSelector(getFormComplete);
-
+  const canSubmit = useSelector(getFormCanSubmit);
+  
+  <% const sections = Object.entries(dataSchema.properties); %>
   return (
-    <form>
-      <GoAFormStepper testId="<%= fileName %>>">
-      <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+    <form className={styles.form}>
+      <GoANotification type="important">
+        This is a generated rapid prototype. Use it as a starting point to build the right thing for users.
+      </GoANotification>
+      <GoAFormStepper 
+        testId="<%= fileName %>"
+        step={formStep}
+        onChange={(step) => dispatch(testIntakeActions.setStep(step))}
+      >
+      <%_ sections.forEach(function([sectionKey, section]) { _%>
         <GoAFormStep 
           text="<%= section.title || sectionKey %>" 
           status={formComplete['<%= sectionKey %>'] ? 'complete' : null} />
@@ -101,8 +181,10 @@ export const <%= className %>Form: FunctionComponent = () => {
         </div>
       ) : (
         <>
-        <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
-          <<%= section.className %>FieldSet            
+        <%_ sections.forEach(function([sectionKey, section], idx) { _%>
+          <<%= section.className %>FieldSet
+            className={formStep === <%= idx + 1 %> || formStep === <%= sections.length + 1 %> ? styles.show : ''}
+            isReadOnly={formStep === <%= sections.length + 1 %>}
             value={formData.<%= sectionKey %> as any || {}}
             errors={formErrors['<%= sectionKey %>'] || {}}
             onChange={(value) =>
@@ -113,8 +195,26 @@ export const <%= className %>Form: FunctionComponent = () => {
         </>
       )}
       <div className={styles.formActions}>
-        <GoAButton type="secondary">Back</GoAButton>
-        <GoAButton type="primary">Next</GoAButton>
+        {formStep > 1 && (
+          <GoAButton
+            type="secondary"
+            onClick={() => dispatch(testIntakeActions.setStep(formStep - 1))}
+          >
+            Back
+          </GoAButton>
+        )}
+        {formStep < <%= sections.length + 1 %> ? (
+          <GoAButton
+            type="primary"
+            onClick={() => dispatch(testIntakeActions.setStep(formStep + 1))}
+          >
+            Next
+          </GoAButton>
+        ) : (
+          <GoAButton disabled={!canSubmit} type="primary" onClick={() => dispatch(submitForm())}>
+            Submit
+          </GoAButton>
+        )}
       </div>
     </form>
   );

@@ -1,3 +1,13 @@
+.form {
+  > fieldset {
+    display: none;
+  }
+
+  > fieldset.show {
+    display: block;
+  }
+}
+
 .formActions {  
   display: flex;
   margin-top: 16px;
@@ -8,5 +18,15 @@
 
   > *:first-child {
     margin-left: auto;
+  }
+}
+
+.load {
+  display: flex;
+  flex-direction: row;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  > * {
+    margin: auto;
   }
 }
