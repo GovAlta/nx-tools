@@ -17,9 +17,9 @@ const FORM_SERVICE_URL = '<%= formServiceUrl %>';
  * Update these interfaces according to your requirements.
  */
 <%- interfaceDefinition %>
-
+<% const sections = Object.entries(dataSchema.properties); %>
 const rules: Record<string, Record<string, RegExp>> = {
-  <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+  <%_ sections.forEach(function([sectionKey, section]) { _%>
   <%= sectionKey %>: {
   <%_ Object.entries(section.properties).filter(([_, { pattern }]) => !!pattern).forEach(function([key, value]) { _%>
     <%= key %>: new RegExp('<%- value.pattern %>')
@@ -29,12 +29,13 @@ const rules: Record<string, Record<string, RegExp>> = {
 };
 
 const required: Record<string, string[]> = {
-  <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+  <%_ sections.forEach(function([sectionKey, section]) { _%>
     <%= sectionKey %>: [<%- section.required?.map(req => `'${req}'`) || "" %>],
   <%_ }); _%>
 };
 
 type FormStatus = 'draft' | 'locked' | 'submitted';
+type SectionCompletion = 'complete' | 'incomplete' | null;
 
 export interface <%= className %>State {
   formId: string;
@@ -42,7 +43,7 @@ export interface <%= className %>State {
   step: number;
   values: <%= className %>;
   errors: Record<string, Record<string, boolean>>;
-  complete: Record<string, boolean>;
+  complete: Record<string, SectionCompletion>;
   busy: {
     loading: boolean;
     saving: boolean;
@@ -51,23 +52,35 @@ export interface <%= className %>State {
 }
 
 function areSectionsComplete(
-  values: TestIntake,
+  values: <%= className %>,
   errors: Record<string, Record<string, boolean>> = {}
-): Record<string, boolean> {
-  const complete: Record<string, boolean> = {};
+): Record<string, SectionCompletion> {
+  const complete: Record<string, SectionCompletion> = {};
   Object.entries(required).forEach(([section, requiredValues]) => {
     const sectionValue = values[section] || {};
-    complete[section] =
-      requiredValues.length > 0 &&
-      Object.values(errors[section] || {}).filter((error) => error).length < 1 &&
-      requiredValues
-        .map(
-          (required) =>
-            sectionValue[required] !== undefined &&
-            sectionValue[required] !== null &&
-            sectionValue[required] !== ''
-        )
-        .filter((hasValue) => !hasValue).length < 1;
+
+    const hasValues = requiredValues
+      .map(
+        (required) =>
+          sectionValue[required] !== undefined &&
+          sectionValue[required] !== null &&
+          sectionValue[required] !== ''
+      )
+      .filter((hasValue) => hasValue);
+
+    const hasError =
+      Object.values(errors[section] || {}).filter((error) => error).length > 0;
+
+    // Note that sections with no required values are considered complete.
+    let completion: SectionCompletion = null;
+    if (!hasError && hasValues.length === requiredValues.length) {
+      completion = 'complete';
+    } else {
+      // This means partial completion.
+      completion = 'incomplete';
+    }
+    
+    complete[section] = completion;
   });
 
   return complete;
@@ -214,11 +227,18 @@ export const updateForm = createAsyncThunk(
 export const submitForm = createAsyncThunk(
   '<%= propertyName %>/submit',
   async (_, { getState }) => {
-    const { formId }: TestIntakeState = getState()[TEST_INTAKE_FEATURE_KEY];    
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];    
+    
     const { data } = await axios.post(
       `${FORM_SERVICE_URL}/form/v1/forms/${formId}`,
       { operation: 'submit' },
-      { headers: {} }
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+      }
     );
     return data;
   }
@@ -333,6 +353,11 @@ export const get<%= className %>State = (
   rootState: unknown
 ): <%= className %>State => rootState[<%= constantName %>_FEATURE_KEY];
 
+export const getFormStatus = createSelector(
+  get<%= className %>State,
+  (state) => state.status
+);
+
 export const getFormStep = createSelector(
   get<%= className %>State,
   (state) => state.step
@@ -358,8 +383,16 @@ export const getFormComplete = createSelector(
   (state) => state.complete
 );
 
+export const getFormInReview = createSelector(
+  get<%= className %>State,
+  (state) => state.step === <%= sections.length + 1 %>
+);
+
 export const getFormCanSubmit = createSelector(
-  getFormComplete,
-  (complete) =>
-    Object.values(complete).filter((complete) => !complete).length < 1
+  get<%= className %>State,
+  (state) =>
+    !state.busy.saving && !state.busy.submitting &&
+    state.status === 'draft' &&
+    Object.values(state.complete).filter((complete) => complete !== 'complete')
+      .length < 1
 );
