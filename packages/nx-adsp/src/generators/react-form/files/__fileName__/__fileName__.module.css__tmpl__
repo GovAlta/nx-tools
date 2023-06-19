@@ -1,3 +1,13 @@
+.form {
+  > fieldset {
+    display: none;
+  }
+
+  > fieldset.show {
+    display: block;
+  }
+}
+
 .formActions {  
   display: flex;
   margin-top: 16px;
@@ -5,8 +15,40 @@
   > * {
     margin-left: 16px;
   }
+  
+  .save {
+    margin-right: auto;
+    display: flex;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 500ms;
+    
+    > * {
+      margin-top: auto;
+      margin-bottom: auto;
+      margin-right: 8px;
+    }
+  }
 
+  .save[data-show='true'] {
+    opacity: 1;
+  }
+}
+
+.sectionActions {
+  display: flex;
+  
   > *:first-child {
-    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.load {
+  display: flex;
+  flex-direction: row;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  > * {
+    margin: auto;
   }
 }

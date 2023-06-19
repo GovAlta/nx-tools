@@ -1,0 +1,23 @@
+import {
+  initial<%= className %>State,
+  <%= propertyName %>Actions,
+  <%= propertyName %>Reducer,
+} from './<%= fileName %>.slice';
+
+describe('<%= name %> slice', () => {
+  describe('<%= propertyName %>Reducer', () => {
+    it('can handle initial state', () => {
+      expect(<%= propertyName %>Reducer(undefined, { type: '' })).toEqual(
+        initial<%= className %>State
+      );
+    });
+
+    it('can handle set step action', () => {
+      expect(
+        <%= propertyName %>Reducer(undefined, <%= propertyName %>Actions.setStep(2))
+      ).toMatchObject({ step: 2 });
+    });
+
+    // TODO: Add state unit tests.
+  });
+});

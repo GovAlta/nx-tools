@@ -1,10 +1,18 @@
 import {
   GoAButton,
+  GoAButtonGroup,
+  GoACallout,
   GoACheckbox,
+  GoADropdown,
+  GoADropdownItem,
   GoAFormItem,
   GoAFormStep,
   GoAFormStepper,
   GoAInput,
+  GoAInputDate,
+  GoAInputDateTime,
+  GoAInputTime,
+  GoANotification,
   GoASpinner,
 } from '@abgov/react-components';
 import { FunctionComponent, useEffect } from 'react';
@@ -12,61 +20,134 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../../store';
 import {
   getFormBusy,
+  getFormCanSubmit,
   getFormComplete,
   getFormErrors,
+  getFormInReview,
+  getFormStatus,
+  getFormStep,
   getFormValues,
   initializeForm,
+  submitForm,
+  <%= propertyName %>Actions,
   updateForm,
 } from './<%= fileName %>.slice';
 import styles from './<%= fileName %>.module.css';
 
 interface FieldSetProps {
+  className?: string;
+  inReview: boolean;
+  isReadOnly: boolean;
   value: Record<string, unknown>;
   errors: Record<string, boolean>;
   onChange: (value: Record<string, unknown>) => void;
+  onEdit: () => void;
 }
 
 <% Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { %>
 const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
+  className,
+  inReview,
+  isReadOnly,
   value,
   errors,
   onChange,
+  onEdit,
 }) => {
   return (
-    <fieldset>
+    <fieldset className={className}>
       <legend><%= section.title || sectionKey %></legend>
+      <div className={styles.sectionActions}>
+        <p><%= section.description %></p>
+        {!isReadOnly && inReview && <GoAButton type="tertiary" onClick={onEdit}>Edit</GoAButton>}
+      </div>
       <%_ Object.entries(section.properties).forEach(function([key, value]) { _%>
-      <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
-      <%_ switch(value.type) { 
-        case 'string': _%>
-        <GoAInput
-          type="text"
-          error={errors['<%= key %>']}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-          value={`${value.<%= key %> || ''}`}
-          name="<%= key %>"
-        />
-      <%_ break;
-        case 'number': _%>
-        <GoAInput
-          type="number"
-          error={errors['<%= key %>']}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-          value={`${value.<%= key %> || ''}`}
-          name="<%= key %>"
-        />
-      <%_ break;
-        case 'boolean': _%>
-        <GoACheckbox
-          checked={value.<%= key %> as any || false}
-          onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
-          name="<%= key %>"
-        />
-      <%_ break;
-        default:
-        break; _%>
-      <%_ } _%>
-      </GoAFormItem>
+        <%_ if (!value.type) { _%>
+          <%_ if (value.constant) { _%>
+          <p><%= value.constant %></p>
+          <%_ } _%>
+        <%_ } else { _%>
+          <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
+          <%_ switch(value.type) { 
+            case 'string': _%>
+            <%_ if (value.enum) { _%>
+              <GoADropdown 
+                name="<%= key %>"
+                disabled={isReadOnly || inReview}
+                onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+                value={`${value.<%= key %> || ''}`}
+              >
+                <%_ value.enum.forEach((enumValue) => { _%>
+                  <GoADropdownItem value="<%= enumValue %>" label="<%= enumValue %>" />
+                <%_ }); _%>
+              </GoADropdown>
+            <%_ } else { _%>
+              <%_ switch(value.format) { 
+                case 'date-time': _%>
+                <GoAInputDateTime
+                  name="<%= key %>"
+                  disabled={isReadOnly || inReview}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                case 'date': _%>
+                <GoAInputDate
+                  name="<%= key %>"
+                  disabled={isReadOnly || inReview}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                case 'time': _%>
+                <GoAInputTime
+                  name="<%= key %>"
+                  step={1}
+                  disabled={isReadOnly || inReview}
+                  value={value.<%= key %> ? new Date(value.<%= key %> as string) : null}
+                  onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+                />
+              <%_ break;
+                default: _%>
+                <GoAInput
+                  type="text"
+                  disabled={isReadOnly || inReview}
+                  error={errors['<%= key %>']}
+                  placeholder="<%= value?.examples?.join(', ') || '' %>"
+                  onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+                  value={`${value.<%= key %> || ''}`}
+                  name="<%= key %>"
+                />
+              <%_ break;
+                } _%>
+            <%_ } _%>
+          <%_ break;
+            case 'number': _%>
+            <GoAInput
+              type="number"
+              disabled={isReadOnly || inReview}
+              error={errors['<%= key %>']}
+              placeholder="<%= value?.examples || []%>"
+              onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+              value={`${value.<%= key %> || ''}`}
+              name="<%= key %>"
+            />
+          <%_ break;
+            case 'boolean': _%>
+            <GoACheckbox
+              disabled={isReadOnly || inReview}
+              checked={value.<%= key %> as any || false}
+              onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
+              name="<%= key %>"
+            />
+          <%_ break;
+            case 'array': _%>
+          <%_ break;
+            default:
+            break; _%>
+          <%_ } _%>
+          </GoAFormItem>
+        <%_ } _%>
       <%_ }); _%>
     </fieldset>
   );
@@ -80,18 +161,36 @@ export const <%= className %>Form: FunctionComponent = () => {
     dispatch(initializeForm());
   }, [dispatch, user]);
 
+  const formStatus = useSelector(getFormStatus);
+  const formStep = useSelector(getFormStep);
   const formData = useSelector(getFormValues);
   const formErrors = useSelector(getFormErrors);
   const formBusy = useSelector(getFormBusy);
   const formComplete = useSelector(getFormComplete);
-
+  const inReview = useSelector(getFormInReview);
+  const canSubmit = useSelector(getFormCanSubmit);
+  
+  <% const sections = Object.entries(dataSchema.properties); %>
   return (
-    <form>
-      <GoAFormStepper testId="<%= fileName %>>">
-      <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
+    <form className={styles.form}>
+      <GoANotification type="important">
+        This is a generated rapid prototype. Use it as a starting point to build the right thing for users.
+      </GoANotification>
+      { 
+        formStatus === 'submitted' && 
+        <GoACallout type="success" heading="<%= name %> form submitted">
+          We received your <%= name %> form and it is being processed.
+        </GoACallout>
+      }
+      <GoAFormStepper 
+        testId="<%= fileName %>"
+        step={formStep}
+        onChange={(step) => dispatch(<%= propertyName %>Actions.setStep(step))}
+      >
+      <%_ sections.forEach(function([sectionKey, section]) { _%>
         <GoAFormStep 
           text="<%= section.title || sectionKey %>" 
-          status={formComplete['<%= sectionKey %>'] ? 'complete' : null} />
+          status={formComplete['<%= sectionKey %>']} />
       <%_ }); _%>
         <GoAFormStep text="Review" />
       </GoAFormStepper>
@@ -101,20 +200,48 @@ export const <%= className %>Form: FunctionComponent = () => {
         </div>
       ) : (
         <>
-        <%_ Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { _%>
-          <<%= section.className %>FieldSet            
+        <%_ sections.forEach(function([sectionKey, section], idx) { _%>
+          <<%= section.className %>FieldSet
+            className={formStep === <%= idx + 1 %> || formStep === <%= sections.length + 1 %> ? styles.show : ''}
+            inReview={inReview}
+            isReadOnly={formStatus !== 'draft'}
             value={formData.<%= sectionKey %> as any || {}}
             errors={formErrors['<%= sectionKey %>'] || {}}
             onChange={(value) =>
               dispatch(updateForm({ ...formData, '<%= sectionKey %>': value as any }))
             }
+            onEdit={() => dispatch(<%= propertyName %>Actions.setStep(<%= idx + 1 %>))}
           />
         <%_ }); _%>
         </>
       )}
       <div className={styles.formActions}>
-        <GoAButton type="secondary">Back</GoAButton>
-        <GoAButton type="primary">Next</GoAButton>
+        <div className={styles.save} data-show={formBusy.saving}>
+          <GoASpinner size="medium" type="infinite" />
+          <span>Saving...</span>
+        </div>
+        <GoAButtonGroup alignment="end">
+        {formStep > 1 && (
+          <GoAButton
+            type="secondary"
+            onClick={() => dispatch(<%= propertyName %>Actions.setStep(formStep - 1))}
+          >
+            Back
+          </GoAButton>
+        )}
+        {formStep < <%= sections.length + 1 %> ? (
+          <GoAButton
+            type="primary"
+            onClick={() => dispatch(<%= propertyName %>Actions.setStep(formStep + 1))}
+          >
+            Next
+          </GoAButton>
+        ) : (
+          <GoAButton disabled={!canSubmit} type="primary" onClick={() => dispatch(submitForm())}>
+            Submit
+          </GoAButton>
+        )}
+        </GoAButtonGroup>
       </div>
     </form>
   );
