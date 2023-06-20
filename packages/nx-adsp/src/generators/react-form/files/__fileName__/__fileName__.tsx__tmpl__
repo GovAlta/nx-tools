@@ -122,6 +122,7 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
                 } _%>
             <%_ } _%>
           <%_ break;
+            case 'integer':
             case 'number': _%>
             <GoAInput
               type="number"
@@ -131,6 +132,15 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
               onChange={(name, updated) => onChange({ ...value, [name]: updated })}
               value={`${value.<%= key %> || ''}`}
               name="<%= key %>"
+              <%_ if (value?.maximum !== undefined) { _%>
+                max={<%= value.maximum %>}
+              <%_ } _%>
+              <%_ if (value?.minimum !== undefined) { _%>
+                min={<%= value.minimum %>}
+              <%_ } _%>
+              <%_ if (value?.multipleOf !== undefined) { _%>
+                step={<%= value.multipleOf %>}
+              <%_ } _%>
             />
           <%_ break;
             case 'boolean': _%>
