@@ -49,6 +49,7 @@ export interface <%= className %>State {
     saving: boolean;
     submitting: boolean;
   };
+  errorMessage: string;
 }
 
 function areSectionsComplete(
@@ -75,7 +76,7 @@ function areSectionsComplete(
     let completion: SectionCompletion = null;
     if (!hasError && hasValues.length === requiredValues.length) {
       completion = 'complete';
-    } else {
+    } else if (hasValues.length > 0) {
       // This means partial completion.
       completion = 'incomplete';
     }
@@ -172,6 +173,11 @@ const formSaved = createAction(
   (values: <%= className %>) => ({ payload: values })
 );
 
+const formSaveRejected = createAction(
+  '<%= propertyName %>/save-rejected',
+  (message: string) => ({ payload: message })
+);
+
 const queueSaveForm = createAsyncThunk(
   '<%= propertyName %>/queue-save',
   debounce(
@@ -181,13 +187,22 @@ const queueSaveForm = createAsyncThunk(
       const { formId }: <%= className %>State =
         state[<%= constantName %>_FEATURE_KEY];
 
-      await axios.put(
-        `${FORM_SERVICE_URL}/form/v1/forms/${formId}/data`,
-        { data: values },
-        { headers: { Authorization: `Bearer ${user.access_token}` } }
-      );
+      try {
+        await axios.put(
+          `${FORM_SERVICE_URL}/form/v1/forms/${formId}/data`,
+          { data: values },
+          { headers: { Authorization: `Bearer ${user.access_token}` } }
+        );
 
-      dispatch(formSaved(values));
+        dispatch(formSaved(values));
+      } catch (err) {
+        let message = 'Unexpected error saving form.';
+        if (axios.isAxiosError(err) && err.response?.status === 400) {
+          message = err.response?.data?.errorMessage;
+        }
+        
+        dispatch(formSaveRejected(message));
+      }
     },
     2000,
     { trailing: true, leading: false }
@@ -256,6 +271,7 @@ export const initial<%= className %>State: <%= className %>State = {
     saving: false,
     submitting: false,
   },
+  errorMessage: null,
 };
 
 export const <%= propertyName %>Slice = createSlice({
@@ -291,6 +307,10 @@ export const <%= propertyName %>Slice = createSlice({
       })
       .addCase(formSaved, (state) => {
         state.busy.saving = false;
+      })
+      .addCase(formSaveRejected, (state, action) => {
+        state.busy.saving = false;
+        state.errorMessage = action.payload;
       })
       .addCase(queueSaveForm.rejected, (state) => {
         state.busy.saving = false;
