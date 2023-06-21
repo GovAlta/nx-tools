@@ -129,7 +129,7 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
               disabled={isReadOnly || inReview}
               error={errors['<%= key %>']}
               placeholder="<%= value?.examples || []%>"
-              onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+              onChange={(name, updated) => onChange({ ...value, [name]: parseFloat(updated) })}
               value={`${value.<%= key %> || ''}`}
               name="<%= key %>"
               <%_ if (value?.maximum !== undefined) { _%>
