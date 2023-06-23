@@ -1,4 +1,6 @@
 .form {
+  max-width: 800px;
+  
   > fieldset {
     display: none;
   }

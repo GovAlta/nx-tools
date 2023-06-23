@@ -67,7 +67,7 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
           <p><%= value.constant %></p>
           <%_ } _%>
         <%_ } else { _%>
-          <GoAFormItem label="<%= value.title || key %>" helpText="<%= value.description %>">
+          <GoAFormItem mb="m" label="<%= value.title || key %>" helpText="<%= value.description %>">
           <%_ switch(value.type) { 
             case 'string': _%>
             <%_ if (value.enum) { _%>
