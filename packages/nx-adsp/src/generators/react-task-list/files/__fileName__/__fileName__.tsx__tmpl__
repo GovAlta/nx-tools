@@ -1,0 +1,595 @@
+import {
+  GoABadge,
+  GoABlock,
+  GoAButton,
+  GoAButtonGroup,
+  GoACallout,
+  GoAContainer,
+  GoADetails,
+  GoADivider,
+  GoADropdown,
+  GoADropdownItem,
+  GoAFormItem,
+  GoAModal,
+  GoANotification,
+  GoARadioGroup,
+  GoARadioItem,
+  GoASpinner,
+  GoATable,
+} from '@abgov/react-components';
+import { FunctionComponent, ReactNode, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch } from '../../store';
+import {
+  TaskFilter,
+  TaskMetric,
+  TaskUser,
+  assignTask,
+  cancelTask,
+  completeTask,
+  getBusy,
+  getFilter,
+  getLive,
+  getModal,
+  getOpenTask,
+  getQueueUser,
+  getQueueWorkers,
+  getTaskMetrics,
+  getTasks,
+  initializeQueue,
+  <%= propertyName %>TaskListActions,
+  setTaskPriority,
+  startTask,
+} from './<%= fileName %>.slice';
+import styles from './<%= fileName %>.module.css';
+import { Person, Task } from './task';
+
+interface TaskListItemProps {
+  task: Task;
+  isOpen: boolean;
+  user: TaskUser;
+  onSelect: (task: Task) => void;
+  onAssign: (task: Task) => void;
+  onSetPriority: (task: Task) => void;
+  onOpen: (task: Task) => void;
+}
+
+function formatTaskAge(createdOn: string): string {
+  if (!createdOn) {
+    return '';
+  }
+
+  const hours = Math.round((Date.now() - new Date(createdOn).getTime()) / 36e5);
+  if (hours < 24) {
+    return `${hours} hours`;
+  } else {
+    return `${Math.round((hours * 10) / 24) / 10} days`;
+  }
+}
+
+interface TaskHeaderProps {
+  className?: string;
+  open: Task;
+  isLive: boolean;
+  onClickTasks: () => void;
+}
+
+const TaskHeader: FunctionComponent<TaskHeaderProps> = ({
+  className,
+  open,
+  isLive,
+  onClickTasks,
+}) => {
+  return (
+    <div className={className}>
+      <div>
+        {open ? (
+          <>
+            <GoAButton mt="s" type="tertiary" onClick={onClickTasks}>
+              Tasks
+            </GoAButton>
+            <span>/</span>
+            <span>
+              {open?.name} - {open?.description}
+            </span>
+          </>
+        ) : (
+          <span>Tasks</span>
+        )}
+        <span>
+          {isLive ? (
+            <GoABadge mt="m" mb="s" type="success" content="Live" />
+          ) : (
+            <GoABadge mt="m" mb="s" type="information" content="Not live" />
+          )}
+        </span>
+      </div>
+      <GoADivider mb="m" />
+    </div>
+  );
+};
+
+interface TaskMetricsProps {
+  metrics: TaskMetric[];
+}
+
+const TaskMetrics: FunctionComponent<TaskMetricsProps> = ({ metrics }) => {
+  return (
+    <GoABlock mt="m">
+      {metrics.map((metric) => (
+        <GoAContainer type="non-interactive" accent="thin">
+          <label>{metric.name}</label>
+          <div style={{ marginTop: 16 }}>
+            <span
+              style={{
+                fontWeight: 'bold',
+                fontSize: 'xx-large',
+                marginRight: 6,
+              }}
+            >
+              {metric.value}
+            </span>
+            <span style={{ fontWeight: 'lighter' }}>{metric.unit}</span>
+          </div>
+        </GoAContainer>
+      ))}
+    </GoABlock>
+  );
+};
+
+const TaskListItem: FunctionComponent<TaskListItemProps> = ({
+  task,
+  isOpen,
+  user,
+  onSelect,
+  onAssign,
+  onSetPriority,
+  onOpen,
+}) => {
+  return (
+    <tr onClick={() => onSelect(task)}>
+      <td>{task.priority}</td>
+      <td>{formatTaskAge(task.createdOn)}</td>
+      <td>
+        <span>{task.name}</span> - <span>{task.description}</span>
+      </td>
+      <td>{task.status}</td>
+      <td>
+        {task.assignment?.assignedTo
+          ? task.assignment.assignedTo.name
+          : 'No one'}
+      </td>
+      <td>
+        <GoAButtonGroup alignment="end">
+          {user.isAssigner && (
+            <>
+              <GoAButton
+                size="compact"
+                type="secondary"
+                onClick={() => onAssign(task)}
+              >
+                Assign
+              </GoAButton>
+              <GoAButton
+                size="compact"
+                type="secondary"
+                onClick={() => onSetPriority(task)}
+              >
+                Set priority
+              </GoAButton>
+            </>
+          )}
+          {!user.isAssigner && user.isWorker && (
+            <GoAButton
+              size="compact"
+              type="secondary"
+              onClick={() => onAssign(task)}
+              disabled={task.assignment?.assignedTo?.id === user.id}
+            >
+              Assign to me
+            </GoAButton>
+          )}
+          <GoAButton
+            size="compact"
+            type="primary"
+            disabled={isOpen}
+            onClick={() => onOpen(task)}
+          >
+            Open
+          </GoAButton>
+        </GoAButtonGroup>
+      </td>
+    </tr>
+  );
+};
+
+interface TaskListProps {
+  className?: string;
+  metrics: TaskMetric[];
+  filter: TaskFilter;
+  tasks: Task[];
+  selected: Task;
+  open: Task;
+  user: TaskUser;
+  onSetFilter: (filter: TaskFilter) => void;
+  onSelect: (task: Task) => void;
+  onAssign: (task: Task) => void;
+  onSetPriority: (task: Task) => void;
+  onOpen: (task: Task) => void;
+}
+
+const TaskList: FunctionComponent<TaskListProps> = ({
+  className,
+  metrics,
+  filter,
+  tasks,
+  open,
+  user,
+  onSetFilter,
+  onSelect,
+  onAssign,
+  onSetPriority,
+  onOpen,
+}) => {
+  return (
+    <div className={className} data-opened={!!open}>
+      <div>
+        <TaskMetrics metrics={metrics} />
+        <GoAFormItem label="Filter" mr="s">
+          <GoADropdown
+            onChange={(_, filter) => onSetFilter(filter as TaskFilter)}
+            value={filter}
+          >
+            <GoADropdownItem label="Active" value="active" />
+            <GoADropdownItem label="My tasks" value="assigned" />
+            <GoADropdownItem label="Pending" value="pending" />
+          </GoADropdown>
+        </GoAFormItem>
+      </div>
+      <GoATable mt="l" width="100%">
+        <colgroup>
+          <col style={{ width: 95 }} />
+          <col style={{ width: 90 }} />
+          <col />
+          <col style={{ width: 95 }} />
+          <col />
+          <col style={{ width: 330 }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Age</th>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Assigned</th>
+            <th style={{ textAlign: 'right' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task) => (
+            <TaskListItem
+              key={task.id}
+              task={task}
+              isOpen={open?.id === task.id}
+              user={user}
+              onSelect={onSelect}
+              onAssign={onAssign}
+              onSetPriority={onSetPriority}
+              onOpen={onOpen}
+            />
+          ))}
+        </tbody>
+      </GoATable>
+    </div>
+  );
+};
+
+interface TaskDetailsProps {
+  className?: string;
+  open: Task;
+  children: ReactNode;
+}
+
+const TaskDetails: FunctionComponent<TaskDetailsProps> = ({
+  className,
+  open,
+  children,
+}) => {
+  return (
+    <div data-opened={!!open} className={className}>
+      {open && children}
+    </div>
+  );
+};
+
+interface TaskAssignmentModalProps {
+  user: TaskUser;
+  task: Task;
+  open: boolean;
+  workers: Person[];
+  executing: boolean;
+  onAssign: (assignTo: Person) => void;
+  onClose: () => void;
+}
+
+const TaskAssignmentModal: FunctionComponent<TaskAssignmentModalProps> = ({
+  user,
+  task,
+  workers,
+  open,
+  executing,
+  onAssign,
+  onClose,
+}) => {
+  const [selected, setSelected] = useState<string>();
+  useEffect(() => {
+    setSelected(task?.assignment?.assignedTo?.id || '');
+  }, [task]);
+
+  return (
+    <GoAModal heading="Assign task" open={open} onClose={onClose}>
+      <form>
+        <p>
+          Assign task {task?.name} to a person. Only the assigned person will be
+          able to progress the task.
+        </p>
+        <div>
+          {task?.assignment?.assignedTo ? (
+            <>
+              <span>Task is currently assigned to: </span>
+              <span>{task.assignment.assignedTo.name}</span>
+            </>
+          ) : (
+            <span>Task is currently not assigned.</span>
+          )}
+        </div>
+        {user.isAssigner ? (
+          <GoAFormItem label="Assign task to" mt="m" mb="4xl">
+            <GoADropdown
+              native={true}
+              value={task?.assignment?.assignedTo?.id}
+              onChange={(_, id) => setSelected(id as string)}
+            >
+              <GoADropdownItem key="no one" value="" label="No one" />
+              {workers.map((w) => (
+                <GoADropdownItem key={w.id} value={w.id} label={w.name} />
+              ))}
+            </GoADropdown>
+          </GoAFormItem>
+        ) : (
+          <div>Assign this task to yourself?</div>
+        )}
+        <GoAButtonGroup alignment="end" mt="4xl">
+          <GoAButton type="secondary" onClick={onClose}>
+            Cancel
+          </GoAButton>
+          <GoAButton
+            disabled={
+              executing ||
+              (user.isAssigner &&
+                selected === (task?.assignment?.assignedTo?.id || ''))
+            }
+            type="primary"
+            onClick={() => {
+              onAssign(
+                user.isAssigner
+                  ? selected
+                    ? workers.find((w) => w.id === selected)
+                    : null
+                  : user
+              );
+            }}
+          >
+            Assign
+          </GoAButton>
+        </GoAButtonGroup>
+      </form>
+    </GoAModal>
+  );
+};
+
+interface TaskPriorityModal {
+  task: Task;
+  open: boolean;
+  executing: boolean;
+  onSetPriority: (priority: string) => void;
+  onClose: () => void;
+}
+
+const TaskPriorityModal: FunctionComponent<TaskPriorityModal> = ({
+  task,
+  open,
+  executing,
+  onSetPriority,
+  onClose,
+}) => {
+  const [priority, setPriority] = useState<string>();
+  useEffect(() => {
+    setPriority(task?.priority);
+  }, [task]);
+
+  return (
+    <GoAModal heading="Set task priority" open={open} onClose={onClose}>
+      <form>
+        <p>
+          Set the priority for {task?.name}. Higher priority tasks will appear
+          at the top of the list.
+        </p>
+        <div>
+          <span>Priority is currently set to: </span>
+          <span>{task?.priority}</span>
+        </div>
+        <GoAFormItem label="Set priority to" mt="m">
+          <GoARadioGroup
+            name="priority"
+            value={task?.priority}
+            onChange={(_, value) => setPriority(value)}
+          >
+            <GoARadioItem name="Urgent" value="Urgent" />
+            <GoARadioItem name="High" value="High" />
+            <GoARadioItem name="Normal" value="Normal" />
+          </GoARadioGroup>
+        </GoAFormItem>
+        <GoAButtonGroup alignment="end" mt="4xl">
+          <GoAButton type="secondary" onClick={onClose}>
+            Cancel
+          </GoAButton>
+          <GoAButton
+            type="primary"
+            disabled={executing || (priority && priority === task?.priority)}
+            onClick={() => onSetPriority(priority)}
+          >
+            Set priority
+          </GoAButton>
+        </GoAButtonGroup>
+      </form>
+    </GoAModal>
+  );
+};
+
+export const <%= className %>TaskList: FunctionComponent = () => {
+  const user = useSelector(getQueueUser);
+  const live = useSelector(getLive);
+  const metrics = useSelector(getTaskMetrics);
+  const filter = useSelector(getFilter);
+  const busy = useSelector(getBusy);
+  const modal = useSelector(getModal);
+  const tasks = useSelector(getTasks);
+  const open = useSelector(getOpenTask);
+  const workers = useSelector(getQueueWorkers);
+
+  const dispatch = useDispatch<AppDispatch>();
+  useEffect(() => {
+    dispatch(
+      initializeQueue({ namespace: '<%= queueNamespace %>', name: '<%= queueName %>' })
+    );
+  }, [dispatch]);
+
+  return (
+    <div className={styles.taskList}>
+      <GoANotification type="important">
+        This is a generated rapid prototype. Use it as a starting point to build
+        the right thing for users.
+      </GoANotification>
+      <TaskHeader
+        className={styles.header}
+        open={open}
+        isLive={live}
+        onClickTasks={() => dispatch(<%= propertyName %>TaskListActions.setOpenTask())}
+      />
+      <TaskDetails className={styles.details} open={open}>
+        {/* Replace this with task detail view so user can view and complete task. */}
+        <div className={styles.detailsPlaceholder}>
+          <div>
+            <GoACallout type="information" heading="Task detail view">
+              This is a placeholder for the task detail view. Replace with your
+              own custom view for the specific type of task that users will work
+              with.
+            </GoACallout>
+            <GoADetails ml="s" heading="Show task specific view">
+              Replace this with a custom view so user can view and perform
+              tasks. For example, if the task is to process a submission, show
+              the form fields and attached files for the assessor.
+            </GoADetails>
+            <GoADetails ml="s" heading="Update task based on user actions">
+              Tasks can be started, completed, and cancelled. Perform task
+              lifecycle actions as part of the task specific user action. For
+              example, if the task is to process a submission, the assessor's
+              action to record a decision should complete the task.
+            </GoADetails>
+          </div>
+          <GoAButtonGroup alignment="end" mt="l">
+            <GoAButton
+              type="secondary"
+              onClick={() => dispatch(<%= propertyName %>TaskListActions.setOpenTask())}
+            >
+              Close
+            </GoAButton>
+            {open?.status === 'Pending' && (
+              <GoAButton
+                disabled={busy.executing}
+                onClick={() => dispatch(startTask({ taskId: open?.id }))}
+              >
+                Start task
+              </GoAButton>
+            )}
+            {open?.status === 'In Progress' && (
+              <>
+                <GoAButton
+                  type="secondary"
+                  disabled={busy.executing}
+                  onClick={() =>
+                    dispatch(cancelTask({ taskId: open?.id, reason: null }))
+                  }
+                >
+                  Cancel task
+                </GoAButton>
+                <GoAButton
+                  disabled={busy.executing}
+                  onClick={() => dispatch(completeTask({ taskId: open?.id }))}
+                >
+                  Complete task
+                </GoAButton>
+              </>
+            )}
+          </GoAButtonGroup>
+        </div>
+      </TaskDetails>
+      {busy.initializing ||
+        (busy.loading && (
+          <div className={styles.loading}>
+            <GoASpinner size="large" type="infinite" />
+          </div>
+        ))}
+      <TaskList
+        className={styles.list}
+        metrics={metrics}
+        filter={filter}
+        tasks={tasks}
+        open={open}
+        selected={null}
+        user={user}
+        onSetFilter={(filter) =>
+          dispatch(<%= propertyName %>TaskListActions.setFilter(filter))
+        }
+        onSelect={() => {
+          // not used
+        }}
+        onAssign={(task) =>
+          dispatch(<%= propertyName %>TaskListActions.setTaskToAssign(task))
+        }
+        onSetPriority={(task) =>
+          dispatch(<%= propertyName %>TaskListActions.setTaskToPrioritize(task))
+        }
+        onOpen={(task) => dispatch(<%= propertyName %>TaskListActions.setOpenTask(task.id))}
+      />
+      <TaskAssignmentModal
+        user={user}
+        task={modal.taskToAssign}
+        workers={workers}
+        open={!!modal.taskToAssign}
+        executing={busy.executing}
+        onAssign={(assignTo) =>
+          dispatch(assignTask({ taskId: modal.taskToAssign.id, assignTo }))
+        }
+        onClose={() => dispatch(<%= propertyName %>TaskListActions.setTaskToAssign(null))}
+      />
+      <TaskPriorityModal
+        task={modal.taskToPrioritize}
+        open={!!modal.taskToPrioritize}
+        executing={busy.executing}
+        onSetPriority={(priority) =>
+          dispatch(
+            setTaskPriority({
+              taskId: modal.taskToPrioritize.id,
+              priority,
+            })
+          )
+        }
+        onClose={() =>
+          dispatch(<%= propertyName %>TaskListActions.setTaskToPrioritize(null))
+        }
+      />
+    </div>
+  );
+};
