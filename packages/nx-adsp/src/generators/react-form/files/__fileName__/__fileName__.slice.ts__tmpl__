@@ -8,10 +8,11 @@ import {
 import axios from 'axios';
 import { debounce } from 'lodash';
 import { UserState } from 'redux-oidc';
+import { CONFIG_FEATURE_KEY, ConfigState } from '../config.slice';
 
 export const <%= constantName %>_FEATURE_KEY = '<%= fileName %>';
 const FORM_DEFINITION_ID = '<%= fileName %>';
-const FORM_SERVICE_URL = '<%= formServiceUrl %>';
+const FORM_SERVICE_ID = 'urn:ads:platform:form-service';
 
 /*
  * Update these interfaces according to your requirements.
@@ -107,13 +108,16 @@ function areSectionsComplete(
 export const initializeForm = createAsyncThunk(
   '<%= propertyName %>/initialize',
   async (_, { getState }) => {
-    const { user }: UserState = getState()['user'];
+    const state = getState();
+    const { user }: UserState = state['user'];
     if (!user) {
       throw new Error('No active user session.');
     }
 
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
     const { data: forms } = await axios.get<{ results: { id: string; status: FormStatus }[] }>(
-      `${FORM_SERVICE_URL}/form/v1/forms`,
+      `${directory[FORM_SERVICE_ID]}/form/v1/forms`,
       {
         headers: {
           Authorization: `Bearer ${user.access_token}`,
@@ -130,7 +134,7 @@ export const initializeForm = createAsyncThunk(
     let form = forms.results?.[0];
     if (!form) {
       const { data: newForm } = await axios.post<{ id: string; status: FormStatus }>(
-        `${FORM_SERVICE_URL}/form/v1/forms`,
+        `${directory[FORM_SERVICE_ID]}/form/v1/forms`,
         {
           definitionId: FORM_DEFINITION_ID,
           applicant: {
@@ -156,7 +160,7 @@ export const initializeForm = createAsyncThunk(
     const { data } = await axios.get<{
       id: string;
       data: <%= className %>;
-    }>(`${FORM_SERVICE_URL}/form/v1/forms/${form.id}/data`, {
+    }>(`${directory[FORM_SERVICE_ID]}/form/v1/forms/${form.id}/data`, {
       headers: {
         Authorization: `Bearer ${user.access_token}`,
       },
@@ -184,12 +188,12 @@ const queueSaveForm = createAsyncThunk(
     async (values: <%= className %>, { dispatch, getState }) => {
       const state = getState();
       const { user }: UserState = state['user'];
-      const { formId }: <%= className %>State =
-        state[<%= constantName %>_FEATURE_KEY];
+      const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];      
+      const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];
 
       try {
         await axios.put(
-          `${FORM_SERVICE_URL}/form/v1/forms/${formId}/data`,
+          `${directory[FORM_SERVICE_ID]}/form/v1/forms/${formId}/data`,
           { data: values },
           { headers: { Authorization: `Bearer ${user.access_token}` } }
         );
@@ -244,10 +248,11 @@ export const submitForm = createAsyncThunk(
   async (_, { getState }) => {
     const state = getState();
     const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
     const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];    
     
     const { data } = await axios.post(
-      `${FORM_SERVICE_URL}/form/v1/forms/${formId}`,
+      `${directory[FORM_SERVICE_ID]}/form/v1/forms/${formId}`,
       { operation: 'submit' },
       {
         headers: {

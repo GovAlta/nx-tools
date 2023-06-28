@@ -90,7 +90,6 @@ async function normalizeOptions(
   const environment = environments[env || 'prod'];
   const urls = await getServiceUrls(environment.directoryServiceUrl);
   const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
-  const formServiceUrl = urls['urn:ads:platform:form-service'];
   const configurationServiceUrl =
     urls['urn:ads:platform:configuration-service'];
 
@@ -117,7 +116,6 @@ async function normalizeOptions(
   return {
     ...options,
     projectRoot,
-    formServiceUrl,
     formDefinition,
   };
 }
