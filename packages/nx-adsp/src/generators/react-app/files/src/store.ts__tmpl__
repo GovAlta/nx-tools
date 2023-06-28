@@ -9,12 +9,14 @@ import {
   USER_LOADED,
   USER_SIGNED_OUT,
 } from 'redux-oidc';
+import { CONFIG_FEATURE_KEY, configReducer } from './app/config.slice';
 import { START_FEATURE_KEY, startReducer } from './app/start.slice';
 import { INTAKE_FEATURE_KEY, intakeReducer } from './app/intake.slice';
 
 export const store = configureStore({
   reducer: {
     user: oidcReducer,
+    [CONFIG_FEATURE_KEY]: configReducer,
     [START_FEATURE_KEY]: startReducer,
     [INTAKE_FEATURE_KEY]: intakeReducer,
   },

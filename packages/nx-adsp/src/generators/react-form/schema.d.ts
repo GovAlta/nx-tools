@@ -9,5 +9,4 @@ export interface Schema {
 export interface NormalizedSchema extends Schema {
   projectRoot: string;
   formDefinition: FormDefinition;
-  formServiceUrl: string;
 }
