@@ -3,6 +3,9 @@
 
 export const environment = {
   production: false,
+  directory: {
+    url: '<%= directoryServiceUrl %>',
+  },
   access: {
     url: '<%= accessServiceUrl %>',
     realm: '<%= tenantRealm %>',

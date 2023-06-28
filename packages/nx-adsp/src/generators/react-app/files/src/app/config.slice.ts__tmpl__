@@ -1,0 +1,66 @@
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+
+export const CONFIG_FEATURE_KEY = 'config';
+
+export interface ConfigState {
+  initialized: boolean;
+  environment: Record<string, unknown>;
+  directory: Record<string, string>;
+}
+
+export const initializeConfig = createAsyncThunk(
+  'config/initialize',
+  async (environment?: Record<string, unknown>) => {
+    // Initialize state with environment and ADSP directory of services.
+    const directoryUrl = environment?.directory?.['url'];
+
+    let directory: Record<string, string> = {};
+    if (directoryUrl) {
+      const platform: { urn: string; url: string }[] = await (
+        await fetch(`${directoryUrl}/directory/v2/namespaces/platform/entries`)
+      ).json();
+      directory = platform.reduce(
+        (result, entry) => ({ ...result, [entry.urn]: entry.url }),
+        directory
+      );
+
+      try {
+        const tenant: { urn: string; url: string }[] = await (
+          await fetch(
+            `${directoryUrl}/directory/v2/namespaces/<%= tenant %>/entries`
+          )
+        ).json();
+
+        directory = tenant.reduce(
+          (result, entry) => ({ ...result, [entry.urn]: entry.url }),
+          directory
+        );
+      } catch (err) {
+        // Tenant directory may not exist if no entries have been added.
+      }
+    }
+
+    return { directory, environment };
+  }
+);
+
+export const initialConfigState: ConfigState = {
+  initialized: false,
+  environment: {},
+  directory: {},
+};
+
+const configSlice = createSlice({
+  name: CONFIG_FEATURE_KEY,
+  initialState: initialConfigState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder.addCase(initializeConfig.fulfilled, (state, { payload }) => {
+      state.environment = payload.environment;
+      state.directory = payload.directory;
+      state.initialized = true;
+    });
+  },
+});
+
+export const configReducer = configSlice.reducer;

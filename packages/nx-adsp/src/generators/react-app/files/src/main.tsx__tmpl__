@@ -12,6 +12,7 @@ import {
 import { environment } from './environments/environment';
 import { createUserManager } from './access';
 import App from './app/app';
+import { initializeConfig } from './app/config.slice';
 import { store } from './store';
 
 // Fetch configuration from web server; otherwise fallback to static environment.
@@ -20,9 +21,10 @@ fetch('/config/config.json')
     res.json() : 
     environment
   )
-  .then(({access}) => {
+  .then((env) => {
 
-    const userManager = createUserManager(access);
+    store.dispatch(initializeConfig(env));
+    const userManager = createUserManager(env.access);
     loadUser(store, userManager);
     
     ReactDOM.render(
