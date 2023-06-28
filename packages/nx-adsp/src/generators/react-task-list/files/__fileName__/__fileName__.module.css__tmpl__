@@ -1,0 +1,80 @@
+.taskList {
+  width: 80vw;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+
+  .header {
+    height: 6vh;
+    flex-shrink: 0;
+    flex-grow: 0;
+
+    > div:first-child {
+      display: flex;
+      align-items: baseline;
+
+      > span {
+        margin-right: 14px;
+      }
+
+      > span:first-child {
+        margin-left: 14px;
+      }
+
+      > :last-child {
+        margin-left: auto;
+      }
+    }
+  }
+
+  .details {
+    height: 0;
+    transition: height 200ms;
+    position: relative;
+    flex-shrink: 0;
+
+    > * {
+      height: 100%;
+      width: 100%;
+    }
+
+    .detailsPlaceholder {
+      display: flex;
+      flex-direction: column;
+
+      > *:first-child {
+        flex-grow: 1;
+      }
+    }
+  }
+
+  .details[data-opened='true'] {
+    height: 74vh;
+  }
+
+  .list {
+    flex-grow: 1;
+    flex-shrink: 1;
+    position: relative;
+    overflow: hidden;
+
+    > div:first-child {
+      display: flex;
+      flex-direction: row;
+
+      > :first-child {
+        margin-right: auto;
+      }
+    }
+  }
+
+  .loading {
+    flex-grow: 2;
+    flex-shrink: 0;
+    height: 80vh;
+    display: flex;
+    > * {
+      margin: auto;
+    }
+  }
+}

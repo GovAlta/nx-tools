@@ -1,0 +1,723 @@
+import {
+  createAsyncThunk,
+  createSelector,
+  createSlice,
+  PayloadAction,
+} from '@reduxjs/toolkit';
+import axios from 'axios';
+import { UserState } from 'redux-oidc';
+import { io, Socket } from 'socket.io-client';
+import { CONFIG_FEATURE_KEY, ConfigState } from '../config.slice';
+import { Person, QueueDefinition, Task } from './task';
+
+export const <%= constantName %>_FEATURE_KEY = '<%= fileName %>';
+const TASK_SERVICE_ID = 'urn:ads:platform:task-service';
+const PUSH_SERVICE_ID = 'urn:ads:platform:push-service';
+const UPDATE_STREAM_ID = '<%= updateStreamId %>';
+
+/*
+ * Update these interfaces according to your requirements.
+ */
+enum TaskPriority {
+  Urgent = 2,
+  High = 1,
+  Normal = 0,
+}
+
+export type TaskFilter = 'active' | 'pending' | 'assigned';
+
+export interface TaskMetric {
+  name: string;
+  value: number;
+  unit?: string;
+}
+
+export interface TaskUser extends Person {
+  id: string;
+  isAssigner: boolean;
+  isWorker: boolean;
+}
+
+export interface <%= className %>TaskListState {
+  user: TaskUser;
+  queue: {
+    namespace: string;
+    name: string;
+  };
+  live: boolean;
+  people: Record<string, Person>;
+  assigners: string[];
+  workers: string[];
+  tasks: Record<string, Task>;
+  results: string[];
+  filter: TaskFilter;
+  next: string;
+  selected: string;
+  opened: string;
+  busy: {
+    initializing: boolean;
+    loading: boolean;
+    executing: boolean;
+  };
+  modal: {
+    taskToAssign: Task;
+    taskToPrioritize: Task;
+  };
+}
+
+/**
+ * Export an effect using createAsyncThunk from
+ * the Redux Toolkit: https://redux-toolkit.js.org/api/createAsyncThunk
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(fetchIntake())
+ * }, [dispatch]);
+ * ```
+ */
+
+interface TaskResults {
+  results: Task[];
+  page: {
+    after?: string;
+    next?: string;
+    size: number;
+  };
+}
+
+export const initializeQueue = createAsyncThunk(
+  '<%= propertyName %>/initialize-definition',
+  async (
+    { namespace, name }: { namespace: string; name: string },
+    { dispatch, getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    const { data } = await axios.get<QueueDefinition>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${namespace}/${name}`,
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    dispatch(loadQueueTasks({ namespace: data.namespace, name: data.name }));
+    dispatch(loadQueuePeople({ namespace: data.namespace, name: data.name }));
+    if (UPDATE_STREAM_ID) {
+      dispatch(connectStream());
+    }
+
+    return {
+      queue: data,
+    };
+  }
+);
+
+interface TaskEvent {
+  timestamp: string;
+  payload: {
+    task: Task;
+  };
+}
+
+let socket: Socket;
+export const connectStream = createAsyncThunk(
+  '<%= propertyName %>/connectStream',
+  async (_, { dispatch, getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    // Create the connection if no previous connection or it is disconnected.
+    if (!socket || socket.disconnected) {
+      socket = io(`${directory[PUSH_SERVICE_ID]}/`, {
+        query: {
+          stream: UPDATE_STREAM_ID,
+        },
+        withCredentials: true,
+        extraHeaders: { Authorization: `Bearer ${user.access_token}` },
+      });
+
+      socket.on('connect', () => {
+        dispatch(<%= propertyName %>TaskListActions.streamConnectionChanged(true));
+      });
+
+      socket.on('disconnected', () => {
+        dispatch(<%= propertyName %>TaskListActions.streamConnectionChanged(false));
+      });
+
+      socket.on('task-service:task-created', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+
+      socket.on('task-service:task-assigned', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+
+      socket.on('task-service:task-priority-set', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+
+      socket.on('task-service:task-started', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+
+      socket.on('task-service:task-completed', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+
+      socket.on('task-service:task-cancelled', ({ payload }: TaskEvent) => {
+        dispatch(<%= propertyName %>TaskListActions.setTask(payload.task));
+      });
+    }
+  }
+);
+
+export const loadQueueTasks = createAsyncThunk(
+  '<%= propertyName %>/load-queue-tasks',
+  async (
+    {
+      namespace,
+      name,
+      after,
+    }: { namespace: string; name: string; after?: string },
+    { getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    const { data } = await axios.get<TaskResults>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${namespace}/${name}/tasks`,
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+        params: {
+          top: 100,
+          after,
+        },
+      }
+    );
+
+    return data;
+  }
+);
+
+export const loadQueuePeople = createAsyncThunk(
+  '<%= propertyName %>/load-queue-people',
+  async (
+    { namespace, name }: { namespace: string; name: string },
+    { getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    let assigners: Person[] = [];
+    let workers: Person[] = [];
+    try {
+      const { data: assignersResult } = await axios.get<Person[]>(
+        `${directory[TASK_SERVICE_ID]}/task/v1/queues/${namespace}/${name}/assigners`,
+        {
+          headers: { Authorization: `Bearer ${user.access_token}` },
+        }
+      );
+      assigners = assignersResult;
+
+      const { data: workersResult } = await axios.get<Person[]>(
+        `${directory[TASK_SERVICE_ID]}/task/v1/queues/${namespace}/${name}/workers`,
+        {
+          headers: { Authorization: `Bearer ${user.access_token}` },
+        }
+      );
+      workers = workersResult;
+    } catch (err) {
+      // Failed to load queue people due to permissions.
+      if (
+        !axios.isAxiosError(err) ||
+        (err.response?.status !== 401 && err.response?.status !== 403)
+      ) {
+        throw err;
+      }
+    }
+
+    return {
+      assigners,
+      workers,
+      user: {
+        id: user.profile.sub,
+        name: user.profile.name,
+        email: user.profile.email,
+        isAssigner: !!assigners.find((a) => a.id === user.profile.sub),
+        isWorker: !!workers.find((w) => w.id === user.profile.sub),
+      },
+    };
+  }
+);
+
+export const setTaskPriority = createAsyncThunk(
+  '<%= propertyName %>/set-task-priority',
+  async (
+    { taskId, priority }: { taskId: string; priority: string },
+    { dispatch, getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { queue }: <%= className %>TaskListState = state[<%= constantName %>_FEATURE_KEY];
+
+    const { data } = await axios.post<Task>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${queue.namespace}/${queue.name}/tasks/${taskId}`,
+      {
+        operation: 'set-priority',
+        priority,
+      },
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    dispatch(<%= propertyName %>TaskListActions.setTaskToPrioritize(null));
+
+    return data;
+  }
+);
+
+export const assignTask = createAsyncThunk(
+  '<%= propertyName %>/assign-task',
+  async (
+    { taskId, assignTo }: { taskId: string; assignTo?: Person },
+    { dispatch, getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { queue }: <%= className %>TaskListState = state[<%= constantName %>_FEATURE_KEY];
+
+    const { data } = await axios.post<Task>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${queue.namespace}/${queue.name}/tasks/${taskId}`,
+      {
+        operation: 'assign',
+        assignTo,
+      },
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    dispatch(<%= propertyName %>TaskListActions.setTaskToAssign(null));
+
+    return data;
+  }
+);
+
+export const startTask = createAsyncThunk(
+  '<%= propertyName %>/start-task',
+  async ({ taskId }: { taskId: string }, { getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { queue }: <%= className %>TaskListState = state[<%= constantName %>_FEATURE_KEY];
+
+    const { data } = await axios.post<Task>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${queue.namespace}/${queue.name}/tasks/${taskId}`,
+      {
+        operation: 'start',
+      },
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    return data;
+  }
+);
+
+export const completeTask = createAsyncThunk(
+  '<%= propertyName %>/complete-task',
+  async ({ taskId }: { taskId: string }, { getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { queue }: <%= className %>TaskListState = state[<%= constantName %>_FEATURE_KEY];
+
+    const { data } = await axios.post<Task>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${queue.namespace}/${queue.name}/tasks/${taskId}`,
+      {
+        operation: 'complete',
+      },
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    return data;
+  }
+);
+
+export const cancelTask = createAsyncThunk(
+  '<%= propertyName %>/cancel-task',
+  async (
+    { taskId, reason }: { taskId: string; reason: string },
+    { getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { queue }: <%= className %>TaskListState = state[<%= constantName %>_FEATURE_KEY];
+
+    const { data } = await axios.post<Task>(
+      `${directory[TASK_SERVICE_ID]}/task/v1/queues/${queue.namespace}/${queue.name}/tasks/${taskId}`,
+      {
+        operation: 'cancel',
+        reason: reason || undefined,
+      },
+      {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      }
+    );
+
+    return data;
+  }
+);
+
+export const initial<%= className %>TaskListState: <%= className %>TaskListState = {
+  user: {
+    id: null,
+    name: null,
+    email: null,
+    isAssigner: false,
+    isWorker: false,
+  },
+  queue: {
+    namespace: null,
+    name: null,
+  },
+  live: false,
+  people: {},
+  assigners: [],
+  workers: [],
+  tasks: {},
+  results: [],
+  filter: 'active',
+  next: null,
+  selected: null,
+  opened: null,
+  busy: {
+    initializing: true,
+    loading: false,
+    executing: false,
+  },
+  modal: {
+    taskToAssign: null,
+    taskToPrioritize: null,
+  },
+};
+
+export const <%= propertyName %>TaskListSlice = createSlice({
+  name: <%= constantName %>_FEATURE_KEY,
+  initialState: initial<%= className %>TaskListState,
+  reducers: {
+    streamConnectionChanged: (state, { payload }: PayloadAction<boolean>) => {
+      state.live = payload;
+    },
+    setTask: (state, { payload }: PayloadAction<Task>) => {
+      state.tasks[payload.id] = payload;
+      if (!state.results.includes(payload.id)) {
+        state.results = [...state.results, payload.id];
+      }
+    },
+    setFilter: (state, { payload }: PayloadAction<TaskFilter>) => {
+      state.filter = payload;
+    },
+    setOpenTask: (state, { payload }: PayloadAction<string>) => {
+      state.opened = payload;
+    },
+    setTaskToAssign: (state, { payload }: PayloadAction<Task>) => {
+      state.modal.taskToAssign = payload;
+    },
+    setTaskToPrioritize: (state, { payload }: PayloadAction<Task>) => {
+      state.modal.taskToPrioritize = payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(initializeQueue.pending, (state) => {
+        state.busy.initializing = true;
+      })
+      .addCase(initializeQueue.fulfilled, (state, { payload }) => {
+        state.busy.initializing = false;
+        state.queue = {
+          namespace: payload.queue.namespace,
+          name: payload.queue.name,
+        };
+      })
+      .addCase(initializeQueue.rejected, (state) => {
+        state.busy.initializing = false;
+      })
+      .addCase(loadQueuePeople.pending, (state) => {
+        state.busy.initializing = true;
+      })
+      .addCase(loadQueuePeople.fulfilled, (state, { payload }) => {
+        state.busy.initializing = false;
+        state.people = [...payload.assigners, ...payload.workers].reduce(
+          (people, person) => ({ ...people, [person.id]: person }),
+          {}
+        );
+        state.assigners = payload.assigners.map((p) => p.id);
+        state.workers = payload.workers.map((p) => p.id);
+        state.user = payload.user;
+      })
+      .addCase(loadQueuePeople.rejected, (state) => {
+        state.busy.initializing = false;
+      })
+      .addCase(loadQueueTasks.pending, (state) => {
+        state.busy.loading = true;
+      })
+      .addCase(loadQueueTasks.fulfilled, (state, { payload }) => {
+        state.busy.loading = false;
+        state.tasks = payload.results.reduce(
+          (results, task) => ({
+            ...results,
+            [task.id]: task,
+          }),
+          state.tasks
+        );
+        state.results = (payload.page.after ? state.results : []).concat(
+          payload.results.map((r) => r.id)
+        );
+        state.next = payload.page.next;
+      })
+      .addCase(loadQueueTasks.rejected, (state) => {
+        state.busy.initializing = false;
+      })
+      .addCase(assignTask.pending, (state) => {
+        state.busy.executing = true;
+      })
+      .addCase(assignTask.fulfilled, (state, { payload }) => {
+        state.busy.executing = false;
+        state.tasks = {
+          ...state.tasks,
+          [payload.id]: payload,
+        };
+      })
+      .addCase(assignTask.rejected, (state) => {
+        state.busy.executing = false;
+      })
+      .addCase(setTaskPriority.pending, (state) => {
+        state.busy.executing = true;
+      })
+      .addCase(setTaskPriority.fulfilled, (state, { payload }) => {
+        state.busy.executing = false;
+        state.tasks = {
+          ...state.tasks,
+          [payload.id]: payload,
+        };
+      })
+      .addCase(setTaskPriority.rejected, (state) => {
+        state.busy.executing = false;
+      })
+      .addCase(startTask.pending, (state) => {
+        state.busy.executing = true;
+      })
+      .addCase(startTask.fulfilled, (state, { payload }) => {
+        state.busy.executing = false;
+        state.tasks = {
+          ...state.tasks,
+          [payload.id]: payload,
+        };
+      })
+      .addCase(startTask.rejected, (state) => {
+        state.busy.executing = false;
+      })
+      .addCase(completeTask.pending, (state) => {
+        state.busy.executing = true;
+      })
+      .addCase(completeTask.fulfilled, (state, { payload }) => {
+        state.busy.executing = false;
+        state.tasks = {
+          ...state.tasks,
+          [payload.id]: payload,
+        };
+      })
+      .addCase(completeTask.rejected, (state) => {
+        state.busy.executing = false;
+      })
+      .addCase(cancelTask.pending, (state) => {
+        state.busy.executing = true;
+      })
+      .addCase(cancelTask.fulfilled, (state, { payload }) => {
+        state.busy.executing = false;
+        state.tasks = {
+          ...state.tasks,
+          [payload.id]: payload,
+        };
+      })
+      .addCase(cancelTask.rejected, (state) => {
+        state.busy.executing = false;
+      });
+  },
+});
+
+/*
+ * Export reducer for store configuration.
+ */
+export const <%= propertyName %>TaskListReducer = <%= propertyName %>TaskListSlice.reducer;
+
+/*
+ * Export action creators to be dispatched. For use with the `useDispatch` hook.
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(intakeActions.add({ id: 1 }))
+ * }, [dispatch]);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#usedispatch
+ */
+export const <%= propertyName %>TaskListActions = <%= propertyName %>TaskListSlice.actions;
+
+/*
+ * Export selectors to query state. For use with the `useSelector` hook.
+ *
+ * e.g.
+ * ```
+ * import { useSelector } from 'react-redux';
+ *
+ * // ...
+ *
+ * const entities = useSelector(selectAllIntake);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#useselector
+ */
+
+export const get<%= className %>TaskListState = (
+  rootState: unknown
+): <%= className %>TaskListState => rootState[<%= constantName %>_FEATURE_KEY];
+
+export const getFilter = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.filter
+);
+
+export const getLive = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.live
+);
+
+export const getTasks = createSelector(
+  (state) => state[<%= constantName %>_FEATURE_KEY].user.id,
+  (state) => state[<%= constantName %>_FEATURE_KEY].results,
+  (state) => state[<%= constantName %>_FEATURE_KEY].tasks,
+  getFilter,
+  (
+    userId: string,
+    results: string[],
+    tasks: Record<string, Task>,
+    filter: string
+  ) =>
+    results
+      .map((r) => tasks[r])
+      .filter((r) => {
+        switch (filter) {
+          case 'pending':
+            return r?.status === 'Pending';
+          case 'assigned':
+            return !r?.endedOn && r?.assignment?.assignedTo?.id === userId;
+          case 'active':
+            return !r?.endedOn;
+          default:
+            return !!r;
+        }
+      })
+      .sort((a, b) => {
+        let result = TaskPriority[b.priority] - TaskPriority[a.priority];
+        if (!result) {
+          result =
+            new Date(a.createdOn).getTime() - new Date(b.createdOn).getTime();
+        }
+        return result;
+      })
+);
+
+export const getBusy = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.busy
+);
+
+export const getModal = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.modal
+);
+
+export const getOpenTask = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.opened && state.tasks[state.opened]
+);
+
+export const getQueueWorkers = createSelector(get<%= className %>TaskListState, (state) =>
+  state.workers.map((worker) => state.people[worker])
+);
+
+export const getQueueUser = createSelector(
+  get<%= className %>TaskListState,
+  (state) => state.user
+);
+
+export const getTaskMetrics = createSelector(
+  (state) => state[<%= constantName %>_FEATURE_KEY].user.id,
+  (state) => state[<%= constantName %>_FEATURE_KEY].results,
+  (state) => state[<%= constantName %>_FEATURE_KEY].tasks,
+  (userId: string, results: string[], tasks: Record<string, Task>) => {
+    const taskResults = results.map((r) => tasks[r]);
+    const statusCounts = {
+      Pending: 0,
+      'In Progress': 0,
+      Stopped: 0,
+      Completed: 0,
+      Cancelled: 0,
+    };
+    taskResults.forEach(
+      (t) => (statusCounts[t.status] = (statusCounts[t.status] || 0) + 1)
+    );
+
+    const myTasks = taskResults.filter(
+      (t) => t.assignment?.assignedTo?.id === userId
+    ).length;
+
+    const metrics: TaskMetric[] = [
+      {
+        name: 'Pending',
+        value: statusCounts.Pending,
+        unit: statusCounts.Pending > 1 ? 'tasks' : 'task',
+      },
+      {
+        name: 'In Progress',
+        value: statusCounts['In Progress'],
+        unit: statusCounts['In Progress'] > 1 ? 'tasks' : 'task',
+      },
+      {
+        name: 'Assigned to me',
+        value: myTasks,
+        unit: myTasks > 1 ? 'tasks' : 'task',
+      },
+    ];
+
+    return metrics;
+  }
+);

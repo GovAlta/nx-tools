@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "NxAdspReactTaskList",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project to add task list component in.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project to add task list component for?"
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment to target.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "e",
+      "x-prompt": {
+        "message": "Which ADSP environment do you want to target? (Typically test for ADSP tenants.)",
+        "type": "list",
+        "items": [
+          "test",
+          "prod",
+          "dev"
+        ]
+      }
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
+    }
+  },
+  "required": [
+    "project",
+    "env"
+  ]
+}
