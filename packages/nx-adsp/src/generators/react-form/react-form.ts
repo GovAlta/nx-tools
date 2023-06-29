@@ -131,6 +131,7 @@ async function addFiles(host: Tree, options: NormalizedSchema) {
     ...options.formDefinition,
     ...formNames,
     interfaceDefinition,
+    includesPath: path.join(__dirname, 'includes'),
     tmpl: '',
   };
   generateFiles(
