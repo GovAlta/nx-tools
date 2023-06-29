@@ -1,4 +1,5 @@
 import { EnvironmentName } from '@abgov/nx-oc';
+import { FormDefinition } from '../../utils/form';
 
 export interface Schema {
   project: string;

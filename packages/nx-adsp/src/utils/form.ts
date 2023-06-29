@@ -1,6 +1,7 @@
 import { compile } from 'json-schema-to-typescript';
 
 export interface FormDefinition {
+  id: string;
   name: string;
   dataSchema: Record<string, unknown>;
 }

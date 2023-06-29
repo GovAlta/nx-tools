@@ -11,7 +11,7 @@ import { UserState } from 'redux-oidc';
 import { CONFIG_FEATURE_KEY, ConfigState } from '../config.slice';
 
 export const <%= constantName %>_FEATURE_KEY = '<%= fileName %>';
-const FORM_DEFINITION_ID = '<%= fileName %>';
+const FORM_DEFINITION_ID = '<%= id %>';
 const FORM_SERVICE_ID = 'urn:ads:platform:form-service';
 
 /*
@@ -23,7 +23,7 @@ const rules: Record<string, Record<string, RegExp>> = {
   <%_ sections.forEach(function([sectionKey, section]) { _%>
   <%= sectionKey %>: {
   <%_ Object.entries(section.properties).filter(([_, { pattern }]) => !!pattern).forEach(function([key, value]) { _%>
-    <%= key %>: new RegExp('<%- value.pattern %>')
+    <%= key %>: new RegExp('<%- value.pattern %>'),
   <%_ }); _%>
   },
   <%_ }); _%>
