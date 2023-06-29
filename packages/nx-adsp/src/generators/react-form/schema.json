@@ -23,12 +23,12 @@
       },
       "alias": "e",
       "x-prompt": {
-        "message": "Which ADSP environment do you want to target?",
+        "message": "Which ADSP environment do you want to target? (Typically test for ADSP tenants.)",
         "type": "list",
         "items": [
-          "dev",
           "test",
-          "prod"
+          "prod",
+          "dev"
         ]
       }
     },

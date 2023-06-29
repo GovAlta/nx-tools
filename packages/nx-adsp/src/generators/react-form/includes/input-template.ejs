@@ -1,0 +1,107 @@
+<%_ if (!value.type) { _%>
+  <%_ if (value.constant) { _%>
+  <p><%= value.constant %></p>
+  <%_ } _%>
+<%_ } else { _%>
+  <GoAFormItem mb="m" label="<%= value.title || key %>" helpText="<%= value.description %>">
+  <%_ switch(value.type) { 
+    case 'string': _%>
+    <%_ if (value.enum) { _%>
+      <GoADropdown 
+        name="<%= key %>"
+        disabled={isReadOnly || inReview}
+        onChange={(name,updated) => onChange({ ...value, [name]: updated })}
+        value={`${value.<%= path %> || ''}`}
+      >
+        <%_ value.enum.forEach((enumValue) => { _%>
+          <GoADropdownItem value="<%= enumValue %>" label="<%= enumValue %>" />
+        <%_ }); _%>
+      </GoADropdown>
+    <%_ } else { _%>
+      <%_ switch(value.format) { 
+        case 'date-time': _%>
+        <GoAInputDateTime
+          name="<%= key %>"
+          disabled={isReadOnly || inReview}
+          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
+          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+        />
+      <%_ break;
+        case 'date': _%>
+        <GoAInputDate
+          name="<%= key %>"
+          disabled={isReadOnly || inReview}
+          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
+          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+        />
+      <%_ break;
+        case 'time': _%>
+        <GoAInputTime
+          name="<%= key %>"
+          step={1}
+          disabled={isReadOnly || inReview}
+          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
+          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+        />
+      <%_ break;
+        default: _%>
+        <% if (value.maxLength > 100) { %>
+          <GoATextArea
+            disabled={isReadOnly || inReview}
+            error={errors['<%= path %>']}
+            placeholder="<%= value?.examples?.join(', ') || '' %>"
+            onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+            value={`${value.<%= path %> || ''}`}
+            name="<%= key %>"
+          />
+        <% } else { %>
+          <GoAInput
+            type="text"
+            disabled={isReadOnly || inReview}
+            error={errors['<%= path %>']}
+            placeholder="<%= value?.examples?.join(', ') || '' %>"
+            onChange={(name, updated) => onChange({ ...value, [name]: updated })}
+            value={`${value.<%= path %> || ''}`}
+            name="<%= key %>"
+          />
+        <% } %>
+      <%_ break;
+        } _%>
+    <%_ } _%>
+  <%_ break;
+    case 'integer':
+    case 'number': _%>
+    <GoAInput
+      type="number"
+      disabled={isReadOnly || inReview}
+      error={errors['<%= path %>']}
+      placeholder="<%= value?.examples || []%>"
+      onChange={(name, updated) => onChange({ ...value, [name]: parseFloat(updated) })}
+      value={`${value.<%= path %> || ''}`}
+      name="<%= key %>"
+      <%_ if (value?.maximum !== undefined) { _%>
+        max={<%= value.maximum %>}
+      <%_ } _%>
+      <%_ if (value?.minimum !== undefined) { _%>
+        min={<%= value.minimum %>}
+      <%_ } _%>
+      <%_ if (value?.multipleOf !== undefined) { _%>
+        step={<%= value.multipleOf %>}
+      <%_ } _%>
+    />
+  <%_ break;
+    case 'boolean': _%>
+    <GoACheckbox
+      disabled={isReadOnly || inReview}
+      checked={value.<%= path %> as any || false}
+      onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
+      name="<%= key %>"
+    />
+  <%_ break;
+    case 'array': _%>
+  <%_ break;
+    default:
+    break; _%>
+  <%_ } _%>
+  </GoAFormItem>
+<%_ } _%>
