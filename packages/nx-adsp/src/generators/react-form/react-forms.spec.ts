@@ -9,6 +9,7 @@ import { Schema } from './schema';
 import generator from './react-form';
 
 const formDefinition: FormDefinition = {
+  id: 'some-intake',
   name: 'Some Intake',
   dataSchema: {
     type: 'object',
