@@ -3,6 +3,7 @@ import {
   GoAButtonGroup,
   GoACallout,
   GoACheckbox,
+  GoADivider,
   GoADropdown,
   GoADropdownItem,
   GoAFormItem,
@@ -35,6 +36,20 @@ import {
 } from './<%= fileName %>.slice';
 import styles from './<%= fileName %>.module.css';
 
+// Function that supports raising change events for updates to properties on array items.
+// Note that this is not needed if the form does not include an array field.
+function onArrayItemChange(
+  onChange: (value: Record<string, unknown>) => void,
+  value: Record<string, unknown>,
+  arrayProperty: string,
+  index: number,
+  updatedItem: object
+) {
+  const updatedArray = [...(value[arrayProperty] as object[])];
+  updatedArray[index] = updatedItem;
+  onChange({ ...value, [arrayProperty]: updatedArray });
+}
+
 interface FieldSetProps {
   className?: string;
   inReview: boolean;
@@ -62,8 +77,8 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
         <p><%= section.description %></p>
         {!isReadOnly && inReview && <GoAButton type="tertiary" onClick={onEdit}>Edit</GoAButton>}
       </div>
-      <%_ Object.entries(section.properties).forEach(function([key, value]) { _%>
-        <%- include(`${includesPath}/input-template.ejs`, {key: key, value: value, path: key, processArray: true, includesPath}); %>
+      <%_ Object.entries(section.properties).forEach(function([key, property]) { _%>
+        <%- include(`${includesPath}/input-template.ejs`, {key, property, path: key, inArray: false, includesPath}); %>
       <%_ }); _%>
     </fieldset>
   );

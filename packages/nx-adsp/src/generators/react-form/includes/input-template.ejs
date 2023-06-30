@@ -1,38 +1,39 @@
-<%_ if (!value.type) { _%>
-  <%_ if (value.constant) { _%>
-  <p><%= value.constant %></p>
+<%_ const valueVar = inArray ? 'item' : 'value'; %>
+<%_ if (!property.type) { _%>
+  <%_ if (property.constant) { _%>
+  <p><%= property.constant %></p>
   <%_ } _%>
 <%_ } else { _%>
-  <GoAFormItem mb="m" label="<%= value.title || key %>" helpText="<%= value.description %>">
-  <%_ switch(value.type) { 
+  <GoAFormItem mb="m" label="<%= property.title || key %>" helpText="<%= property.description %>">
+  <%_ switch(property.type) { 
     case 'string': _%>
-    <%_ if (value.enum) { _%>
+    <%_ if (property.enum) { _%>
       <GoADropdown 
         name="<%= key %>"
         disabled={isReadOnly || inReview}
-        onChange={(name,updated) => onChange({ ...value, [name]: updated })}
-        value={`${value.<%= path %> || ''}`}
+        onChange={(name,updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: updated })}
+        value={`${<%= valueVar %>.<%= key %> || ''}`}
       >
-        <%_ value.enum.forEach((enumValue) => { _%>
+        <%_ property.enum.forEach((enumValue) => { _%>
           <GoADropdownItem value="<%= enumValue %>" label="<%= enumValue %>" />
         <%_ }); _%>
       </GoADropdown>
     <%_ } else { _%>
-      <%_ switch(value.format) { 
+      <%_ switch(property.format) { 
         case 'date-time': _%>
         <GoAInputDateTime
           name="<%= key %>"
           disabled={isReadOnly || inReview}
-          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
-          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+          value={<%= valueVar %>.<%= key %> ? new Date(<%= valueVar %>.<%= key %> as string) : null}
+          onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: (updated as Date)?.toISOString() })}
         />
       <%_ break;
         case 'date': _%>
         <GoAInputDate
           name="<%= key %>"
           disabled={isReadOnly || inReview}
-          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
-          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+          value={<%= valueVar %>.<%= key %> ? new Date(<%= valueVar %>.<%= key %> as string) : null}
+          onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: (updated as Date)?.toISOString() })}
         />
       <%_ break;
         case 'time': _%>
@@ -40,28 +41,28 @@
           name="<%= key %>"
           step={1}
           disabled={isReadOnly || inReview}
-          value={value.<%= path %> ? new Date(value.<%= path %> as string) : null}
-          onChange={(name, updated) => onChange({ ...value, [name]: (updated as Date)?.toISOString() })}
+          value={<%= valueVar %>.<%= key %> ? new Date(<%= valueVar %>.<%= key %> as string) : null}
+          onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: (updated as Date)?.toISOString() })}
         />
       <%_ break;
         default: _%>
-        <% if (value.maxLength > 100) { %>
+        <% if (property.maxLength > 100) { %>
           <GoATextArea
             disabled={isReadOnly || inReview}
-            error={errors['<%= path %>']}
-            placeholder="<%= value?.examples?.join(', ') || '' %>"
-            onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-            value={`${value.<%= path %> || ''}`}
+            error={errors[`<%= path %>`]}
+            placeholder="<%= property?.examples?.join(', ') || '' %>"
+            onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: updated })}
+            value={`${<%= valueVar %>.<%= key %> || ''}`}
             name="<%= key %>"
           />
         <% } else { %>
           <GoAInput
             type="text"
             disabled={isReadOnly || inReview}
-            error={errors['<%= path %>']}
-            placeholder="<%= value?.examples?.join(', ') || '' %>"
-            onChange={(name, updated) => onChange({ ...value, [name]: updated })}
-            value={`${value.<%= path %> || ''}`}
+            error={errors[`<%= path %>`]}
+            placeholder="<%= property?.examples?.join(', ') || '' %>"
+            onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: updated })}
+            value={`${<%= valueVar %>.<%= key %> || ''}`}
             name="<%= key %>"
           />
         <% } %>
@@ -74,31 +75,69 @@
     <GoAInput
       type="number"
       disabled={isReadOnly || inReview}
-      error={errors['<%= path %>']}
-      placeholder="<%= value?.examples || []%>"
-      onChange={(name, updated) => onChange({ ...value, [name]: parseFloat(updated) })}
-      value={`${value.<%= path %> || ''}`}
+      error={errors[`<%= path %>`]}
+      placeholder="<%= property?.examples || []%>"
+      onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: parseFloat(updated) })}
+      value={`${<%= valueVar %>.<%= key %> || ''}`}
       name="<%= key %>"
-      <%_ if (value?.maximum !== undefined) { _%>
-        max={<%= value.maximum %>}
+      <%_ if (property?.maximum !== undefined) { _%>
+        max={<%= property.maximum %>}
       <%_ } _%>
-      <%_ if (value?.minimum !== undefined) { _%>
-        min={<%= value.minimum %>}
+      <%_ if (property?.minimum !== undefined) { _%>
+        min={<%= property.minimum %>}
       <%_ } _%>
-      <%_ if (value?.multipleOf !== undefined) { _%>
-        step={<%= value.multipleOf %>}
+      <%_ if (property?.multipleOf !== undefined) { _%>
+        step={<%= property.multipleOf %>}
       <%_ } _%>
     />
   <%_ break;
     case 'boolean': _%>
     <GoACheckbox
       disabled={isReadOnly || inReview}
-      checked={value.<%= path %> as any || false}
-      onChange={(name, updated) => onChange({ ...value, [name]: updated })}          
+      checked={<%= valueVar %>.<%= key %> as any || false}
+      onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: updated })}          
       name="<%= key %>"
     />
   <%_ break;
     case 'array': _%>
+    <% if (!inArray && property.items?.type === 'object') { %>
+      <fieldset>
+        <legend><%= property.items.title || key %></legend>
+        <p><%= property.items.description %></p>
+        {(<%= valueVar %>.<%= key %> as Record<string, unknown>[])?.map((item, idx) => (
+          <div key={idx}>
+            <% Object.entries(property.items.properties || {}).map(([key, property]) => { %>
+              <%- include(`${includesPath}/input-template.ejs`, {key, property, parent: path, path: path + ".[${idx}]." + key, inArray: true, includesPath}); %>
+            <% }); %>
+            {!inReview && <GoAButtonGroup alignment="end">
+              <GoAButton
+                disabled={isReadOnly}
+                type="tertiary"
+                onClick={() => {
+                  const update = [...(<%= valueVar %>.<%= key %> as [] || [])];
+                  update.splice(idx, 1);
+                  <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, <%= key %>: update })
+                }}
+              >
+                Remove
+              </GoAButton>
+            </GoAButtonGroup>}
+            <GoADivider mb="l" />
+          </div>
+        ))}
+        {!inReview && <GoAButtonGroup alignment="end">
+          <GoAButton
+            disabled={isReadOnly}
+            type="tertiary"
+            onClick={() =>
+              <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, <%= key %>: [...(<%= valueVar %>.<%= key %> as [] || []), {}] })
+            }
+          >
+            Add
+          </GoAButton>
+        </GoAButtonGroup>}
+      </fieldset>
+    <% } %>
   <%_ break;
     default:
     break; _%>
