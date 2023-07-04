@@ -61,6 +61,9 @@
             disabled={isReadOnly || inReview}
             error={errors[`<%= path %>`]}
             placeholder="<%= property?.examples?.join(', ') || '' %>"
+            <%_ if (property?.maxLength !== undefined) { _%>
+              maxLength={<%= property?.maxLength %>}
+            <%_ } _%>
             onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: updated })}
             value={`${<%= valueVar %>.<%= key %> || ''}`}
             name="<%= key %>"
