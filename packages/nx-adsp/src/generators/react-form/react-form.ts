@@ -41,14 +41,14 @@ async function getFormDefinition(
     throw new Error('No form definitions with data schema found.');
   }
 
-  const result = await prompt<{ definition: string }>({
+  const { definition } = await prompt<{ definition: string }>({
     type: 'autocomplete',
     name: 'definition',
     message: 'Which form definition do you want to generate a component for?',
     choices,
   });
 
-  const formDefinition = definitions.find((r) => r.name === result.definition);
+  const formDefinition = definitions.find((r) => r.name === definition);
 
   const general = {
     type: 'object',
@@ -73,6 +73,38 @@ async function getFormDefinition(
       general,
       ...(formDefinition.dataSchema.properties as object),
     };
+  }
+
+  const fileTypeName = `${formDefinition.name} files`;
+  const fileTypeId = `${names(formDefinition.name).fileName}-files`;
+  const { addFileType } = await prompt<{ addFileType: boolean }>({
+    type: 'confirm',
+    name: 'addFileType',
+    message: `Create file type (${fileTypeName}) for form files?`,
+  });
+
+  if (addFileType) {
+    await axios.patch<Record<string, FormDefinition>>(
+      new URL(
+        'configuration/v2/configuration/platform/file-service',
+        configurationServiceUrl
+      ).href,
+      {
+        operation: 'UPDATE',
+        update: {
+          [fileTypeId]: {
+            id: fileTypeId,
+            name: fileTypeName,
+            readRoles: formDefinition.assessorRoles,
+            updateRoles: formDefinition.applicantRoles,
+            anonymousRead: false,
+          },
+        },
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
   }
 
   return formDefinition;

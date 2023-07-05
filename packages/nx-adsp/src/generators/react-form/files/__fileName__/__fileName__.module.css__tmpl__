@@ -3,10 +3,20 @@
   
   > fieldset {
     display: none;
+    padding-bottom: 64px;
   }
 
   > fieldset.show {
     display: block;
+  }
+}
+
+.formFile {
+  display: flex;
+  align-items: center;
+
+  > a {
+    display: none;
   }
 }
 
