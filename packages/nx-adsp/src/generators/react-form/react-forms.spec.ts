@@ -48,6 +48,8 @@ const formDefinition: FormDefinition = {
       },
     },
   },
+  assessorRoles: [],
+  applicantRoles: [],
 };
 
 jest.mock('@abgov/nx-oc');
@@ -69,7 +71,8 @@ axiosMock.get.mockResolvedValueOnce({
 
 jest.mock('enquirer', () => ({ prompt: jest.fn() }));
 const promptMock = prompt as jest.Mock;
-promptMock.mockResolvedValue({ definition: 'Some Intake' });
+promptMock.mockResolvedValueOnce({ definition: 'Some Intake' });
+promptMock.mockResolvedValueOnce({ addFileType: false });
 
 describe('React Form Generator', () => {
   const options: Schema = {
@@ -91,7 +94,9 @@ describe('React Form Generator', () => {
     });
 
     await generator(host, options);
-    expect(host.exists('apps/test/src/app/some-intake/some-intake.tsx')).toBeTruthy();
+    expect(
+      host.exists('apps/test/src/app/some-intake/some-intake.tsx')
+    ).toBeTruthy();
     expect(
       host.exists('apps/test/src/app/some-intake/some-intake.slice.ts')
     ).toBeTruthy();
