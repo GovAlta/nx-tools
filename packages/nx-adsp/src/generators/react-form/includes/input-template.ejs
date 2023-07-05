@@ -45,6 +45,32 @@
           onChange={(name, updated) => <%- inArray ? `onArrayItemChange(onChange, value, '${parent}', idx, ` : 'onChange(' %>{ ...<%= valueVar %>, [name]: (updated as Date)?.toISOString() })}
         />
       <%_ break;
+        case 'uri': _%>
+        <% if (!inArray) { %>
+          {files['<%= key %>'] ? (
+            isReadOnly || inReview ? (
+              <FormFile property="<%= key %>" file={files['<%= key %>']} />
+            ) : (
+              <GoAFileUploadCard
+                filename={files['<%= key %>'].filename}
+                size={files['<%= key %>'].size}
+                progress={files['<%= key %>'].progress}
+                onDelete={() => onFileChange('<%= key %>', files['<%= key %>'])}
+              />
+            )
+          ) : (
+            !isReadOnly &&
+            !inReview && (
+              <GoAFileUploadInput
+                variant="dragdrop"
+                onSelectFile={(file) =>
+                  onFileChange('<%= key %>', files['<%= key %>'], file)
+                }
+              />
+            )
+          )}
+        <% } %>
+      <%_ break;
         default: _%>
         <% if (property.maxLength > 100) { %>
           <GoATextArea

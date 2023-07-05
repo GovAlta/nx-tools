@@ -4,6 +4,8 @@ export interface FormDefinition {
   id: string;
   name: string;
   dataSchema: Record<string, unknown>;
+  assessorRoles: string[];
+  applicantRoles: string[];
 }
 
 export async function generateFormInterface({

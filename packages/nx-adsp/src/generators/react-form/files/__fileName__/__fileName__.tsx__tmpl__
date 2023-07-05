@@ -6,9 +6,12 @@ import {
   GoADivider,
   GoADropdown,
   GoADropdownItem,
+  GoAFileUploadCard,
+  GoAFileUploadInput,
   GoAFormItem,
   GoAFormStep,
   GoAFormStepper,
+  GoAIconButton,
   GoAInput,
   GoAInputDate,
   GoAInputDateTime,
@@ -17,14 +20,20 @@ import {
   GoASpinner,
   GoATextArea,
 } from '@abgov/react-components';
-import { FunctionComponent, useEffect } from 'react';
+import { 
+  FunctionComponent,
+  useEffect,
+  useRef, 
+} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '../../store';
 import {
+  FileInformation,
   getFormBusy,
   getFormCanSubmit,
   getFormComplete,
   getFormErrors,
+  getFormFiles,
   getFormInReview,
   getFormStatus,
   getFormStep,
@@ -33,6 +42,8 @@ import {
   submitForm,
   <%= propertyName %>Actions,
   updateForm,
+  updateFile,
+  downloadFile,
 } from './<%= fileName %>.slice';
 import styles from './<%= fileName %>.module.css';
 
@@ -50,13 +61,44 @@ function onArrayItemChange(
   onChange({ ...value, [arrayProperty]: updatedArray });
 }
 
+interface FormFileProps {
+  property: string;
+  file: FileInformation;
+}
+
+const FormFile: FunctionComponent<FormFileProps> = ({ property, file }) => {
+  const anchorRef = useRef<HTMLAnchorElement>();
+  const dispatch = useDispatch<AppDispatch>();
+  return (
+    <div className={styles.formFile}>
+      <span>{file.filename}</span>
+      <GoAIconButton
+        ml="s"
+        icon="download"
+        onClick={() => {
+          if (file.dataUri) {
+            anchorRef.current.click();
+          } else {
+            dispatch(downloadFile({ key: property, file }));
+          }
+        }}
+      />
+      <a ref={anchorRef} href={file.dataUri} download={file.filename}>
+        Download
+      </a>
+    </div>
+  );
+};
+
 interface FieldSetProps {
   className?: string;
   inReview: boolean;
   isReadOnly: boolean;
   value: Record<string, unknown>;
+  files: Record<string, FileInformation>;
   errors: Record<string, boolean>;
   onChange: (value: Record<string, unknown>) => void;
+  onFileChange: (key: string, old?: FileInformation, file?: File) => void;
   onEdit: () => void;
 }
 
@@ -66,8 +108,10 @@ const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
   inReview,
   isReadOnly,
   value,
+  files,
   errors,
   onChange,
+  onFileChange,
   onEdit,
 }) => {
   return (
@@ -95,6 +139,7 @@ export const <%= className %>Form: FunctionComponent = () => {
   const formStatus = useSelector(getFormStatus);
   const formStep = useSelector(getFormStep);
   const formData = useSelector(getFormValues);
+  const formFiles = useSelector(getFormFiles);
   const formErrors = useSelector(getFormErrors);
   const formBusy = useSelector(getFormBusy);
   const formComplete = useSelector(getFormComplete);
@@ -137,9 +182,13 @@ export const <%= className %>Form: FunctionComponent = () => {
             inReview={inReview}
             isReadOnly={formStatus !== 'draft'}
             value={formData.<%= sectionKey %> as any || {}}
+            files={formFiles}
             errors={formErrors['<%= sectionKey %>'] || {}}
             onChange={(value) =>
               dispatch(updateForm({ ...formData, '<%= sectionKey %>': value as any }))
+            }
+            onFileChange={(key, old, file) =>
+              dispatch(updateFile({ key, old, file }))
             }
             onEdit={() => dispatch(<%= propertyName %>Actions.setStep(<%= idx + 1 %>))}
           />
