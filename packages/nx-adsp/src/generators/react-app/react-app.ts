@@ -148,7 +148,7 @@ export default async function (host: Tree, options: Schema) {
         output: './',
       },
     ],
-    webpackConfig: `${normalizedOptions.projectRoot}/webpack.conf.js`,
+    webpackConfig: `${normalizedOptions.projectRoot}/webpack.config.js`,
   };
 
   if (addedProxy) {
