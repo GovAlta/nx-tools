@@ -16,7 +16,6 @@
     "baseUrl": ".",
     "paths": {
       "@abgov/nx-adsp": ["packages/nx-adsp/src/index.ts"],
-      "@abgov/nx-dotnet": ["packages/nx-dotnet/src/index.ts"],
       "@abgov/nx-oc": ["packages/nx-oc/src/index.ts"],
       "@abgov/nx-release": ["packages/nx-release/src/index.ts"],
       "@abgov/semantic-release-nuget": [

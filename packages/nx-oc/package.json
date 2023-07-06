@@ -12,7 +12,7 @@
   "generators": "./generators.json",
   "executors": "./executors.json",
   "peerDependencies": {
-    "@nrwl/devkit": "^14.0.0"
+    "@nrwl/devkit": "^15.0.0"
   },
   "dependencies": {
     "yaml": "^1.10.2"

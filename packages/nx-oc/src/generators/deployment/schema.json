@@ -14,16 +14,51 @@
       },
       "x-prompt": "Which project to add deployment for?"
     },
-    "tenant": {
+    "appType": {
       "type": "string",
-      "description": "Name of the ADSP tenant.",
+      "description": "Type of application.",
       "$default": {
         "$source": "argv",
         "index": 1
       },
       "alias": "t",
-      "x-prompt": "What is the name of your ADSP tenant?"
+      "x-prompt": {
+        "message": "What type of application is the project?",
+        "type": "list",
+        "items": [
+          "frontend",
+          "dotnet",
+          "node"
+        ]
+      }
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment to target.",
+      "$default": {
+        "$source": "argv",
+        "index": 2
+      },
+      "alias": "e",
+      "x-prompt": {
+        "message": "Which ADSP environment do you want to target?",
+        "type": "list",
+        "items": [
+          "dev",
+          "test",
+          "prod"
+        ]
+      }
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
     }
   },
-  "required": ["project", "tenant"]
+  "required": [
+    "project",
+    "appType",
+    "env"
+  ]
 }

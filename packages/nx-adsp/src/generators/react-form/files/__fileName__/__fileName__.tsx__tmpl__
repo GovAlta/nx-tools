@@ -1,0 +1,228 @@
+import {
+  GoAButton,
+  GoAButtonGroup,
+  GoACallout,
+  GoACheckbox,
+  GoADivider,
+  GoADropdown,
+  GoADropdownItem,
+  GoAFileUploadCard,
+  GoAFileUploadInput,
+  GoAFormItem,
+  GoAFormStep,
+  GoAFormStepper,
+  GoAIconButton,
+  GoAInput,
+  GoAInputDate,
+  GoAInputDateTime,
+  GoAInputTime,
+  GoANotification,
+  GoASpinner,
+  GoATextArea,
+} from '@abgov/react-components';
+import { 
+  FunctionComponent,
+  useEffect,
+  useRef, 
+} from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch } from '../../store';
+import {
+  FileInformation,
+  getFormBusy,
+  getFormCanSubmit,
+  getFormComplete,
+  getFormErrors,
+  getFormFiles,
+  getFormInReview,
+  getFormStatus,
+  getFormStep,
+  getFormValues,
+  initializeForm,
+  submitForm,
+  <%= propertyName %>Actions,
+  updateForm,
+  updateFile,
+  downloadFile,
+} from './<%= fileName %>.slice';
+import styles from './<%= fileName %>.module.css';
+
+// Function that supports raising change events for updates to properties on array items.
+// Note that this is not needed if the form does not include an array field.
+function onArrayItemChange(
+  onChange: (value: Record<string, unknown>) => void,
+  value: Record<string, unknown>,
+  arrayProperty: string,
+  index: number,
+  updatedItem: object
+) {
+  const updatedArray = [...(value[arrayProperty] as object[])];
+  updatedArray[index] = updatedItem;
+  onChange({ ...value, [arrayProperty]: updatedArray });
+}
+
+interface FormFileProps {
+  property: string;
+  file: FileInformation;
+}
+
+const FormFile: FunctionComponent<FormFileProps> = ({ property, file }) => {
+  const anchorRef = useRef<HTMLAnchorElement>();
+  const dispatch = useDispatch<AppDispatch>();
+  return (
+    <div className={styles.formFile}>
+      <span>{file.filename}</span>
+      <GoAIconButton
+        ml="s"
+        icon="download"
+        onClick={() => {
+          if (file.dataUri) {
+            anchorRef.current.click();
+          } else {
+            dispatch(downloadFile({ key: property, file }));
+          }
+        }}
+      />
+      <a ref={anchorRef} href={file.dataUri} download={file.filename}>
+        Download
+      </a>
+    </div>
+  );
+};
+
+interface FieldSetProps {
+  className?: string;
+  inReview: boolean;
+  isReadOnly: boolean;
+  value: Record<string, unknown>;
+  files: Record<string, FileInformation>;
+  errors: Record<string, boolean>;
+  onChange: (value: Record<string, unknown>) => void;
+  onFileChange: (key: string, old?: FileInformation, file?: File) => void;
+  onEdit: () => void;
+}
+
+<% Object.entries(dataSchema.properties).forEach(function([sectionKey, section]) { %>
+const <%= section.className %>FieldSet: FunctionComponent<FieldSetProps> = ({
+  className,
+  inReview,
+  isReadOnly,
+  value,
+  files,
+  errors,
+  onChange,
+  onFileChange,
+  onEdit,
+}) => {
+  return (
+    <fieldset className={className}>
+      <legend><%= section.title || sectionKey %></legend>
+      <div className={styles.sectionActions}>
+        <p><%= section.description %></p>
+        {!isReadOnly && inReview && <GoAButton type="tertiary" onClick={onEdit}>Edit</GoAButton>}
+      </div>
+      <%_ Object.entries(section.properties).forEach(function([key, property]) { _%>
+        <%- include(`${includesPath}/input-template.ejs`, {key, property, path: key, inArray: false, includesPath}); %>
+      <%_ }); _%>
+    </fieldset>
+  );
+};
+<% }); %>
+
+export const <%= className %>Form: FunctionComponent = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const user = useSelector((state) => state['user'].user);
+  useEffect(() => {
+    dispatch(initializeForm());
+  }, [dispatch, user]);
+
+  const formStatus = useSelector(getFormStatus);
+  const formStep = useSelector(getFormStep);
+  const formData = useSelector(getFormValues);
+  const formFiles = useSelector(getFormFiles);
+  const formErrors = useSelector(getFormErrors);
+  const formBusy = useSelector(getFormBusy);
+  const formComplete = useSelector(getFormComplete);
+  const inReview = useSelector(getFormInReview);
+  const canSubmit = useSelector(getFormCanSubmit);
+  
+  <% const sections = Object.entries(dataSchema.properties); %>
+  return (
+    <form className={styles.form}>
+      <GoANotification type="important">
+        This is a generated rapid prototype. Use it as a starting point to build the right thing for users.
+      </GoANotification>
+      { 
+        formStatus === 'submitted' && 
+        <GoACallout type="success" heading="<%= name %> form submitted">
+          We received your <%= name %> form and it is being processed.
+        </GoACallout>
+      }
+      <GoAFormStepper 
+        testId="<%= fileName %>"
+        step={formStep}
+        onChange={(step) => dispatch(<%= propertyName %>Actions.setStep(step))}
+      >
+      <%_ sections.forEach(function([sectionKey, section]) { _%>
+        <GoAFormStep 
+          text="<%= section.title || sectionKey %>" 
+          status={formComplete['<%= sectionKey %>']} />
+      <%_ }); _%>
+        <GoAFormStep text="Review" />
+      </GoAFormStepper>
+      {formBusy.loading ? (
+        <div className={styles.load}>
+          <GoASpinner type="infinite" size="large" />
+        </div>
+      ) : (
+        <>
+        <%_ sections.forEach(function([sectionKey, section], idx) { _%>
+          <<%= section.className %>FieldSet
+            className={formStep === <%= idx + 1 %> || formStep === <%= sections.length + 1 %> ? styles.show : ''}
+            inReview={inReview}
+            isReadOnly={formStatus !== 'draft'}
+            value={formData.<%= sectionKey %> as any || {}}
+            files={formFiles}
+            errors={formErrors['<%= sectionKey %>'] || {}}
+            onChange={(value) =>
+              dispatch(updateForm({ ...formData, '<%= sectionKey %>': value as any }))
+            }
+            onFileChange={(key, old, file) =>
+              dispatch(updateFile({ key, old, file }))
+            }
+            onEdit={() => dispatch(<%= propertyName %>Actions.setStep(<%= idx + 1 %>))}
+          />
+        <%_ }); _%>
+        </>
+      )}
+      <div className={styles.formActions}>
+        <div className={styles.save} data-show={formBusy.saving}>
+          <GoASpinner size="medium" type="infinite" />
+          <span>Saving...</span>
+        </div>
+        <GoAButtonGroup alignment="end">
+        {formStep > 1 && (
+          <GoAButton
+            type="secondary"
+            onClick={() => dispatch(<%= propertyName %>Actions.setStep(formStep - 1))}
+          >
+            Back
+          </GoAButton>
+        )}
+        {formStep < <%= sections.length + 1 %> ? (
+          <GoAButton
+            type="primary"
+            onClick={() => dispatch(<%= propertyName %>Actions.setStep(formStep + 1))}
+          >
+            Next
+          </GoAButton>
+        ) : (
+          <GoAButton disabled={!canSubmit} type="primary" onClick={() => dispatch(submitForm())}>
+            Submit
+          </GoAButton>
+        )}
+        </GoAButtonGroup>
+      </div>
+    </form>
+  );
+};

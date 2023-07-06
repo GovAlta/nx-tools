@@ -14,21 +14,32 @@
       },
       "x-prompt": "What name would you like to use?"
     },
-    "tenant": {
+    "env": {
       "type": "string",
-      "description": "Name of the ADSP tenant.",
+      "description": "Environment to target.",
       "$default": {
         "$source": "argv",
         "index": 1
       },
-      "alias": "t",
-      "x-prompt": "What is the name of your ADSP tenant?"
+      "alias": "e",
+      "x-prompt": {
+        "message": "Which ADSP environment do you want to target?",
+        "type": "list",
+        "items": [
+          "dev",
+          "test",
+          "prod"
+        ]
+      }
     },
-    "namespace": {
+    "accessToken": {
       "type": "string",
-      "description": "Default namespace to use.",
-      "alias": "n"
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
     }
   },
-  "required": ["name", "tenant"]
+  "required": [
+    "name",
+    "env"
+  ]
 }

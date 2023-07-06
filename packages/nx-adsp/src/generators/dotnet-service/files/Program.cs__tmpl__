@@ -1,26 +1,70 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Adsp.Sdk;
+using Adsp.Sdk.Examples;
 
-namespace <%= namespace %>
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddLogging();
+builder.Services.AddControllers();
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Initialization of ADSP SDK components...
+// Learn more about configuring ADSP SDK at https://govalta.github.io/adsp-monorepo/platform/platform-dotnet-sdk.html
+// 1. Bind configuration section or otherwise configure the options.
+var adspConfiguration = builder.Configuration.GetSection("Adsp");
+builder.Services.Configure<AdspOptions>(adspConfiguration);
+
+// 2. Add ADSP components to the service collection.
+builder.Services.AddAdspForService(options =>
 {
-  public static class Program
-  {
-    public static void Main(string[] args)
-    {
-      CreateHostBuilder(args).Build().Run();
-    }
+  // 3. Provide configuration of the service.
+  // 3a. Configure basic service information.
+  var serviceId = AdspId.Parse(adspConfiguration.GetValue<string>("ClientId"));
+  options.ServiceId = serviceId;
+  options.DisplayName = "<%= projectName %>";
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-      Host.CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(webBuilder =>
-        {
-          webBuilder.UseStartup<Startup>();
-        });
-  }
-}
+  // 3b. Register configuration definition.
+  options.Configuration = new ConfigurationDefinition<HelloWorldConfiguration>(
+    "Configuration of the hello world sample service.",
+    (tenant, core) => tenant
+  );
+  // Enable / disable socket.io based configuration invalidation.
+  // Include `urn:ads:platform:push-service` audience in access token; e.g use an audience mapper on the associated client.
+  options.EnableConfigurationInvalidation = false;
+
+  // 3c. Register service roles.
+  options.Roles = new[] {
+    new ServiceRole {
+      Role = ServiceRoles.HelloWorlder,
+      Description = "Hello worlder role that allows user to post a message to the API."
+    }
+  };
+
+  // 3d. Register domain events.
+  options.Events = new[] {
+    new DomainEventDefinition<HelloWorldEvent>(
+      HelloWorldEvent.EventName,
+      "Signalled when a hello world message is posted to the API."
+    )
+  };
+});
+
+var app = builder.Build();
+
+app.UseSwagger();
+app.UseHttpsRedirection();
+
+// 4. Add ADSP middleware.
+app.UseAdsp();
+app.UseAuthorization();
+app.UseAdspMetadata(new AdspMetadataOptions
+{
+  ApiPath = "WeatherForecast"
+});
+
+app.MapControllers();
+
+app.Run();

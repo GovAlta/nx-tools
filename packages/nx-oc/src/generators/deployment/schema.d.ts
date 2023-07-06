@@ -1,15 +1,19 @@
+import { AdspConfiguration } from '../../adsp';
+
+export type ApplicationType = 'node' | 'dotnet' | 'frontend';
+
 export interface Schema {
   project: string;
-  tenant: string;
+  appType?: ApplicationType;
+  env: EnvironmentName;
+  adsp?: AdspConfiguration;
+  accessToken?: string;
 }
 
 export interface NormalizedSchema extends Schema {
   projectName: string;
-  appType: 'frontend' | 'express' | 'dotnet';
+  appType: ApplicationType;
   ocInfraProject: string;
   ocEnvProjects: string[];
-  adsp: {
-    tenantRealm: string;
-    accessServiceUrl: string;
-  }
+  adsp: AdspConfiguration;
 }

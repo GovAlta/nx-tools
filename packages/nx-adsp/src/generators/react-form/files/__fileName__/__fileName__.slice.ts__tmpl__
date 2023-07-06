@@ -1,0 +1,627 @@
+import {
+  PayloadAction,
+  createAction,
+  createAsyncThunk,
+  createSelector,
+  createSlice,
+} from '@reduxjs/toolkit';
+import axios from 'axios';
+import { debounce } from 'lodash';
+import { UserState } from 'redux-oidc';
+import { CONFIG_FEATURE_KEY, ConfigState } from '../config.slice';
+
+export const <%= constantName %>_FEATURE_KEY = '<%= fileName %>';
+const FORM_DEFINITION_ID = '<%= id %>';
+const FORM_SERVICE_ID = 'urn:ads:platform:form-service';
+const FILE_TYPE_ID = '<%= fileName %>-files';
+const FILE_SERVICE_ID = 'urn:ads:platform:file-service';
+const FILE_SERVICE_RESOURCE_PREFIX = `${FILE_SERVICE_ID}:v1:`;
+
+/*
+ * Update these interfaces according to your requirements.
+ */
+<%- interfaceDefinition %>
+<% const sections = Object.entries(dataSchema.properties); %>
+const rules: Record<string, Record<string, RegExp>> = {
+  <%_ sections.forEach(function([sectionKey, section]) { _%>
+  <%= sectionKey %>: {
+  <%_ Object.entries(section.properties).filter(([_, { pattern }]) => !!pattern).forEach(function([key, value]) { _%>
+    <%= key %>: new RegExp('<%- value.pattern %>'),
+  <%_ }); _%>
+  },
+  <%_ }); _%>
+};
+
+const required: Record<string, string[]> = {
+  <%_ sections.forEach(function([sectionKey, section]) { _%>
+    <%= sectionKey %>: [<%- section.required?.map(req => `'${req}'`) || "" %>],
+  <%_ }); _%>
+};
+
+type FormStatus = 'draft' | 'locked' | 'submitted';
+type SectionCompletion = 'complete' | 'incomplete' | null;
+
+export interface FileInformation {
+  urn?: string;
+  filename: string;
+  progress: number;
+  size: number;
+  dataUri?: string;
+}
+
+export interface <%= className %>State {
+  formId: string;
+  status: FormStatus;
+  step: number;
+  values: <%= className %>;
+  files: Record<string, FileInformation>;
+  errors: Record<string, Record<string, boolean>>;
+  complete: Record<string, SectionCompletion>;
+  busy: {
+    loading: boolean;
+    loadingFiles: boolean;
+    uploadingFile: boolean;
+    saving: boolean;
+    submitting: boolean;
+  };
+  errorMessage: string;
+}
+
+function areSectionsComplete(
+  values: <%= className %>,
+  errors: Record<string, Record<string, boolean>> = {}
+): Record<string, SectionCompletion> {
+  const complete: Record<string, SectionCompletion> = {};
+  Object.entries(required).forEach(([section, requiredValues]) => {
+    const sectionValue = values[section] || {};
+
+    const hasValues = requiredValues
+      .map(
+        (required) =>
+          sectionValue[required] !== undefined &&
+          sectionValue[required] !== null &&
+          sectionValue[required] !== ''
+      )
+      .filter((hasValue) => hasValue);
+
+    const hasError =
+      Object.values(errors[section] || {}).filter((error) => error).length > 0;
+
+    // Note that sections with no required values are considered complete.
+    let completion: SectionCompletion = null;
+    if (!hasError && hasValues.length === requiredValues.length) {
+      completion = 'complete';
+    } else if (hasValues.length > 0) {
+      // This means partial completion.
+      completion = 'incomplete';
+    }
+    
+    complete[section] = completion;
+  });
+
+  return complete;
+}
+
+function getFileUrl(directory: Record<string, string>, urn: string): URL {
+  return new URL(
+    urn.replace(FILE_SERVICE_RESOURCE_PREFIX, 'v1'),
+    `${directory[FILE_SERVICE_ID]}/file/v1`
+  );
+}
+
+/**
+ * Export an effect using createAsyncThunk from
+ * the Redux Toolkit: https://redux-toolkit.js.org/api/createAsyncThunk
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(fetchIntake())
+ * }, [dispatch]);
+ * ```
+ */
+export const initializeForm = createAsyncThunk(
+  '<%= propertyName %>/initialize',
+  async (_, { dispatch, getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    if (!user) {
+      throw new Error('No active user session.');
+    }
+
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    const { data: forms } = await axios.get<{ results: { id: string; status: FormStatus }[] }>(
+      `${directory[FORM_SERVICE_ID]}/form/v1/forms`,
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+        params: {
+          criteria: {
+            createdByIdEquals: user.profile.sub,
+            definitionIdEquals: FORM_DEFINITION_ID,
+          },
+        },
+      }
+    );
+
+    let form = forms.results?.[0];
+    if (!form) {
+      const { data: newForm } = await axios.post<{ id: string; status: FormStatus }>(
+        `${directory[FORM_SERVICE_ID]}/form/v1/forms`,
+        {
+          definitionId: FORM_DEFINITION_ID,
+          applicant: {
+            userId: user.profile.sub,
+            addressAs: user.profile.name,
+            channels: [
+              {
+                channel: 'email',
+                address: user.profile.email,
+              },
+            ],
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+          },
+        }
+      );
+      form = newForm;
+    }
+
+    const { data } = await axios.get<{
+      id: string;
+      data: <%= className %>;
+      files: Record<string, string>;
+    }>(`${directory[FORM_SERVICE_ID]}/form/v1/forms/${form.id}/data`, {
+      headers: {
+        Authorization: `Bearer ${user.access_token}`,
+      },
+    });
+
+    dispatch(getFileMetadata(data.files));
+
+    const complete = areSectionsComplete(data.data);
+
+    return { ...form, ...data, complete };
+  }
+);
+
+export const getFileMetadata = createAsyncThunk(
+  '<%= propertyName %>/get-file-metadata',
+  async (files: Record<string, string>, { getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    const metadata: Record<string, FileInformation> = {};
+    for (const [key, urn] of Object.entries(files)) {
+      const { data } = await axios.get<FileInformation>(
+        getFileUrl(directory, urn).href,
+        {
+          headers: { Authorization: `Bearer ${user.access_token}` },
+        }
+      );
+
+      metadata[key] = {
+        urn: data.urn,
+        filename: data.filename,
+        size: data.size,
+        progress: 100,
+      };
+    }
+
+    return metadata;
+  }
+);
+
+export const downloadFile = createAsyncThunk(
+  '<%= propertyName %>/download-file',
+  async (
+    { key, file }: { key: string; file: FileInformation },
+    { getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+
+    let uri = file.dataUri;
+    if (!uri) {
+      const { data } = await axios.get(
+        `${getFileUrl(directory, file.urn).href}/download`,
+        {
+          responseType: 'arraybuffer',
+          headers: { Authorization: `Bearer ${user.access_token}` },
+        }
+      );
+      uri = URL.createObjectURL(new Blob([data]));
+
+      const anchor = document.createElement('a');
+      anchor.href = uri;
+      anchor.setAttribute('download', file.filename);
+      anchor.click();
+    }
+
+    return uri;
+  }
+);
+
+const formSaved = createAction(
+  '<%= propertyName %>/saved',
+  (values: <%= className %>) => ({ payload: values })
+);
+
+const formSaveRejected = createAction(
+  '<%= propertyName %>/save-rejected',
+  (message: string) => ({ payload: message })
+);
+
+const queueSaveForm = createAsyncThunk(
+  '<%= propertyName %>/queue-save',
+  debounce(
+    async (
+      {
+        values,
+        files,
+      }: { values: <%= className %>; files: Record<string, FileInformation> },
+      { dispatch, getState }
+    ) => {
+      const state = getState();
+      const { user }: UserState = state['user'];
+      const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];      
+      const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];
+
+      try {
+        await axios.put(
+          `${directory[FORM_SERVICE_ID]}/form/v1/forms/${formId}/data`,
+          {
+            data: values,
+            files: Object.entries(files).reduce((fileValues, [key, file]) => {
+              if (file) {
+                fileValues[key] = file.urn;
+              }
+
+              return fileValues;
+            }, {} as Record<string, string>),
+          },
+          { headers: { Authorization: `Bearer ${user.access_token}` } }
+        );
+
+        dispatch(formSaved(values));
+      } catch (err) {
+        let message = 'Unexpected error saving form.';
+        if (axios.isAxiosError(err) && err.response?.status === 400) {
+          message = err.response?.data?.errorMessage;
+        }
+        
+        dispatch(formSaveRejected(message));
+      }
+    },
+    2000,
+    { trailing: true, leading: false }
+  )
+);
+
+export const updateForm = createAsyncThunk(
+  '<%= propertyName %>/update',
+  async (values: <%= className %>, { dispatch, getState }) => {
+    const errors: Record<string, Record<string, boolean>> = {};
+    let hasError = false;
+    Object.entries(rules).forEach(([section, sectionRules]) => {
+      const sectionValue = values[section] || {};
+      const sectionErrors = Object.entries(sectionRules).reduce(
+        (results, [key, valueRule]) => {
+          const value = sectionValue[key] || '';
+          const isError = !!value && !valueRule.test(value);
+          hasError = hasError || isError;
+          return { ...results, [key]: isError };
+        },
+        {}
+      );
+
+      errors[section] = sectionErrors;
+    });
+
+    const complete = areSectionsComplete(values, errors);
+
+    if (!hasError) {
+      const { files }: <%= className %>State = getState()[<%= constantName %>_FEATURE_KEY];
+      dispatch(queueSaveForm({ values, files }));
+    }
+
+    return { values, complete, errors };
+  }
+);
+
+const setFileProgress = createAction(
+  '<%= propertyName %>/set-file-progress',
+  (key: string, progress: number) => {
+    return { payload: { key, progress } };
+  }
+);
+
+export const updateFile = createAsyncThunk(
+  '<%= propertyName %>/update-file',
+  async (
+    { key, old, file }: { key: string; old?: FileInformation; file?: File },
+    { dispatch, getState }
+  ) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];
+
+    let newFile: FileInformation = null;
+    if (file) {
+      const formData = new FormData();
+      formData.append('type', FILE_TYPE_ID);
+      formData.append('recordId', formId);
+      formData.append('file', file);
+
+      const { data } = await axios.post<Omit<FileInformation, 'progress'>>(
+        `${directory[FILE_SERVICE_ID]}/file/v1/files`,
+        formData,
+        {
+          headers: { Authorization: `Bearer ${user.access_token}` },
+          onUploadProgress: ({ loaded, total }: ProgressEvent) => {
+            const progress = Math.floor((loaded * 100) / total);
+            dispatch(setFileProgress(key, progress));
+          },
+        }
+      );
+
+      newFile = {
+        urn: data.urn,
+        filename: data.filename,
+        size: data.size,
+        progress: 100,
+      };
+    }
+
+    if (old?.urn) {
+      await axios.delete(getFileUrl(directory, old.urn).href, {
+        headers: { Authorization: `Bearer ${user.access_token}` },
+      });
+    }
+
+    const { values, files }: <%= className %>State = getState()[<%= constantName %>_FEATURE_KEY];
+
+    dispatch(queueSaveForm({ values, files: { ...files, [key]: newFile } }));
+
+    return { key, file: newFile };
+  }
+);
+
+export const submitForm = createAsyncThunk(
+  '<%= propertyName %>/submit',
+  async (_, { getState }) => {
+    const state = getState();
+    const { user }: UserState = state['user'];
+    const { directory }: ConfigState = state[CONFIG_FEATURE_KEY];
+    const { formId }: <%= className %>State = state[<%= constantName %>_FEATURE_KEY];    
+    
+    const { data } = await axios.post(
+      `${directory[FORM_SERVICE_ID]}/form/v1/forms/${formId}`,
+      { operation: 'submit' },
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+      }
+    );
+    return data;
+  }
+);
+
+export const initial<%= className %>State: <%= className %>State = {
+  formId: null,
+  status: null,
+  step: 1,
+  values: {} as <%= className %>,
+  files: {},
+  errors: {},
+  complete: {},
+  busy: {
+    loading: false,
+    loadingFiles: false,
+    uploadingFile: false,
+    saving: false,
+    submitting: false,
+  },
+  errorMessage: null,
+};
+
+export const <%= propertyName %>Slice = createSlice({
+  name: <%= constantName %>_FEATURE_KEY,
+  initialState: initial<%= className %>State,
+  reducers: {
+    setStep: (state, action: PayloadAction<number>) => {
+      state.step = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(initializeForm.pending, (state) => {
+        state.busy.loading = true;
+      })
+      .addCase(initializeForm.fulfilled, (state, action) => {
+        state.formId = action.payload.id;
+        state.status = action.payload.status;
+        state.values = action.payload.data;
+        state.complete = action.payload.complete;
+        state.busy.loading = false;
+      })
+      .addCase(initializeForm.rejected, (state) => {
+        state.busy.loading = false;
+      })
+      .addCase(getFileMetadata.pending, (state) => {
+        state.busy.loadingFiles = true;
+      })
+      .addCase(getFileMetadata.fulfilled, (state, action) => {
+        state.busy.loadingFiles = false;
+        state.files = action.payload;
+      })
+      .addCase(getFileMetadata.rejected, (state) => {
+        state.busy.loadingFiles = false;
+      })
+      .addCase(downloadFile.fulfilled, (state, action) => {
+        if (state.files[action.meta.arg.key]) {
+          state.files[action.meta.arg.key].dataUri = action.payload;
+        }
+      })
+      .addCase(updateForm.fulfilled, (state, action) => {
+        state.values = action.payload.values;
+        state.complete = action.payload.complete;
+        state.errors = action.payload.errors;
+      })
+      .addCase(updateFile.pending, (state, action) => {
+        const file = action.meta.arg.file;
+        state.busy.uploadingFile = true;
+        state.files[action.meta.arg.key] = file
+          ? {
+              filename: file.name,
+              size: file.size,
+              progress: 0,
+            }
+          : null;
+      })
+      .addCase(updateFile.fulfilled, (state, action) => {
+        state.busy.uploadingFile = false;
+        state.files[action.payload.key] = action.payload.file;
+      })
+      .addCase(updateFile.rejected, (state) => {
+        state.busy.uploadingFile = false;
+      })
+      .addCase(setFileProgress, (state, action) => {
+        if (state.files[action.payload.key]) {
+          state.files[action.payload.key].progress = action.payload.progress;
+        }
+      })
+      .addCase(queueSaveForm.pending, (state) => {
+        state.busy.saving = true;
+      })
+      .addCase(formSaved, (state) => {
+        state.busy.saving = false;
+      })
+      .addCase(formSaveRejected, (state, action) => {
+        state.busy.saving = false;
+        state.errorMessage = action.payload;
+      })
+      .addCase(queueSaveForm.rejected, (state) => {
+        state.busy.saving = false;
+      })
+      .addCase(submitForm.pending, (state) => {
+        state.busy.submitting = true;
+      })
+      .addCase(submitForm.fulfilled, (state) => {
+        state.busy.submitting = false;
+        state.status = 'submitted'
+      })
+      .addCase(submitForm.rejected, (state) => {
+        state.busy.submitting = false;
+      });
+  },
+});
+
+/*
+ * Export reducer for store configuration.
+ */
+export const <%= propertyName %>Reducer = <%= propertyName %>Slice.reducer;
+
+/*
+ * Export action creators to be dispatched. For use with the `useDispatch` hook.
+ *
+ * e.g.
+ * ```
+ * import React, { useEffect } from 'react';
+ * import { useDispatch } from 'react-redux';
+ *
+ * // ...
+ *
+ * const dispatch = useDispatch();
+ * useEffect(() => {
+ *   dispatch(intakeActions.add({ id: 1 }))
+ * }, [dispatch]);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#usedispatch
+ */
+export const <%= propertyName %>Actions = <%= propertyName %>Slice.actions;
+
+/*
+ * Export selectors to query state. For use with the `useSelector` hook.
+ *
+ * e.g.
+ * ```
+ * import { useSelector } from 'react-redux';
+ *
+ * // ...
+ *
+ * const entities = useSelector(selectAllIntake);
+ * ```
+ *
+ * See: https://react-redux.js.org/next/api/hooks#useselector
+ */
+// const { selectAll, selectEntities } = intakeAdapter.getSelectors();
+
+export const get<%= className %>State = (
+  rootState: unknown
+): <%= className %>State => rootState[<%= constantName %>_FEATURE_KEY];
+
+export const getFormStatus = createSelector(
+  get<%= className %>State,
+  (state) => state.status
+);
+
+export const getFormStep = createSelector(
+  get<%= className %>State,
+  (state) => state.step
+);
+
+export const getFormValues = createSelector(
+  get<%= className %>State,
+  (state) => state.values
+);
+
+export const getFormFiles = createSelector(
+  get<%= className %>State,
+  (state) => state.files
+);
+
+export const getFormErrors = createSelector(
+  get<%= className %>State,
+  (state) => state.errors
+);
+
+export const getFormBusy = createSelector(
+  get<%= className %>State,
+  (state) => state.busy
+);
+
+export const getFormComplete = createSelector(
+  get<%= className %>State,
+  (state) => state.complete
+);
+
+export const getFormInReview = createSelector(
+  get<%= className %>State,
+  (state) => state.step === <%= sections.length + 1 %>
+);
+
+export const getFormCanSubmit = createSelector(
+  get<%= className %>State,
+  (state) =>
+    !state.busy.saving && !state.busy.submitting &&
+    state.status === 'draft' &&
+    Object.values(state.complete).filter((complete) => complete !== 'complete')
+      .length < 1
+);

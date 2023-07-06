@@ -9,6 +9,9 @@
     "url": "https://github.com/abgov/nx-tools.git",
     "directory": "packages/nx-release"
   },
+  "peerDependencies": {
+    "@nrwl/devkit": "^15.0.0"
+  },
   "dependencies": {
     "@semantic-release/commit-analyzer": "~9.0.2",
     "@semantic-release/release-notes-generator": "~10.0.3",

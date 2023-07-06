@@ -1,7 +1,6 @@
 import {
   formatFiles,
   generateFiles,
-  getWorkspacePath,
   names,
   readProjectConfiguration,
   Tree,
@@ -11,11 +10,15 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { NormalizedSchema, Schema } from './schema';
+import { ApplicationType, NormalizedSchema, Schema } from './schema';
+import { getAdspConfiguration } from '../../adsp';
 
 const infraManifestFile = '.openshift/environments.yml';
 
-function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
+async function normalizeOptions(
+  host: Tree,
+  options: Schema
+): Promise<NormalizedSchema> {
   const projectName = names(options.project).fileName;
 
   const result = host.read(infraManifestFile).toString();
@@ -29,33 +32,37 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
   // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
-  let appType = null;
-  switch (config.targets.build.executor) {
-    case '@nrwl/web:webpack':
-    case '@angular-devkit/build-angular:browser':
-      appType = 'frontend';
-      break;
-    case '@nrwl/node:build':
-      appType = 'express';
-      break;
-    case '@abgov/nx-dotnet:build':
-      appType = 'dotnet';
-      break;
+  let appType: ApplicationType = options.appType;
+  if (!appType) {
+    switch (config.targets.build.executor) {
+      case '@nrwl/web:webpack':
+      case '@angular-devkit/build-angular:browser':
+        appType = 'frontend';
+        break;
+      case '@nrwl/node:build':
+        appType = 'node';
+        break;
+      case '@nx-dotnet/core:build':
+        appType = 'dotnet';
+        break;
+      case '@nrwl/webpack:webpack': {
+        // More recent version of NX switched to use a generic webpack executor for builds.
+        appType =
+          config.targets.build.options.target === 'node' ? 'node' : 'frontend';
+        break;
+      }
+    }
   }
 
-  const tenantRealm = names(options.tenant).fileName;
-  const accessServiceUrl = 'https://access.alpha.alberta.ca';
+  const adsp = await getAdspConfiguration(host, options);
 
   return {
     ...options,
-    projectName,
     appType,
+    adsp,
+    projectName,
     ocInfraProject,
     ocEnvProjects,
-    adsp: {
-      tenantRealm,
-      accessServiceUrl,
-    },
   };
 }
 
@@ -69,7 +76,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   generateFiles(
     host,
     path.join(__dirname, `${options.appType}-files`),
-    `${path.dirname(getWorkspacePath(host))}/.openshift/${options.projectName}`,
+    `./.openshift/${options.projectName}`,
     templateOptions
   );
 }
@@ -88,7 +95,7 @@ export default async function (host: Tree, options: Schema) {
     return;
   }
 
-  const normalizedOptions = normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options);
   if (!normalizedOptions.appType) {
     console.log('Cannot generate deployment for unknown project type.');
     return;

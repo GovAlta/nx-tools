@@ -1,14 +1,25 @@
 import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import { Tree, readProjectConfiguration } from '@nrwl/devkit';
 
+import * as utils from '@abgov/nx-oc';
+import { environments } from '@abgov/nx-oc';
 import angularApp from './angular-app';
 import { AngularAppGeneratorSchema } from './schema';
+
+jest.mock('@abgov/nx-oc');
+const utilsMock = utils as jest.Mocked<typeof utils>;
+utilsMock.getAdspConfiguration.mockResolvedValue({
+  tenant: 'test',
+  tenantRealm: 'test',
+  accessServiceUrl: environments.test.accessServiceUrl,
+  directoryServiceUrl: environments.test.directoryServiceUrl,
+});
 
 describe('angular app generator', () => {
   let appTree: Tree;
   const options: AngularAppGeneratorSchema = {
     name: 'test',
-    tenant: 'testtenant',
+    env: 'dev',
   };
 
   beforeEach(() => {

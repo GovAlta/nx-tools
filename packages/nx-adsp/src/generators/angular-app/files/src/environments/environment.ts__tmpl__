@@ -6,7 +6,7 @@ export const environment = {
   access: {
     url: '<%= accessServiceUrl %>',
     realm: '<%= tenantRealm %>',
-    client_id: 'urn:ads:platform:tenant-admin-app'
+    client_id: 'urn:ads:<%= tenant %>:<%= projectName %>'
   },
   tenantApi: {
     host: "http://localhost:3333",

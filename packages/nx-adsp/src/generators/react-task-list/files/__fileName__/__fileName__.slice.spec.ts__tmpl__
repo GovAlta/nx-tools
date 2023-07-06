@@ -1,0 +1,26 @@
+import {
+  initial<%= className %>TaskListState,
+  <%= propertyName %>TaskListActions,
+  <%= propertyName %>TaskListReducer,
+} from './<%= fileName %>.slice';
+
+describe('<%= fileName %> slice', () => {
+  describe('<%= propertyName %>TaskListReducer', () => {
+    it('can handle initial state', () => {
+      expect(<%= propertyName %>TaskListReducer(undefined, { type: '' })).toEqual(
+        initial<%= className %>TaskListState
+      );
+    });
+
+    it('can handle set step action', () => {
+      expect(
+        <%= propertyName %>TaskListReducer(
+          undefined,
+          <%= propertyName %>TaskListActions.setFilter('active')
+        )
+      ).toMatchObject({ filter: 'active' });
+    });
+
+    // TODO: Add state unit tests.
+  });
+});

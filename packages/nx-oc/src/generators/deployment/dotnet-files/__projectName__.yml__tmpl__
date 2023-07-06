@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: <%= projectName %>
@@ -25,12 +25,12 @@ parameters:
     value: latest
     required: true
 objects:
-  - apiVersion: v1
+  - apiVersion: image.openshift.io/v1
     kind: ImageStream
     metadata:
       name: ${APP_NAME}
       namespace: ${INFRA_PROJECT}
-  - apiVersion: v1
+  - apiVersion: build.openshift.io/v1
     kind: BuildConfig
     metadata:
       name: ${APP_NAME}
@@ -40,10 +40,17 @@ objects:
         to:
           kind: ImageStreamTag
           name: '${APP_NAME}:latest'
+      resources:
+        limits:
+          cpu: 300m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 200Mi
       runPolicy: Serial
       source:
-          binary: {}
-          type: Binary
+        binary: {}
+        type: Binary
       strategy:
         dockerStrategy:
           buildArgs:
@@ -78,7 +85,7 @@ objects:
           "AllowedHosts": "*",
           "Urls": "http://${APP_NAME}:5000"
         }
-  - apiVersion: v1
+  - apiVersion: apps.openshift.io/v1
     kind: DeploymentConfig
     metadata:
       name: ${APP_NAME}
@@ -91,7 +98,13 @@ objects:
         activeDeadlineSeconds: 21600
         recreateParams:
           timeoutSeconds: 600
-        resources: {}
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
         type: Recreate
       template:
         metadata:
@@ -111,7 +124,13 @@ objects:
                 - containerPort: 5000
                   name: http
                   protocol: TCP
-              resources: {}
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 1Gi
+                requests:
+                  cpu: 20m
+                  memory: 200Mi
               terminationMessagePath: /dev/termination-log
               volumeMounts:
                 - mountPath: /opt/app-root/app/appsettings.json
@@ -149,7 +168,7 @@ objects:
         name: ${APP_NAME}
       sessionAffinity: None
       type: ClusterIP
-  - apiVersion: v1
+  - apiVersion: route.openshift.io/v1
     kind: Route
     metadata:
       name: ${APP_NAME}

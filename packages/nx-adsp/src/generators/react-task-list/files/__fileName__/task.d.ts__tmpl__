@@ -1,0 +1,30 @@
+export interface QueueDefinition {
+  namespace: string;
+  name: string;
+  description: string;
+  assignerRoles: string[];
+  workerRoles: string[];
+}
+
+export interface Task {
+  id: string;
+  name: string;
+  description: string;
+  priority: string;
+  status: 'Pending' | 'In Progress' | 'Stopped' | 'Cancelled' | 'Completed';
+  createdOn: string;
+  startedOn: string;
+  endedOn: string;
+  assignment: {
+    assignedTo: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
+export interface Person {
+  id: string;
+  name: string;
+  email: string;
+}

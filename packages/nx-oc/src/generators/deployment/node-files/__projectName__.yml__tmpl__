@@ -1,0 +1,160 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: <%= projectName %>
+labels:
+  app: <%= projectName %>
+parameters:
+  - name: INFRA_PROJECT
+    description: Project used for build infrastructure.
+    displayName: Infrastructure Project
+    value: <%= ocInfraProject %>
+    required: true
+  - name: PROJECT
+    description: Project to set up.
+    displayName: Project
+    required: true
+  - name: APP_NAME
+    description: Name of the application.
+    displayName: Application Name
+    value: <%= projectName %>
+    required: true
+  - name: DEPLOY_TAG
+    description: Tag of the ImageStream to deploy.
+    displayName: Deploy Tag
+    value: latest
+    required: true
+objects:
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${INFRA_PROJECT}
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${INFRA_PROJECT}
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: '${APP_NAME}:latest'
+      resources:
+        limits:
+          cpu: 300m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 200Mi
+      runPolicy: Serial
+      source:
+        binary: {}
+        type: Binary
+      strategy:
+        dockerStrategy:
+          buildArgs:
+            - name: PROJECT
+              value: <%= projectName %>
+          dockerfilePath: .openshift/<%= projectName %>/Dockerfile
+        type: Docker
+      triggers: []
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${PROJECT}
+    data:
+      TENANT_REALM: <%= tenantRealm %>
+      ACCESS_SERVICE_URL: <%= accessServiceUrl %>
+  - apiVersion: apps.openshift.io/v1
+    kind: DeploymentConfig
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${PROJECT}
+    spec:
+      replicas: 1
+      selector:
+        name: ${APP_NAME}
+      strategy:
+        activeDeadlineSeconds: 21600
+        recreateParams:
+          timeoutSeconds: 600
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+        type: Recreate
+      template:
+        metadata:
+          labels:
+            name: ${APP_NAME}
+        spec:
+          containers:
+            - name: ${APP_NAME}
+              envFrom:
+                - configMapRef:
+                    name: ${APP_NAME}
+              env:
+                - name: port
+                  value: '3333'
+                - name: LOG_LEVEL
+                  value: info
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 3333
+                  name: http
+                  protocol: TCP
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 200Mi
+                requests:
+                  cpu: 20m
+                  memory: 50Mi
+              terminationMessagePath: /dev/termination-log
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+      triggers:
+        - imageChangeParams:
+            containerNames:
+              - ${APP_NAME}
+            from:
+              kind: ImageStreamTag
+              name: '${APP_NAME}:${DEPLOY_TAG}'
+              namespace: ${INFRA_PROJECT}
+          type: ImageChange
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${PROJECT}
+    spec:
+      ports:
+        - name: http
+          port: 3333
+          protocol: TCP
+          targetPort: 3333
+      selector:
+        name: ${APP_NAME}
+      sessionAffinity: None
+      type: ClusterIP
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: ${APP_NAME}
+      namespace: ${PROJECT}
+    spec:
+      port:
+        targetPort: http
+      tls:
+        termination: edge
+      to:
+        kind: Service
+        name: ${APP_NAME}
+        weight: 100
+      wildcardPolicy: None
