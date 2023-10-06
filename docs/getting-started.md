@@ -13,16 +13,18 @@ nav_order: 1
 {:toc}
 </details>
 
-# Overview
+# Getting started
 Government of Alberta's Nx Tools are a set of plugins for [nx](https://nx.dev) including plugins for working in OpenShift, generating new applications, and automating releases of published libraries.
 
 ## Version compatibility
 
-@abgov libraries at version *x* that correspond to the @nrwl version *x + 10*
+@abgov libraries at version *x* correspond to @nrwl workspace at version *x + 10*
 
 * @abgov/nx-oc@1 -> @nrwl/cli@11
 * @abgov/nx-oc@2 -> @nrwl/cli@12
-* @abgov/nx-oc@3 -> @nrwl/cli@13
+* @abgov/nx-oc@5 -> @nrwl/cli@15
+
+When installing @nrwl dependencies, make sure versions across all @nrwl scope dependencies are the same.
 
 ## Quick start
 The follow steps can be used to generate a basic React frontend, Express/Node backend solution deployed on OpenShift with a GitHub Actions based continuous delivery pipeline.
@@ -30,18 +32,20 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
 ### Prerequisite
 - Empty Github repository
 - OpenShift Projects to use for build, dev, test, and prod
+- [ADSP](https://adsp.alberta.ca) Tenant
 
 ### Steps
 
 1. Create an NX workspace.
    
    ```
-   npx create-nx-workspace@13.8.1 my-project --preset empty --nx-cloud false   
+   npx create-nx-workspace@15.9.3 my-project --preset empty --nx-cloud false   
    ```
 
 2. Push the project to GitHub repository.
    
    ```
+   cd my-project
    git remote add origin <REMOTE_URL>
    git push -u origin main
    ```
@@ -49,9 +53,7 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
 3. Install dependencies needed for the React and Express based solution.
    
     ```
-    cd my-project
-
-    npm i -D @nrwl/react@13.8.1 @nrwl/express@13.8.1 @abgov/nx-oc@3 @abgov/nx-adsp@3
+    npm i -D @nrwl/react@15.9.3 @nrwl/express@15.9.3 @abgov/nx-oc@5 @abgov/nx-adsp@5
     ```
 
     @abgov/nx-adsp includes peer dependencies for its application templates. Make sure that the appropriate ones are installed. (e.g. @nrwl/angular if generating Angular application.)
@@ -83,7 +85,7 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
    
     ```
     npx nx g @abgov/nx-adsp:mern demo
-    ? What is the name of your ADSP tenant? <Realm ID>
+    ? Which ADSP environment do you want to target? <Tenant>
     ```
 
     This will generate additional projects as well as associated OpenShift manifests in the workspace.
