@@ -1,8 +1,4 @@
-import {
-  formatFiles,
-  generateFiles,
-  Tree,
-} from '@nrwl/devkit';
+import { formatFiles, generateFiles, Tree } from '@nrwl/devkit';
 import * as path from 'path';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
@@ -15,6 +11,10 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   const envsProjectsSet = new Set(ocEnvProjects);
   if (envsProjectsSet.size !== ocEnvProjects.length) {
     throw new Error('Each environment must be a unique project.');
+  } else if (ocEnvProjects.length > envs.length) {
+    throw new Error(
+      `Provided projects must correspond to ${envs.join(', ')} environments.`
+    );
   }
 
   return {
