@@ -1,6 +1,6 @@
 import * as utils from '@abgov/nx-oc';
 import { addProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import axios from 'axios';
 import { prompt } from 'enquirer';
 
@@ -81,7 +81,7 @@ describe('React Form Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
 
     addProjectConfiguration(host, 'test', {
       root: 'apps/test',

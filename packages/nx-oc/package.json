@@ -10,11 +10,5 @@
     "directory": "packages/nx-oc"
   },
   "generators": "./generators.json",
-  "executors": "./executors.json",
-  "peerDependencies": {
-    "@nrwl/devkit": "^15.0.0"
-  },
-  "dependencies": {
-    "yaml": "^1.10.2"
-  }
+  "executors": "./executors.json"
 }

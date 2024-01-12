@@ -48,6 +48,7 @@
     "@nrwl/node": "15.9.2",
     "@nrwl/nx-plugin": "15.9.2",
     "@nrwl/react": "15.9.2",
+    "@nrwl/web": "15.9.2",
     "@nrwl/workspace": "15.9.2",
     "@nx-dotnet/core": "^1.16.3",
     "@schematics/angular": "~15.2.0",

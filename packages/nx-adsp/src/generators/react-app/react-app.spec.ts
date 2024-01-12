@@ -1,5 +1,5 @@
 import { readProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
 import { environments } from '@abgov/nx-oc';
@@ -22,7 +22,7 @@ describe('React App Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);
 
     const config = readProjectConfiguration(host, 'test');
@@ -32,7 +32,7 @@ describe('React App Generator', () => {
   }, 30000);
 
   it('can add nginx proxy', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, {
       ...options,
       proxy: {
@@ -51,7 +51,7 @@ describe('React App Generator', () => {
   });
 
   it('can add multiple nginx proxy', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, {
       ...options,
       proxy: [
@@ -76,7 +76,7 @@ describe('React App Generator', () => {
   });
 
   it('can add webpack dev server proxy', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, {
       ...options,
       proxy: {

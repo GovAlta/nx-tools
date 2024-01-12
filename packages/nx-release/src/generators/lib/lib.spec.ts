@@ -1,4 +1,4 @@
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import {
   Tree,
   readProjectConfiguration,
@@ -15,7 +15,7 @@ describe('nx-release generator', () => {
   const options: Schema = { project: 'test' };
 
   beforeEach(() => {
-    appTree = createTreeWithEmptyV1Workspace();
+    appTree = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addProjectConfiguration(appTree, 'test', {
       root: 'libs/test',
       projectType: 'library',

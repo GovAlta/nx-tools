@@ -1,5 +1,5 @@
 import { addDependenciesToPackageJson } from '@nrwl/devkit';
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import appGenerator from '@nx-dotnet/core/src/generators/app/generator';
 import refGenerator from '@nx-dotnet/core/src/generators/nuget-reference/generator';
 
@@ -35,7 +35,7 @@ describe('Dotnet Service Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addDependenciesToPackageJson(
       host,
       {},
