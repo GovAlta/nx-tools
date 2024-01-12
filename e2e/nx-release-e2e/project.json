@@ -1,0 +1,19 @@
+{
+  "name": "nx-release-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "e2e/nx-release-e2e/src",
+  "targets": {
+    "e2e": {
+      "executor": "@nrwl/nx-plugin:e2e",
+      "options": {
+        "target": "nx-release:build",
+        "npmPackageName": "@abgov/nx-release",
+        "pluginOutputPath": "dist/packages/nx-release",
+        "jestConfig": "e2e/nx-release-e2e/jest.config.js"
+      }
+    }
+  },
+  "tags": [],
+  "implicitDependencies": ["nx-release"]
+}
