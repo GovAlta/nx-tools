@@ -1,4 +1,4 @@
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 import { Schema } from './schema';
 import generator from './pipeline';
 
@@ -12,7 +12,7 @@ describe('Pipeline Generator', () => {
     };
 
     it('can run', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await generator(host, options);
       expect(host.exists('.openshift/Jenkinsfile')).toBeTruthy();
       expect(host.exists('.openshift/environment.infra.yml')).toBeTruthy();
@@ -20,7 +20,7 @@ describe('Pipeline Generator', () => {
     });
 
     it('can generate multiple envs', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await generator(host, { ...options, envs: 'test-dev test-test' });
       expect(host.exists('.openshift/environments.yml')).toBeTruthy();
 
@@ -30,7 +30,7 @@ describe('Pipeline Generator', () => {
     });
 
     it('can fail for duplicate env project', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await expect(
         generator(host, { ...options, envs: 'test-dev test-dev' })
       ).rejects.toThrow('Each environment must be a unique project.');
@@ -46,7 +46,7 @@ describe('Pipeline Generator', () => {
     };
 
     it('can run', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await generator(host, options);
       expect(host.exists('.github/workflows/pipeline.yml')).toBeTruthy();
       expect(host.exists('.openshift/environment.infra.yml')).toBeTruthy();
@@ -54,7 +54,7 @@ describe('Pipeline Generator', () => {
     });
 
     it('can generate multiple envs', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await generator(host, { ...options, envs: 'test-dev test-test' });
       expect(host.exists('.openshift/environments.yml')).toBeTruthy();
 
@@ -64,7 +64,7 @@ describe('Pipeline Generator', () => {
     });
 
     it('can fail for duplicate env project', async () => {
-      const host = createTreeWithEmptyV1Workspace();
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await expect(
         generator(host, { ...options, envs: 'test-dev test-dev' })
       ).rejects.toThrow('Each environment must be a unique project.');

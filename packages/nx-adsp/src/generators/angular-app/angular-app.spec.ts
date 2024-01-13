@@ -23,7 +23,7 @@ describe('angular app generator', () => {
   };
 
   beforeEach(() => {
-    appTree = createTreeWithEmptyWorkspace();
+    appTree = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
   });
 
   it('should run successfully', async () => {
@@ -35,7 +35,7 @@ describe('angular app generator', () => {
   }, 30000);
 
   it('can add nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await angularApp(host, {
       ...options,
       proxy: {
@@ -54,7 +54,7 @@ describe('angular app generator', () => {
   });
 
   it('can add multiple nginx proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await angularApp(host, {
       ...options,
       proxy: [
@@ -79,7 +79,7 @@ describe('angular app generator', () => {
   });
 
   it('can add webpack dev server proxy', async () => {
-    const host = createTreeWithEmptyWorkspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await angularApp(host, {
       ...options,
       proxy: {

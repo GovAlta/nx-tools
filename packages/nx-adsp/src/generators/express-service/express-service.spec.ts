@@ -1,5 +1,5 @@
 import { readProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyV1Workspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
 import { environments } from '@abgov/nx-oc';
@@ -22,7 +22,7 @@ describe('Express Service Generator', () => {
   };
 
   it('can run', async () => {
-    const host = createTreeWithEmptyV1Workspace();
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);
 
     const config = readProjectConfiguration(host, 'test');
