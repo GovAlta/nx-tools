@@ -1,4 +1,4 @@
-import { names, readJson, Tree } from '@nrwl/devkit';
+import { names, readJson, Tree } from '@nx/devkit';
 import axios from 'axios';
 import { prompt } from 'enquirer';
 import * as express from 'express';

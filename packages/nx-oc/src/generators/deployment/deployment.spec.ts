@@ -1,8 +1,5 @@
-import {
-  addProjectConfiguration,
-  readProjectConfiguration,
-} from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { addProjectConfiguration, readProjectConfiguration } from '@nx/devkit';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '../../adsp';
 import { environments } from '../../adsp';
@@ -46,7 +43,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/web:webpack',
+          executor: '@nx/web:webpack',
         },
       },
     });
@@ -77,7 +74,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/webpack:webpack',
+          executor: '@nx/webpack:webpack',
           options: {
             compiler: 'babel',
           },
@@ -134,7 +131,7 @@ describe('Deployment Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/webpack:webpack',
+          executor: '@nx/webpack:webpack',
           options: {
             compiler: 'tsc',
             target: 'node',

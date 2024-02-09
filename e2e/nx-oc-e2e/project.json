@@ -5,13 +5,14 @@
   "sourceRoot": "e2e/nx-oc-e2e/src",
   "targets": {
     "e2e": {
-      "executor": "@nrwl/nx-plugin:e2e",
+      "executor": "@nx/jest:jest",
       "options": {
-        "target": "nx-oc:build",
         "npmPackageName": "@abgov/nx-oc",
         "pluginOutputPath": "dist/packages/nx-oc",
-        "jestConfig": "e2e/nx-oc-e2e/jest.config.js"
-      }
+        "jestConfig": "e2e/nx-oc-e2e/jest.config.js",
+        "runInBand": true
+      },
+      "dependsOn": ["nx-oc:build"]
     }
   },
   "tags": [],

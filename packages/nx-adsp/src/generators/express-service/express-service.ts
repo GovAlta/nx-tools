@@ -7,8 +7,8 @@ import {
   installPackagesTask,
   names,
   Tree,
-} from '@nrwl/devkit';
-import { Linter } from '@nrwl/linter';
+} from '@nx/devkit';
+import { Linter } from '@nx/eslint';
 import * as path from 'path';
 import { Schema, NormalizedSchema } from './schema';
 
@@ -46,7 +46,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initExpress } = await import('@nrwl/express');
+  const { applicationGenerator: initExpress } = await import('@nx/express');
   await initExpress(host, {
     ...options,
     skipFormat: true,

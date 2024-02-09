@@ -1,6 +1,5 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "cli": "nx",
   "id": "NxRelease",
   "title": "",
   "type": "object",
@@ -15,5 +14,7 @@
       "x-prompt": "Which project do you want to add semantic release to?"
     }
   },
-  "required": ["project"]
+  "required": [
+    "project"
+  ]
 }

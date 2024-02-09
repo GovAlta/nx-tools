@@ -1,5 +1,5 @@
-import { addDependenciesToPackageJson } from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { addDependenciesToPackageJson } from '@nx/devkit';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import appGenerator from '@nx-dotnet/core/src/generators/app/generator';
 import refGenerator from '@nx-dotnet/core/src/generators/nuget-reference/generator';
 

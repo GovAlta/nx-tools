@@ -1,4 +1,4 @@
-import { ExecutorContext } from '@nrwl/devkit';
+import { ExecutorContext } from '@nx/devkit';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { runOcCommand } from '../../utils/oc-utils';
 import { NormalizedSchema, PipelineEnvironment, Schema } from './schema';

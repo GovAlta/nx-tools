@@ -1,4 +1,4 @@
-import { formatFiles, generateFiles, Tree } from '@nrwl/devkit';
+import { formatFiles, generateFiles, Tree } from '@nx/devkit';
 import * as path from 'path';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';

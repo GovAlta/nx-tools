@@ -1,5 +1,5 @@
-import { readProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { readProjectConfiguration } from '@nx/devkit';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
 import { environments } from '@abgov/nx-oc';
