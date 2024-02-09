@@ -110,7 +110,6 @@ export default async function (host: Tree, options: Schema) {
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
     e2eTestRunner: 'cypress',
-    babelJest: false,
     strict: false,
   });
 
