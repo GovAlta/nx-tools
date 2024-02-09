@@ -1,4 +1,3 @@
-import { installedCypressVersion } from '@nrwl/cypress/src/utils/cypress-version';
 import {
   formatFiles,
   generateFiles,
