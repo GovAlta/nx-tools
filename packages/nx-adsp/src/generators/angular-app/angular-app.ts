@@ -21,7 +21,6 @@ async function normalizeOptions(
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
-  const projectOrg = getWorkspaceLayout(host).npmScope;
   const openshiftDirectory = `.openshift/${projectName}`;
 
   const adsp = await getAdspConfiguration(host, options);
@@ -37,7 +36,7 @@ async function normalizeOptions(
     projectName,
     projectRoot,
     openshiftDirectory,
-    projectOrg,
+    projectOrg: projectName,
     adsp,
     nginxProxies,
   };
