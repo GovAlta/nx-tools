@@ -11,7 +11,7 @@ import {
   Tree,
   updateProjectConfiguration,
   writeJson,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import * as path from 'path';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
@@ -102,7 +102,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initAngular } = await import(
-    '@nrwl/angular/generators'
+    '@nx/angular/generators'
   );
   await initAngular(host, { name: options.name });
 

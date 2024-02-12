@@ -1,6 +1,6 @@
 import * as utils from '@abgov/nx-oc';
-import { addProjectConfiguration } from '@nrwl/devkit';
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { addProjectConfiguration } from '@nx/devkit';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import axios from 'axios';
 import { prompt } from 'enquirer';
 
@@ -88,7 +88,7 @@ describe('React Form Generator', () => {
       projectType: 'application',
       targets: {
         build: {
-          executor: '@nrwl/web:webpack',
+          executor: '@nx/web:webpack',
         },
       },
     });

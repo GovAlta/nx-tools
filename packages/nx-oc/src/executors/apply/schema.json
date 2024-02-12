@@ -2,7 +2,6 @@
   "version": 2,
   "outputCapture": "direct-nodejs",
   "$schema": "http://json-schema.org/schema",
-  "cli": "nx",
   "title": "Apply executor",
   "description": "",
   "type": "object",
@@ -36,5 +35,7 @@
       ]
     }
   },
-  "required": ["ocProject"]
+  "required": [
+    "ocProject"
+  ]
 }

@@ -8,8 +8,8 @@ export default {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
-    '@nrwl/angular/src/utils/test-runners':
-      '<rootDir>/../../node_modules/@nrwl/angular/src/utils/test-runners.js',
+    '@nx/angular/src/utils/test-runners':
+      '<rootDir>/../../node_modules/@nx/angular/src/utils/test-runners.js',
   },
   coverageDirectory: '../../coverage/packages/nx-adsp',
   testEnvironment: 'node',

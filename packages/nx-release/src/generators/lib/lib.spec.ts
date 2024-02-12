@@ -1,11 +1,11 @@
-import { createTreeWithEmptyWorkspace } from '@nrwl/devkit/testing';
+import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import {
   Tree,
   readProjectConfiguration,
   addProjectConfiguration,
   writeJson,
   readJson,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 
 import generator from './lib';
 import { Schema } from './schema';
@@ -21,7 +21,7 @@ describe('nx-release generator', () => {
       projectType: 'library',
       targets: {
         build: {
-          executor: '@nrwl/node:package',
+          executor: '@nx/node:package',
           options: {
             outputPath: 'dist/libs/test',
           },

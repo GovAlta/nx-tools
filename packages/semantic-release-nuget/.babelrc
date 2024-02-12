@@ -1,5 +1,3 @@
 {
-  "presets": [
-    "@nrwl/web/babel"
-  ]
+  "presets": ["@nx/web/babel"]
 }
