@@ -8,7 +8,7 @@ import {
   names,
   Tree,
 } from '@nx/devkit';
-import { Linter } from '@nx/linter';
+import { Linter } from '@nx/eslint';
 import * as path from 'path';
 import { Schema, NormalizedSchema } from './schema';
 
