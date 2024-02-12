@@ -5,7 +5,7 @@
   "sourceRoot": "e2e/nx-adsp-e2e/src",
   "targets": {
     "e2e": {
-      "executor": "@nrwl/nx-plugin:e2e",
+      "executor": "@nx/plugin:e2e",
       "options": {
         "target": "nx-adsp:build",
         "npmPackageName": "@abgov/nx-adsp",

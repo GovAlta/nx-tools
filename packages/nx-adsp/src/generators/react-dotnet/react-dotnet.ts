@@ -4,7 +4,7 @@ import {
   installPackagesTask,
   names,
   Tree,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import initDotnetService from '../dotnet-service/dotnet-service';
 import initReactApp from '../react-app/react-app';
 import { NormalizedSchema, Schema } from './schema';

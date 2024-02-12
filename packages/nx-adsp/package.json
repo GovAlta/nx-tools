@@ -10,11 +10,11 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@nrwl/angular": "^15.0.0",
-    "@nrwl/devkit": "^15.0.0",
-    "@nrwl/express": "^15.0.0",
-    "@nrwl/react": "^15.0.0",
-    "@nx-dotnet/core": "^1.16.0"
+    "@nx-dotnet/core": "^1.16.0",
+    "@nx/devkit": "16.0.0",
+    "@nx/react": "16.0.0",
+    "@nx/express": "16.0.0",
+    "@nx/angular": "16.0.0"
   },
   "dependencies": {
     "@abgov/nx-oc": "^5.5.0",

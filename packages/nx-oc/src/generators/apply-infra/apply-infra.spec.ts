@@ -1,24 +1,23 @@
-import { createTree } from '@nrwl/devkit/testing';
-import { mocked } from 'jest-mock'
+import { createTree } from '@nx/devkit/testing';
+import { mocked } from 'jest-mock';
 import generator from './apply-infra';
 import { runOcCommand } from '../../utils/oc-utils';
-import { writeJson } from '@nrwl/devkit';
+import { writeJson } from '@nx/devkit';
 
 jest.mock('../../utils/oc-utils');
 const mockedRunOcCommand = mocked(runOcCommand);
 
 describe('Apply Infra Generator', () => {
-
   beforeEach(() => {
     mockedRunOcCommand.mockReset();
   });
 
-  it ('can run', async () => {
+  it('can run', async () => {
     const host = createTree();
     writeJson(host, '.openshift/environment.infra.yml', {});
     writeJson(host, '.openshift/environment.env.yml', {});
 
-    mockedRunOcCommand.mockReturnValue({success: true });
+    mockedRunOcCommand.mockReturnValue({ success: true });
 
     await generator(host);
 

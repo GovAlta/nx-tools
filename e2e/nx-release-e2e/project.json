@@ -5,7 +5,7 @@
   "sourceRoot": "e2e/nx-release-e2e/src",
   "targets": {
     "e2e": {
-      "executor": "@nrwl/nx-plugin:e2e",
+      "executor": "@nx/plugin:e2e",
       "options": {
         "target": "nx-release:build",
         "npmPackageName": "@abgov/nx-release",
