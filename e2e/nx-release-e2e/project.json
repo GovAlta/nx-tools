@@ -5,13 +5,14 @@
   "sourceRoot": "e2e/nx-release-e2e/src",
   "targets": {
     "e2e": {
-      "executor": "@nx/plugin:e2e",
+      "executor": "@nx/jest:jest",
       "options": {
-        "target": "nx-release:build",
         "npmPackageName": "@abgov/nx-release",
         "pluginOutputPath": "dist/packages/nx-release",
-        "jestConfig": "e2e/nx-release-e2e/jest.config.js"
-      }
+        "jestConfig": "e2e/nx-release-e2e/jest.config.js",
+        "runInBand": true
+      },
+      "dependsOn": ["nx-release:build"]
     }
   },
   "tags": [],
