@@ -3,13 +3,10 @@ import {
   ensureNxProject,
   runNxCommandAsync,
   uniq,
-} from '@nrwl/nx-plugin/testing';
+} from '@nx/plugin/testing';
 
 describe('nx-adsp e2e', () => {
-
-  beforeEach(() =>
-    ensureNxProject('@abgov/nx-adsp', 'dist/packages/nx-adsp')
-  );
+  beforeEach(() => ensureNxProject('@abgov/nx-adsp', 'dist/packages/nx-adsp'));
 
   describe('express service', () => {
     it('should create express-service', async (done) => {
@@ -17,9 +14,7 @@ describe('nx-adsp e2e', () => {
       const result = await runNxCommandAsync(
         `generate @abgov/nx-adsp:express-service ${plugin} test`
       );
-      expect(() =>
-        checkFilesExist(`apps/${plugin}/src/main.ts`)
-      ).not.toThrow();
+      expect(() => checkFilesExist(`apps/${plugin}/src/main.ts`)).not.toThrow();
 
       done();
     }, 60000);
@@ -45,8 +40,8 @@ describe('nx-adsp e2e', () => {
       const result = await runNxCommandAsync(
         `generate @abgov/nx-adsp:react-app ${plugin} test`
       );
-      expect(() =>
-        {}// checkFilesExist(`apps/${plugin}/src/main.ts`)
+      expect(
+        () => {} // checkFilesExist(`apps/${plugin}/src/main.ts`)
       ).not.toThrow();
 
       done();
@@ -55,7 +50,9 @@ describe('nx-adsp e2e', () => {
 
   it('should create angular app', async (done) => {
     const plugin = uniq('angular-app');
-    await runNxCommandAsync(`generate @abgov/nx-adsp:angular-app ${plugin} test`);
+    await runNxCommandAsync(
+      `generate @abgov/nx-adsp:angular-app ${plugin} test`
+    );
 
     const result = await runNxCommandAsync(`build ${plugin}`);
     expect(result.stdout).toContain('Executor ran');

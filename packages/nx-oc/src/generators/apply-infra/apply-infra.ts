@@ -1,19 +1,16 @@
-import {
-  Tree,
-} from '@nrwl/devkit';
+import { Tree } from '@nx/devkit';
 import { runOcCommand } from '../../utils/oc-utils';
 
 function applyOcResources(host: Tree) {
-
   const { success: pipelineApplied, stdout: pipelineOut } = runOcCommand(
-    'apply', 
+    'apply',
     [],
     host.read('.openshift/environment.infra.yml')
   );
   console.log(pipelineOut?.toString());
-  
+
   const { success: envApplied, stdout: envOut } = runOcCommand(
-    'apply', 
+    'apply',
     [],
     host.read('.openshift/environments.yml')
   );

@@ -10,7 +10,7 @@ import {
   generateFiles,
   getWorkspaceLayout,
   names,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import axios from 'axios';
 import { prompt } from 'enquirer';
 import * as path from 'path';
