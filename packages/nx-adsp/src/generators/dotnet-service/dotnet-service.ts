@@ -72,7 +72,7 @@ export default async function (host: Tree, options: Schema) {
   await refGenerator(host, {
     project: normalizedOptions.projectName,
     packageName: 'Adsp.Sdk',
-    version: '1.*',
+    version: '2.*',
   });
 
   addFiles(host, normalizedOptions);
