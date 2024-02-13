@@ -39,7 +39,6 @@
     "@angular-devkit/core": "16.2.12",
     "@angular-devkit/schematics": "16.2.12",
     "@nrwl/cli": "15.9.2",
-    "@nrwl/devkit": "14.7.17",
     "@nx-dotnet/core": "^1.16.3",
     "@nx/angular": "16.10.0",
     "@nx/eslint-plugin": "16.10.0",
@@ -87,6 +86,7 @@
     "yaml": "~2.2.2"
   },
   "overrides": {
+    "@nrwl/devkit": "$@nx/devkit",
     "@nx/devkit": "16.10.0",
     "nx": "16.10.0",
     "semver": "^7.3.4",
