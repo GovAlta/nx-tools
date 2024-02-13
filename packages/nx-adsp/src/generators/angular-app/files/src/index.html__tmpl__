@@ -8,6 +8,6 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>
-    <<%= projectOrg %>-app-root></<%= projectOrg %>-app-root>
+    <<%= projectName %>-app-root></<%= projectName %>-app-root>
   </body>
 </html>

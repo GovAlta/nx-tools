@@ -4,7 +4,7 @@ import { environment } from '../environments/environment'
 
 
 @Component({
-  selector: '<%= projectOrg %>-app-root',
+  selector: '<%= projectName %>-app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })

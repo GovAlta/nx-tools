@@ -1,4 +1,3 @@
-import { installedCypressVersion } from '@nrwl/cypress/src/utils/cypress-version';
 import {
   formatFiles,
   generateFiles,
@@ -7,7 +6,7 @@ import {
   names,
   offsetFromRoot,
   Tree,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import * as path from 'path';
 import { getAdspConfiguration } from '@abgov/nx-oc';
 import initExpressService from '../express-service/express-service';
@@ -57,7 +56,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
-export default async function (host: Tree, options: Schema) {
+export default async function(host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   await initExpressService(host, {

@@ -7,8 +7,8 @@ import {
   installPackagesTask,
   names,
   Tree,
-} from '@nrwl/devkit';
-import { Linter } from '@nrwl/linter';
+} from '@nx/devkit';
+import { Linter } from '@nx/linter';
 import * as path from 'path';
 import { Schema, NormalizedSchema } from './schema';
 
@@ -46,7 +46,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initExpress } = await import('@nrwl/express');
+  const { applicationGenerator: initExpress } = await import('@nx/express');
   await initExpress(host, {
     ...options,
     skipFormat: true,
@@ -60,7 +60,7 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/adsp-service-sdk': '^1.18.0',
+      '@abgov/adsp-service-sdk': '^2.0.0',
       dotenv: '^16.0.0',
       passport: '^0.6.0',
       'passport-anonymous': '^1.0.1',

@@ -5,7 +5,7 @@ import {
   readProjectConfiguration,
   Tree,
   updateProjectConfiguration,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
@@ -35,17 +35,17 @@ async function normalizeOptions(
   let appType: ApplicationType = options.appType;
   if (!appType) {
     switch (config.targets.build.executor) {
-      case '@nrwl/web:webpack':
+      case '@nx/web:webpack':
       case '@angular-devkit/build-angular:browser':
         appType = 'frontend';
         break;
-      case '@nrwl/node:build':
+      case '@nx/node:build':
         appType = 'node';
         break;
       case '@nx-dotnet/core:build':
         appType = 'dotnet';
         break;
-      case '@nrwl/webpack:webpack': {
+      case '@nx/webpack:webpack': {
         // More recent version of NX switched to use a generic webpack executor for builds.
         appType =
           config.targets.build.options.target === 'node' ? 'node' : 'frontend';
@@ -90,7 +90,7 @@ export default async function (host: Tree, options: Schema) {
 
   if (!host.exists(infraManifestFile)) {
     console.log(
-      `Cannot generate deployment; run 'nx g @abgov/nx-oc:workspace' first.`
+      `Cannot generate deployment; run 'nx g @abgov/nx-oc:pipeline' first.`
     );
     return;
   }

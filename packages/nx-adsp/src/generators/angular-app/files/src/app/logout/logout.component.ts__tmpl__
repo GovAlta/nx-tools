@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: '<%= projectOrg %>-app-logout',
+  selector: '<%= projectName %>-app-logout',
   templateUrl: 'logout.component.html',
 })
 export class LogoutComponent {

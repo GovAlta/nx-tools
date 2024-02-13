@@ -11,7 +11,7 @@ import {
   Tree,
   updateProjectConfiguration,
   writeJson,
-} from '@nrwl/devkit';
+} from '@nx/devkit';
 import * as path from 'path';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
@@ -21,7 +21,6 @@ async function normalizeOptions(
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
-  const projectOrg = getWorkspaceLayout(host).npmScope;
   const openshiftDirectory = `.openshift/${projectName}`;
 
   const adsp = await getAdspConfiguration(host, options);
@@ -37,7 +36,6 @@ async function normalizeOptions(
     projectName,
     projectRoot,
     openshiftDirectory,
-    projectOrg,
     adsp,
     nginxProxies,
   };
@@ -102,7 +100,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initAngular } = await import(
-    '@nrwl/angular/generators'
+    '@nx/angular/generators'
   );
   await initAngular(host, { name: options.name });
 
@@ -110,8 +108,8 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     host,
     {},
     {
-      '@abgov/angular-components': '^1.7.1',
-      '@abgov/core-css': '^1.0.0',
+      '@abgov/angular-components': '^3.0.0',
+      '@abgov/web-components': '^1.19.0',
       '@angular/cdk': '^15.0.0',
       '@angular/localize': '^15.0.0',
       'html-webpack-plugin': '~5.5.0',
