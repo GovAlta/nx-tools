@@ -10,7 +10,7 @@
     "directory": "packages/nx-release"
   },
   "peerDependencies": {
-    "@nx/devkit": "^16.0.0",
+    "@nx/devkit": "^17.0.0",
     "semantic-release": "^19.0.2",
     "tslib": "^2.0.0"
   },
