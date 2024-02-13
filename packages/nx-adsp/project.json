@@ -7,7 +7,10 @@
     "lint": {
       "executor": "@nx/linter:eslint",
       "options": {
-        "lintFilePatterns": ["packages/nx-adsp/**/*.ts"]
+        "lintFilePatterns": [
+          "packages/nx-adsp/**/*.ts",
+          "packages/nx-adsp/package.json"
+        ]
       },
       "outputs": ["{options.outputFile}"]
     },
@@ -44,8 +47,7 @@
             "glob": "executors.json",
             "output": "."
           }
-        ],
-        "updateBuildableProjectDepsInPackageJson": true
+        ]
       }
     },
     "release": {
