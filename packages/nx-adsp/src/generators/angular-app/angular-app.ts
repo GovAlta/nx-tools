@@ -102,7 +102,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const { applicationGenerator: initAngular } = await import(
     '@nx/angular/generators'
   );
-  await initAngular(host, { name: options.name });
+  await initAngular(host, { name: options.name, prefix: normalizedOptions.projectName });
 
   addDependenciesToPackageJson(
     host,
