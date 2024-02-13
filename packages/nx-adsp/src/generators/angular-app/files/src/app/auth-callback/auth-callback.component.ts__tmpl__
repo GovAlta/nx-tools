@@ -3,7 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { User } from 'oidc-client';
 
 @Component({
-  selector: '<%= projectOrg %>-app-auth-callback',
+  selector: '<%= projectName %>-app-auth-callback',
   templateUrl: './auth-callback.component.html',
   styleUrls: ['./auth-callback.component.css'],
 })

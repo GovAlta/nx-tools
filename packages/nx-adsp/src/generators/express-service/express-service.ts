@@ -60,7 +60,7 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/adsp-service-sdk': '^1.18.0',
+      '@abgov/adsp-service-sdk': '^2.0.0',
       dotenv: '^16.0.0',
       passport: '^0.6.0',
       'passport-anonymous': '^1.0.1',

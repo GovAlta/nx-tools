@@ -118,8 +118,8 @@ export default async function(host: Tree, options: Schema) {
     host,
     {},
     {
-      '@abgov/react-components': '^4.11.0',
-      '@abgov/web-components': '^1.11.0',
+      '@abgov/react-components': '^4.18.0',
+      '@abgov/web-components': '^1.19.0',
       '@types/react-router-dom': '~5.3.3',
       '@types/redux-mock-store': '~1.0.2',
       'html-webpack-plugin': '~5.5.0',

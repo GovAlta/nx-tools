@@ -90,7 +90,7 @@ export default async function (host: Tree, options: Schema) {
 
   if (!host.exists(infraManifestFile)) {
     console.log(
-      `Cannot generate deployment; run 'nx g @abgov/nx-oc:workspace' first.`
+      `Cannot generate deployment; run 'nx g @abgov/nx-oc:pipeline' first.`
     );
     return;
   }
