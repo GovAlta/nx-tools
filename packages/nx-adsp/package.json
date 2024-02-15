@@ -10,15 +10,16 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@nx/angular": "^16.0.0",
-    "@nx/express": "^16.0.0",
-    "@nx/devkit": "^16.0.0",
-    "@nx/linter": "^16.0.0",
-    "@nx/react": "^16.0.0",
+    "@abgov/nx-oc": "^7.0.0",
+    "@nx-dotnet/core": "^2.0.0",
+    "@nx/angular": "^17.0.0",
+    "@nx/express": "^17.0.0",
+    "@nx/devkit": "^17.0.0",
+    "@nx/react": "^17.0.0",
+    "@nx/eslint": "^17.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {
-    "@abgov/nx-oc": "^6.0.0",
     "axios": "^1.6.0",
     "enquirer": "^2.3.6",
     "json-schema-to-typescript": "^13.0.1"

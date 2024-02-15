@@ -1,13 +1,9 @@
 <div class="app">
-  <goa-header
-    serviceLevel="alpha"
-    serviceName="Digital Service Example"
-    serviceHome="/"
-  >
-  </goa-header>
+  <goa-microsite-header type="alpha"></goa-microsite-header>
+  <goa-app-header heading="Digital Service Example" url="/"></goa-app-header>
   <goa-hero-banner
     backgroundUrl="../assets/banner.jpg"
-    title="Quick start of a digital service"
+    heading="Quick start of a digital service"
   >
   </goa-hero-banner>
   <main class="container">
@@ -31,14 +27,15 @@
       <div class="row">
         <h3><a routerLink="/">Home</a> | <a routerLink="/protected">Admin Area</a></h3>
         <div *ngIf="isLoggedIn(); else elseBlock">
-          <button goa-button (click)="logout()">
+          <goa-button (click)="logout()">
             Sign Out
-          </button>
+          </goa-button>
         </div>
         <ng-template #elseBlock>
-          <button goa-button (click)="login()">
+          <goa-button (click)="login()">
             Sign In
-          </button></ng-template>
+          </goa-button>
+        </ng-template>
         <div class="col-sm-12 body-content">
           <router-outlet></router-outlet>
         </div>

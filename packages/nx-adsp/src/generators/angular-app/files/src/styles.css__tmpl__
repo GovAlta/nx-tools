@@ -1,7 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
-@import '~@abgov/angular-components/theme.css';
-@import '~@abgov/core-css/goa-core.css';
-@import '~@abgov/core-css/goa-components.css';
+@import "@abgov/web-components/index.css";
 
 body {
   margin: 0px;
