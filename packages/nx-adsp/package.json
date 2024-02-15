@@ -10,11 +10,11 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@nx/angular": "^16.0.0",
-    "@nx/express": "^16.0.0",
-    "@nx/devkit": "^16.0.0",
-    "@nx/linter": "^16.0.0",
-    "@nx/react": "^16.0.0",
+    "@nx/angular": "^17.0.0",
+    "@nx/express": "^17.0.0",
+    "@nx/devkit": "^17.0.0",
+    "@nx/react": "^17.0.0",
+    "@nx/eslint": "^17.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {

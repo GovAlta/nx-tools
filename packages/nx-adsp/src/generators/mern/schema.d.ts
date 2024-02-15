@@ -1,5 +1,4 @@
-import { AdspConfiguration } from '../../../../plugin-common/src/lib/adsp';
-import { EnvironmentName } from '../../../../plugin-common/src/lib/environments';
+import { AdspConfiguration, EnvironmentName } from '@abgov/nx-oc';
 
 export interface Schema {
   name: string;

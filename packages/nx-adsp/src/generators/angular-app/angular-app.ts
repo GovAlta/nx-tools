@@ -28,8 +28,8 @@ async function normalizeOptions(
   const nginxProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
-    ? [options.proxy]
-    : [];
+      ? [options.proxy]
+      : [];
 
   return {
     ...options,
@@ -64,9 +64,8 @@ function addFiles(host: Tree, options: NormalizedSchema) {
         const upstreamUrl = new URL(nginxProxy.proxyPass);
 
         const proxy = {
-          target: `${upstreamUrl.protocol}//localhost${
-            upstreamUrl.port ? ':' + upstreamUrl.port : ''
-          }`,
+          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''
+            }`,
           secure: upstreamUrl.protocol === 'https:',
           changeOrigin: false,
           pathRewrite: {},
@@ -96,7 +95,7 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
   host.delete(`${options.projectRoot}/src/app/star.svg`);
 }
 
-export default async function (host: Tree, options: AngularAppGeneratorSchema) {
+export default async function(host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initAngular } = await import(
