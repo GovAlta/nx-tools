@@ -3,6 +3,8 @@ import {
   getAdspConfiguration,
   hasDependency,
 } from '@abgov/nx-oc';
+import { default as appGenerator } from '@nx-dotnet/core/src/generators/app/generator';
+import { default as refGenerator } from '@nx-dotnet/core/src/generators/nuget-reference/generator';
 import {
   generateFiles,
   getWorkspaceLayout,
@@ -51,14 +53,6 @@ export default async function (host: Tree, options: Schema) {
 
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { default: appGenerator } = await import(
-    `${'@nx-dotnet/core/src/generators/app/generator'}`
-  );
-
-  const { default: refGenerator } = await import(
-    `${'@nx-dotnet/core/src/generators/nuget-reference/generator'}`
-  );
-
   await appGenerator(host, {
     name: normalizedOptions.projectName,
     template: 'webapi',
@@ -70,6 +64,7 @@ export default async function (host: Tree, options: Schema) {
   });
 
   await refGenerator(host, {
+    allowVersionMismatch: false,
     project: normalizedOptions.projectName,
     packageName: 'Adsp.Sdk',
     version: '2.*',
