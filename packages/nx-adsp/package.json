@@ -10,6 +10,8 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
+    "@abgov/nx-oc": "^7.0.0",
+    "@nx-dotnet/core": "^2.0.0",
     "@nx/angular": "^17.0.0",
     "@nx/express": "^17.0.0",
     "@nx/devkit": "^17.0.0",
@@ -18,7 +20,6 @@
     "tslib": "^2.0.0"
   },
   "dependencies": {
-    "@abgov/nx-oc": "^6.0.0",
     "axios": "^1.6.0",
     "enquirer": "^2.3.6",
     "json-schema-to-typescript": "^13.0.1"
