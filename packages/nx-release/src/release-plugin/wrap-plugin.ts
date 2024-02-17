@@ -1,11 +1,11 @@
 import { workspaceRoot } from '@nx/devkit';
 import {
-  Context,
   PluginConfig,
   PluginFunction,
 } from '@semantic-release/semantic-release';
 import { getPathCommitHashes } from './git-utils';
 import { getProjectChangePaths } from './nx-util';
+import { VerifyReleaseContext } from 'semantic-release';
 
 export interface WrappedPluginConfig extends PluginConfig {
   project: string;
@@ -15,7 +15,7 @@ export const wrapPlugin =
   (plugin: PluginFunction) =>
   async (
     { project, ...pluginConfig }: WrappedPluginConfig,
-    context: Context
+    context: VerifyReleaseContext
   ) => {
     const { commits, logger } = context;
     let filteredCommits = commits;
@@ -52,5 +52,8 @@ export const wrapPlugin =
       });
     }
 
-    return await plugin(pluginConfig, { ...context, commits: filteredCommits });
+    return await plugin(pluginConfig, {
+      ...context,
+      commits: [...filteredCommits] as const,
+    });
   };

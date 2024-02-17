@@ -1,12 +1,5 @@
 declare namespace SemanticRelease {
    import('semantic-release');
-   import { Commit, Context as BaseContext } from 'semantic-release';
-
-   interface Context extends BaseContext {
-      cwd: string;
-      env: Record<string, string>;
-      commits: Commit[];
-   }
 
    type PluginConfig = Record<string, unknown>
 
