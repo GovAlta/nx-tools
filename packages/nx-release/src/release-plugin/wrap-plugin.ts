@@ -1,9 +1,9 @@
 import { workspaceRoot } from '@nx/devkit';
 import {
-  Context,
   PluginConfig,
   PluginFunction,
 } from '@semantic-release/semantic-release';
+import { BaseContext } from 'semantic-release';
 import { getPathCommitHashes } from './git-utils';
 import { getProjectChangePaths } from './nx-util';
 
@@ -12,12 +12,10 @@ export interface WrappedPluginConfig extends PluginConfig {
 }
 
 export const wrapPlugin =
-  (plugin: PluginFunction) =>
-  async (
-    { project, ...pluginConfig }: WrappedPluginConfig,
-    context: Context
-  ) => {
-    const { commits, logger } = context;
+  <T extends BaseContext>(plugin: PluginFunction<T>) =>
+  async ({ project, ...pluginConfig }: WrappedPluginConfig, context: T) => {
+    const { logger } = context;
+    const commits = context['commits'];
     let filteredCommits = commits;
 
     if (!project) {
@@ -30,8 +28,8 @@ export const wrapPlugin =
       const paths = await getProjectChangePaths(workspaceRoot, project);
       logger.log(`Resolved to paths: ${paths.join(', ')}...`);
 
-      const from = context.lastRelease?.gitHead;
-      const to = context.nextRelease?.gitHead;
+      const from = context['lastRelease']?.gitHead;
+      const to = context['nextRelease']?.gitHead;
 
       const hashes = await getPathCommitHashes(
         workspaceRoot,
@@ -52,5 +50,8 @@ export const wrapPlugin =
       });
     }
 
-    return await plugin(pluginConfig, { ...context, commits: filteredCommits });
+    return await plugin(pluginConfig, {
+      ...context,
+      commits: [...filteredCommits] as const,
+    });
   };

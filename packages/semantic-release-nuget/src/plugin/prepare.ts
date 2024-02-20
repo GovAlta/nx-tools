@@ -1,11 +1,11 @@
 import { PluginFunction } from '@semantic-release/semantic-release';
+import { PrepareContext } from 'semantic-release';
 import { exec as execCb } from 'child_process';
 import { promisify } from 'util';
 import { NugetPluginConfig } from './config';
-
 const exec = promisify(execCb);
 
-export const prepare: PluginFunction = async (
+export const prepare: PluginFunction<PrepareContext> = async (
   config: NugetPluginConfig,
   context
 ) => {
