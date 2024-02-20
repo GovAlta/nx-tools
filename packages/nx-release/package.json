@@ -6,7 +6,7 @@
   "description": "Government of Alberta - Nx plugin for Semantic Release.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GovAlta/nx-tools.git",
+    "url": "git+https://github.com/GovAlta/nx-tools.git",
     "directory": "packages/nx-release"
   },
   "peerDependencies": {
@@ -20,5 +20,6 @@
     "get-stream": "~6.0.0",
     "split2": "~3.2.2"
   },
-  "generators": "./generators.json"
+  "generators": "./generators.json",
+  "scripts": {}
 }

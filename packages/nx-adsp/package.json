@@ -6,7 +6,7 @@
   "description": "Government of Alberta - Nx plugin for ADSP apps.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GovAlta/nx-tools.git",
+    "url": "git+https://github.com/GovAlta/nx-tools.git",
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
@@ -24,5 +24,6 @@
     "enquirer": "^2.3.6",
     "json-schema-to-typescript": "^13.0.1"
   },
-  "generators": "./generators.json"
+  "generators": "./generators.json",
+  "scripts": {}
 }
