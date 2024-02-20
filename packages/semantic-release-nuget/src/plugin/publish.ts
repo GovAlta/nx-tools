@@ -1,4 +1,5 @@
 import { PluginFunction } from '@semantic-release/semantic-release';
+import { PublishContext } from 'semantic-release';
 import { exec as execCb } from 'child_process';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -6,7 +7,7 @@ import { NugetPluginConfig } from './config';
 
 const exec = promisify(execCb);
 
-export const publish: PluginFunction = async (
+export const publish: PluginFunction<PublishContext> = async (
   config: NugetPluginConfig,
   context
 ) => {

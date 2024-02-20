@@ -3,21 +3,19 @@ import {
   PluginConfig,
   PluginFunction,
 } from '@semantic-release/semantic-release';
+import { BaseContext } from 'semantic-release';
 import { getPathCommitHashes } from './git-utils';
 import { getProjectChangePaths } from './nx-util';
-import { VerifyReleaseContext } from 'semantic-release';
 
 export interface WrappedPluginConfig extends PluginConfig {
   project: string;
 }
 
 export const wrapPlugin =
-  (plugin: PluginFunction) =>
-  async (
-    { project, ...pluginConfig }: WrappedPluginConfig,
-    context: VerifyReleaseContext
-  ) => {
-    const { commits, logger } = context;
+  <T extends BaseContext>(plugin: PluginFunction<T>) =>
+  async ({ project, ...pluginConfig }: WrappedPluginConfig, context: T) => {
+    const { logger } = context;
+    const commits = context['commits'];
     let filteredCommits = commits;
 
     if (!project) {
@@ -30,8 +28,8 @@ export const wrapPlugin =
       const paths = await getProjectChangePaths(workspaceRoot, project);
       logger.log(`Resolved to paths: ${paths.join(', ')}...`);
 
-      const from = context.lastRelease?.gitHead;
-      const to = context.nextRelease?.gitHead;
+      const from = context['lastRelease']?.gitHead;
+      const to = context['nextRelease']?.gitHead;
 
       const hashes = await getPathCommitHashes(
         workspaceRoot,
