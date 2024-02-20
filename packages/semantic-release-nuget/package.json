@@ -6,7 +6,7 @@
   "description": "Government of Alberta - Semantic release plugin for nuget.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/abgov/nx-tools.git",
+    "url": "https://github.com/GovAlta/nx-tools.git",
     "directory": "packages/semantic-release-nuget"
   }
 }
