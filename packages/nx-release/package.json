@@ -6,19 +6,20 @@
   "description": "Government of Alberta - Nx plugin for Semantic Release.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/abgov/nx-tools.git",
+    "url": "git+https://github.com/GovAlta/nx-tools.git",
     "directory": "packages/nx-release"
   },
   "peerDependencies": {
     "@nx/devkit": "^18.0.0",
-    "semantic-release": "^19.0.2",
+    "semantic-release": "^23.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {
-    "@semantic-release/commit-analyzer": "~9.0.2",
-    "@semantic-release/release-notes-generator": "~10.0.3",
+    "@semantic-release/commit-analyzer": "^11.1.0",
+    "@semantic-release/release-notes-generator": "^12.1.0",
     "get-stream": "~6.0.0",
     "split2": "~3.2.2"
   },
-  "generators": "./generators.json"
+  "generators": "./generators.json",
+  "scripts": {}
 }

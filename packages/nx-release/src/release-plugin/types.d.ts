@@ -1,50 +1,43 @@
 declare namespace SemanticRelease {
-   import('semantic-release');
-   import { Commit, Context as BaseContext } from 'semantic-release';
+  import('semantic-release');
+  import { BaseContext } from 'semantic-release';
 
-   interface Context extends BaseContext {
-      cwd: string;
-      env: Record<string, string>;
-      commits: Commit[];
-   }
+  type PluginConfig = Record<string, unknown>;
 
-   type PluginConfig = Record<string, unknown>
-
-   type PluginFunction = 
-      (pluginConfig: PluginConfig, context: Context) => Promise<ReleaseType>
+  type PluginFunction<T extends BaseContext> = (
+    pluginConfig: PluginConfig,
+    context: Context
+  ) => Promise<ReleaseType>;
 }
 
 declare module '@semantic-release/semantic-release' {
-   export = SemanticRelease
+  export = SemanticRelease;
 }
 
 declare namespace CommitAnalyzer {
+  type ReleaseType = string;
 
-   type ReleaseType = string;
-   
-   const analyzeCommits: SemanticRelease.PluginFunction
+  const analyzeCommits: SemanticRelease.PluginFunction;
 
-   module.exports = { analyzeCommits }
+  module.exports = { analyzeCommits };
 }
 
 declare module '@semantic-release/commit-analyzer' {
-   export = CommitAnalyzer; 
+  export = CommitAnalyzer;
 }
 
 declare module '@semantic-release/semantic-release' {
-   export = SemanticRelease
+  export = SemanticRelease;
 }
 
 declare namespace ReleaseNotesGenerator {
+  type ReleaseType = string;
 
-   type ReleaseType = string;
-   
-   const generateNotes: SemanticRelease.PluginFunction
+  const generateNotes: SemanticRelease.PluginFunction;
 
-   module.exports = { generateNotes }
+  module.exports = { generateNotes };
 }
 
 declare module '@semantic-release/release-notes-generator' {
-   export = ReleaseNotesGenerator; 
+  export = ReleaseNotesGenerator;
 }
-

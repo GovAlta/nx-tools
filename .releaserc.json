@@ -1,5 +1,5 @@
 {
-  "repositoryUrl": "git@github.com:abgov/nx-tools.git",
+  "repositoryUrl": "git@github.com:GovAlta/nx-tools.git",
   "branches": [
     "+([0-9])?(.{+([0-9]),x}).x", 
     "main",
