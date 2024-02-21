@@ -27,7 +27,7 @@
       "type": "string",
       "description": "Jenkins or GitHub Actions based pipeline.",
       "alias": "t",
-      "x-prompt": "Generate a Jenkins (jenkins) based pipeline or a GitHub Actions (actions) pipeline?"
+      "default": "actions"
     },
     "envs": {
       "type": "string",
