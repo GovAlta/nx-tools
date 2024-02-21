@@ -1,6 +1,5 @@
 declare namespace SemanticRelease {
-  import('semantic-release');
-  import { BaseContext } from 'semantic-release';
+  import type { BaseContext } from 'semantic-release';
 
   type PluginConfig = Record<string, unknown>;
 
