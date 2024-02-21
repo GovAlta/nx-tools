@@ -62,7 +62,12 @@ jobs:
         run: npx nx affected --target=build --base=${{ env.AFFECTED_BASE }} --configuration production
       # Set affected apps to env for later steps and jobs.
       - name: Set AFFECTED_APPS for OC steps
-        run: echo "AFFECTED_APPS=$(npx nx affected:apps --plain --base=${{ env.AFFECTED_BASE }})" >> $GITHUB_ENV
+        run: |
+          {
+            echo 'AFFECTED_APPS<<EOF'
+            npx nx show projects --affected --type=app --base=${{ env.AFFECTED_BASE }}
+            echo EOF
+          } >> "$GITHUB_ENV"
       - run: npm prune --production
       
       # Run the OC BuildConfigs for create containers.
@@ -85,7 +90,12 @@ jobs:
           done 
       # Set build job outputs for subsequent jobs.
       - id: set_outputs
-        run: echo "affected_apps=$AFFECTED_APPS" >> $GITHUB_OUTPUT
+        run: |
+          {
+            echo 'affected-apps<<EOF'
+            echo $AFFECTED_APPS
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 <% ocEnvProjects.forEach(function(ocEnvProject, i){ -%>
   
   deploy<%= envs[i] %>:
