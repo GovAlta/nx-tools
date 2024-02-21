@@ -1,11 +1,11 @@
 import { workspaceRoot } from '@nx/devkit';
-import {
+import type {
   PluginConfig,
   PluginFunction,
 } from '@semantic-release/semantic-release';
-import { BaseContext } from 'semantic-release';
-import { getPathCommitHashes } from './git-utils';
-import { getProjectChangePaths } from './nx-util';
+import type { BaseContext } from 'semantic-release';
+import { getPathCommitHashes } from './git-utils.js';
+import { getProjectChangePaths } from './nx-util.js';
 
 export interface WrappedPluginConfig extends PluginConfig {
   project: string;

@@ -1,4 +1,4 @@
-import { Commit, VerifyReleaseContext } from 'semantic-release';
+import type { Commit, VerifyReleaseContext } from 'semantic-release';
 import { mocked } from 'jest-mock';
 import { wrapPlugin } from './wrap-plugin';
 import { getProjectChangePaths } from './nx-util';
