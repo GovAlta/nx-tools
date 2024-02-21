@@ -46,12 +46,12 @@ export default async function (host: Tree, options: Schema) {
       host,
       {},
       {
-        'semantic-release': '~17.4.2',
+        'semantic-release': '^23.0.0',
       }
     );
 
     config.targets.release = {
-      executor: '@nx/workspace:run-commands',
+      executor: 'nx:run-commands',
       options: {
         command: `npx semantic-release -e ./${config.root}/.releaserc.json`,
       },
