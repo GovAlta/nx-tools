@@ -18,7 +18,7 @@
     "@semantic-release/commit-analyzer": "^11.1.0",
     "@semantic-release/release-notes-generator": "^12.1.0",
     "get-stream": "~6.0.0",
-    "split2": "~3.2.2"
+    "split2": "~4.2.0"
   },
   "generators": "./generators.json",
   "scripts": {}
