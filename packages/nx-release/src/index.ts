@@ -1,1 +1,1 @@
-export * from './release-plugin';
+export * from './release-plugin/index.js';
