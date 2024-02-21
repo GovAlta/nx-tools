@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { array } from 'get-stream';
-import * as split from 'split2';
+import split from 'split2';
 
 const projectCommits: Record<string, string[]> = {};
 
