@@ -41,6 +41,7 @@
     "@angular-devkit/schematics": "17.3.9",
     "@nx-dotnet/core": "^2.2.0",
     "@nx/angular": "18.3.5",
+    "@nx/cypress": "18.3.5",
     "@nx/eslint": "18.3.5",
     "@nx/eslint-plugin": "18.3.5",
     "@nx/express": "18.3.5",
