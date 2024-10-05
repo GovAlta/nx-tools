@@ -88,6 +88,7 @@
   "overrides": {
     "@angular-devkit/build-angular": "18.2.7",
     "@angular/compiler-cli": "18.2.7",
+    "@nx/devkit": "19.8.4",
     "semantic-release": "^23.0.2",
     "semver": "^7.3.4"
   }
