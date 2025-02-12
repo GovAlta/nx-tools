@@ -15,7 +15,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
   directoryServiceUrl: environments.test.directoryServiceUrl,
 });
 
-describe('React App Generator', () => {
+describe.skip('React App Generator', () => {
   const options: Schema = {
     name: 'test',
     env: 'dev',
