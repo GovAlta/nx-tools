@@ -53,8 +53,8 @@ export default async function (host: Tree, options: Schema) {
     skipPackageJson: false,
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
-    pascalCaseFiles: false,
     js: false,
+    directory: `apps/${options.name}`,
   });
 
   addDependenciesToPackageJson(

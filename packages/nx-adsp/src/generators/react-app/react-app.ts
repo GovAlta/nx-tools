@@ -111,9 +111,13 @@ export default async function (host: Tree, options: Schema) {
     unitTestRunner: 'jest',
     e2eTestRunner: 'cypress',
     strict: false,
+    directory: `apps/${options.name}`,
   });
 
-  await initRedux(host, { name: 'intake', project: options.name });
+  await initRedux(host, {
+    name: 'intake',
+    path: `apps/${options.name}/src/state/intake.slice.ts`,
+  });
 
   addDependenciesToPackageJson(
     host,
