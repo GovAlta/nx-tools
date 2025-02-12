@@ -41,5 +41,6 @@
     ]
   },
   "parallel": 1,
-  "defaultBase": "origin/main"
+  "defaultBase": "origin/main",
+  "useLegacyCache": true
 }
