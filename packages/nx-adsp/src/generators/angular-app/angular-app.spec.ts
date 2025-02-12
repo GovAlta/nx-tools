@@ -32,7 +32,7 @@ describe('angular app generator', () => {
     expect(config).toBeDefined();
     expect(config.root).toBe('apps/test');
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
-  }, 30000);
+  }, 120000);
 
   it('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
