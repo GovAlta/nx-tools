@@ -37,7 +37,7 @@ jobs:
       - name: Lint
         run: npm run affected:lint -- --base=${{ steps.last_successful_commit.outputs.base }}
       - name: Test
-        run: npm run affected:test -- --base=${{ steps.last_successful_commit.outputs.base }} --verbose
+        run: npm run affected:test -- --base=${{ steps.last_successful_commit.outputs.base }}
       - name: Build
         run: npm run affected:build -- --base=${{ steps.last_successful_commit.outputs.base }}
       - name: Release
