@@ -27,7 +27,7 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/core": "19.1.6",
+    "@angular/core": "19.2.18",
     "@nx/devkit": "20.4.2",
     "json-schema-to-typescript": "^13.0.1",
     "react": "18.3.1",
