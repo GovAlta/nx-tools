@@ -10,8 +10,8 @@
     "directory": "packages/nx-release"
   },
   "peerDependencies": {
-    "@nx/devkit": "^20.0.0",
-    "semantic-release": "^23.0.0",
+    "@nx/devkit": "^22.0.0",
+    "semantic-release": "^24.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {
