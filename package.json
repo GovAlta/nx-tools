@@ -35,7 +35,7 @@
     "react-is": "18.3.1"
   },
   "devDependencies": {
-    "@abgov/nx-release": "^8.1.4",
+    "@abgov/nx-release": "^12.0.0",
     "@angular-devkit/build-angular": "21.0.5",
     "@angular-devkit/core": "21.0.5",
     "@angular-devkit/schematics": "21.0.5",
@@ -87,10 +87,5 @@
     "tslib": "^2.0.0",
     "typescript": "5.9.3",
     "yaml": "~2.2.2"
-  },
-  "overrides": {
-    "@nx/devkit": "22.3.3",
-    "semantic-release": "^24.0.0",
-    "@semantic-release/npm": "^13.1.0"
   }
 }
