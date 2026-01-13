@@ -3,6 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/semantic-release-nuget/src",
   "projectType": "library",
+  "tags": [],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint",
@@ -36,6 +37,5 @@
         "command": "npx semantic-release -e ./packages/semantic-release-nuget/.releaserc.json"
       }
     }
-  },
-  "tags": []
+  }
 }

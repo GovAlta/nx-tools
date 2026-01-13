@@ -11,12 +11,12 @@
   },
   "peerDependencies": {
     "@abgov/nx-oc": "^10.0.0",
-    "@nx-dotnet/core": "^2.5.0",
-    "@nx/angular": "^20.0.0",
-    "@nx/express": "^20.0.0",
-    "@nx/devkit": "^20.0.0",
-    "@nx/react": "^20.0.0",
-    "@nx/eslint": "^20.0.0",
+    "@nx-dotnet/core": "^3.0.0",
+    "@nx/angular": "^22.0.0",
+    "@nx/express": "^22.0.0",
+    "@nx/devkit": "^22.0.0",
+    "@nx/react": "^22.0.0",
+    "@nx/eslint": "^22.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {

@@ -3,6 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/nx-adsp/src",
   "projectType": "library",
+  "tags": [],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint",
@@ -56,6 +57,5 @@
         "command": "npx semantic-release -e ./packages/nx-adsp/.releaserc.json"
       }
     }
-  },
-  "tags": []
+  }
 }
