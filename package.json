@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@abgov/nx-release": "^12.0.0",
-    "@angular-devkit/build-angular": "21.0.5",
+    "@angular-devkit/build-angular": "21.1.3",
     "@angular-devkit/core": "21.0.5",
     "@angular-devkit/schematics": "21.0.5",
     "@nx-dotnet/core": "^3.0.0",
