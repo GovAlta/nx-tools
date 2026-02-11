@@ -65,7 +65,7 @@
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
     "@typescript-eslint/utils": "^8.13.0",
-    "axios": "^1.6.0",
+    "axios": "^1.13.5",
     "dotenv": "10.0.0",
     "enquirer": "^2.3.6",
     "eslint": "8.57.1",
