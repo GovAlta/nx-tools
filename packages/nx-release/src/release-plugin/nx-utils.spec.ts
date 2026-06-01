@@ -1,6 +1,6 @@
-import { getProjectChangePaths } from './nx-util';
+import { clearCache, getProjectChangePaths } from './nx-util';
 jest.mock('child_process', () => ({
-  exec: jest.fn((_c, cb) => cb(null)),
+  execFile: jest.fn((_cmd, _args, cb) => cb(null)),
 }));
 jest.mock('fs', () => ({
   readFile: jest.fn((_f, _e, cb) =>
@@ -30,6 +30,10 @@ jest.mock('fs', () => ({
 }));
 
 describe('getProjectChangePaths', () => {
+  beforeEach(() => {
+    clearCache();
+  });
+
   it('can get paths', async () => {
     const paths = await getProjectChangePaths('', 'test');
 
