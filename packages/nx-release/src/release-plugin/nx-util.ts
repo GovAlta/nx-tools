@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { readFile } from 'fs';
 import { resolve } from 'path';
 import { promisify } from 'util';
@@ -19,24 +19,16 @@ interface DependencyGraph {
   dependencies: Record<string, Dependency[]>;
 }
 
-const paths: Record<string, string[]> = {}
+let paths: Record<string, string[]> = {};
+
+export function clearCache(): void {
+  paths = {};
+}
 
 export const getProjectChangePaths = async (cwd: string, project: string) => {
-  
   if (!paths[project]) {
-    
     const file = resolve(cwd, `tmp/${project}-deps.json`);
-    await promisify(exec)(
-      [
-        'npx',
-        'nx',
-        'dep-graph',
-        '--focus',
-        project,
-        '--file',
-        file
-      ].join(' ')
-    );
+    await promisify(execFile)('npx', ['nx', 'graph', '--focus', project, '--file', file]);
   
     const result = await promisify(readFile)(file, 'utf8');
     const { graph }: { graph: DependencyGraph } = JSON.parse(result);

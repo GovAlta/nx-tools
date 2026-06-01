@@ -1,26 +1,35 @@
 import { ChildProcess, spawn } from 'child_process';
 import { ReadableStreamBuffer } from 'stream-buffers';
 import { mocked } from 'jest-mock'
-import { getPathCommitHashes } from './git-utils';
+import { clearCache, getPathCommitHashes } from './git-utils';
 
 jest.mock('child_process');
 const mockedSpawn = mocked(spawn);
 
 describe('git-utils', () => {
-  
+
   beforeEach(() => {
-    mockedSpawn.mockReset()
+    mockedSpawn.mockReset();
+    clearCache();
   });
 
   describe('getPathCommitHashes', () => {
   
     it('can get commits', async () => {
-  
-      const stream = new ReadableStreamBuffer();
-      stream.put('test1\ntest2\n');
-      stream.stop();
-      
-      mockedSpawn.mockReturnValue({ stdout: stream } as unknown as ChildProcess)
+
+      const stdout = new ReadableStreamBuffer();
+      stdout.put('test1\ntest2\n');
+      stdout.stop();
+
+      const stderr = new ReadableStreamBuffer();
+      stderr.stop();
+
+      mockedSpawn.mockReturnValue({
+        stdout,
+        stderr,
+        on: jest.fn((event, cb) => { if (event === 'close') cb(0); }),
+      } as unknown as ChildProcess);
+
       const commits = await getPathCommitHashes(
         '/repo',
         'test', 
