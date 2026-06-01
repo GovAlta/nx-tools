@@ -1,14 +1,14 @@
-import { exec as execCb } from 'child_process';
+import { execFile as execFileCb } from 'child_process';
 import { publish } from './publish';
 
 jest.mock('child_process', () => ({
-  exec: jest.fn(),
+  execFile: jest.fn(),
 }));
 jest.mock('util', () => ({
   promisify: jest.fn((fn) => fn),
 }));
 
-const mockedExec = execCb as jest.MockedFunction<typeof execCb>;
+const mockedExecFile = execFileCb as jest.MockedFunction<typeof execFileCb>;
 
 function makeContext(overrides: Record<string, unknown> = {}) {
   return {
@@ -20,72 +20,82 @@ function makeContext(overrides: Record<string, unknown> = {}) {
 
 describe('publish', () => {
   beforeEach(() => {
-    mockedExec.mockReset();
-    (mockedExec as unknown as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' });
+    mockedExecFile.mockReset();
+    (mockedExecFile as unknown as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' });
   });
 
-  it('builds dotnet nuget push command with *.nupkg glob', async () => {
+  it('invokes dotnet nuget push with *.nupkg glob', async () => {
     await publish({}, makeContext());
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('dotnet nuget push');
-    expect(cmd).toContain('*.nupkg');
+    const [file, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    expect(file).toBe('dotnet');
+    expect(args).toContain('nuget');
+    expect(args).toContain('push');
+    expect(args).toContain('*.nupkg');
   });
 
-  it('includes api-key from env when NUGET_API_KEY is set', async () => {
+  it('passes api-key as a discrete arg when NUGET_API_KEY is set', async () => {
     await publish({}, makeContext({ env: { NUGET_API_KEY: 'my-key' } }));
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('--api-key my-key');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const keyIdx = args.indexOf('--api-key');
+    expect(keyIdx).toBeGreaterThan(-1);
+    expect(args[keyIdx + 1]).toBe('my-key');
   });
 
   it('omits api-key args when NUGET_API_KEY is not set', async () => {
     await publish({}, makeContext({ env: {} }));
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).not.toContain('--api-key');
-    expect(cmd).not.toContain('--symbol-api-key');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    expect(args).not.toContain('--api-key');
+    expect(args).not.toContain('--symbol-api-key');
   });
 
-  it('includes --source when provided', async () => {
+  it('passes --source as a discrete arg', async () => {
     await publish({ source: 'https://nuget.example.com/v3/index.json' }, makeContext());
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('--source https://nuget.example.com/v3/index.json');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const srcIdx = args.indexOf('--source');
+    expect(srcIdx).toBeGreaterThan(-1);
+    expect(args[srcIdx + 1]).toBe('https://nuget.example.com/v3/index.json');
   });
 
-  it('includes --symbol-source when provided', async () => {
+  it('passes --symbol-source as a discrete arg', async () => {
     await publish({ symbolSource: 'https://symbols.example.com' }, makeContext());
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('--symbol-source https://symbols.example.com');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const symIdx = args.indexOf('--symbol-source');
+    expect(symIdx).toBeGreaterThan(-1);
+    expect(args[symIdx + 1]).toBe('https://symbols.example.com');
   });
 
   it('includes --skip-duplicate when set', async () => {
     await publish({ skipDuplicate: true }, makeContext());
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('--skip-duplicate');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    expect(args).toContain('--skip-duplicate');
   });
 
-  it('includes --timeout when provided', async () => {
+  it('passes --timeout as a discrete arg', async () => {
     await publish({ timeout: 300 }, makeContext());
 
-    const [cmd] = (mockedExec as unknown as jest.Mock).mock.calls[0];
-    expect(cmd).toContain('--timeout 300');
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const tIdx = args.indexOf('--timeout');
+    expect(tIdx).toBeGreaterThan(-1);
+    expect(args[tIdx + 1]).toBe('300');
   });
 
   it('resolves nupkgRoot relative to cwd', async () => {
     await publish({ nupkgRoot: 'artifacts' }, makeContext({ cwd: '/project' }));
 
-    const [, options] = (mockedExec as unknown as jest.Mock).mock.calls[0];
+    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     expect(options.cwd).toBe('/project/artifacts');
   });
 
   it('uses cwd directly when nupkgRoot is not set', async () => {
     await publish({}, makeContext({ cwd: '/project' }));
 
-    const [, options] = (mockedExec as unknown as jest.Mock).mock.calls[0];
+    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     expect(options.cwd).toBe('/project');
   });
 });

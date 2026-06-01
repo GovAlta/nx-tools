@@ -1,41 +1,32 @@
 import { PluginFunction } from '@semantic-release/semantic-release';
 import { PrepareContext } from 'semantic-release';
-import { exec as execCb } from 'child_process';
+import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 import { NugetPluginConfig } from './config';
-const exec = promisify(execCb);
+
+const execFile = promisify(execFileCb);
 
 export const prepare: PluginFunction<PrepareContext> = async (
   config: NugetPluginConfig,
   context
 ) => {
-  const { project, configuration, noBuild, includeSymbols, includeSource, serviceable } =
-    config;
-
+  const { project, configuration, noBuild, includeSymbols, includeSource, serviceable } = config;
   const {
     cwd,
     env,
-    // stdout,
-    // stderr,
     nextRelease: { version },
   } = context;
 
-  const args = [
-    'dotnet',
+  const args: string[] = [
     'pack',
     project,
-    noBuild ? '--no-build' : null,
-    includeSymbols ? '--include-symbols' : null,
-    includeSource ? '--include-source' : null,
-    serviceable ? '--serviceable' : null,
+    ...(noBuild ? ['--no-build'] : []),
+    ...(includeSymbols ? ['--include-symbols'] : []),
+    ...(includeSource ? ['--include-source'] : []),
+    ...(serviceable ? ['--serviceable'] : []),
     `/p:Configuration=${configuration || 'Release'}`,
     `/p:Version=${version}`,
-  ].filter((v) => !!v);
+  ];
 
-  const dotnetResult = await exec(args.join(' '), { env, cwd });
-
-  // dotnetResult.stdout.pipe(stdout, { end: false });
-  // dotnetResult.stderr.pipe(stderr, { end: false });
-
-  await dotnetResult;
+  await execFile('dotnet', args, { env, cwd });
 };
