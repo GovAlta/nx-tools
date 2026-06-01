@@ -42,6 +42,8 @@ jobs:
         run: npm run affected:test -- --base=${{ steps.last_successful_commit.outputs.base }}
       - name: Build
         run: npm run affected:build -- --base=${{ steps.last_successful_commit.outputs.base }}
+      - name: E2E
+        run: npx nx affected --target e2e --base=${{ steps.last_successful_commit.outputs.base }}
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
