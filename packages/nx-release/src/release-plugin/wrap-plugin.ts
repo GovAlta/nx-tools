@@ -4,8 +4,8 @@ import type {
   PluginFunction,
 } from '@semantic-release/semantic-release';
 import type { BaseContext } from 'semantic-release';
-import { getPathCommitHashes } from './git-utils.js';
-import { getProjectChangePaths } from './nx-util.js';
+import { getPathCommitHashes } from './git-utils';
+import { getProjectChangePaths } from './nx-util';
 
 export interface WrappedPluginConfig extends PluginConfig {
   project: string;
