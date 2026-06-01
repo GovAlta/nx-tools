@@ -39,6 +39,30 @@ describe('nx-release generator', () => {
     expect(appTree.exists('libs/test/.releaserc.json')).toBeTruthy();
   });
 
+  it('should throw when project is not a library', async () => {
+    addProjectConfiguration(appTree, 'my-app', {
+      root: 'apps/my-app',
+      projectType: 'application',
+      targets: { build: { executor: '@nx/webpack:webpack', options: {} } },
+    });
+
+    await expect(generator(appTree, { project: 'my-app' })).rejects.toThrow(
+      'This generator can only be run against buildable libraries.'
+    );
+  });
+
+  it('should throw when project has no build target', async () => {
+    addProjectConfiguration(appTree, 'no-build', {
+      root: 'libs/no-build',
+      projectType: 'library',
+      targets: {},
+    });
+
+    await expect(generator(appTree, { project: 'no-build' })).rejects.toThrow(
+      'This generator can only be run against buildable libraries.'
+    );
+  });
+
   it('should skip root .releaserc.json if present', async () => {
     await generator(appTree, options);
     const config = readProjectConfiguration(appTree, 'test');
