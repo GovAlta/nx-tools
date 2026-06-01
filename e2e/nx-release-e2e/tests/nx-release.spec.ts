@@ -25,11 +25,16 @@ describe('nx-release e2e', () => {
 
       // npm warns to stderr for deprecated packages and allow-scripts; ignore warnings, check for actual errors
       expect(result.stderr).not.toContain('ERR!');
-      expect(() =>
-        checkFilesExist(`.releaserc.json`, `libs/${plugin}/.releaserc.json`)
-      ).not.toThrow();
 
-      const releaseConfig = readJson(`libs/${plugin}/.releaserc.json`);
+      // Root .releaserc.json is always at the workspace root regardless of library path
+      expect(() => checkFilesExist(`.releaserc.json`)).not.toThrow();
+
+      // Get the actual project root from Nx (Nx 22 as-provided mode places libs at ${name}/, not libs/${name}/)
+      const projectInfo = await runNxCommandAsync(`show project ${plugin} --json`);
+      const projectRoot = JSON.parse(projectInfo.stdout).root;
+      expect(() => checkFilesExist(`${projectRoot}/.releaserc.json`)).not.toThrow();
+
+      const releaseConfig = readJson(`${projectRoot}/.releaserc.json`);
       expect(releaseConfig.plugins).toBeDefined();
     }, 60000);
 

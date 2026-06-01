@@ -6,7 +6,11 @@ import {
 } from '@nx/plugin/testing';
 
 describe('nx-adsp e2e', () => {
-  beforeEach(() => ensureNxProject('@abgov/nx-adsp', 'dist/packages/nx-adsp'));
+  beforeEach(() => {
+    ensureNxProject('@abgov/nx-adsp', 'dist/packages/nx-adsp');
+    // nx-adsp generators import @abgov/nx-oc at module load time; it must be in the e2e workspace
+    ensureNxProject('@abgov/nx-oc', 'dist/packages/nx-oc');
+  });
 
   describe('express service', () => {
     it('should create express-service', async () => {
@@ -17,11 +21,11 @@ describe('nx-adsp e2e', () => {
       expect(() => checkFilesExist(`apps/${plugin}/src/main.ts`)).not.toThrow();
     }, 60000);
 
-    describe('--tenant', () => {
-      it('should create express-service', async () => {
+    describe('--accessToken', () => {
+      it('should create express-service with access token', async () => {
         const plugin = uniq('express-service');
         await runNxCommandAsync(
-          `generate @abgov/nx-adsp:express-service ${plugin} --tenant test`
+          `generate @abgov/nx-adsp:express-service ${plugin} test --accessToken mock-token`
         );
         expect(() =>
           checkFilesExist(`apps/${plugin}/src/main.ts`)
