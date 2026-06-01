@@ -173,6 +173,17 @@ unless explicitly directed.
   repo (docs, dependency updates, refactors, generator logic covered by unit/e2e
   tests) should target `main` directly.
 
+### Branch workflow (required)
+
+All changes — no matter how small — must follow this workflow:
+
+1. Create a feature branch from `main` (or `beta` if the change is beta-only):
+   `git checkout -b fix/short-description`
+2. Commit changes to that branch.
+3. Open a pull request targeting `main` or `beta` and wait for CI to pass.
+4. **Never push commits directly to `main` or `beta`**, even when repository
+   permissions allow it. Always integrate via PR.
+
 ### Version convention
 
 **@abgov major version = Nx major version − 10**
