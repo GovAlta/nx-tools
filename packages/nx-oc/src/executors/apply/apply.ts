@@ -8,7 +8,7 @@ function mapOcProject(
   i: number
 ): PipelineEnvironment {
   if (typeof project === 'string') {
-    return { project: 'string', tag: envs[i].toLowerCase() };
+    return { project, tag: envs[i].toLowerCase() };
   } else {
     return project;
   }
@@ -33,9 +33,9 @@ export default async function runExecutor(
   const failed = ocProjects
     .map(({ project, tag }) => {
       const processResult = runOcCommand('process', [
-        `-f .openshift/${projectName}/${projectName}.yml`,
-        `-p PROJECT=${project}`,
-        `-p DEPLOY_TAG=${tag}`,
+        '-f', `.openshift/${projectName}/${projectName}.yml`,
+        '-p', `PROJECT=${project}`,
+        '-p', `DEPLOY_TAG=${tag}`,
       ]);
 
       if (!processResult.success) {

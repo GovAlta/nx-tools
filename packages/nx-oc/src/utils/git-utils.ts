@@ -1,6 +1,6 @@
 import { execSync } from 'child_process'
 
-export function getGitRemoteUrl(): string {
+export function getGitRemoteUrl(): string | undefined {
   try {
     const stdout = execSync(
       "git config --get remote.origin.url", 
