@@ -19,13 +19,14 @@ Government of Alberta's Nx Tools are a set of plugins for [nx](https://nx.dev) i
 
 ## Version compatibility
 
-@abgov libraries at version _x_ correspond to @nrwl workspace at version _x + 10_
+@abgov libraries at version _x_ correspond to @nx workspace at version _x + 10_
 
-- @abgov/nx-oc@1 -> @nrwl/cli@11
-- @abgov/nx-oc@2 -> @nrwl/cli@12
-- @abgov/nx-oc@5 -> @nrwl/cli@15
+- @abgov/nx-oc@1 -> @nx/devkit@11
+- @abgov/nx-oc@2 -> @nx/devkit@12
+- @abgov/nx-oc@5 -> @nx/devkit@15
+- @abgov/nx-oc@12 -> @nx/devkit@22
 
-When installing @nrwl dependencies, make sure versions across all @nrwl scope dependencies are the same.
+When installing @nx dependencies, make sure versions across all @nx scope dependencies are the same.
 
 ## Quick start
 
@@ -42,7 +43,7 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
 1. Create an NX workspace.
 
    ```
-   npx create-nx-workspace@15.9.3 my-project --preset empty --nx-cloud false
+   npx create-nx-workspace@latest my-project --preset empty --nx-cloud false
    ```
 
 2. Push the project to GitHub repository.
@@ -56,7 +57,7 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
 3. Install dependencies needed for the React and Express based solution.
 
    ```
-   npm i -D @nx/react@15.9.3 @nx/express@15.9.3 @abgov/nx-oc@5 @abgov/nx-adsp@5
+   npm i -D @nx/react @nx/express @abgov/nx-oc @abgov/nx-adsp
    ```
 
    @abgov/nx-adsp includes peer dependencies for its application templates. Make sure that the appropriate ones are installed. (e.g. @nx/angular if generating Angular application.)
