@@ -3,6 +3,7 @@ export interface Schema {
   type: string;
   infra: string;
   envs: string;
+  registry: string;
   apply?: boolean;
 }
 

@@ -11,7 +11,7 @@ parameters:
     value: <%= ocInfraProject %>
     required: true
   - name: PROJECT
-    description: Project to set up.
+    description: Project to deploy into.
     displayName: Project
     required: true
   - name: APP_NAME
@@ -20,7 +20,7 @@ parameters:
     value: <%= projectName %>
     required: true
   - name: DEPLOY_TAG
-    description: Tag of the ImageStream to deploy.
+    description: ImageStream tag to deploy.
     displayName: Deploy Tag
     value: latest
     required: true
@@ -30,64 +30,46 @@ objects:
     metadata:
       name: ${APP_NAME}
       namespace: ${INFRA_PROJECT}
-  - apiVersion: build.openshift.io/v1
-    kind: BuildConfig
-    metadata:
-      name: ${APP_NAME}
-      namespace: ${INFRA_PROJECT}
-    spec:
-      output:
-        to:
-          kind: ImageStreamTag
-          name: '${APP_NAME}:latest'
-      resources:
-        limits:
-          cpu: 300m
-          memory: 1Gi
-        requests:
-          cpu: 100m
-          memory: 200Mi
-      runPolicy: Serial
-      source:
-        binary: {}
-        type: Binary
-      strategy:
-        dockerStrategy:
-          buildArgs:
-            - name: PROJECT
-              value: <%= projectName %>
-          dockerfilePath: .openshift/<%= projectName %>/Dockerfile
-        type: Docker
-      triggers: []
   - apiVersion: v1
     kind: ConfigMap
     metadata:
       name: ${APP_NAME}
       namespace: ${PROJECT}
+      labels:
+        reference: "true"
     data:
       TENANT_REALM: <%= tenantRealm %>
       ACCESS_SERVICE_URL: <%= accessServiceUrl %>
-  - apiVersion: apps.openshift.io/v1
-    kind: DeploymentConfig
+  - apiVersion: apps/v1
+    kind: Deployment
     metadata:
       name: ${APP_NAME}
       namespace: ${PROJECT}
+      annotations:
+        image.openshift.io/triggers: |-
+          [
+            {
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "${APP_NAME}:${DEPLOY_TAG}",
+                "namespace": "${INFRA_PROJECT}"
+              },
+              "fieldPath": "spec.template.spec.containers[0].image",
+              "paused": true
+            }
+          ]
     spec:
       replicas: 1
       selector:
-        name: ${APP_NAME}
+        matchLabels:
+          name: ${APP_NAME}
+      revisionHistoryLimit: 3
+      progressDeadlineSeconds: 600
       strategy:
-        activeDeadlineSeconds: 21600
-        recreateParams:
-          timeoutSeconds: 600
-        resources:
-          limits:
-            cpu: 200m
-            memory: 200Mi
-          requests:
-            cpu: 20m
-            memory: 50Mi
-        type: Recreate
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 25%
       template:
         metadata:
           labels:
@@ -95,11 +77,12 @@ objects:
         spec:
           containers:
             - name: ${APP_NAME}
+              image: ${APP_NAME}:${DEPLOY_TAG}
               envFrom:
                 - configMapRef:
                     name: ${APP_NAME}
               env:
-                - name: port
+                - name: PORT
                   value: '3333'
                 - name: LOG_LEVEL
                   value: info
@@ -115,19 +98,6 @@ objects:
                 requests:
                   cpu: 20m
                   memory: 50Mi
-              terminationMessagePath: /dev/termination-log
-          dnsPolicy: ClusterFirst
-          restartPolicy: Always
-          schedulerName: default-scheduler
-      triggers:
-        - imageChangeParams:
-            containerNames:
-              - ${APP_NAME}
-            from:
-              kind: ImageStreamTag
-              name: '${APP_NAME}:${DEPLOY_TAG}'
-              namespace: ${INFRA_PROJECT}
-          type: ImageChange
   - apiVersion: v1
     kind: Service
     metadata:
