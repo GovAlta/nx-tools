@@ -1,3 +1,5 @@
+# DEPRECATED: Jenkins pipeline support is deprecated and will be removed in the next major version.
+# Use the GitHub Actions pipeline type (--type actions) instead.
 apiVersion: v1
 kind: List
 items:

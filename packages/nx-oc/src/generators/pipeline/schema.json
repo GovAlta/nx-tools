@@ -35,6 +35,12 @@
       "alias": "e",
       "x-prompt": "What projects should be used for environments (dev test prod)?"
     },
+    "registry": {
+      "type": "string",
+      "description": "Container registry to publish images to (e.g., ghcr.io/my-org).",
+      "alias": "r",
+      "x-prompt": "What container registry should images be published to (e.g., ghcr.io/my-org)?"
+    },
     "apply": {
       "type": "boolean",
       "description": "Flag indicating if the pipeline should be applied.",
@@ -46,7 +52,8 @@
     "pipeline",
     "infra",
     "type",
-    "envs"
+    "envs",
+    "registry"
   ],
   "additionalProperties": false
 }

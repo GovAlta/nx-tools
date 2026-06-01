@@ -33,6 +33,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -64,6 +65,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -94,6 +96,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -121,6 +124,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -152,6 +156,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -179,6 +184,7 @@ describe('Deployment Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',

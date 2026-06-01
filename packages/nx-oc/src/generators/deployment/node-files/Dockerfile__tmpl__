@@ -1,0 +1,5 @@
+FROM registry.access.redhat.com/ubi9/nodejs-24
+ARG PROJECT
+COPY ./dist/apps/${PROJECT} .
+COPY ./node_modules ./node_modules
+CMD node main.js

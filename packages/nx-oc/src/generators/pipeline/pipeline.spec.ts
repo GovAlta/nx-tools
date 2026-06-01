@@ -6,6 +6,7 @@ describe('Pipeline Generator', () => {
   describe('Jenkins', () => {
     const options: Schema = {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'jenkins',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -40,6 +41,7 @@ describe('Pipeline Generator', () => {
   describe('GitHub Actions', () => {
     const options: Schema = {
       pipeline: 'test',
+      registry: 'ghcr.io/test-org',
       type: 'actions',
       infra: 'test-infra',
       envs: 'test-dev',
@@ -51,6 +53,16 @@ describe('Pipeline Generator', () => {
       expect(host.exists('.github/workflows/pipeline.yml')).toBeTruthy();
       expect(host.exists('.openshift/environment.infra.yml')).toBeTruthy();
       expect(host.exists('.openshift/environments.yml')).toBeTruthy();
+    });
+
+    it('includes registry in pipeline workflow', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      await generator(host, options);
+      const workflow = host.read('.github/workflows/pipeline.yml').toString();
+      expect(workflow).toContain('ghcr.io/test-org');
+      expect(workflow).toContain('buildah build');
+      expect(workflow).toContain('oc import-image');
+      expect(workflow).toContain('oc set triggers');
     });
 
     it('can generate multiple envs', async () => {

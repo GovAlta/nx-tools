@@ -1,0 +1,12 @@
+FROM registry.access.redhat.com/ubi8/dotnet-80 AS build
+ARG PROJECT
+WORKDIR /src
+COPY . .
+RUN dotnet publish ${PROJECT} -c Release -o /app/publish
+
+FROM registry.access.redhat.com/ubi8/dotnet-80-runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
+CMD ["dotnet", "<%= projectName %>.dll"]

@@ -1,0 +1,5 @@
+FROM registry.access.redhat.com/ubi9/nginx-120
+ARG PROJECT
+COPY ./dist/apps/${PROJECT}/nginx.conf "${NGINX_CONF_PATH}"
+COPY ./dist/apps/${PROJECT} .
+CMD nginx -g "daemon off;"

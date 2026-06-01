@@ -36,6 +36,10 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   };
 
   if (options.pipelineType === 'jenkins') {
+    console.warn(
+      'WARNING: Jenkins pipeline support is deprecated and will be removed in the next major version. ' +
+        'Use --type actions instead.'
+    );
     generateFiles(
       host,
       path.join(__dirname, 'jenkins'),
