@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspReactApp",
-  "title": "",
+  "title": "React ADSP Application",
   "type": "object",
   "properties": {
     "name": {
@@ -77,5 +77,6 @@
   "required": [
     "name",
     "env"
-  ]
+  ],
+  "additionalProperties": false
 }

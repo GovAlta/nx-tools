@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspReactTaskList",
-  "title": "",
+  "title": "React Task List Component from ADSP",
   "type": "object",
   "properties": {
     "project": {
@@ -40,5 +40,6 @@
   "required": [
     "project",
     "env"
-  ]
+  ],
+  "additionalProperties": false
 }

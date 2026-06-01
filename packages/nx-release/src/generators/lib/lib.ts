@@ -40,38 +40,38 @@ export default async function (host: Tree, options: Schema) {
   const config = readProjectConfiguration(host, options.project);
   const { build } = config.targets;
   if (config.projectType !== 'library' || !build) {
-    console.log('This generator can only be run against buildable libraries.');
-  } else {
-    addDependenciesToPackageJson(
-      host,
-      {},
-      {
-        'semantic-release': '^23.0.0',
-      }
-    );
-
-    config.targets.release = {
-      executor: 'nx:run-commands',
-      options: {
-        command: `npx semantic-release -e ./${config.root}/.releaserc.json`,
-      },
-    };
-
-    updateProjectConfiguration(host, options.project, config);
-
-    const { libsDir } = getWorkspaceLayout(host);
-    const normalizedOptions = {
-      ...options,
-      projectRoot: config.root,
-      projectDist:
-        build.options.outputPath || `dist/${libsDir}/${options.project}`,
-    };
-
-    addFiles(host, normalizedOptions);
-    await formatFiles(host);
-
-    return () => {
-      installPackagesTask(host);
-    };
+    throw new Error('This generator can only be run against buildable libraries.');
   }
+
+  addDependenciesToPackageJson(
+    host,
+    {},
+    {
+      'semantic-release': '^24.0.0',
+    }
+  );
+
+  config.targets.release = {
+    executor: 'nx:run-commands',
+    options: {
+      command: `npx semantic-release -e ./${config.root}/.releaserc.json`,
+    },
+  };
+
+  updateProjectConfiguration(host, options.project, config);
+
+  const { libsDir } = getWorkspaceLayout(host);
+  const normalizedOptions = {
+    ...options,
+    projectRoot: config.root,
+    projectDist:
+      build.options.outputPath || `dist/${libsDir}/${options.project}`,
+  };
+
+  addFiles(host, normalizedOptions);
+  await formatFiles(host);
+
+  return () => {
+    installPackagesTask(host);
+  };
 }
