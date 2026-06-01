@@ -4,7 +4,7 @@
   "projectType": "application",
   "sourceRoot": "e2e/nx-adsp-e2e/src",
   "tags": [],
-  "implicitDependencies": ["nx-adsp"],
+  "implicitDependencies": ["nx-adsp", "nx-oc"],
   "targets": {
     "e2e": {
       "executor": "@nx/jest:jest",
@@ -14,7 +14,7 @@
         "jestConfig": "e2e/nx-adsp-e2e/jest.config.js",
         "runInBand": true
       },
-      "dependsOn": ["nx-adsp:build"]
+      "dependsOn": ["nx-adsp:build", "nx-oc:build"]
     }
   }
 }
