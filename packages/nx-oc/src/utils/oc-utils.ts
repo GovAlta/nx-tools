@@ -1,20 +1,20 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 export function runOcCommand(
   command: 'project' | 'start-build' | 'process' | 'apply',
   params: string[],
   input?: Buffer
 ): { success: boolean, stdout?: Buffer} {
-  const execute = !input ?
-    `oc ${command} ${params.join(' ')}` :
-    `cat | oc ${command} ${['-f -', ...params].join(' ')}`;
+  const args = input
+    ? [command, '-f', '-', ...params]
+    : [command, ...params];
 
   try {
-    console.log(`Executing command: ${execute}`);
-    const stdout = execSync(execute, { stdio: 'pipe', input });
+    console.log(`Executing command: oc ${args.join(' ')}`);
+    const stdout = execFileSync('oc', args, { stdio: 'pipe', input });
     return { success: true, stdout };
   } catch (e) {
-    console.log(`Failed to execute command: ${execute}`, e);
+    console.log(`Failed to execute command: oc ${args.join(' ')}`, e);
     return { success: false };
   }
 }
