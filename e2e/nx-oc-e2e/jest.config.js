@@ -6,7 +6,7 @@ module.exports = {
     '^.+\\.[tj]s$': [
       'ts-jest',
       {
-        tsConfig: '<rootDir>/tsconfig.spec.json',
+        tsconfig: '<rootDir>/tsconfig.spec.json',
       },
     ],
   },
@@ -14,5 +14,4 @@ module.exports = {
   coverageDirectory: '../../coverage/e2e/nx-oc-e2e',
   // ensureNxProject (beforeEach) does a full npm install — needs more than the default 5s
   testTimeout: 300000,
-  forceExit: true,
 };

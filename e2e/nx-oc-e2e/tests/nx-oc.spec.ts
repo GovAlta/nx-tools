@@ -17,7 +17,10 @@ describe('nx-oc e2e', () => {
 
       expect(result.stderr).toBeFalsy();
       expect(() =>
-        checkFilesExist(`.openshift/${plugin}-build/${plugin}-build.yml`)
+        checkFilesExist(
+          `.openshift/environment.infra.yml`,
+          `.openshift/environments.yml`
+        )
       ).not.toThrow();
     }, 60000);
 
@@ -30,8 +33,9 @@ describe('nx-oc e2e', () => {
       expect(result.stderr).toBeFalsy();
       expect(() =>
         checkFilesExist(
-          `.openshift/${plugin}-build/${plugin}-build.yml`,
-          `.github/workflows/${plugin}-build.yml`
+          `.openshift/environment.infra.yml`,
+          `.openshift/environments.yml`,
+          `.github/workflows/pipeline.yml`
         )
       ).not.toThrow();
     }, 60000);
