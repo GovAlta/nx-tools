@@ -1,5 +1,5 @@
 import { execFile as execFileCb } from 'child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { publish } from './publish';
 
 jest.mock('child_process', () => ({
@@ -10,12 +10,14 @@ jest.mock('util', () => ({
 }));
 jest.mock('fs', () => ({
   mkdtempSync: jest.fn().mockReturnValue('/tmp/sr-nuget-test'),
-  writeFileSync: jest.fn(),
+  readdirSync: jest.fn().mockReturnValue(['MyLib.1.2.3.nupkg']),
   rmSync: jest.fn(),
+  writeFileSync: jest.fn(),
 }));
 
 const mockedExecFile = execFileCb as jest.MockedFunction<typeof execFileCb>;
 const mockedMkdtempSync = mkdtempSync as jest.MockedFunction<typeof mkdtempSync>;
+const mockedReaddirSync = readdirSync as jest.MockedFunction<typeof readdirSync>;
 const mockedWriteFileSync = writeFileSync as jest.MockedFunction<typeof writeFileSync>;
 const mockedRmSync = rmSync as jest.MockedFunction<typeof rmSync>;
 
@@ -32,18 +34,56 @@ describe('publish', () => {
     mockedExecFile.mockReset();
     (mockedExecFile as unknown as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' });
     (mockedMkdtempSync as jest.Mock).mockReturnValue('/tmp/sr-nuget-test');
+    (mockedReaddirSync as jest.Mock).mockReturnValue(['MyLib.1.2.3.nupkg']);
     (mockedWriteFileSync as jest.Mock).mockReset();
     (mockedRmSync as jest.Mock).mockReset();
   });
 
-  it('invokes dotnet nuget push with *.nupkg glob', async () => {
+  it('invokes dotnet nuget push with an explicit filename per package', async () => {
     await publish({}, makeContext());
 
     const [file, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     expect(file).toBe('dotnet');
     expect(args).toContain('nuget');
     expect(args).toContain('push');
-    expect(args).toContain('*.nupkg');
+    expect(args).toContain('MyLib.1.2.3.nupkg');
+    expect(args).not.toContain('*.nupkg');
+  });
+
+  it('pushes each .nupkg file in a separate execFile call', async () => {
+    (mockedReaddirSync as jest.Mock).mockReturnValue(['Foo.1.0.0.nupkg', 'Bar.2.0.0.nupkg']);
+    await publish({}, makeContext());
+
+    expect(mockedExecFile).toHaveBeenCalledTimes(2);
+    const firstArgs = (mockedExecFile as unknown as jest.Mock).mock.calls[0][1];
+    const secondArgs = (mockedExecFile as unknown as jest.Mock).mock.calls[1][1];
+    expect(firstArgs).toContain('Foo.1.0.0.nupkg');
+    expect(secondArgs).toContain('Bar.2.0.0.nupkg');
+  });
+
+  it('scans basePath for .nupkg files', async () => {
+    await publish({ nupkgRoot: 'artifacts' }, makeContext({ cwd: '/project' }));
+
+    expect(mockedReaddirSync).toHaveBeenCalledWith('/project/artifacts');
+  });
+
+  it('filters non-.nupkg files from the directory listing', async () => {
+    (mockedReaddirSync as jest.Mock).mockReturnValue([
+      'MyLib.1.2.3.nupkg',
+      'README.md',
+      'MyLib.1.2.3.snupkg',
+    ]);
+    await publish({}, makeContext());
+
+    expect(mockedExecFile).toHaveBeenCalledTimes(1);
+    const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    expect(args).toContain('MyLib.1.2.3.nupkg');
+    expect(args).not.toContain('README.md');
+  });
+
+  it('throws when no .nupkg files are found', async () => {
+    (mockedReaddirSync as jest.Mock).mockReturnValue([]);
+    await expect(publish({}, makeContext())).rejects.toThrow('No .nupkg files found');
   });
 
   it('passes api-key via config file, not as a CLI arg', async () => {

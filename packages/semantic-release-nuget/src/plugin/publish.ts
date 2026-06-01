@@ -1,7 +1,7 @@
 import { PluginFunction } from '@semantic-release/semantic-release';
 import { PublishContext } from 'semantic-release';
 import { execFile as execFileCb } from 'child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -25,6 +25,11 @@ export const publish: PluginFunction<PublishContext> = async (
   const { cwd, env } = context;
 
   const basePath = nupkgRoot ? path.resolve(cwd, nupkgRoot) : cwd;
+  const nupkgFiles = readdirSync(basePath).filter((f) => f.endsWith('.nupkg'));
+
+  if (nupkgFiles.length === 0) {
+    throw new Error(`No .nupkg files found in ${basePath}`);
+  }
 
   let tempDir: string | null = null;
 
@@ -50,18 +55,19 @@ export const publish: PluginFunction<PublishContext> = async (
       configArgs = ['--config-file', configPath];
     }
 
-    const args: string[] = [
-      'nuget',
-      'push',
-      '*.nupkg',
-      ...(source ? ['--source', source] : []),
-      ...(symbolSource ? ['--symbol-source', symbolSource] : []),
-      ...configArgs,
-      ...(skipDuplicate ? ['--skip-duplicate'] : []),
-      ...(timeout ? ['--timeout', String(timeout)] : []),
-    ];
-
-    await execFile('dotnet', args, { env, cwd: basePath });
+    for (const nupkg of nupkgFiles) {
+      const args: string[] = [
+        'nuget',
+        'push',
+        nupkg,
+        ...(source ? ['--source', source] : []),
+        ...(symbolSource ? ['--symbol-source', symbolSource] : []),
+        ...configArgs,
+        ...(skipDuplicate ? ['--skip-duplicate'] : []),
+        ...(timeout ? ['--timeout', String(timeout)] : []),
+      ];
+      await execFile('dotnet', args, { env, cwd: basePath });
+    }
   } finally {
     if (tempDir) {
       rmSync(tempDir, { recursive: true, force: true });
