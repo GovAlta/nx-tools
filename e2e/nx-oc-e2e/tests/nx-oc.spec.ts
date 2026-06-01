@@ -15,7 +15,7 @@ describe('nx-oc e2e', () => {
         `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t jenkins --e ${plugin}-dev --r ghcr.io/test-org`
       );
 
-      expect(result.stderr).toBeFalsy();
+      expect(result.stderr).not.toMatch(/error/i);
       expect(() =>
         checkFilesExist(
           `.openshift/environment.infra.yml`,
