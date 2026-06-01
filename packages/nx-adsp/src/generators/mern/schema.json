@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspMern",
-  "title": "",
+  "title": "MERN Stack ADSP Solution",
   "type": "object",
   "properties": {
     "name": {
@@ -40,5 +40,6 @@
   "required": [
     "name",
     "env"
-  ]
+  ],
+  "additionalProperties": false
 }

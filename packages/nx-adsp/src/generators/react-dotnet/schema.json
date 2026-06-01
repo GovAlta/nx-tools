@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspReactDotnet",
-  "title": "",
+  "title": "React + .NET ADSP Solution",
   "type": "object",
   "properties": {
     "name": {
@@ -40,5 +40,6 @@
   "required": [
     "name",
     "env"
-  ]
+  ],
+  "additionalProperties": false
 }

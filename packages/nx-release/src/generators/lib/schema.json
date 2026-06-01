@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxRelease",
-  "title": "",
+  "title": "Semantic Release Configuration",
   "type": "object",
   "properties": {
     "project": {
       "type": "string",
-      "description": "",
+      "description": "Name of the publishable library to add semantic release to.",
       "$default": {
         "$source": "argv",
         "index": 0
@@ -16,5 +16,6 @@
   },
   "required": [
     "project"
-  ]
+  ],
+  "additionalProperties": false
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspExpressService",
-  "title": "",
+  "title": "Express ADSP Service",
   "type": "object",
   "properties": {
     "name": {
@@ -40,5 +40,6 @@
   "required": [
     "name",
     "env"
-  ]
+  ],
+  "additionalProperties": false
 }
