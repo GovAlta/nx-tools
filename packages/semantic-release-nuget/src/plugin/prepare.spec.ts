@@ -15,6 +15,7 @@ function makeContext(version = '1.2.3') {
   return {
     cwd: '/project',
     env: { NUGET_API_KEY: 'test-key' },
+    logger: { log: jest.fn(), error: jest.fn() },
     nextRelease: { version },
   } as never;
 }
@@ -84,5 +85,25 @@ describe('prepare', () => {
 
     const [, , options] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     expect(options.cwd).toBe('/project');
+  });
+
+  it('packs each project when project is an array', async () => {
+    await prepare({ project: ['Lib1.csproj', 'Lib2.csproj'] }, makeContext());
+
+    expect(mockedExecFile).toHaveBeenCalledTimes(2);
+    expect((mockedExecFile as unknown as jest.Mock).mock.calls[0][1]).toContain('Lib1.csproj');
+    expect((mockedExecFile as unknown as jest.Mock).mock.calls[1][1]).toContain('Lib2.csproj');
+  });
+
+  it('applies the same flags to every project in the array', async () => {
+    await prepare(
+      { project: ['Lib1.csproj', 'Lib2.csproj'], noBuild: true, configuration: 'Debug' },
+      makeContext(),
+    );
+
+    for (const call of (mockedExecFile as unknown as jest.Mock).mock.calls) {
+      expect(call[1]).toContain('--no-build');
+      expect(call[1]).toContain('/p:Configuration=Debug');
+    }
   });
 });
