@@ -2,8 +2,9 @@ import type { AnalyzeCommitsContext, GenerateNotesContext } from 'semantic-relea
 import { analyzeCommits as baseAnalyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes as baseGenerateNotes } from '@semantic-release/release-notes-generator';
 import { wrapPlugin } from './wrap-plugin';
+import { verifyConditions } from './verify-conditions';
 
 const analyzeCommits = wrapPlugin<AnalyzeCommitsContext>(baseAnalyzeCommits);
 const generateNotes = wrapPlugin<GenerateNotesContext>(baseGenerateNotes);
 
-export { analyzeCommits, generateNotes };
+export { analyzeCommits, generateNotes, verifyConditions };
