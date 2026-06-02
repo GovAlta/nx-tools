@@ -29,4 +29,13 @@ Prerelease branches (those with `prerelease: true` in the semantic-release confi
 
 Semantic-release v24.2.7 introduced a performance optimisation ([#3732](https://github.com/semantic-release/semantic-release/pull/3732)) that replaced per-tag note reads with a single `git log` command using a glob (`--notes=refs/notes/semantic-release*`). When multiple projects release on the same commit, each tag has its own note ref but all notes land on the same commit object. The glob causes git to emit all matching notes for that commit in a single log line where only the first note retains its tag association — subsequent notes appear on continuation lines with no tag decoration and are discarded. After the first project is promoted to `latest` (its note updated to include `null` channel), the combined output maps all tags on that commit to that updated note, making every remaining project appear to already be on the latest channel.
 
-A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic-release/semantic-release/pull/4074). Until that merges and is released, the workaround is to ensure a commit exists between each project's release on the `next` branch so that no two project tags share the same commit.
+A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic-release/semantic-release/pull/4074). Until that merges and is released there are two workarounds:
+
+**Option 1 — Pin semantic-release to the last unaffected version:**
+```json
+"semantic-release": "24.2.6"
+```
+v24.2.6 (released 2025-06-29) is the last version before the regression. v24.2.7 introduced it.
+
+**Option 2 — Ensure no two project tags share a commit on `next`:**
+Add a trivial commit between each project's release run on the `next` branch so that every release tag lands on a distinct commit.
