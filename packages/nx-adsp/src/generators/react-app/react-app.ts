@@ -137,6 +137,12 @@ export default async function (host: Tree, options: Schema) {
   const layout = getWorkspaceLayout(host);
   const config = readProjectConfiguration(host, options.name);
 
+  // Remove the generated fileReplacements for production — we use a single
+  // environment.ts with runtime env vars rather than a build-time swap.
+  if (config.targets.build.configurations?.production?.fileReplacements) {
+    delete config.targets.build.configurations.production.fileReplacements;
+  }
+
   config.targets.build.options = {
     ...config.targets.build.options,
     assets: [
