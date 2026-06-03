@@ -7,9 +7,5 @@ export interface Schema {
 }
 
 export interface NormalizedSchema extends Schema {
-  projectName: string;
-  projectRoot: string;
-  projectDirectory: string;
-  openshiftDirectory: string;
   adsp: AdspConfiguration;
 }
