@@ -54,6 +54,19 @@ app.get('/<%= projectName %>/v1/my-resource', (req, res) => {
 `/<%= projectName %>/v1` prefix — check `req.user` inside handlers to
 distinguish authenticated from anonymous access.
 
+## Frontend proxy integration (mern / mean stacks)
+
+When this service is paired with a React or Angular frontend via the `mern` or
+`mean` generators, the frontend proxies `/api/` to this service:
+
+- **Dev** (webpack / Vite): `/api/v1/my-resource` → `/<%= projectName %>/v1/my-resource` on `localhost:3333`
+- **Production** (nginx): same rewrite via the nginx proxy block in the frontend app
+
+All API routes in this service live under `/<%= projectName %>/v1/`. The proxy
+rewrites the frontend's `/api/` prefix to `/<%= projectName %>/` before the
+request reaches Express, so `/<%= projectName %>/v1/public` maps to the
+frontend's `/api/v1/public`.
+
 ## What NOT to change
 
 - `initializeService(...)` config — `CLIENT_ID` and `CLIENT_SECRET` are read

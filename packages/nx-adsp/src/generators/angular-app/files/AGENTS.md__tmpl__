@@ -61,6 +61,25 @@ component wrapper. Use `MutationObserver` to set the property directly after
 the inner `<goa-hero-banner>` element appears — see `app.component.ts` for the
 established pattern.
 
+## Backend API calls (mean / proxy setup)
+
+If `proxy.conf.json` exists at the project root, API calls are proxied to the
+backend service in development. Use relative `/api/` paths — do not hardcode
+the service URL:
+
+```typescript
+// ✓ correct — works through proxy in dev, nginx in production
+this.http.get('/api/v1/my-resource')
+
+// ✗ wrong — bypasses proxy, won't work in production
+this.http.get('http://localhost:3333/my-service/v1/my-resource')
+```
+
+`includeBearerTokenInterceptor` (configured in `app.config.ts`) automatically
+attaches the Keycloak access token to all outgoing HTTP requests.
+In production, `nginx.conf` contains the same proxy rule routing `/api/` to
+the backend service hostname.
+
 ## Adding a new route
 
 1. Create `src/app/my-feature/my-feature.component.ts` as a standalone component

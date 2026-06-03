@@ -49,6 +49,23 @@ import { GoabButton, GoabAppHeader, GoabButtonGroup } from '@abgov/react-compone
 1. Create `src/app/my-feature.slice.ts` using `createSlice` / `createAsyncThunk`
 2. Export the reducer and add it to `src/store.ts`
 
+## Backend API calls (mern / proxy setup)
+
+If `proxy.conf.json` exists at the project root, API calls are proxied to the
+backend service in development. Use relative `/api/` paths — do not hardcode
+the service URL:
+
+```typescript
+// ✓ correct — works through proxy in dev, nginx in production
+const response = await fetch('/api/v1/my-resource');
+
+// ✗ wrong — bypasses proxy, won't work in production
+const response = await fetch('http://localhost:3333/my-service/v1/my-resource');
+```
+
+In production, `nginx.conf` contains the same proxy rule routing `/api/` to
+the backend service hostname.
+
 ## What NOT to change
 
 - `user.slice.ts` — keycloak-js is initialised once per app lifecycle; do not
