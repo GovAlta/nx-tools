@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "$id": "mean",
+  "title": "MEAN fullstack generator",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the project.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What name would you like to use for the project?"
+    },
+    "env": {
+      "type": "string",
+      "description": "ADSP environment to initialize the project for.",
+      "enum": ["dev", "test", "prod"],
+      "default": "prod"
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for ADSP tenant configuration (skips interactive login)."
+    }
+  },
+  "required": ["name"]
+}

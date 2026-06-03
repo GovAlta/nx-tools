@@ -1,27 +1,27 @@
-import { Component, OnInit } from '@angular/core';
-import TenantService from '../tenant.service';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import Keycloak from 'keycloak-js';
 
 @Component({
-  selector: 'app-protected',
+  selector: '<%= projectName %>-protected',
+  standalone: true,
   templateUrl: './protected.component.html',
-  styleUrls: ['./protected.component.css'],
+  styleUrl: './protected.component.css',
 })
 export class ProtectedComponent implements OnInit {
-  constructor(private _tenantService: TenantService) {}
+  private http = inject(HttpClient);
+  private keycloak = inject(Keycloak);
 
-  public tenant = { name: '' };
+  privateMessage = signal('Not retrieved');
 
-  getTenant() {
-    this._tenantService.getTenant().subscribe(
-      (data: any) => {
-        this.tenant = data.tenant;
-      },
-      (err) => console.error(err),
-      () => console.log('done loading tenant')
-    );
+  get userName(): string {
+    return (this.keycloak.tokenParsed?.['name'] as string) ?? '';
   }
 
   ngOnInit() {
-    this.getTenant();
+    this.http.get<{ message: string }>('/api/v1/private').subscribe({
+      next: (data) => this.privateMessage.set(data.message),
+      error: () => this.privateMessage.set('Error loading data'),
+    });
   }
 }

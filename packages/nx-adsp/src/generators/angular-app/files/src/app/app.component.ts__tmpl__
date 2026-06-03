@@ -1,36 +1,76 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AuthService } from './services/auth.service';
-import { environment } from '../environments/environment'
-
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { RouterOutlet } from '@angular/router';
+import {
+  GoabAppHeader,
+  GoabButton,
+  GoabButtonGroup,
+  GoabHeroBanner,
+  GoabMicrositeHeader,
+} from '@abgov/angular-components';
+import Keycloak from 'keycloak-js';
+import { getAccessToken } from './user.slice';
 
 @Component({
-  selector: '<%= projectName %>-app-root',
+  selector: '<%= projectName %>-root',
+  standalone: true,
+  imports: [RouterOutlet, GoabAppHeader, GoabButton, GoabButtonGroup, GoabHeroBanner, GoabMicrositeHeader],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
+  styleUrl: './app.component.css',
 })
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
+  title = '<%= projectName %>';
 
-export class AppComponent implements OnInit, OnDestroy  {
-  title = "<%= projectName %>";
+  @ViewChild('heroBanner', { read: ElementRef, static: false }) heroBannerRef!: ElementRef;
 
-  constructor(private authService: AuthService) {}
+  private http = inject(HttpClient);
+  private keycloak = inject(Keycloak);
+  private heroObserver?: MutationObserver;
 
-  isLoggedIn(): boolean {
-    return this.authService.isLoggedIn()
-  }
+  publicResource = 'Not retrieved';
+  privateResource = 'Not retrieved';
 
-  logout() {
-    if (this.authService.isLoggedIn()) {
-      this.authService.logout();
+  get isLoggedIn(): boolean { return this.keycloak.authenticated ?? false; }
+  get userName(): string { return (this.keycloak.tokenParsed?.['name'] as string) ?? ''; }
+
+  ngOnInit() {
+    this.http.get<{ message: string }>('/api/v1/public').subscribe({
+      next: (data) => (this.publicResource = data.message),
+      error: () => (this.publicResource = 'Error loading data'),
+    });
+    if (this.isLoggedIn) {
+      getAccessToken().then((token) => {
+        this.http.get<{ message: string }>('/api/v1/private', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).subscribe({
+          next: (data) => (this.privateResource = data.message),
+          error: () => (this.privateResource = 'Error loading data'),
+        });
+      });
     }
   }
 
-  login() {
-    if (!this.authService.isLoggedIn()) {
-      this.authService.startAuthentication();
+  ngAfterViewInit() {
+    const host = this.heroBannerRef?.nativeElement;
+    if (!host) return;
+    const setBackground = (inner: Element) => {
+      (inner as any).backgroundurl = '/assets/banner.jpg';
+      this.heroObserver?.disconnect();
+    };
+    const existing = host.querySelector('goa-hero-banner');
+    if (existing) {
+      setBackground(existing);
+    } else {
+      this.heroObserver = new MutationObserver(() => {
+        const inner = host.querySelector('goa-hero-banner');
+        if (inner) setBackground(inner);
+      });
+      this.heroObserver.observe(host, { childList: true, subtree: true });
     }
   }
 
-  ngOnInit() {}
+  ngOnDestroy() { this.heroObserver?.disconnect(); }
 
-  ngOnDestroy(): void {}
+  login() { this.keycloak.login(); }
+  logout() { this.keycloak.logout({ redirectUri: window.location.origin }); }
 }

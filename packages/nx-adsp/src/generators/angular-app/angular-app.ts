@@ -111,25 +111,42 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   addDependenciesToPackageJson(
     host,
-    {},
     {
-      '@abgov/angular-components': '^3.0.0',
-      '@abgov/web-components': '^1.19.0',
-      'oidc-client': '~1.11.5',
-    }
+      '@abgov/angular-components': '5.2.1',
+      '@abgov/design-tokens': '1.8.0',
+      '@abgov/ui-components-common': '^2.0.0',
+      '@abgov/web-components': '1.39.3',
+      'keycloak-angular': '^19.0.2',
+      'keycloak-js': '^23.0.7',
+      'zone.js': '~0.15.0',
+    },
+    {}
   );
 
   const addedProxy = addFiles(host, normalizedOptions);
-  removeFiles(host, normalizedOptions);
+
+  // @nx/angular generates app.ts/html/css/spec.ts (new naming) and nx-welcome.ts;
+  // our templates use app.component.* and don't use nx-welcome.
+  for (const file of ['app.ts', 'app.html', 'app.css', 'app.spec.ts', 'nx-welcome.ts']) {
+    host.delete(`${normalizedOptions.projectRoot}/src/app/${file}`);
+  }
 
   const layout = getWorkspaceLayout(host);
 
   const config = readProjectConfiguration(host, options.name);
 
+  // Remove the generated fileReplacements for production — single environment.ts
+  // is pre-populated from tenant config at generation time.
+  if (config.targets.build.configurations?.production?.fileReplacements) {
+    delete config.targets.build.configurations.production.fileReplacements;
+  }
+
   config.targets.build.options = {
     ...config.targets.build.options,
+    polyfills: ['zone.js'],
     assets: [
       ...config.targets.build.options.assets,
+      `${normalizedOptions.projectRoot}/src/silent-check-sso.html`,
       {
         glob: 'nginx.conf',
         input: `${layout.appsDir}/${options.name}`,

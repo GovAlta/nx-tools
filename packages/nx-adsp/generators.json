@@ -43,6 +43,12 @@
       "factory": "./src/generators/angular-app/angular-app",
       "schema": "./src/generators/angular-app/schema.json",
       "description": "Generator that creates a Angular based frontend application."
+    },
+    "mean": {
+      "factory": "./src/generators/mean/mean",
+      "schema": "./src/generators/mean/schema.json",
+      "description": "Generator that creates a MEAN fullstack solution.",
+      "hidden": true
     }
   }
 }

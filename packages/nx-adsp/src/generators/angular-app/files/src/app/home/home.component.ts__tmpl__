@@ -1,33 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
-  selector: '<%= projectName %>-app-logout',
+  selector: '<%= projectName %>-home',
+  standalone: true,
   templateUrl: 'home.component.html',
 })
 export class HomeComponent implements OnInit {
-  constructor(private http: HttpClient) {}
-  public uptime = 0;
-
-  private getHealthUrl = `${this.configData().tenantApi.host}/health`;
-
-  getHealth() {
-    const uptimePromise = this.http.get(this.getHealthUrl);
-
-    uptimePromise.subscribe(
-      (data: any) => {
-        this.uptime = data.uptime;
-      },
-      (err) => console.error(err),
-      () => console.log('done loading uptime')
-    );
-  }
-
-  configData () {
-    return JSON.parse(localStorage.getItem('envData') || "\"\"");
-  }
+  private http = inject(HttpClient);
+  publicMessage = signal('Not retrieved');
 
   ngOnInit() {
-    this.getHealth();
+    this.http.get<{ message: string }>('/api/v1/public').subscribe({
+      next: (data) => this.publicMessage.set(data.message),
+      error: () => this.publicMessage.set('Error loading data'),
+    });
   }
 }
