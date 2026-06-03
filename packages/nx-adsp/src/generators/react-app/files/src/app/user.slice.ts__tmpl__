@@ -1,0 +1,71 @@
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import Keycloak from 'keycloak-js';
+
+import { environment } from '../environments/environment';
+
+const keycloak = new Keycloak({
+  url: environment.access.url,
+  realm: environment.access.realm,
+  clientId: environment.access.client_id,
+});
+
+export const USER_FEATURE_KEY = 'user';
+
+export interface UserState {
+  initialized: boolean;
+  authenticated: boolean;
+  name: string;
+  email: string;
+}
+
+export const initialUserState: UserState = {
+  initialized: false,
+  authenticated: false,
+  name: '',
+  email: '',
+};
+
+export const initializeUser = createAsyncThunk('user/initialize', async () => {
+  const authenticated = await keycloak.init({
+    onLoad: 'check-sso',
+    pkceMethod: 'S256',
+    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+  });
+  return {
+    authenticated,
+    name: keycloak.tokenParsed?.name as string,
+    email: keycloak.tokenParsed?.email as string,
+  };
+});
+
+export const loginUser = createAsyncThunk('user/login', async () => {
+  await keycloak.login();
+});
+
+export const logoutUser = createAsyncThunk('user/logout', async () => {
+  await keycloak.logout({ redirectUri: window.location.origin });
+});
+
+export async function getAccessToken(): Promise<string> {
+  await keycloak.updateToken(30);
+  return keycloak.token;
+}
+
+const userSlice = createSlice({
+  name: USER_FEATURE_KEY,
+  initialState: initialUserState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder.addCase(initializeUser.fulfilled, (state, { payload }) => {
+      state.initialized = true;
+      state.authenticated = payload.authenticated;
+      state.name = payload.name || '';
+      state.email = payload.email || '';
+    });
+  },
+});
+
+export const userReducer = userSlice.reducer;
+
+export const userSelector = (state: { [USER_FEATURE_KEY]: UserState }) =>
+  state[USER_FEATURE_KEY];

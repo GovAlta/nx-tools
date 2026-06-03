@@ -1,96 +1,66 @@
-import React, { useEffect } from 'react';
+import {
+  GoabAppHeader,
+  GoabButton,
+  GoabButtonGroup,
+  GoabHeroBanner,
+  GoabMicrositeHeader,
+} from '@abgov/react-components';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { UserManager } from 'oidc-client';
-import { UserState } from 'redux-oidc';
-import { GoAAppHeader, GoAButton, GoAMicrositeHeader, GoAHeroBanner } from '@abgov/react-components';
 
 import { AppDispatch } from '../store';
 import styles from './app.module.css';
-import '@abgov/web-components/index.css';
-import { 
-  fetchPrivateResource, 
-  fetchPublicResource, 
-  publicResourceSelector, 
-  privateResourceSelector 
-  } from './start.slice';
+import {
+  fetchPrivateResource,
+  fetchPublicResource,
+  privateResourceSelector,
+  publicResourceSelector,
+} from './start.slice';
+import { loginUser, logoutUser, userSelector } from './user.slice';
 
-interface AppProps {
-  userManager: UserManager;
-}
-
-export function App({ userManager }: AppProps) {
-  const user = useSelector(
-    (state: {user: UserState}) => state.user.user
-  );
+export function App() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { authenticated, name } = useSelector(userSelector);
   const publicResource = useSelector(publicResourceSelector);
   const privateResource = useSelector(privateResourceSelector);
 
-  const dispatch = useDispatch<AppDispatch>();
-
   useEffect(() => {
     dispatch(fetchPublicResource());
-    if (user?.access_token) {
-      dispatch(fetchPrivateResource(user?.access_token));
+    if (authenticated) {
+      dispatch(fetchPrivateResource());
     }
-  }, [user, dispatch]);
+  }, [authenticated, dispatch]);
 
   return (
     <div className={styles.app}>
-      <GoAMicrositeHeader type="alpha" />
-      <GoAAppHeader
-        url="/"
-        heading="Digital Service Example"
-      />
-      <GoAHeroBanner
-        heading="Quick start of a digital service"
-        backgroundUrl={'../assets/banner.jpg'}
-      />
+      <GoabMicrositeHeader type="alpha" />
+      <GoabAppHeader url="/" heading="<%= projectName %>">
+        <GoabButtonGroup alignment="end">
+          {name && <span>{name}</span>}
+          {!authenticated ? (
+            <GoabButton type="tertiary" onClick={() => dispatch(loginUser())}>
+              Sign in
+            </GoabButton>
+          ) : (
+            <GoabButton type="tertiary" onClick={() => dispatch(logoutUser())}>
+              Sign out
+            </GoabButton>
+          )}
+        </GoabButtonGroup>
+      </GoabAppHeader>
+      <GoabHeroBanner heading="<%= projectName %>" backgroundUrl="/assets/banner.jpg" />
       <main>
         <section>
           <h2>Welcome to <%= projectName %>!</h2>
-          <p>
-            Don't panic. Start editing the project to build your digital service.
-          </p>
+          <p>Don't panic. Start editing the project to build your digital service.</p>
           <h3>A few things you might want to do next:</h3>
           <ul className={styles.nextSteps}>
-            <li>
-              Create the '<%= projectName %>' client in your realm to let users 
-              {
-                user ?
-                <GoAButton ml="s" onClick={() => userManager.signoutRedirect()}>
-                  Sign Out
-                </GoAButton> :
-                <GoAButton ml="s" onClick={() => userManager.signinRedirect()}>
-                  Sign In
-                </GoAButton>
-              }
-            </li>
-            <li>
-              Make requests to the backend API by either updating nginx.conf or enabling CORS on the API.
-            </li>
-            <li>
-              Add requests to public API resources: {publicResource || 'Not retrieved'}
-            </li>
-            <li>
-              Add requests to private API resources: {privateResource || 'Not retrieved'}
-            </li>
+            <li>Register the '<%= projectName %>' client in your realm and set CLIENT_SECRET.</li>
+            <li>Add requests to public API resources: {publicResource || 'Not retrieved'}</li>
+            <li>Add requests to private API resources: {privateResource || 'Not retrieved'}</li>
           </ul>
         </section>
       </main>
-      <footer className={styles.footer}>
-        <div className="goa-socialconnect">
-        <div className="goa-title">
-          Connect with us on
-        </div>
-          <ul>
-            <li className={styles.github}>
-              <a href="https://github.com/abgov" rel="noreferrer" target="_blank">
-                GitHub
-              </a>
-            </li>
-          </ul>
-        </div>
-      </footer>
     </div>
   );
 }

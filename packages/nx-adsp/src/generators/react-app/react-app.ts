@@ -94,18 +94,18 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 function removeFiles(host: Tree, options: NormalizedSchema) {
   host.delete(`${options.projectRoot}/src/app/logo.svg`);
   host.delete(`${options.projectRoot}/src/app/star.svg`);
+  host.delete(`${options.projectRoot}/src/app/nx-welcome.tsx`);
 }
 
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
   const { applicationGenerator: initReact } = await import('@nx/react');
-  const { reduxGenerator: initRedux } = await import('@nx/react');
 
   // Setting strict to false because of: https://github.com/nrwl/nx/issues/8180
   await initReact(host, {
     name: options.name,
-    style: 'styled-components',
+    style: 'css',
     skipFormat: true,
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
@@ -114,23 +114,19 @@ export default async function (host: Tree, options: Schema) {
     directory: `apps/${options.name}`,
   });
 
-  await initRedux(host, {
-    name: 'intake',
-    path: `apps/${options.name}/src/state/intake.slice.ts`,
-  });
-
   addDependenciesToPackageJson(
     host,
-    {},
     {
-      '@abgov/react-components': '^4.18.0',
-      '@abgov/web-components': '^1.19.0',
-      '@types/react-router-dom': '~5.3.3',
-      '@types/redux-mock-store': '~1.0.2',
+      '@abgov/design-tokens': '1.8.0',
+      '@abgov/react-components': '6.10.0',
+      '@abgov/web-components': '1.39.3',
+      '@reduxjs/toolkit': '^2.5.1',
+      'keycloak-js': '^23.0.7',
+      'react-redux': '^9.2.0',
+      'react-router-dom': '6.30.3',
+    },
+    {
       'html-webpack-plugin': '~5.5.0',
-      'oidc-client': '~1.11.5',
-      'redux-oidc': '~4.0.0-beta1',
-      'react-router-dom': '~5.2.0',
       'redux-mock-store': '~1.5.4',
     }
   );
