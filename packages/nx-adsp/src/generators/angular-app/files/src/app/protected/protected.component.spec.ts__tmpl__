@@ -1,52 +1,36 @@
-import { ComponentFixture, TestBed, waitForAsync, inject } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Keycloak } from 'keycloak-angular';
 import { ProtectedComponent } from './protected.component';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import TenantService from '../tenant.service';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting
-} from "@angular/platform-browser-dynamic/testing";
 
 describe('ProtectedComponent', () => {
-  let fixture: ComponentFixture<ProtectedComponent>;
-  let httpTestingController: HttpTestingController;
-  let envData = {"production":false,"access":{"url":"https://testurl.com","realm":"123","client_id":"urn:ads:platform:tenant-admin-app"},"tenantApi":{"host":"http://localhost:3333","endpoints":{"tenantNameByRealm":"/api/tenant/v1/realm"}}}
+  const keycloakMock = {
+    authenticated: true,
+    tokenParsed: { name: 'Test User' },
+  };
 
-  localStorage.setItem('envData', JSON.stringify(envData));
-  beforeAll( ()=> {
-    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+  let httpTesting: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ProtectedComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: Keycloak, useValue: keycloakMock },
+      ],
+    }).compileComponents();
+
+    httpTesting = TestBed.inject(HttpTestingController);
   });
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        declarations: [ProtectedComponent],
-        providers: [ProtectedComponent, TenantService],
-        imports: [HttpClientTestingModule],
-      }).compileComponents();
 
-      httpTestingController = TestBed.inject(HttpTestingController);
-    })
-  );
+  afterEach(() => httpTesting.verify());
 
-  beforeEach(() => {
-    fixture = TestBed.createComponent(ProtectedComponent);
+  it('should create', () => {
+    const fixture = TestBed.createComponent(ProtectedComponent);
     fixture.detectChanges();
+    httpTesting.expectOne('/api/v1/private').flush({ message: 'Hello' });
+    expect(fixture.componentInstance).toBeTruthy();
   });
-
-  afterEach(() => {
-    httpTestingController.verify();
-  });
-
-  it('should create', (inject([TenantService, HttpTestingController],
-    () => {
-    const mockTenant = { status: 200, statusText: 'OK'}
-    const data = { name: 'Child Services' }
-    const req = httpTestingController.expectOne(
-     'http://localhost:3333/api/tenant/v1/realm/123'
-    )
-
-    expect(req.request.method).toEqual('GET');
-
-   req.flush(data, mockTenant);
-  })));
 });
