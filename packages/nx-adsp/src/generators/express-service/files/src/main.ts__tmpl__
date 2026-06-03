@@ -1,63 +1,84 @@
-/**
- * This is not a production server yet!
- * This is only a minimal backend to get started.
- */
 import { AdspId, initializeService } from '@abgov/adsp-service-sdk';
+import compression from 'compression';
+import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
 
-import { environment } from './environments/environment';
+import { environment } from './environment';
 
-async function initializeApp(): Promise<express.Application> {
-  const app = express();
-  app.use(passport.initialize());
-
+async function initializeApp() {
   const serviceId = AdspId.parse(environment.CLIENT_ID);
-  const { tenantStrategy } = await initializeService(
+  const capabilities = await initializeService(
     {
       displayName: '<%= projectName %>',
       description: 'Put your service description here.',
-      realm: environment.TENANT_REALM,
       serviceId,
+      realm: environment.TENANT_REALM,
       clientSecret: environment.CLIENT_SECRET,
-      accessServiceUrl: new URL(environment.ACCESS_SERVICE_URL),
-      directoryUrl: new URL(environment.DIRECTORY_SERVICE_URL),
+      accessServiceUrl: new URL(environment.KEYCLOAK_ROOT_URL),
+      directoryUrl: new URL(environment.DIRECTORY_URL),
     },
     { logLevel: environment.LOG_LEVEL }
   );
 
-  passport.use('tenant', tenantStrategy);
+  const { logger, tenantStrategy, traceHandler, configurationHandler, healthCheck } = capabilities;
+
+  const app = express();
+
+  app.use(compression());
+  app.use(helmet());
+  app.use(express.json());
+  app.use(cors());
+
+  if (environment.TRUSTED_PROXY) {
+    app.set('trust proxy', environment.TRUSTED_PROXY);
+  }
+
+  app.use(traceHandler);
+
   passport.use('anonymous', new AnonymousStrategy());
+  passport.use('tenant', tenantStrategy);
+  app.use(passport.initialize());
 
-  app.use(passport.authenticate(['tenant', 'anonymous'], { session: false }));
+  app.use(
+    '/<%= projectName %>/v1',
+    passport.authenticate(['tenant', 'anonymous'], { session: false }),
+    configurationHandler
+  );
 
-  app.get('/<%= projectName %>/v1/public', (_req, res) => {
-    res.send({ message: `Welcome to public API resource!` });
+  app.get('/health', async (_req, res) => {
+    const platform = await healthCheck();
+    res.json({ ...platform });
   });
 
-  app.get(
-    '/<%= projectName %>/v1/private',
-    (req, res, next) => {
-      if (!req.user) {
-        res.sendStatus(401);
-      } else {
-        next();
-      }
-    },
-    (req, res) => {
-      const user = req.user;
-      res.send({ message: `Welcome to private API resource! ${user.name}` });
-    }
-  );
-  return app;
+  app.get('/', (req, res) => {
+    const rootUrl = new URL(`${req.protocol}://${req.get('host')}`);
+    res.json({
+      _links: {
+        self: { href: new URL(req.originalUrl, rootUrl).href },
+        health: { href: new URL('/health', rootUrl).href },
+        api: { href: new URL('/<%= projectName %>/v1', rootUrl).href },
+      },
+    });
+  });
+
+  app.get('/<%= projectName %>/v1', (_req, res) => {
+    res.json({
+      _links: {
+        self: { href: '/<%= projectName %>/v1' },
+      },
+    });
+  });
+
+  return { app, logger };
 }
 
-initializeApp().then((app) => {
-  const port = environment.port || 3333;
-
+initializeApp().then(({ app, logger }) => {
+  const port = environment.PORT;
   const server = app.listen(port, () => {
-    console.log(`Listening at http://localhost:${port}/<%= projectName %>/v1`);
+    logger.info(`Listening at http://localhost:${port}/<%= projectName %>/v1`);
   });
-  server.on('error', console.error);
+  server.on('error', (err) => logger.error(`Error encountered in server: ${err}`));
 });

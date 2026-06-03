@@ -29,5 +29,7 @@ describe('Express Service Generator', () => {
     expect(config.root).toBe('apps/test');
 
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
+    expect(host.exists('apps/test/src/environment.ts')).toBeTruthy();
+    expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
   }, 60000);
 });
