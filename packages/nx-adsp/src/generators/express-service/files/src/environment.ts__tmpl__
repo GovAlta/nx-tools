@@ -1,0 +1,19 @@
+import { config } from 'dotenv';
+import { cleanEnv, num, str } from 'envalid';
+import { resolve } from 'path';
+
+config({
+  path: resolve(process.cwd(), 'apps/<%= projectName %>/.env'),
+  override: true,
+});
+
+export const environment = cleanEnv(process.env, {
+  KEYCLOAK_ROOT_URL: str({ default: '<%= accessServiceUrl %>' }),
+  DIRECTORY_URL: str({ default: '<%= directoryServiceUrl %>' }),
+  TENANT_REALM: str({ default: '<%= tenantRealm %>' }),
+  CLIENT_ID: str({ default: 'urn:ads:<%= tenant %>:<%= projectName %>' }),
+  CLIENT_SECRET: str({ default: '' }),
+  TRUSTED_PROXY: str({ default: 'uniquelocal' }),
+  LOG_LEVEL: str({ default: 'debug' }),
+  PORT: num({ default: 3000 }),
+});
