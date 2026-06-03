@@ -1,0 +1,21 @@
+import { createSlice } from '@reduxjs/toolkit';
+
+export const INTAKE_FEATURE_KEY = 'intake';
+
+export interface IntakeState {
+  loadingStatus: 'not loaded' | 'loading' | 'loaded' | 'error';
+  error: string;
+}
+
+export const initialIntakeState: IntakeState = {
+  loadingStatus: 'not loaded',
+  error: null,
+};
+
+const intakeSlice = createSlice({
+  name: INTAKE_FEATURE_KEY,
+  initialState: initialIntakeState,
+  reducers: {},
+});
+
+export const intakeReducer = intakeSlice.reducer;

@@ -1,13 +1,10 @@
-// This file can be replaced during build by using the `fileReplacements` array.
-// When building for production, this file is replaced with `environment.prod.ts`.
-
 export const environment = {
   production: false,
   directory: {
     url: '<%= directoryServiceUrl %>',
   },
   access: {
-    url: '<%= accessServiceUrl %>',
+    url: '<%= accessServiceUrl %>/auth',
     realm: '<%= tenantRealm %>',
     client_id: 'urn:ads:<%= tenant %>:<%= projectName %>'
   }

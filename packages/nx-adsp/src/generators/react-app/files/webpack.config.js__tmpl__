@@ -6,13 +6,14 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = composePlugins(withNx(), withReact(), (config) => {
   // Update the webpack config as needed here.
   // e.g. `config.plugins.push(new MyPlugin())`
-  config.entry['renew'] = ['./src/renew.ts'];
 
+  // Required for keycloak-js silent SSO check.
   config.plugins.push(
     new HtmlWebpackPlugin({
-      template: './src/renew.html',
-      chunks: ['renew'],
-      filename: 'renew.html',
+      templateContent:
+        '<html><body><script>parent.postMessage(location.href, location.origin);</script></body></html>',
+      chunks: [],
+      filename: 'silent-check-sso.html',
     })
   );
 
