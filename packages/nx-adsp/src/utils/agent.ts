@@ -202,12 +202,13 @@ export async function consultAgent(
     });
 
     socket.on('workspace-state', ({ files }: { files: { path: string; content: string }[] }) => {
-      if (files?.length > 0) {
-        const written = applyWorkspaceFiles(files);
+      // Only count files the agent added or modified — not unchanged uploaded files.
+      const written = applyWorkspaceFiles(files ?? []);
+      if (written > 0) {
         process.stdout.write(`\nApplied ${written} file(s) from agent workspace.\n`);
         cleanup(written);
       } else {
-        // No files written yet — agent may need more input.
+        // Agent hasn't generated anything yet — prompt for more input.
         promptUser();
       }
     });
