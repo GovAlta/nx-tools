@@ -91,10 +91,6 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   return addProxyConf;
 }
 
-function removeFiles(host: Tree, options: NormalizedSchema) {
-  host.delete(`${options.projectRoot}/src/app/logo.svg`);
-  host.delete(`${options.projectRoot}/src/app/star.svg`);
-}
 
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const normalizedOptions = await normalizeOptions(host, options);
