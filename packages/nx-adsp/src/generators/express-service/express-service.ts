@@ -1,4 +1,4 @@
-import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import { deploymentGenerator, getAdspConfiguration, realmLogin } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -91,12 +91,21 @@ export default async function (host: Tree, options: Schema) {
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
   if (normalizedOptions.adsp) {
+    // getAdspConfiguration authenticates but doesn't return the token.
+    // Re-authenticate with the tenant realm to get a token for the agent call.
+    const accessToken =
+      options.accessToken ??
+      (await realmLogin(
+        normalizedOptions.adsp.accessServiceUrl,
+        normalizedOptions.adsp.tenantRealm
+      ).catch(() => undefined));
+
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 
     await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
-      options.accessToken,
+      accessToken,
       {
         projectName: normalizedOptions.projectName,
         projectType: 'express-service',

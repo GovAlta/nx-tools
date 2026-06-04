@@ -14,6 +14,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
   accessServiceUrl: environments.test.accessServiceUrl,
   directoryServiceUrl: environments.test.directoryServiceUrl,
 });
+utilsMock.realmLogin.mockResolvedValue('test-token');
 
 describe('MERN Generator', () => {
   const options: Schema = {

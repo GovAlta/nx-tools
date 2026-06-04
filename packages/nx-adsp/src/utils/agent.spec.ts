@@ -110,7 +110,7 @@ describe('consultAgent', () => {
     expect(socket.emit).toHaveBeenCalledWith(
       'message',
       expect.objectContaining({
-        agent: 'nx-adsp-agent',
+        agent: 'nxAdspAgent',
         content: expect.stringContaining('src/main.ts'),
       })
     );
