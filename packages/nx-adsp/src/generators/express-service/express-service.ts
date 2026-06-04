@@ -10,7 +10,12 @@ import {
 } from '@nx/devkit';
 import { Linter } from '@nx/eslint';
 import * as path from 'path';
+import { consultAgent } from '../../utils/agent';
 import { Schema, NormalizedSchema } from './schema';
+
+// Version of nx-adsp passed to the agent for template compatibility checks.
+// Keep in sync with package.json version.
+const PLUGIN_VERSION = '12.x';
 
 async function normalizeOptions(
   host: Tree,
@@ -79,6 +84,33 @@ export default async function (host: Tree, options: Schema) {
 
   addFiles(host, normalizedOptions);
   await formatFiles(host);
+
+  // Consult the nx-adsp-agent to augment the project with ADSP capabilities.
+  // The agent has access to template tools and a workspace; it generates new
+  // files and modifications to integration files (main.ts, environment.ts)
+  // which are applied directly to the Nx Tree.
+  // Falls back silently if agent-service is unreachable or no accessToken.
+  if (normalizedOptions.adsp) {
+    const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
+    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
+
+    await consultAgent(
+      normalizedOptions.adsp.directoryServiceUrl,
+      options.accessToken,
+      {
+        projectName: normalizedOptions.projectName,
+        projectType: 'express-service',
+        tenant: normalizedOptions.adsp.tenant,
+        pluginVersion: PLUGIN_VERSION,
+        existingFiles: {
+          'src/main.ts': mainTs,
+          'src/environment.ts': environmentTs,
+        },
+      },
+      host,
+      normalizedOptions.projectRoot
+    );
+  }
 
   await deploymentGenerator(host, {
     ...normalizedOptions,
