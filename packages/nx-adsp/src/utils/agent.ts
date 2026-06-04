@@ -190,7 +190,11 @@ async function resolveAgentServiceUrl(
 ): Promise<string | null> {
   try {
     const urls = await getServiceUrls(directoryServiceUrl);
-    return urls[AGENT_SERVICE_URN] ?? null;
+    const apiUrl = urls[AGENT_SERVICE_URN];
+    if (!apiUrl) return null;
+    // The directory URL includes the REST API path (e.g. /agent/v1).
+    // Socket.io attaches at the server root, so use only the origin.
+    return new URL(apiUrl).origin;
   } catch {
     return null;
   }
