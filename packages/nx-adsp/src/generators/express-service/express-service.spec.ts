@@ -14,6 +14,8 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
   accessServiceUrl: environments.test.accessServiceUrl,
   directoryServiceUrl: environments.test.directoryServiceUrl,
 });
+utilsMock.deploymentGenerator.mockResolvedValue(undefined);
+utilsMock.realmLogin.mockResolvedValue('test-token');
 
 describe('Express Service Generator', () => {
   const options: Schema = {

@@ -1,4 +1,4 @@
-import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import { deploymentGenerator, environments, getAdspConfiguration, getServiceUrls, realmLogin } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -24,7 +24,43 @@ async function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
 
-  const adsp = await getAdspConfiguration(host, options);
+  let adsp: import('@abgov/nx-oc').AdspConfiguration;
+
+  if (options.tenant) {
+    // Resolve realm from tenant name via the public tenant service API (no auth required),
+    // then do a single browser login for the tenant realm.
+    const env = environments[options.env ?? 'prod'];
+    const tenantServiceUrl = (await getServiceUrls(env.directoryServiceUrl))['urn:ads:platform:tenant-service'];
+
+    const { default: axios } = await import('axios');
+    const { data } = await axios.get<{ results: { name: string; realm: string }[] }>(
+      new URL('/api/tenant/v2/tenants', tenantServiceUrl).href,
+      { params: { name: options.tenant } }
+    );
+
+    const tenantInfo = data?.results?.[0];
+    if (!tenantInfo) {
+      throw new Error(`Tenant "${options.tenant}" not found in ${env.directoryServiceUrl}.`);
+    }
+
+    const tenantRealm = options.tenantRealm ?? tenantInfo.realm;
+
+    if (!options.accessToken) {
+      options = {
+        ...options,
+        accessToken: await realmLogin(env.accessServiceUrl, tenantRealm).catch(() => undefined),
+      };
+    }
+
+    adsp = {
+      tenant: tenantInfo.name,
+      tenantRealm,
+      accessServiceUrl: env.accessServiceUrl,
+      directoryServiceUrl: env.directoryServiceUrl,
+    };
+  } else {
+    adsp = await getAdspConfiguration(host, options);
+  }
 
   return {
     ...options,
@@ -91,12 +127,25 @@ export default async function (host: Tree, options: Schema) {
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
   if (normalizedOptions.adsp) {
+    // getAdspConfiguration authenticates but doesn't return the token.
+    // Re-authenticate with the tenant realm to get a token for the agent call.
+    process.stdout.write('\nSigning in to connect to the ADSP agent...\n');
+    const accessToken =
+      options.accessToken ??
+      (await realmLogin(
+        normalizedOptions.adsp.accessServiceUrl,
+        normalizedOptions.adsp.tenantRealm
+      ).catch((err) => {
+        process.stdout.write(`Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`);
+        return undefined;
+      }));
+
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 
-    await consultAgent(
+    const agentResult = await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
-      options.accessToken,
+      accessToken,
       {
         projectName: normalizedOptions.projectName,
         projectType: 'express-service',
@@ -110,6 +159,21 @@ export default async function (host: Tree, options: Schema) {
       host,
       normalizedOptions.projectRoot
     );
+
+    // When the user was in an active conversation but it ended without the
+    // agent generating files, confirm whether to proceed with base scaffolding.
+    if (agentResult?.userInteracted && agentResult.filesWritten === 0) {
+      const { prompt } = await import('enquirer');
+      const { proceed } = await prompt<{ proceed: boolean }>({
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
+        initial: true,
+      });
+      if (!proceed) {
+        throw new Error('Generation aborted.');
+      }
+    }
   }
 
   await deploymentGenerator(host, {

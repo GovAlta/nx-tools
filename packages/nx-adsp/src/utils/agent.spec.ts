@@ -80,6 +80,9 @@ describe('consultAgent', () => {
     await flushPromises();
 
     socket._handlers['connect']?.();
+    socket._handlers['workspace-updated']?.();
+    // Simulate agent responding with text (sets agentHasResponded = true)
+    socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'I will add events.' } }, done: false });
     socket._handlers['stream']?.({ chunk: null, done: true });
     socket._handlers['workspace-state']?.({
       files: [
@@ -89,12 +92,12 @@ describe('consultAgent', () => {
     });
 
     const result = await resultPromise;
-    expect(result).toEqual({ filesWritten: 2 });
+    expect(result).toEqual({ filesWritten: 2, userInteracted: true });
     expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/roles.ts', 'export enum ServiceRoles {}');
     expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/main.ts', 'updated main.ts');
   });
 
-  it('includes existing file content in the initial message', async () => {
+  it('uploads existing files to workspace before sending the initial message', async () => {
     mockedGetServiceUrls.mockResolvedValue({
       'urn:ads:platform:agent-service:v1': 'https://agent.example.com',
     });
@@ -102,15 +105,27 @@ describe('consultAgent', () => {
     const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
     await flushPromises();
 
+    // connect → workspace-update emitted, then workspace-updated → message emitted
     socket._handlers['connect']?.();
+    socket._handlers['workspace-updated']?.();
+    socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'What does this service do?' } }, done: false });
     socket._handlers['stream']?.({ chunk: null, done: true });
     socket._handlers['workspace-state']?.({ files: [] });
     await resultPromise;
 
     expect(socket.emit).toHaveBeenCalledWith(
+      'workspace-update',
+      expect.objectContaining({
+        agent: 'nxAdspAgent',
+        writes: expect.arrayContaining([
+          expect.objectContaining({ path: 'src/main.ts' }),
+        ]),
+      })
+    );
+    expect(socket.emit).toHaveBeenCalledWith(
       'message',
       expect.objectContaining({
-        agent: 'nx-adsp-agent',
+        agent: 'nxAdspAgent',
         content: expect.stringContaining('src/main.ts'),
       })
     );
