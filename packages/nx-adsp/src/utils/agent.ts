@@ -92,12 +92,9 @@ export async function consultAgent(
     const buildInitialMessage = () => {
       const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
-        `[NEW SESSION: ${threadId}] Ignore any context from previous conversations. ` +
-        `This is a fresh, independent session.\n` +
-        `[CLI CONTEXT] This conversation runs in a developer terminal. ` +
-        `Keep every response to 2-3 plain-text sentences — no markdown, bullets, or headers. ` +
-        `Ask at most one focused question per turn. ` +
-        `After one or two exchanges you have enough context: call the template tools and write the files immediately. Do not ask for confirmation before writing.\n\n` +
+        `This is a new generator session running in a developer terminal. ` +
+        `Please keep responses brief — two or three plain sentences, no markdown formatting. ` +
+        `Ask one question at a time and generate the integration code after one or two exchanges.\n\n` +
         `I am setting up a new ${projectContext.projectType} called "${projectContext.projectName}" ` +
         `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}). ` +
         `The project files (${fileNames}) have been uploaded to your workspace. ` +
