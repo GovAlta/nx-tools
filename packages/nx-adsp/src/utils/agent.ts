@@ -136,6 +136,12 @@ export async function consultAgent(
     const applyWorkspaceFiles = (files: { path: string; content: string }[]) => {
       let count = 0;
       for (const file of files) {
+        // Skip files we uploaded that the agent hasn't modified — only apply
+        // new files and agent-modified versions of existing files.
+        const original = projectContext.existingFiles[file.path];
+        if (original !== undefined && original === file.content) {
+          continue;
+        }
         const fullPath = `${projectRoot}/${file.path}`;
         host.write(fullPath, file.content);
         count++;
