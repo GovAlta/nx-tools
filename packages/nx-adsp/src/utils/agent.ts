@@ -27,6 +27,8 @@ export interface AgentResult {
   filesWritten: number;
   /** True when the user was in an active conversation before it ended. */
   userInteracted: boolean;
+  /** True when the conversation ended via Ctrl+C (SIGINT). */
+  interrupted?: boolean;
 }
 
 /**
@@ -163,10 +165,15 @@ export async function consultAgent(
       conversationDone = true;
       rl.close();
       socket.disconnect();
-      // Return null for silent skips (no agent, no token, connection failed).
-      // Return a result with userInteracted:true when the user was in a
-      // conversation so the caller can ask whether to proceed.
-      resolve(agentHasResponded ? { filesWritten, userInteracted: true } : null);
+      // Return null only for truly silent skips (no agent, no token, connection failed).
+      // Return a result whenever the user was actively engaged (agent responded)
+      // OR when they explicitly interrupted (Ctrl+C), so the caller always gets
+      // a chance to confirm before proceeding.
+      resolve(
+        agentHasResponded || interrupted
+          ? { filesWritten, userInteracted: agentHasResponded, interrupted }
+          : null
+      );
     };
 
     socket.on('workspace-updated', () => {
@@ -200,6 +207,10 @@ export async function consultAgent(
     socket.on('stream', ({ chunk, done }) => {
       if (chunk?.type === 'text-delta') {
         const text: string = chunk.payload?.text ?? '';
+        if (!agentHasResponded) {
+          // Clear the dots line before the first response starts.
+          process.stdout.write('\n');
+        }
         buffer += text;
         agentHasResponded = true;
         process.stdout.write(text);

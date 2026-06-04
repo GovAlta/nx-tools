@@ -92,7 +92,7 @@ describe('consultAgent', () => {
     });
 
     const result = await resultPromise;
-    expect(result).toEqual({ filesWritten: 2, userInteracted: true });
+    expect(result).toEqual({ filesWritten: 2, userInteracted: true, interrupted: false });
     expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/roles.ts', 'export enum ServiceRoles {}');
     expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/main.ts', 'updated main.ts');
   });
