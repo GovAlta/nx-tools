@@ -143,7 +143,18 @@ export async function consultAgent(
 
     socket.on('connect', () => {
       process.stdout.write('[nx-adsp] Connected to agent-service.\n');
+      process.stdout.write('[nx-adsp] Sending project context to agent...\n');
       sendMessage(buildInitialMessage());
+      // Warn if no response arrives within 20 seconds — agent may not be deployed yet.
+      setTimeout(() => {
+        if (!conversationDone && buffer.length === 0) {
+          process.stdout.write(
+            '[nx-adsp] No response from agent after 20s. ' +
+            'The nxAdspAgent may not be deployed yet in this environment. ' +
+            'Press Ctrl+C to skip agent interaction and continue generation.\n'
+          );
+        }
+      }, 20000);
     });
 
     socket.on('stream', ({ chunk, done }) => {
@@ -187,7 +198,10 @@ export async function consultAgent(
       process.stdout.write(`[nx-adsp] Error detail: ${JSON.stringify(errAny?.description ?? errAny?.context ?? errAny?.cause ?? 'none')}\n`);
       cleanup(0);
     });
-    socket.on('error', () => requestWorkspaceState());
+    socket.on('error', (err) => {
+      process.stdout.write(`\n[nx-adsp] Agent error: ${JSON.stringify(err)}\n`);
+      requestWorkspaceState();
+    });
   });
 }
 
