@@ -122,12 +122,12 @@ export async function consultAgent(
     };
 
     const promptUser = () => {
-      rl.question('\n> (press Enter to finish and apply generated files) ', (input) => {
+      rl.question('\n> ', (input) => {
         const trimmed = input.trim();
         if (trimmed) {
           sendMessage(trimmed);
         } else {
-          // Empty input — user is done; retrieve workspace and apply generated files.
+          // Empty input — apply whatever the agent has generated.
           requestWorkspaceState();
         }
       });
@@ -158,6 +158,7 @@ export async function consultAgent(
 
     socket.on('workspace-updated', () => {
       process.stdout.write('[nx-adsp] Project files uploaded to workspace.\n');
+      process.stdout.write('[nx-adsp] Type your replies at the > prompt. Press Ctrl+D or leave blank to apply generated files.\n\n');
       sendMessage(buildInitialMessage());
     });
 
