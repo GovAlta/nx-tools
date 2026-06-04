@@ -38,12 +38,12 @@
     },
     "tenantRealm": {
       "type": "string",
-      "description": "Keycloak realm UUID. When provided with --tenant, skips interactive tenant selection.",
+      "description": "Keycloak realm UUID. Optional when --tenant is provided \u2014 overrides the realm looked up from the tenant service.",
       "alias": "tr"
     },
     "tenant": {
       "type": "string",
-      "description": "ADSP tenant name. Required when --tenantRealm is provided.",
+      "description": "ADSP tenant name. When provided, the realm is looked up anonymously and a single browser login is used instead of the full interactive flow.",
       "alias": "t"
     }
   },

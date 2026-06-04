@@ -26,25 +26,38 @@ async function normalizeOptions(
 
   let adsp: import('@abgov/nx-oc').AdspConfiguration;
 
-  if (options.tenantRealm && options.tenant) {
-    // Skip interactive tenant selection — realm and tenant name are known.
+  if (options.tenant) {
+    // Resolve realm from tenant name via the public tenant service API (no auth required),
+    // then do a single browser login for the tenant realm.
     const env = environments[options.env ?? 'prod'];
-    const urls = await getServiceUrls(env.directoryServiceUrl);
-    adsp = {
-      tenant: options.tenant,
-      tenantRealm: options.tenantRealm,
-      accessServiceUrl: env.accessServiceUrl,
-      directoryServiceUrl: env.directoryServiceUrl,
-    };
-    // Seed accessToken so subsequent realmLogin calls are skipped too.
+    const tenantServiceUrl = (await getServiceUrls(env.directoryServiceUrl))['urn:ads:platform:tenant-service'];
+
+    const { default: axios } = await import('axios');
+    const { data } = await axios.get<{ results: { name: string; realm: string }[] }>(
+      new URL('/api/tenant/v2/tenants', tenantServiceUrl).href,
+      { params: { name: options.tenant } }
+    );
+
+    const tenantInfo = data?.results?.[0];
+    if (!tenantInfo) {
+      throw new Error(`Tenant "${options.tenant}" not found in ${env.directoryServiceUrl}.`);
+    }
+
+    const tenantRealm = options.tenantRealm ?? tenantInfo.realm;
+
     if (!options.accessToken) {
       options = {
         ...options,
-        accessToken: await realmLogin(env.accessServiceUrl, options.tenantRealm).catch(() => undefined),
+        accessToken: await realmLogin(env.accessServiceUrl, tenantRealm).catch(() => undefined),
       };
     }
-    // Make getServiceUrls result available (adsp may need it internally).
-    void urls;
+
+    adsp = {
+      tenant: tenantInfo.name,
+      tenantRealm,
+      accessServiceUrl: env.accessServiceUrl,
+      directoryServiceUrl: env.directoryServiceUrl,
+    };
   } else {
     adsp = await getAdspConfiguration(host, options);
   }
