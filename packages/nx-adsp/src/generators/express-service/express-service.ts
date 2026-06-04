@@ -127,11 +127,12 @@ export default async function (host: Tree, options: Schema) {
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
   if (normalizedOptions.adsp) {
-    // getAdspConfiguration authenticates but doesn't return the token.
-    // Re-authenticate with the tenant realm to get a token for the agent call.
-    process.stdout.write('\nSigning in to connect to the ADSP agent...\n');
+    // When --tenant was provided, normalizedOptions.accessToken holds the token
+    // from the single realm login already performed during normalizeOptions.
+    // token from the single realm login. Fall back to a new login only when the
+    // full interactive flow was used and no token is available.
     const accessToken =
-      options.accessToken ??
+      normalizedOptions.accessToken ??
       (await realmLogin(
         normalizedOptions.adsp.accessServiceUrl,
         normalizedOptions.adsp.tenantRealm
@@ -160,15 +161,16 @@ export default async function (host: Tree, options: Schema) {
       normalizedOptions.projectRoot
     );
 
-    // When the user was in an active conversation but it ended without the
-    // agent generating files, confirm whether to proceed with base scaffolding.
-    if (agentResult?.userInteracted && agentResult.filesWritten === 0) {
+    // When the agent interaction ended without generating files — whether the
+    // user was in a conversation or Ctrl+C'd before the agent responded —
+    // confirm whether to proceed. Default to false when Ctrl+C was used.
+    if (agentResult && agentResult.filesWritten === 0) {
       const { prompt } = await import('enquirer');
       const { proceed } = await prompt<{ proceed: boolean }>({
         type: 'confirm',
         name: 'proceed',
         message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
-        initial: true,
+        initial: !agentResult.interrupted,
       });
       if (!proceed) {
         throw new Error('Generation aborted.');
