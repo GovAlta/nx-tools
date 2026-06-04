@@ -87,13 +87,11 @@ export async function consultAgent(
     });
 
     const buildInitialMessage = () => {
-      // Keep the initial message concise — full file content is provided when
-      // the agent asks for it or uses workspace tools.
       const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
         `I am setting up a new ${projectContext.projectType} called "${projectContext.projectName}" ` +
         `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}). ` +
-        `The scaffolded project includes: ${fileNames}. ` +
+        `The project files (${fileNames}) have been uploaded to your workspace. ` +
         `What ADSP capabilities would be useful to integrate into this service?`
       );
     };
@@ -109,6 +107,18 @@ export async function consultAgent(
 
     const requestWorkspaceState = () => {
       socket.emit('workspace-read', { agent: AGENT_ID, threadId });
+    };
+
+    const uploadFilesToWorkspace = () => {
+      socket.emit('workspace-update', {
+        agent: AGENT_ID,
+        threadId,
+        writes: Object.entries(projectContext.existingFiles).map(([path, content]) => ({
+          path,
+          content,
+        })),
+        deletes: [],
+      });
     };
 
     const promptUser = () => {
@@ -140,10 +150,15 @@ export async function consultAgent(
       resolve(filesWritten > 0 ? { filesWritten } : null);
     };
 
+    socket.on('workspace-updated', () => {
+      process.stdout.write('[nx-adsp] Project files uploaded to workspace.\n');
+      sendMessage(buildInitialMessage());
+    });
+
     socket.on('connect', () => {
       process.stdout.write('[nx-adsp] Connected to agent-service.\n');
-      process.stdout.write('[nx-adsp] Sending project context to agent...\n');
-      sendMessage(buildInitialMessage());
+      process.stdout.write('[nx-adsp] Uploading project files to workspace...\n');
+      uploadFilesToWorkspace();
 
       // Show periodic dots while waiting for first response, then a warning at 2 minutes.
       const dotInterval = setInterval(() => {
