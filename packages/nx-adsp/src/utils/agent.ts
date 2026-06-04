@@ -80,11 +80,18 @@ export async function consultAgent(
     let buffer = '';
     let conversationDone = false;
     let agentHasResponded = false;
+    let interrupted = false;
 
-    // If stdin closes while waiting for user input, apply whatever the agent
-    // wrote to the workspace and continue generation.
+    // Ctrl+C — abort the interaction without applying generated files.
+    rl.on('SIGINT', () => {
+      interrupted = true;
+      process.stdout.write('\n');
+      cleanup(0);
+    });
+
+    // Ctrl+D / stdin EOF — intentional finish: fetch workspace and apply files.
     rl.on('close', () => {
-      if (!conversationDone) {
+      if (!conversationDone && !interrupted) {
         requestWorkspaceState();
       }
     });
