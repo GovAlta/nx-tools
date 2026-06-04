@@ -77,6 +77,7 @@ export async function consultAgent(
     const threadId = crypto.randomUUID();
     let buffer = '';
     let conversationDone = false;
+    let agentHasResponded = false;
 
     // If stdin closes while waiting for user input, apply whatever the agent
     // wrote to the workspace and continue generation.
@@ -169,12 +170,12 @@ export async function consultAgent(
 
       // Show periodic dots while waiting for first response, then a warning at 2 minutes.
       const dotInterval = setInterval(() => {
-        if (!conversationDone && buffer.length === 0) process.stdout.write('.');
+        if (!conversationDone && !agentHasResponded) process.stdout.write('.');
         else clearInterval(dotInterval);
       }, 3000);
       setTimeout(() => {
         clearInterval(dotInterval);
-        if (!conversationDone && buffer.length === 0) {
+        if (!conversationDone && !agentHasResponded) {
           process.stdout.write(
             '\n[nx-adsp] No response after 2 minutes. ' +
             'The nxAdspAgent may still be deploying or the LLM is unresponsive. ' +
@@ -188,6 +189,7 @@ export async function consultAgent(
       if (chunk?.type === 'text-delta') {
         const text: string = chunk.payload?.text ?? '';
         buffer += text;
+        agentHasResponded = true;
         process.stdout.write(text);
       }
 
