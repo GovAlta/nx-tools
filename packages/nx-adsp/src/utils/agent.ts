@@ -25,6 +25,8 @@ export interface CapabilitySpec {
  */
 export interface AgentResult {
   filesWritten: number;
+  /** True when the user was in an active conversation before it ended. */
+  userInteracted: boolean;
 }
 
 /**
@@ -154,7 +156,10 @@ export async function consultAgent(
       conversationDone = true;
       rl.close();
       socket.disconnect();
-      resolve(filesWritten > 0 ? { filesWritten } : null);
+      // Return null for silent skips (no agent, no token, connection failed).
+      // Return a result with userInteracted:true when the user was in a
+      // conversation so the caller can ask whether to proceed.
+      resolve(agentHasResponded ? { filesWritten, userInteracted: true } : null);
     };
 
     socket.on('workspace-updated', () => {

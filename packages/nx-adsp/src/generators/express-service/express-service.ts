@@ -107,7 +107,7 @@ export default async function (host: Tree, options: Schema) {
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 
-    await consultAgent(
+    const agentResult = await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       accessToken,
       {
@@ -123,6 +123,21 @@ export default async function (host: Tree, options: Schema) {
       host,
       normalizedOptions.projectRoot
     );
+
+    // When the user was in an active conversation but it ended without the
+    // agent generating files, confirm whether to proceed with base scaffolding.
+    if (agentResult?.userInteracted && agentResult.filesWritten === 0) {
+      const { prompt } = await import('enquirer');
+      const { proceed } = await prompt<{ proceed: boolean }>({
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
+        initial: true,
+      });
+      if (!proceed) {
+        throw new Error('Generation aborted.');
+      }
+    }
   }
 
   await deploymentGenerator(host, {
