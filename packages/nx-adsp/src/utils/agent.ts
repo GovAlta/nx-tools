@@ -87,14 +87,13 @@ export async function consultAgent(
     });
 
     const buildInitialMessage = () => {
-      const fileSection = Object.entries(projectContext.existingFiles)
-        .map(([path, content]) => `${path}:\n\`\`\`typescript\n${content}\n\`\`\``)
-        .join('\n\n');
-
+      // Keep the initial message concise — full file content is provided when
+      // the agent asks for it or uses workspace tools.
+      const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
         `I am setting up a new ${projectContext.projectType} called "${projectContext.projectName}" ` +
-        `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}).\n\n` +
-        `Existing project files:\n\n${fileSection}\n\n` +
+        `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}). ` +
+        `The scaffolded project includes: ${fileNames}. ` +
         `What ADSP capabilities would be useful to integrate into this service?`
       );
     };
@@ -145,16 +144,22 @@ export async function consultAgent(
       process.stdout.write('[nx-adsp] Connected to agent-service.\n');
       process.stdout.write('[nx-adsp] Sending project context to agent...\n');
       sendMessage(buildInitialMessage());
-      // Warn if no response arrives within 20 seconds — agent may not be deployed yet.
+
+      // Show periodic dots while waiting for first response, then a warning at 2 minutes.
+      const dotInterval = setInterval(() => {
+        if (!conversationDone && buffer.length === 0) process.stdout.write('.');
+        else clearInterval(dotInterval);
+      }, 3000);
       setTimeout(() => {
+        clearInterval(dotInterval);
         if (!conversationDone && buffer.length === 0) {
           process.stdout.write(
-            '[nx-adsp] No response from agent after 20s. ' +
-            'The nxAdspAgent may not be deployed yet in this environment. ' +
-            'Press Ctrl+C to skip agent interaction and continue generation.\n'
+            '\n[nx-adsp] No response after 2 minutes. ' +
+            'The nxAdspAgent may still be deploying or the LLM is unresponsive. ' +
+            'Press Ctrl+C to skip and continue generation.\n'
           );
         }
-      }, 20000);
+      }, 120000);
     });
 
     socket.on('stream', ({ chunk, done }) => {
