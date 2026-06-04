@@ -50,10 +50,18 @@ export async function consultAgent(
   host: Tree,
   projectRoot: string
 ): Promise<AgentResult | null> {
-  const agentServiceUrl = await resolveAgentServiceUrl(directoryServiceUrl);
-  if (!agentServiceUrl) {
+  if (!accessToken) {
+    process.stdout.write('\n[nx-adsp] No access token — skipping agent interaction.\n');
     return null;
   }
+
+  const agentServiceUrl = await resolveAgentServiceUrl(directoryServiceUrl);
+  if (!agentServiceUrl) {
+    process.stdout.write('\n[nx-adsp] Agent-service not found in directory — skipping agent interaction.\n');
+    return null;
+  }
+
+  process.stdout.write(`\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`);
 
   return new Promise((resolve) => {
     const socket = io(agentServiceUrl, {
@@ -131,6 +139,7 @@ export async function consultAgent(
     };
 
     socket.on('connect', () => {
+      process.stdout.write('[nx-adsp] Connected to agent-service.\n');
       sendMessage(buildInitialMessage());
     });
 
@@ -168,7 +177,10 @@ export async function consultAgent(
       requestWorkspaceState();
     });
 
-    socket.on('connect_error', () => cleanup(0));
+    socket.on('connect_error', (err) => {
+      process.stdout.write(`\n[nx-adsp] Connection failed: ${err?.message ?? err}\n`);
+      cleanup(0);
+    });
     socket.on('error', () => requestWorkspaceState());
   });
 }

@@ -93,12 +93,16 @@ export default async function (host: Tree, options: Schema) {
   if (normalizedOptions.adsp) {
     // getAdspConfiguration authenticates but doesn't return the token.
     // Re-authenticate with the tenant realm to get a token for the agent call.
+    process.stdout.write('\nSigning in to connect to the ADSP agent...\n');
     const accessToken =
       options.accessToken ??
       (await realmLogin(
         normalizedOptions.adsp.accessServiceUrl,
         normalizedOptions.adsp.tenantRealm
-      ).catch(() => undefined));
+      ).catch((err) => {
+        process.stdout.write(`Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`);
+        return undefined;
+      }));
 
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
