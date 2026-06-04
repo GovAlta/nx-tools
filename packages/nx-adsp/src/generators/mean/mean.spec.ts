@@ -14,6 +14,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
   directoryServiceUrl: environments.test.directoryServiceUrl,
 });
 utilsMock.deploymentGenerator.mockResolvedValue(undefined);
+utilsMock.realmLogin.mockResolvedValue('test-token');
 
 describe('MEAN Generator', () => {
   const options: Schema = {
