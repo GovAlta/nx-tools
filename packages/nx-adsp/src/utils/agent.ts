@@ -92,6 +92,8 @@ export async function consultAgent(
     const buildInitialMessage = () => {
       const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
+        `[NEW SESSION: ${threadId}] Ignore any context from previous conversations. ` +
+        `This is a fresh, independent session.\n` +
         `[CLI CONTEXT] This conversation runs in a developer terminal. ` +
         `Keep every response to 2-3 plain-text sentences — no markdown, bullets, or headers. ` +
         `Ask at most one focused question per turn. ` +
