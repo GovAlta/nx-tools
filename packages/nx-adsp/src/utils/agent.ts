@@ -66,6 +66,9 @@ export async function consultAgent(
   return new Promise((resolve) => {
     const socket = io(agentServiceUrl, {
       auth: { token: accessToken },
+      // Skip polling — go directly to WebSocket to avoid ARO ingress rejecting
+      // the polling POST with HTTP 400.
+      transports: ['websocket'],
       timeout: 30000,
       reconnection: false,
     });
@@ -178,13 +181,10 @@ export async function consultAgent(
     });
 
     socket.on('connect_error', (err) => {
-      // 'xhr poll error' typically means the auth middleware returned a
-      // non-socket.io HTTP response (e.g. 401). Show full error context.
+      // Log the full error object so we can diagnose the root cause.
       const errAny = err as unknown as Record<string, unknown>;
-      const detail = errAny?.description
-        ? `${err.message} (HTTP ${(errAny.description as Record<string, unknown>)?.status ?? '?'})`
-        : (err?.message ?? String(err));
-      process.stdout.write(`\n[nx-adsp] Connection failed: ${detail}\n`);
+      process.stdout.write(`\n[nx-adsp] Connection failed: ${err?.message ?? err}\n`);
+      process.stdout.write(`[nx-adsp] Error detail: ${JSON.stringify(errAny?.description ?? errAny?.context ?? errAny?.cause ?? 'none')}\n`);
       cleanup(0);
     });
     socket.on('error', () => requestWorkspaceState());
