@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { getServiceUrls } from '@abgov/nx-oc';
 
 const AGENT_SERVICE_URN = 'urn:ads:platform:agent-service:v1';
-const AGENT_ID = 'nx-adsp-agent';
+const AGENT_ID = 'nxAdspAgent';
 
 // Keep CapabilitySpec exported for backward compatibility and tests,
 // but the primary flow now uses the workspace approach.
