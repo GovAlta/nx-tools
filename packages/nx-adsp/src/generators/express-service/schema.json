@@ -35,6 +35,16 @@
       "type": "string",
       "description": "Access token for retrieving configuration from ADSP APIs.",
       "alias": "at"
+    },
+    "tenantRealm": {
+      "type": "string",
+      "description": "Keycloak realm UUID. When provided with --tenant, skips interactive tenant selection.",
+      "alias": "tr"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. Required when --tenantRealm is provided.",
+      "alias": "t"
     }
   },
   "required": [

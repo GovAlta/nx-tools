@@ -1,4 +1,4 @@
-import { deploymentGenerator, getAdspConfiguration, realmLogin } from '@abgov/nx-oc';
+import { deploymentGenerator, environments, getAdspConfiguration, getServiceUrls, realmLogin } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -24,7 +24,30 @@ async function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
 
-  const adsp = await getAdspConfiguration(host, options);
+  let adsp: import('@abgov/nx-oc').AdspConfiguration;
+
+  if (options.tenantRealm && options.tenant) {
+    // Skip interactive tenant selection — realm and tenant name are known.
+    const env = environments[options.env ?? 'prod'];
+    const urls = await getServiceUrls(env.directoryServiceUrl);
+    adsp = {
+      tenant: options.tenant,
+      tenantRealm: options.tenantRealm,
+      accessServiceUrl: env.accessServiceUrl,
+      directoryServiceUrl: env.directoryServiceUrl,
+    };
+    // Seed accessToken so subsequent realmLogin calls are skipped too.
+    if (!options.accessToken) {
+      options = {
+        ...options,
+        accessToken: await realmLogin(env.accessServiceUrl, options.tenantRealm).catch(() => undefined),
+      };
+    }
+    // Make getServiceUrls result available (adsp may need it internally).
+    void urls;
+  } else {
+    adsp = await getAdspConfiguration(host, options);
+  }
 
   return {
     ...options,
