@@ -11,11 +11,8 @@ import {
 import { Linter } from '@nx/eslint';
 import * as path from 'path';
 import { consultAgent } from '../../utils/agent';
+import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import { Schema, NormalizedSchema } from './schema';
-
-// Version of nx-adsp passed to the agent for template compatibility checks.
-// Keep in sync with package.json version.
-const PLUGIN_VERSION = '12.x';
 
 async function normalizeOptions(
   host: Tree,
@@ -126,7 +123,7 @@ export default async function (host: Tree, options: Schema) {
   // files and modifications to integration files (main.ts, environment.ts)
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
-  if (normalizedOptions.adsp) {
+  if (normalizedOptions.adsp && !options.skipAgent) {
     // When --tenant was provided, normalizedOptions.accessToken holds the token
     // from the single realm login already performed during normalizeOptions.
     // token from the single realm login. Fall back to a new login only when the
