@@ -43,6 +43,9 @@ function makeMockSocket() {
     on: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
       handlers[event] = handler;
     }),
+    once: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
+      handlers[event] = handler;
+    }),
     emit: jest.fn(),
     disconnect: jest.fn(),
     _handlers: handlers,
@@ -91,6 +94,8 @@ describe('consultAgent', () => {
 
     // descriptionReady=true at this point; workspace-updated fires last → triggers sendInitialMessage.
     socket._handlers['connect']?.();
+    // Server signals readiness via 'message' before workspace-update is safe to send.
+    socket._handlers['message']?.('Connected as user...');
     socket._handlers['workspace-updated']?.();
     // Simulate agent responding with text (sets agentHasResponded = true)
     socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'I will add events.' } }, done: false });
@@ -116,8 +121,9 @@ describe('consultAgent', () => {
     const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
     await flushPromises();
 
-    // connect → workspace-update emitted; workspace-updated → message emitted (descriptionReady=true)
+    // connect → server sends 'message' readiness signal → workspace-update emitted → workspace-updated → initial message sent
     socket._handlers['connect']?.();
+    socket._handlers['message']?.('Connected as user...');
     socket._handlers['workspace-updated']?.();
     socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'What does this service do?' } }, done: false });
     socket._handlers['stream']?.({ chunk: null, done: true });

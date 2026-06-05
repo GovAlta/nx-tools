@@ -216,14 +216,22 @@ export async function consultAgent(
   socket.on('connect', () => {
     process.stdout.write('[nx-adsp] Connected to agent-service.\n');
     process.stdout.write('[nx-adsp] Uploading project files to workspace...\n');
-    socket.emit('workspace-update', {
-      agent: AGENT_ID,
-      threadId,
-      writes: Object.entries(projectContext.existingFiles).map(([path, content]) => ({
-        path,
-        content,
-      })),
-      deletes: [],
+    // The server registers its 'workspace-update' handler only after an async
+    // getServiceConfiguration() call completes (router.ts:215). It signals
+    // readiness by calling socket.send() (router.ts:217), which arrives as a
+    // 'message' event on the client — by then all server handlers are registered.
+    // Emitting workspace-update immediately on 'connect' races that await and
+    // the event is silently dropped when the server wins.
+    socket.once('message', () => {
+      socket.emit('workspace-update', {
+        agent: AGENT_ID,
+        threadId,
+        writes: Object.entries(projectContext.existingFiles).map(([path, content]) => ({
+          path,
+          content,
+        })),
+        deletes: [],
+      });
     });
   });
 
