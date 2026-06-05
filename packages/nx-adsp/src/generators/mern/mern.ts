@@ -11,7 +11,10 @@ async function normalizeOptions(
   options: Schema
 ): Promise<NormalizedSchema> {
   const adsp = await getAdspConfiguration(host, options);
-  return { ...options, adsp };
+  // Propagate the token from adsp to the Schema-level accessToken so that
+  // sub-generators (express-service, react-app) that check options.accessToken
+  // see it and skip their own realmLogin fallback.
+  return { ...options, accessToken: adsp.accessToken ?? options.accessToken, adsp };
 }
 
 export default async function (host: Tree, options: Schema) {
