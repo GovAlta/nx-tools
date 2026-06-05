@@ -12,6 +12,12 @@ jest.mock('socket.io-client');
 jest.mock('@abgov/nx-oc', () => ({ getServiceUrls: jest.fn() }));
 jest.mock('@nx/devkit', () => ({ Tree: jest.fn() }));
 
+// Enquirer is dynamically imported inside consultAgent; mock it here so the
+// prompt resolves immediately with an empty description in all tests.
+jest.mock('enquirer', () => ({
+  prompt: jest.fn().mockResolvedValue({ description: '' }),
+}));
+
 import { io } from 'socket.io-client';
 import { getServiceUrls } from '@abgov/nx-oc';
 
@@ -46,6 +52,9 @@ function makeMockSocket() {
   return socket;
 }
 
+// Flush the microtask queue so async operations inside consultAgent settle.
+// One tick is enough: the dynamic import and the enquirer mock both resolve
+// as microtasks, so after this all handlers are registered and descriptionReady=true.
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('consultAgent', () => {
@@ -66,6 +75,7 @@ describe('consultAgent', () => {
     });
     const socket = makeMockSocket();
     const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
+    // After one tick: enquirer mock resolves, descriptionReady=true, conversationPromise returned.
     await flushPromises();
     socket._handlers['connect_error']?.();
     expect(await resultPromise).toBeNull();
@@ -79,6 +89,7 @@ describe('consultAgent', () => {
     const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
     await flushPromises();
 
+    // descriptionReady=true at this point; workspace-updated fires last → triggers sendInitialMessage.
     socket._handlers['connect']?.();
     socket._handlers['workspace-updated']?.();
     // Simulate agent responding with text (sets agentHasResponded = true)
@@ -105,7 +116,7 @@ describe('consultAgent', () => {
     const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
     await flushPromises();
 
-    // connect → workspace-update emitted, then workspace-updated → message emitted
+    // connect → workspace-update emitted; workspace-updated → message emitted (descriptionReady=true)
     socket._handlers['connect']?.();
     socket._handlers['workspace-updated']?.();
     socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'What does this service do?' } }, done: false });
