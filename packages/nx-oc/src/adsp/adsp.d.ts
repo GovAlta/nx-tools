@@ -3,6 +3,8 @@ export interface AdspConfiguration {
   tenantRealm: string;
   accessServiceUrl: string;
   directoryServiceUrl: string;
+  /** Access token from the login performed during configuration retrieval. */
+  accessToken?: string;
 }
 
 export type AdspOptions = {

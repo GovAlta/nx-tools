@@ -94,9 +94,13 @@ export default async function (host: Tree, options: Schema) {
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 
+    // Prefer the token from adsp config (set by getAdspConfiguration's login),
+    // falling back to an explicitly provided accessToken (e.g. --tenant flow).
+    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+
     await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
-      options.accessToken,
+      accessToken,
       {
         projectName: normalizedOptions.projectName,
         projectType: 'express-service',

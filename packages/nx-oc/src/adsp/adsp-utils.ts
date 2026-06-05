@@ -140,6 +140,7 @@ export async function getAdspConfiguration(
       tenantRealm: tenant.realm,
       accessServiceUrl: environment.accessServiceUrl,
       directoryServiceUrl: environment.directoryServiceUrl,
+      accessToken: token,
     };
   }
 }
