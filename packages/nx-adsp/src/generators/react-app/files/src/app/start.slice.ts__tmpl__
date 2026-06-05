@@ -40,10 +40,10 @@ export const fetchPrivateResource = createAsyncThunk(
 );
 
 export const initialStartState: StartState = {
-  apiPublicMessage: null,
-  apiPrivateMessage: null,
+  apiPublicMessage: '',
+  apiPrivateMessage: '',
   loadingStatus: 'not loaded',
-  error: null,
+  error: '',
 };
 
 export const startReducer = createReducer(initialStartState, (builder) => {
@@ -60,7 +60,7 @@ export const startReducer = createReducer(initialStartState, (builder) => {
     )
     .addCase(fetchPublicResource.rejected, (state: StartState, action) => {
       state.loadingStatus = 'error';
-      state.error = action.error.message;
+      state.error = action.error.message ?? '';
     })
     .addCase(fetchPrivateResource.pending, (state: StartState) => {
       state.loadingStatus = 'loading';
@@ -74,16 +74,16 @@ export const startReducer = createReducer(initialStartState, (builder) => {
     )
     .addCase(fetchPrivateResource.rejected, (state: StartState, action) => {
       state.loadingStatus = 'error';
-      state.error = action.error.message;
+      state.error = action.error.message ?? '';
     });
 });
 
 export const publicResourceSelector = createSelector(
-  (state: unknown): StartState => state[START_FEATURE_KEY],
+  (state: { [START_FEATURE_KEY]: StartState }) => state[START_FEATURE_KEY],
   (start) => start.apiPublicMessage
 );
 
 export const privateResourceSelector = createSelector(
-  (state: unknown): StartState => state[START_FEATURE_KEY],
+  (state: { [START_FEATURE_KEY]: StartState }) => state[START_FEATURE_KEY],
   (start) => start.apiPrivateMessage
 );

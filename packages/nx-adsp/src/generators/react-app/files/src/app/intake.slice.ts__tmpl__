@@ -9,7 +9,7 @@ export interface IntakeState {
 
 export const initialIntakeState: IntakeState = {
   loadingStatus: 'not loaded',
-  error: null,
+  error: '',
 };
 
 const intakeSlice = createSlice({

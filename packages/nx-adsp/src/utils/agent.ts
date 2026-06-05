@@ -32,6 +32,28 @@ export interface AgentResult {
 }
 
 /**
+ * After a consultAgent call, check whether the user interrupted before any
+ * files were generated and confirm they still want to proceed with the base
+ * scaffolding. Throws if the user declines, which aborts the Nx Tree commit.
+ */
+export async function confirmAfterAgentInterrupt(
+  result: AgentResult | null
+): Promise<void> {
+  if (result?.interrupted && result.filesWritten === 0) {
+    const { prompt } = await import('enquirer');
+    const { proceed } = await prompt<{ proceed: boolean }>({
+      type: 'confirm',
+      name: 'proceed',
+      message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
+      initial: false,
+    });
+    if (!proceed) {
+      throw new Error('Generation aborted.');
+    }
+  }
+}
+
+/**
  * Connect to the ADSP agent-service and conduct a multi-turn conversation
  * with the nx-adsp-agent. The agent uses its workspace tools to write
  * generated and modified files; this function retrieves the workspace state
@@ -50,7 +72,7 @@ export async function consultAgent(
   accessToken: string,
   projectContext: {
     projectName: string;
-    projectType: 'express-service' | 'react-app' | 'angular-app';
+    projectType: 'express-service' | 'react-app' | 'angular-app' | 'mern' | 'mean';
     tenant: string;
     pluginVersion: string;
     /** Content of key integration files for the agent to read and potentially modify. */
@@ -59,13 +81,20 @@ export async function consultAgent(
   host: Tree,
   projectRoot: string,
   options?: {
-    /**
-     * When provided, join an existing thread rather than starting a new one.
-     * The description prompt is skipped and a continuation message is sent instead,
-     * allowing the agent to carry context from a prior service interaction.
-     * Used by composite generators (mern, mean) to run service + frontend in one session.
-     */
+    /** Thread ID to use. When omitted a new UUID is generated. */
     threadId?: string;
+    /**
+     * When true, skip the description prompt and send a continuation message instead,
+     * letting the agent carry context from a prior interaction on the same thread.
+     */
+    isContinuation?: boolean;
+    /**
+     * Additional project roots for composite generators (mern, mean).
+     * Files whose paths start with a given prefix are written to the mapped root
+     * rather than projectRoot. E.g. { 'app': '/path/to/my-app' } routes any
+     * workspace file beginning with 'app/' to that root (with the prefix stripped).
+     */
+    additionalRoots?: Record<string, string>;
   }
 ): Promise<AgentResult | null> {
   if (!accessToken) {
@@ -79,7 +108,7 @@ export async function consultAgent(
     return null;
   }
 
-  const isContinuation = !!options?.threadId;
+  const isContinuation = options?.isContinuation ?? false;
   const threadId = options?.threadId ?? crypto.randomUUID();
 
   process.stdout.write(`\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`);
@@ -111,12 +140,34 @@ export async function consultAgent(
   let buffer = '';
   let conversationDone = false;
   let agentHasResponded = false;
+  let thinkingInterval: ReturnType<typeof setInterval> | null = null;
   let interrupted = false;
 
   let resolveConversation: (result: AgentResult | null) => void;
   const conversationPromise = new Promise<AgentResult | null>((r) => {
     resolveConversation = r;
   });
+
+  // ANSI helpers — no-op when stdout is not a TTY (e.g. CI, piped output).
+  const DIM   = process.stdout.isTTY ? '\x1b[2m' : '';
+  const RESET = process.stdout.isTTY ? '\x1b[0m' : '';
+
+  const startThinking = () => {
+    // Dim colour is left open so the dots inherit it; stopThinking resets.
+    process.stdout.write(`${DIM}[nx-adsp] Agent is thinking`);
+    thinkingInterval = setInterval(() => {
+      if (!conversationDone) process.stdout.write('.');
+      else stopThinking();
+    }, 1000);
+  };
+
+  const stopThinking = () => {
+    if (thinkingInterval) {
+      clearInterval(thinkingInterval);
+      thinkingInterval = null;
+      process.stdout.write(`${RESET}\n`);
+    }
+  };
 
   const cleanup = (filesWritten: number) => {
     conversationDone = true;
@@ -134,20 +185,51 @@ export async function consultAgent(
   };
 
   const buildInitialMessage = () => {
-    const fileNames = Object.keys(projectContext.existingFiles).join(', ');
+    const { projectType, projectName, tenant, pluginVersion } = projectContext;
+    const descriptionLine = description ? `It is described as: "${description}". ` : '';
+
     if (isContinuation) {
+      const stackDetail =
+        projectType === 'react-app'
+          ? 'It uses Redux Toolkit slices for state (store.ts, config.slice.ts, intake.slice.ts) and keycloak-js for authentication. '
+          : projectType === 'angular-app'
+          ? 'It uses Angular standalone components, HttpClient with includeBearerTokenInterceptor for authenticated requests, and keycloak-angular for authentication. '
+          : '';
+      const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
-        `I've also scaffolded a ${projectContext.projectType} called "${projectContext.projectName}" ` +
-        `for the same tenant. The frontend files (${fileNames}) have been uploaded to your workspace. ` +
-        `Based on the ADSP capabilities we discussed for the service, what frontend integrations would be useful?`
+        `I've also scaffolded a ${projectType} called "${projectName}" for the same tenant. ` +
+        stackDetail +
+        `The files (${fileNames}) have been uploaded to your workspace — please read them to understand the current structure before suggesting capabilities. ` +
+        `Based on our service discussion, what ADSP frontend integrations would be most useful?`
       );
     }
-    const descriptionLine = description
-      ? `It is described as: "${description}". `
-      : '';
+
+    if (projectType === 'mern' || projectType === 'mean') {
+      const frontendStack =
+        projectType === 'mern'
+          ? 'React frontend using Redux Toolkit slices and keycloak-js'
+          : 'Angular frontend using standalone components and keycloak-angular';
+      const serviceFiles = Object.keys(projectContext.existingFiles)
+        .filter((f) => f.startsWith('service/'))
+        .join(', ');
+      const appFiles = Object.keys(projectContext.existingFiles)
+        .filter((f) => f.startsWith('app/'))
+        .join(', ');
+      return (
+        `I am setting up a ${projectType.toUpperCase()} full-stack project called "${projectName}" ` +
+        `for ADSP tenant "${tenant}" (nx-adsp plugin version ${pluginVersion}). ` +
+        descriptionLine +
+        `It has an Express service ("${projectName}-service") and a ${frontendStack} ("${projectName}-app"). ` +
+        `Both have been uploaded to your workspace: service files (${serviceFiles}) and frontend files (${appFiles}). ` +
+        `When writing generated files, use the service/ prefix for backend files and the app/ prefix for frontend files. ` +
+        `What ADSP capabilities would be useful for this full-stack project?`
+      );
+    }
+
+    const fileNames = Object.keys(projectContext.existingFiles).join(', ');
     return (
-      `I am setting up a new ${projectContext.projectType} called "${projectContext.projectName}" ` +
-      `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}). ` +
+      `I am setting up a new ${projectType} called "${projectName}" ` +
+      `for ADSP tenant "${tenant}" (nx-adsp plugin version ${pluginVersion}). ` +
       descriptionLine +
       `The project files (${fileNames}) have been uploaded to your workspace. ` +
       `What ADSP capabilities would be useful to integrate into this service?`
@@ -164,13 +246,9 @@ export async function consultAgent(
       content: buildInitialMessage(),
       rawChunks: true,
     });
-    // Show periodic dots while waiting for first agent response, then warn at 2 minutes.
-    const dotInterval = setInterval(() => {
-      if (!conversationDone && !agentHasResponded) process.stdout.write('.');
-      else clearInterval(dotInterval);
-    }, 3000);
+    startThinking();
     setTimeout(() => {
-      clearInterval(dotInterval);
+      stopThinking();
       if (!conversationDone && !agentHasResponded) {
         process.stdout.write(
           '\n[nx-adsp] No response after 2 minutes. ' +
@@ -195,6 +273,7 @@ export async function consultAgent(
           content: trimmed,
           rawChunks: true,
         });
+        startThinking();
       } else {
         // Empty input — apply whatever the agent has generated.
         requestWorkspaceState();
@@ -205,14 +284,31 @@ export async function consultAgent(
   const applyWorkspaceFiles = (files: { path: string; content: string }[]) => {
     let count = 0;
     for (const file of files) {
-      // Skip files we uploaded that the agent hasn't modified — only apply
-      // new files and agent-modified versions of existing files.
+      // Skip files we uploaded that the agent hasn't modified.
       const original = projectContext.existingFiles[file.path];
       if (original !== undefined && original === file.content) {
         continue;
       }
-      const fullPath = `${projectRoot}/${file.path}`;
-      host.write(fullPath, file.content);
+
+      // Route to the correct project root. For composite generators (mern, mean)
+      // files are prefixed with 'service/' or 'app/' to distinguish the two parts.
+      let targetRoot = projectRoot;
+      let relativePath = file.path;
+      if (options?.additionalRoots) {
+        for (const [prefix, root] of Object.entries(options.additionalRoots)) {
+          if (file.path.startsWith(prefix + '/')) {
+            targetRoot = root;
+            relativePath = file.path.slice(prefix.length + 1);
+            break;
+          }
+        }
+        // Also strip the default 'service/' prefix when it matches projectRoot
+        if (relativePath === file.path && file.path.startsWith('service/')) {
+          relativePath = file.path.slice('service/'.length);
+        }
+      }
+
+      host.write(`${targetRoot}/${relativePath}`, file.content);
       count++;
     }
     return count;
@@ -249,12 +345,38 @@ export async function consultAgent(
     // else: description prompt is still open — post-prompt code will call sendInitialMessage.
   });
 
+  const describeToolCall = (toolName: string, args: Record<string, unknown>): string => {
+    switch (toolName) {
+      // Workspace tools (Mastra built-in names)
+      case 'mastra_workspace_write_file': return `Writing:  ${args['path']}`;
+      case 'mastra_workspace_edit_file':  return `Editing:  ${args['path']}`;
+      case 'mastra_workspace_read_file':  return `Reading:  ${args['path']}`;
+      case 'mastra_workspace_list_files': return `Listing workspace files`;
+      // nx-adsp template tools (Mastra uses the agent registration key, not the tool id)
+      case 'listNxAdspTemplatesTool':     return `Listing available ADSP templates`;
+      case 'getNxAdspTemplateTool':       return `Getting template: ${args['templateId']}`;
+      default:                            return `Tool: ${toolName}`;
+    }
+  };
+
+  let firstDeltaOfTurn = true;
+
   socket.on('stream', ({ chunk, done }) => {
+    if (chunk?.type === 'tool-call') {
+      const p = chunk.payload as { toolName?: string; args?: Record<string, unknown> };
+      if (p?.toolName) {
+        stopThinking();
+        process.stdout.write(`${DIM}[nx-adsp] ${describeToolCall(p.toolName, p.args ?? {})}${RESET}\n`);
+      }
+    }
+
     if (chunk?.type === 'text-delta') {
       const text: string = chunk.payload?.text ?? '';
-      if (!agentHasResponded) {
-        // Clear the dots line before the first response starts.
+      stopThinking();
+      if (firstDeltaOfTurn) {
+        // Blank line between the status/tool output and the agent's response text.
         process.stdout.write('\n');
+        firstDeltaOfTurn = false;
       }
       buffer += text;
       agentHasResponded = true;
@@ -266,8 +388,7 @@ export async function consultAgent(
         process.stdout.write('\n');
       }
       buffer = '';
-      // Agent finished its turn — prompt the user to continue the conversation
-      // or press Enter to apply whatever the agent has written so far.
+      firstDeltaOfTurn = true;  // reset for the next turn
       promptUser();
     }
   });
