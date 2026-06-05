@@ -8,6 +8,8 @@ export interface Schema {
   tenantRealm?: string;
   /** ADSP tenant name (e.g. 'my-org'). Required when tenantRealm is provided. */
   tenant?: string;
+  /** When true, skip the agent interaction. Used by composite generators that run the agent themselves. */
+  skipAgent?: boolean;
 }
 
 export interface NormalizedSchema extends Schema {

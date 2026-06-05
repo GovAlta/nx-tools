@@ -17,6 +17,16 @@
       "enum": ["dev", "test", "prod"],
       "default": "prod"
     },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. Enables a single browser login for the full stack — service and frontend agent interactions both use the same tenant-realm token.",
+      "alias": "t"
+    },
+    "tenantRealm": {
+      "type": "string",
+      "description": "Keycloak realm UUID. Optional when --tenant is provided — overrides the realm looked up from the tenant service.",
+      "alias": "tr"
+    },
     "accessToken": {
       "type": "string",
       "description": "Access token for ADSP tenant configuration (skips interactive login)."

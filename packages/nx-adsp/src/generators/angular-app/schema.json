@@ -31,6 +31,16 @@
         ]
       }
     },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. Looks up the tenant realm and opens a single browser login, avoiding a separate interactive tenant selection.",
+      "alias": "t"
+    },
+    "tenantRealm": {
+      "type": "string",
+      "description": "Keycloak realm UUID. Optional when --tenant is provided — overrides the realm looked up from the tenant service.",
+      "alias": "tr"
+    },
     "accessToken": {
       "type": "string",
       "description": "Access token for retrieving configuration from ADSP APIs.",

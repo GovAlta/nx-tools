@@ -1,4 +1,6 @@
 import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import { consultAgent } from '../../utils/agent';
+import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -162,6 +164,34 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   updateProjectConfiguration(host, options.name, config);
 
   await formatFiles(host);
+
+  if (normalizedOptions.adsp && !options.skipAgent) {
+    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const appComponentTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.component.ts`)?.toString() ?? '';
+    const appComponentHtml = host.read(`${normalizedOptions.projectRoot}/src/app/app.component.html`)?.toString() ?? '';
+    const appConfigTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.config.ts`)?.toString() ?? '';
+    const appRoutesTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.routes.ts`)?.toString() ?? '';
+    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
+    await consultAgent(
+      normalizedOptions.adsp.directoryServiceUrl,
+      accessToken,
+      {
+        projectName: normalizedOptions.projectName,
+        projectType: 'angular-app',
+        tenant: normalizedOptions.adsp.tenant,
+        pluginVersion: PLUGIN_VERSION,
+        existingFiles: {
+          'src/app/app.component.ts': appComponentTs,
+          'src/app/app.component.html': appComponentHtml,
+          'src/app/app.config.ts': appConfigTs,
+          'src/app/app.routes.ts': appRoutesTs,
+          'src/environments/environment.ts': environmentTs,
+        },
+      },
+      host,
+      normalizedOptions.projectRoot
+    );
+  }
 
   await deploymentGenerator(host, {
     ...normalizedOptions,

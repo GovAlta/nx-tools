@@ -1,4 +1,6 @@
 import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import { consultAgent } from '../../utils/agent';
+import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -167,6 +169,34 @@ export default async function (host: Tree, options: Schema) {
   updateProjectConfiguration(host, options.name, config);
 
   await formatFiles(host);
+
+  if (normalizedOptions.adsp && !options.skipAgent) {
+    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const appTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.tsx`)?.toString() ?? '';
+    const storeTs = host.read(`${normalizedOptions.projectRoot}/src/store.ts`)?.toString() ?? '';
+    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
+    const configSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/config.slice.ts`)?.toString() ?? '';
+    const intakeSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/intake.slice.ts`)?.toString() ?? '';
+    await consultAgent(
+      normalizedOptions.adsp.directoryServiceUrl,
+      accessToken,
+      {
+        projectName: normalizedOptions.projectName,
+        projectType: 'react-app',
+        tenant: normalizedOptions.adsp.tenant,
+        pluginVersion: PLUGIN_VERSION,
+        existingFiles: {
+          'src/app/app.tsx': appTs,
+          'src/store.ts': storeTs,
+          'src/environments/environment.ts': environmentTs,
+          'src/app/config.slice.ts': configSliceTs,
+          'src/app/intake.slice.ts': intakeSliceTs,
+        },
+      },
+      host,
+      normalizedOptions.projectRoot
+    );
+  }
 
   await deploymentGenerator(host, {
     ...normalizedOptions,

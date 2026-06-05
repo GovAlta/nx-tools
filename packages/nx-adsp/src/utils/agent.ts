@@ -57,7 +57,16 @@ export async function consultAgent(
     existingFiles: Record<string, string>;
   },
   host: Tree,
-  projectRoot: string
+  projectRoot: string,
+  options?: {
+    /**
+     * When provided, join an existing thread rather than starting a new one.
+     * The description prompt is skipped and a continuation message is sent instead,
+     * allowing the agent to carry context from a prior service interaction.
+     * Used by composite generators (mern, mean) to run service + frontend in one session.
+     */
+    threadId?: string;
+  }
 ): Promise<AgentResult | null> {
   if (!accessToken) {
     process.stdout.write('\n[nx-adsp] No access token — skipping agent interaction.\n');
@@ -70,9 +79,10 @@ export async function consultAgent(
     return null;
   }
 
-  process.stdout.write(`\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`);
+  const isContinuation = !!options?.threadId;
+  const threadId = options?.threadId ?? crypto.randomUUID();
 
-  const threadId = crypto.randomUUID();
+  process.stdout.write(`\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`);
 
   // Start socket connection immediately so file upload overlaps with the description prompt.
   const socket = io(agentServiceUrl, {
@@ -125,6 +135,13 @@ export async function consultAgent(
 
   const buildInitialMessage = () => {
     const fileNames = Object.keys(projectContext.existingFiles).join(', ');
+    if (isContinuation) {
+      return (
+        `I've also scaffolded a ${projectContext.projectType} called "${projectContext.projectName}" ` +
+        `for the same tenant. The frontend files (${fileNames}) have been uploaded to your workspace. ` +
+        `Based on the ADSP capabilities we discussed for the service, what frontend integrations would be useful?`
+      );
+    }
     const descriptionLine = description
       ? `It is described as: "${description}". `
       : '';
@@ -285,21 +302,28 @@ export async function consultAgent(
     requestWorkspaceState();
   });
 
-  // Show description prompt while socket connects and uploads files in the background.
-  try {
-    const { prompt } = await import('enquirer');
-    const answer = await prompt<{ description: string }>({
-      type: 'input',
-      name: 'description',
-      message: `Briefly describe what ${projectContext.projectName} does:`,
-    });
-    description = answer.description?.trim() || undefined;
+  // For continuation calls (shared thread from composite generator), skip the
+  // description prompt — the agent already has context from the prior service
+  // interaction on the same thread.
+  if (isContinuation) {
     descriptionReady = true;
-  } catch {
-    // Ctrl+C or cancellation during the description prompt.
-    interrupted = true;
-    cleanup(0);
-    return conversationPromise;
+  } else {
+    // Show description prompt while socket connects and uploads files in the background.
+    try {
+      const { prompt } = await import('enquirer');
+      const answer = await prompt<{ description: string }>({
+        type: 'input',
+        name: 'description',
+        message: `Briefly describe what ${projectContext.projectName} does:`,
+      });
+      description = answer.description?.trim() || undefined;
+      descriptionReady = true;
+    } catch {
+      // Ctrl+C or cancellation during the description prompt.
+      interrupted = true;
+      cleanup(0);
+      return conversationPromise;
+    }
   }
 
   // Create readline after enquirer has fully released stdin so the two
