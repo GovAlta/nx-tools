@@ -84,7 +84,10 @@ export async function consultAgent(
     reconnection: false,
   });
 
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // rl is created after the enquirer prompt (below) so that readline gets a
+  // clean stdin — enquirer sets raw mode on stdin and restoring it before
+  // readline attaches avoids the two libraries leaving stdin in a bad state.
+  let rl: ReturnType<typeof createInterface> | null = null;
 
   // Coordination: sendInitialMessage is called once BOTH conditions are met:
   //   1. description prompt has been answered (descriptionReady = true)
@@ -107,7 +110,7 @@ export async function consultAgent(
 
   const cleanup = (filesWritten: number) => {
     conversationDone = true;
-    rl.close();
+    rl?.close();
     socket.disconnect();
     // Return null only for truly silent skips (no agent, no token, connection failed).
     // Return a result whenever the user was actively engaged (agent responded)
@@ -198,20 +201,9 @@ export async function consultAgent(
     return count;
   };
 
-  // Register all socket and readline handlers upfront so they are active
-  // while the description prompt is being shown.
-
-  rl.on('SIGINT', () => {
-    interrupted = true;
-    process.stdout.write('\n');
-    cleanup(0);
-  });
-
-  rl.on('close', () => {
-    if (!conversationDone && !interrupted) {
-      requestWorkspaceState();
-    }
-  });
+  // Register socket handlers upfront so they are active while the description
+  // prompt is being shown. readline handlers are registered after the prompt
+  // (see below) to avoid enquirer leaving stdin in a bad state.
 
   socket.on('connect', () => {
     // Connect and upload silently — stdout writes here would interleave with
@@ -309,6 +301,22 @@ export async function consultAgent(
     cleanup(0);
     return conversationPromise;
   }
+
+  // Create readline after enquirer has fully released stdin so the two
+  // libraries don't conflict over stdin state.
+  rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  rl.on('SIGINT', () => {
+    interrupted = true;
+    process.stdout.write('\n');
+    cleanup(0);
+  });
+
+  rl.on('close', () => {
+    if (!conversationDone && !interrupted) {
+      requestWorkspaceState();
+    }
+  });
 
   if (workspaceReady) {
     // Upload finished while the user was typing — send immediately.
