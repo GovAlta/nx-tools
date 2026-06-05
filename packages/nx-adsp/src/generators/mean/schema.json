@@ -17,6 +17,11 @@
       "enum": ["dev", "test", "prod"],
       "default": "prod"
     },
+    "tenant": {
+      "type": "string",
+      "description": "Tenant name. Looks up the tenant realm and opens a single browser login to that realm, avoiding a separate interactive tenant selection.",
+      "alias": "t"
+    },
     "accessToken": {
       "type": "string",
       "description": "Access token for ADSP tenant configuration (skips interactive login)."

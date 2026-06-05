@@ -15,7 +15,7 @@ import { Schema, NormalizedSchema } from './schema';
 
 // Version of nx-adsp passed to the agent for template compatibility checks.
 // Keep in sync with package.json version.
-const PLUGIN_VERSION = '12.x';
+export const PLUGIN_VERSION = '12.x';
 
 async function normalizeOptions(
   host: Tree,
@@ -90,7 +90,7 @@ export default async function (host: Tree, options: Schema) {
   // files and modifications to integration files (main.ts, environment.ts)
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
-  if (normalizedOptions.adsp) {
+  if (normalizedOptions.adsp && !options.skipAgent) {
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 

@@ -118,23 +118,44 @@ export async function selectTenant(tenantServiceUrl: string, token: string) {
 
 export async function getAdspConfiguration(
   _host: Tree,
-  options: { env: EnvironmentName; accessToken?: string }
+  options: { env: EnvironmentName; accessToken?: string; tenant?: string }
 ): Promise<AdspConfiguration> {
   const { env, accessToken } = options;
   const environment = environments[env || 'prod'];
 
   if (isAdspOptions(options)) {
-    // If Adsp configuration is already been resolved, then no need to retrieve gain.
+    // Adsp configuration already resolved — return it directly.
     return options.adsp;
+  }
+
+  const urls = await getServiceUrls(environment.directoryServiceUrl);
+  const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
+
+  if (options.tenant) {
+    // --tenant <name>: look up the realm anonymously, then login to that realm
+    // once. The resulting token works for both configuration access and the
+    // agent-service (which requires a tenant-realm token for role checks).
+    const { data } = await axios.get<{ results: { name: string; realm: string }[] }>(
+      new URL('v2/tenants', tenantServiceUrl).href,
+      { params: { name: options.tenant } },
+    );
+    const found = data.results[0];
+    if (!found) {
+      throw new Error(`Tenant '${options.tenant}' not found.`);
+    }
+
+    const token = accessToken || (await realmLogin(environment.accessServiceUrl, found.realm));
+    return {
+      tenant: names(found.name).fileName,
+      tenantRealm: found.realm,
+      accessServiceUrl: environment.accessServiceUrl,
+      directoryServiceUrl: environment.directoryServiceUrl,
+      accessToken: token,
+    };
   } else {
-    const urls = await getServiceUrls(environment.directoryServiceUrl);
-
-    const token =
-      accessToken || (await realmLogin(environment.accessServiceUrl, 'core'));
-
-    const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
+    // Interactive flow: login to core realm, then let the user pick a tenant.
+    const token = accessToken || (await realmLogin(environment.accessServiceUrl, 'core'));
     const tenant = await selectTenant(tenantServiceUrl, token);
-
     return {
       tenant: names(tenant.name).fileName,
       tenantRealm: tenant.realm,
