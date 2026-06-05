@@ -48,6 +48,8 @@ export async function consultAgent(
     projectType: 'express-service' | 'react-app' | 'angular-app';
     tenant: string;
     pluginVersion: string;
+    /** Brief description of what the service does, provided by the developer. */
+    description?: string;
     /** Content of key integration files for the agent to read and potentially modify. */
     existingFiles: Record<string, string>;
   },
@@ -100,9 +102,13 @@ export async function consultAgent(
 
     const buildInitialMessage = () => {
       const fileNames = Object.keys(projectContext.existingFiles).join(', ');
+      const descriptionLine = projectContext.description
+        ? `It is described as: "${projectContext.description}". `
+        : '';
       return (
         `I am setting up a new ${projectContext.projectType} called "${projectContext.projectName}" ` +
         `for ADSP tenant "${projectContext.tenant}" (nx-adsp plugin version ${projectContext.pluginVersion}). ` +
+        descriptionLine +
         `The project files (${fileNames}) have been uploaded to your workspace. ` +
         `What ADSP capabilities would be useful to integrate into this service?`
       );
