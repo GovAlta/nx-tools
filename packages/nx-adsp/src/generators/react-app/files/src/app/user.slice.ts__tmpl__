@@ -48,7 +48,7 @@ export const logoutUser = createAsyncThunk('user/logout', async () => {
 
 export async function getAccessToken(): Promise<string> {
   await keycloak.updateToken(30);
-  return keycloak.token;
+  return keycloak.token as string;
 }
 
 const userSlice = createSlice({
