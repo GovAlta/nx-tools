@@ -1,10 +1,10 @@
 import { formatFiles, getWorkspaceLayout, installPackagesTask, names, Tree } from '@nx/devkit';
 import { getAdspConfiguration } from '@abgov/nx-oc';
 import initExpressService from '../express-service/express-service';
-import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import initReactApp from '../react-app/react-app';
 import { Schema, NormalizedSchema } from './schema';
-import { consultAgent } from '../../utils/agent';
+import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
+import { PLUGIN_VERSION } from '../../utils/plugin-version';
 
 async function normalizeOptions(
   host: Tree,
@@ -19,42 +19,12 @@ export default async function (host: Tree, options: Schema) {
   const projectName = names(options.name).fileName;
   const serviceName = `${projectName}-service`;
   const appName = `${projectName}-app`;
-  const serviceRoot = `${getWorkspaceLayout(host).appsDir}/${serviceName}`;
-  const appRoot = `${getWorkspaceLayout(host).appsDir}/${appName}`;
+  const appsDir = getWorkspaceLayout(host).appsDir;
+  const serviceRoot = `${appsDir}/${serviceName}`;
+  const appRoot = `${appsDir}/${appName}`;
 
-  // When --tenant is provided, getAdspConfiguration returns a tenant-realm token
-  // that works for the agent-service. Use a shared thread so the agent carries
-  // context from the service discussion into the frontend interaction.
-  const sharedThreadId = options.tenant ? crypto.randomUUID() : undefined;
-
-  await initExpressService(host, {
-    ...normalizedOptions,
-    name: serviceName,
-    skipAgent: !!sharedThreadId,
-  });
-
-  if (sharedThreadId && normalizedOptions.adsp) {
-    const mainTs = host.read(`${serviceRoot}/src/main.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${serviceRoot}/src/environment.ts`)?.toString() ?? '';
-    await consultAgent(
-      normalizedOptions.adsp.directoryServiceUrl,
-      normalizedOptions.adsp.accessToken,
-      {
-        projectName: serviceName,
-        projectType: 'express-service',
-        tenant: normalizedOptions.adsp.tenant,
-        pluginVersion: PLUGIN_VERSION,
-        existingFiles: {
-          'src/main.ts': mainTs,
-          'src/environment.ts': environmentTs,
-        },
-      },
-      host,
-      serviceRoot,
-      { threadId: sharedThreadId }
-    );
-  }
-
+  // Scaffold both projects before the agent interaction so files exist to upload.
+  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true });
   await initReactApp(host, {
     ...normalizedOptions,
     name: appName,
@@ -62,35 +32,35 @@ export default async function (host: Tree, options: Schema) {
       location: '/api/',
       proxyPass: `http://${serviceName}:3333/${serviceName}/`,
     },
-    skipAgent: !!sharedThreadId,
+    skipAgent: true,
   });
 
-  if (sharedThreadId && normalizedOptions.adsp) {
-    const appTs = host.read(`${appRoot}/src/app/app.tsx`)?.toString() ?? '';
-    const storeTs = host.read(`${appRoot}/src/store.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${appRoot}/src/environments/environment.ts`)?.toString() ?? '';
-    const configSliceTs = host.read(`${appRoot}/src/app/config.slice.ts`)?.toString() ?? '';
-    const intakeSliceTs = host.read(`${appRoot}/src/app/intake.slice.ts`)?.toString() ?? '';
-    await consultAgent(
+  if (normalizedOptions.adsp && options.tenant) {
+    // Single conversation covering the full stack. Files from both projects are
+    // uploaded with service/ and app/ prefixes so the agent can write to both,
+    // and are routed to the correct project root when applied.
+    await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       normalizedOptions.adsp.accessToken,
       {
-        projectName: appName,
-        projectType: 'react-app',
+        projectName,
+        projectType: 'mern',
         tenant: normalizedOptions.adsp.tenant,
         pluginVersion: PLUGIN_VERSION,
         existingFiles: {
-          'src/app/app.tsx': appTs,
-          'src/store.ts': storeTs,
-          'src/environments/environment.ts': environmentTs,
-          'src/app/config.slice.ts': configSliceTs,
-          'src/app/intake.slice.ts': intakeSliceTs,
+          'service/src/main.ts': host.read(`${serviceRoot}/src/main.ts`)?.toString() ?? '',
+          'service/src/environment.ts': host.read(`${serviceRoot}/src/environment.ts`)?.toString() ?? '',
+          'app/src/app/app.tsx': host.read(`${appRoot}/src/app/app.tsx`)?.toString() ?? '',
+          'app/src/store.ts': host.read(`${appRoot}/src/store.ts`)?.toString() ?? '',
+          'app/src/environments/environment.ts': host.read(`${appRoot}/src/environments/environment.ts`)?.toString() ?? '',
+          'app/src/app/config.slice.ts': host.read(`${appRoot}/src/app/config.slice.ts`)?.toString() ?? '',
+          'app/src/app/intake.slice.ts': host.read(`${appRoot}/src/app/intake.slice.ts`)?.toString() ?? '',
         },
       },
       host,
-      appRoot,
-      { threadId: sharedThreadId }
-    );
+      serviceRoot,
+      { additionalRoots: { 'app': appRoot } }
+    ));
   }
 
   await formatFiles(host);

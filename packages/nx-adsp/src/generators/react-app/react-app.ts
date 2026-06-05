@@ -1,5 +1,5 @@
 import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
-import { consultAgent } from '../../utils/agent';
+import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
   addDependenciesToPackageJson,
@@ -177,7 +177,7 @@ export default async function (host: Tree, options: Schema) {
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
     const configSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/config.slice.ts`)?.toString() ?? '';
     const intakeSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/intake.slice.ts`)?.toString() ?? '';
-    await consultAgent(
+    await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       accessToken,
       {
@@ -195,7 +195,7 @@ export default async function (host: Tree, options: Schema) {
       },
       host,
       normalizedOptions.projectRoot
-    );
+    ));
   }
 
   await deploymentGenerator(host, {
