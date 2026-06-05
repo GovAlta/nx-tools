@@ -214,14 +214,10 @@ export async function consultAgent(
   });
 
   socket.on('connect', () => {
-    process.stdout.write('[nx-adsp] Connected to agent-service.\n');
-    process.stdout.write('[nx-adsp] Uploading project files to workspace...\n');
-    // The server registers its 'workspace-update' handler only after an async
-    // getServiceConfiguration() call completes (router.ts:215). It signals
-    // readiness by calling socket.send() (router.ts:217), which arrives as a
-    // 'message' event on the client — by then all server handlers are registered.
-    // Emitting workspace-update immediately on 'connect' races that await and
-    // the event is silently dropped when the server wins.
+    // Connect and upload silently — stdout writes here would interleave with
+    // the description prompt that is active concurrently.
+    // The server signals handler readiness via socket.send() after its async
+    // getServiceConfiguration() resolves; wait for that before uploading.
     socket.once('message', () => {
       socket.emit('workspace-update', {
         agent: AGENT_ID,
@@ -317,8 +313,12 @@ export async function consultAgent(
   if (workspaceReady) {
     // Upload finished while the user was typing — send immediately.
     sendInitialMessage();
+  } else {
+    // Rare: user typed faster than the upload completed. Show a brief status
+    // so the prompt doesn't appear to hang.
+    process.stdout.write('[nx-adsp] Uploading project files to workspace...\n');
+    // workspace-updated handler will call sendInitialMessage once upload completes.
   }
-  // else: workspace-updated handler will call sendInitialMessage once upload completes.
 
   return conversationPromise;
 }
