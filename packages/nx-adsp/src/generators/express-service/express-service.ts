@@ -141,6 +141,13 @@ export default async function (host: Tree, options: Schema) {
         return undefined;
       }));
 
+    const { prompt } = await import('enquirer');
+    const { description } = await prompt<{ description: string }>({
+      type: 'input',
+      name: 'description',
+      message: `Briefly describe what ${normalizedOptions.projectName} does:`,
+    });
+
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
 
@@ -150,6 +157,7 @@ export default async function (host: Tree, options: Schema) {
       {
         projectName: normalizedOptions.projectName,
         projectType: 'express-service',
+        description: description?.trim() || undefined,
         tenant: normalizedOptions.adsp.tenant,
         pluginVersion: PLUGIN_VERSION,
         existingFiles: {
