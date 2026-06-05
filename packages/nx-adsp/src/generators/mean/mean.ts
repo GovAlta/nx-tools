@@ -2,9 +2,9 @@ import { formatFiles, getWorkspaceLayout, installPackagesTask, names, Tree } fro
 import { getAdspConfiguration } from '@abgov/nx-oc';
 import initAngularApp from '../angular-app/angular-app';
 import initExpressService from '../express-service/express-service';
-import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import { NormalizedSchema, Schema } from './schema';
-import { consultAgent } from '../../utils/agent';
+import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
+import { PLUGIN_VERSION } from '../../utils/plugin-version';
 
 async function normalizeOptions(
   host: Tree,
@@ -19,42 +19,12 @@ export default async function (host: Tree, options: Schema) {
   const projectName = names(options.name).fileName;
   const serviceName = `${projectName}-service`;
   const appName = `${projectName}-app`;
-  const serviceRoot = `${getWorkspaceLayout(host).appsDir}/${serviceName}`;
-  const appRoot = `${getWorkspaceLayout(host).appsDir}/${appName}`;
+  const appsDir = getWorkspaceLayout(host).appsDir;
+  const serviceRoot = `${appsDir}/${serviceName}`;
+  const appRoot = `${appsDir}/${appName}`;
 
-  // When --tenant is provided, getAdspConfiguration returns a tenant-realm token
-  // that works for the agent-service. Use a shared thread so the agent carries
-  // context from the service discussion into the frontend interaction.
-  const sharedThreadId = options.tenant ? crypto.randomUUID() : undefined;
-
-  await initExpressService(host, {
-    ...normalizedOptions,
-    name: serviceName,
-    skipAgent: !!sharedThreadId,
-  });
-
-  if (sharedThreadId && normalizedOptions.adsp) {
-    const mainTs = host.read(`${serviceRoot}/src/main.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${serviceRoot}/src/environment.ts`)?.toString() ?? '';
-    await consultAgent(
-      normalizedOptions.adsp.directoryServiceUrl,
-      normalizedOptions.adsp.accessToken,
-      {
-        projectName: serviceName,
-        projectType: 'express-service',
-        tenant: normalizedOptions.adsp.tenant,
-        pluginVersion: PLUGIN_VERSION,
-        existingFiles: {
-          'src/main.ts': mainTs,
-          'src/environment.ts': environmentTs,
-        },
-      },
-      host,
-      serviceRoot,
-      { threadId: sharedThreadId }
-    );
-  }
-
+  // Scaffold both projects before the agent interaction so files exist to upload.
+  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true });
   await initAngularApp(host, {
     ...normalizedOptions,
     name: appName,
@@ -62,35 +32,35 @@ export default async function (host: Tree, options: Schema) {
       location: '/api/',
       proxyPass: `http://${serviceName}:3333/${serviceName}/`,
     },
-    skipAgent: !!sharedThreadId,
+    skipAgent: true,
   });
 
-  if (sharedThreadId && normalizedOptions.adsp) {
-    const appComponentTs = host.read(`${appRoot}/src/app/app.component.ts`)?.toString() ?? '';
-    const appComponentHtml = host.read(`${appRoot}/src/app/app.component.html`)?.toString() ?? '';
-    const appConfigTs = host.read(`${appRoot}/src/app/app.config.ts`)?.toString() ?? '';
-    const appRoutesTs = host.read(`${appRoot}/src/app/app.routes.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${appRoot}/src/environments/environment.ts`)?.toString() ?? '';
-    await consultAgent(
+  if (normalizedOptions.adsp && options.tenant) {
+    // Single conversation covering the full stack. Files from both projects are
+    // uploaded with service/ and app/ prefixes so the agent can write to both,
+    // and are routed to the correct project root when applied.
+    await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       normalizedOptions.adsp.accessToken,
       {
-        projectName: appName,
-        projectType: 'angular-app',
+        projectName,
+        projectType: 'mean',
         tenant: normalizedOptions.adsp.tenant,
         pluginVersion: PLUGIN_VERSION,
         existingFiles: {
-          'src/app/app.component.ts': appComponentTs,
-          'src/app/app.component.html': appComponentHtml,
-          'src/app/app.config.ts': appConfigTs,
-          'src/app/app.routes.ts': appRoutesTs,
-          'src/environments/environment.ts': environmentTs,
+          'service/src/main.ts': host.read(`${serviceRoot}/src/main.ts`)?.toString() ?? '',
+          'service/src/environment.ts': host.read(`${serviceRoot}/src/environment.ts`)?.toString() ?? '',
+          'app/src/app/app.component.ts': host.read(`${appRoot}/src/app/app.component.ts`)?.toString() ?? '',
+          'app/src/app/app.component.html': host.read(`${appRoot}/src/app/app.component.html`)?.toString() ?? '',
+          'app/src/app/app.config.ts': host.read(`${appRoot}/src/app/app.config.ts`)?.toString() ?? '',
+          'app/src/app/app.routes.ts': host.read(`${appRoot}/src/app/app.routes.ts`)?.toString() ?? '',
+          'app/src/environments/environment.ts': host.read(`${appRoot}/src/environments/environment.ts`)?.toString() ?? '',
         },
       },
       host,
-      appRoot,
-      { threadId: sharedThreadId }
-    );
+      serviceRoot,
+      { additionalRoots: { 'app': appRoot } }
+    ));
   }
 
   await formatFiles(host);
