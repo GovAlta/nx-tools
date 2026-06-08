@@ -387,6 +387,13 @@ export async function consultAgent(
       if (buffer.length > 0 && !buffer.endsWith('\n')) {
         process.stdout.write('\n');
       }
+      if (firstDeltaOfTurn) {
+        // Agent completed its turn (possibly doing tool work) without sending any
+        // text. Clear any active thinking indicator and show a dim hint so the
+        // user knows the turn ended and they can reply or press Enter to finish.
+        stopThinking();
+        process.stdout.write(`${DIM}[nx-adsp] Agent completed work without a response — reply or press Enter to apply files.${RESET}\n`);
+      }
       buffer = '';
       firstDeltaOfTurn = true;  // reset for the next turn
       promptUser();
