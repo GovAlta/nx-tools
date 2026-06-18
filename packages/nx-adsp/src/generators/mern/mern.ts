@@ -1,5 +1,5 @@
 import { formatFiles, getWorkspaceLayout, installPackagesTask, names, Tree } from '@nx/devkit';
-import { getAdspConfiguration } from '@abgov/nx-oc';
+import { getAdspConfiguration, realmLogin } from '@abgov/nx-oc';
 import initExpressService from '../express-service/express-service';
 import initReactApp from '../react-app/react-app';
 import { Schema, NormalizedSchema } from './schema';
@@ -38,13 +38,26 @@ export default async function (host: Tree, options: Schema) {
     skipAgent: true,
   });
 
-  if (normalizedOptions.adsp && options.tenant) {
+  if (normalizedOptions.adsp) {
     // Single conversation covering the full stack. Files from both projects are
     // uploaded with service/ and app/ prefixes so the agent can write to both,
     // and are routed to the correct project root when applied.
+    // Use the token from --tenant login if available; fall back to a realm login
+    // when the interactive flow was used (which only obtains a core-realm token).
+    const accessToken =
+      normalizedOptions.adsp.accessToken ??
+      (await realmLogin(
+        normalizedOptions.adsp.accessServiceUrl,
+        normalizedOptions.adsp.tenantRealm
+      ).catch((err) => {
+        process.stdout.write(
+          `\n[nx-adsp] Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`
+        );
+        return undefined;
+      }));
     await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
-      normalizedOptions.adsp.accessToken,
+      accessToken,
       {
         projectName,
         projectType: 'mern',
