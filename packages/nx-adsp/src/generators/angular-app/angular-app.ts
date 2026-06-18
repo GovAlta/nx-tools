@@ -104,7 +104,8 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     name: options.name,
     prefix: normalizedOptions.projectName,
     linter: 'none',
-    directory: `apps/${options.name}`
+    directory: `apps/${options.name}`,
+    skipFormat: true,
   });
 
   addDependenciesToPackageJson(
