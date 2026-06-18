@@ -5,7 +5,12 @@ import { environments } from '@abgov/nx-oc';
 import { Schema } from './schema';
 import generator from './mean';
 
+jest.mock('@nx/devkit', () => ({ ...jest.requireActual('@nx/devkit'), formatFiles: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@abgov/nx-oc');
+jest.mock('../../utils/agent', () => ({
+  consultAgent: jest.fn().mockResolvedValue(null),
+  confirmAfterAgentInterrupt: jest.fn().mockResolvedValue(undefined),
+}));
 const utilsMock = utils as jest.Mocked<typeof utils>;
 utilsMock.getAdspConfiguration.mockResolvedValue({
   tenant: 'test',
