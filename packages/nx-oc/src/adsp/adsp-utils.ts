@@ -6,6 +6,7 @@ import * as open from 'open';
 import { AccessToken, AuthorizationCode } from 'simple-oauth2';
 import { AdspConfiguration, AdspOptions } from './adsp';
 import { EnvironmentName, environments } from './environments';
+import { getCachedToken, isExpired, setCachedToken } from './token-cache';
 
 interface Package {
   dependencies: Record<string, string>;
@@ -36,6 +37,29 @@ export async function realmLogin(
       authorizePath: `/auth/realms/${realm}/protocol/openid-connect/auth`,
     },
   });
+
+  // Core realm is only used to fetch the tenant list — not worth caching.
+  if (realm !== 'core') {
+    const cached = getCachedToken(accessServiceUrl, realm);
+    if (cached) {
+      if (!isExpired(cached)) {
+        return cached.accessToken;
+      }
+
+      if (cached.refreshToken) {
+        try {
+          const { token } = await client
+            .createToken({ access_token: cached.accessToken, refresh_token: cached.refreshToken })
+            .refresh();
+          const expiresIn = (token['expires_in'] as number) ?? 300;
+          setCachedToken(accessServiceUrl, realm, token['access_token'] as string, token['refresh_token'] as string | undefined, expiresIn);
+          return token['access_token'] as string;
+        } catch {
+          // Refresh failed — fall through to browser login.
+        }
+      }
+    }
+  }
 
   const redirect_uri = 'http://localhost:3000/callback';
   const authorizationUri = client.authorizeURL({
@@ -76,6 +100,11 @@ export async function realmLogin(
       )
     ),
   ]).finally(() => server.close());
+
+  if (realm !== 'core') {
+    const expiresIn = (token['expires_in'] as number) ?? 300;
+    setCachedToken(accessServiceUrl, realm, token['access_token'] as string, token['refresh_token'] as string | undefined, expiresIn);
+  }
 
   return token['access_token'];
 }
