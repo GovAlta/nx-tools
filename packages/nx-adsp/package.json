@@ -19,6 +19,14 @@
     "@nx/react": "^22.0.0",
     "tslib": "^2.0.0"
   },
+  "peerDependenciesMeta": {
+    "@nx-dotnet/core": {
+      "optional": true
+    },
+    "@nx/angular": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "axios": "^1.16.0",
     "enquirer": "^2.3.6",
