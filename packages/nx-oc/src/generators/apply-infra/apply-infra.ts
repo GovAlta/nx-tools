@@ -22,6 +22,11 @@ function applyOcResources(host: Tree) {
 }
 
 export default async function (host: Tree) {
-  ensureOcLogin();
+  try {
+    ensureOcLogin();
+  } catch (e) {
+    console.log(e instanceof Error ? e.message : String(e));
+    return;
+  }
   applyOcResources(host);
 }
