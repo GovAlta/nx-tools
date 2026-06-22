@@ -1,5 +1,5 @@
 import { Tree } from '@nx/devkit';
-import { runOcCommand } from '../../utils/oc-utils';
+import { ensureOcLogin, runOcCommand } from '../../utils/oc-utils';
 
 function applyOcResources(host: Tree) {
   const { success: pipelineApplied, stdout: pipelineOut } = runOcCommand(
@@ -22,10 +22,6 @@ function applyOcResources(host: Tree) {
 }
 
 export default async function (host: Tree) {
-  const { success } = runOcCommand('project', []);
-  if (success) {
-    applyOcResources(host);
-  } else {
-    console.log(`Use oc login then run 'nx g @abgov/nx-oc:apply-infra'`);
-  }
+  ensureOcLogin();
+  applyOcResources(host);
 }
