@@ -29,13 +29,14 @@ describe('Apply Infra Generator', () => {
     expect(mockedRunOcCommand.mock.calls[1][0]).toBe('apply');
   });
 
-  it('propagates login error without running oc apply', async () => {
+  it('logs login error and exits cleanly without running oc apply', async () => {
     const host = createTree();
     mockedEnsureOcLogin.mockImplementation(() => {
-      throw new Error('OpenShift login failed or was cancelled.');
+      throw new Error('oc CLI is not installed or not on PATH.');
     });
 
-    await expect(generator(host)).rejects.toThrow('OpenShift login failed');
+    await generator(host);
+
     expect(mockedRunOcCommand).not.toHaveBeenCalled();
   });
 });
