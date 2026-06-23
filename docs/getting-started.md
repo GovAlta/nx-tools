@@ -88,22 +88,22 @@ The follow steps can be used to generate a basic React frontend, Express/Node ba
 5. Generate the React frontend and Express backend projects.
 
    ```
-   npx nx g @abgov/nx-adsp:mern demo
-   ? Which ADSP environment do you want to target? <Tenant>
+   npx nx g @abgov/nx-adsp:express-service demo-service --env dev --tenant <Tenant>
+   npx nx g @abgov/nx-adsp:react-app demo-app --env dev --tenant <Tenant>
    ```
 
-   This will generate additional projects as well as associated OpenShift manifests in the workspace.
+   Each generator will open a browser login for your ADSP tenant. This generates the application projects along with associated OpenShift manifests.
 
    ```
    .openshift/
-     ├─ demo-app
-     └─ demo-service
-   apps
-     ├─ demo-app
-     └─ demo-service
+     ├─ demo-app/
+     └─ demo-service/
+   apps/
+     ├─ demo-app/
+     └─ demo-service/
    ```
 
-   Note that the OpenShift manifests are only generated if a pipeline has already been generated for the workspace. In order to add manifests to an existing project in the monorepo, refer to the `@abgov/nx-oc:deployment` generator.
+   Note that OpenShift manifests are only generated when a pipeline has already been set up in the workspace (step 4). To add OpenShift manifests to an existing project later, use the `@abgov/nx-oc:deployment` generator.
 
 6. Run apply-envs target to create the OpenShift resources across dev, test and prod environments.
 

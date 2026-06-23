@@ -1,19 +1,68 @@
-# About this project
-This is the Government of Alberta - Nx plugin for Semantic Release.
+# @abgov/nx-release
 
-The project contains both the Nx plugin generator for setting up a monorepo with semantic release
-configuration as well as a plugin for semantic release. 
+Nx plugin for configuring [semantic-release](https://semantic-release.gitbook.io/semantic-release/) in an Nx monorepo.
 
-## Semantic release / monorepo
-There are multiple challenges with using semantic release in a monorepo:
+The plugin generates a `.releaserc.json` for a publishable library that addresses the challenges of running semantic-release across multiple packages in the same repository. It also exports the semantic-release plugin used internally by the generated configuration.
+
+## TLDR
+
+```bash
+# 1. Install
+npm i -D @abgov/nx-release semantic-release
+
+# 2. Generate semantic-release configuration for a publishable library
+npx nx g @abgov/nx-release:lib my-lib
+```
+
+## Quick Start
+
+### Prerequisites
+
+- A publishable Nx library with a `package.json` and a configured `build` target
+- `semantic-release` installed as a dev dependency
+
+### Installation
+
+```bash
+npm i -D @abgov/nx-release semantic-release
+```
+
+### Generate configuration
+
+```bash
+npx nx g @abgov/nx-release:lib my-lib
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `project` | Yes | Name of the publishable Nx library to configure |
+
+The generator writes a `.releaserc.json` into the project directory with monorepo-safe configuration: per-project tag formats, commit filtering scoped to the project via Nx graph traversal, and coordinated multi-package release notes. Run it once per publishable library.
+
+### Running releases
+
+```bash
+# Release a single library
+npx nx run my-lib:semantic-release
+
+# Release all affected libraries
+npx nx affected --target=semantic-release
+```
+
+---
+
+## Monorepo challenges
+
+There are multiple challenges with using semantic-release in a monorepo:
+
 1. Each release project needs distinct release tags.
 2. Each project should be evaluated based on only commits related to it.
 3. Interdependencies between projects need to be handled.
 4. Interdependencies between publishable/releasable projects require coordination of releases.
-5. Channel (next-major, next, latest) information is stored in a git note on a semantic-release ref and does not distinguished between tags (and consequently projects).
+5. Channel (next-major, next, latest) information is stored in a git note on a semantic-release ref and does not distinguish between tags (and consequently projects).
 
-For (1), (2), and (3) in part this project uses the approach from [semantic-release-monorepo](https://github.com/pmowrer/semantic-release-monorepo) along with Nx capabilities: 
-- Each project uses a distinct `tagFormat`; 
+For (1), (2), and (3) in part this project uses the approach from [semantic-release-monorepo](https://github.com/pmowrer/semantic-release-monorepo) along with Nx capabilities:
+- Each project uses a distinct `tagFormat`;
 - A custom plugin wraps default plugins for `analyzeCommits` and `generateNotes` and filters for only relevant commits;
 - Nx `graph` is used to determine dependency paths that should also be included.
 

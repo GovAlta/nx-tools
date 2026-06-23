@@ -1,35 +1,179 @@
-# About this project
+# @abgov/nx-adsp
 
-This is the Government of Alberta - Nx plugin for ADSP apps.
+Nx plugin for bootstrapping [ADSP](https://govalta.github.io/adsp-monorepo/) applications for the Government of Alberta.
 
-The plugin includes generators for application, service, and fullstack solution quick starts. If the peer dependency `@abgov/nx-oc` is found, then OpenShift yml files are also included in the quickstarts. Application stack peer dependencies are required for the associated ADSP application type; for example, `@nx/angular` is required for the angular-app, and [@nx-dotnet/core](https://github.com/nx-dotnet/nx-dotnet) is required for dotnet-service.
+The plugin provides generators for Node/Express services, React and Angular frontends, .NET services, and fullstack solutions. When `@abgov/nx-oc` is also installed in the workspace, OpenShift deployment YAML is automatically included in the generated output.
 
-## TLDR
+## Prerequisites
 
-1. Create your Nx workspace using `npx create-nx-workspace my-workspace`
-2. Install plugin: `npm i -D @abgov/nx-adsp`
-3. Generate a quick start `npx g @abgov/nx-adsp:express-service my-app`
+| Generator | Required peer dependency |
+|-----------|--------------------------|
+| `react-app` | `@nx/react` |
+| `angular-app` | `@nx/angular` |
+| `dotnet-service` | `@nx-dotnet/core` |
+| `react-dotnet` | `@nx/react`, `@nx-dotnet/core` |
+| `express-service` | `@nx/node` |
+| `react-form`, `react-task-list` | existing React project in the workspace |
 
-# Dev Features
+## Installation
 
-Stuff inside [] needs to be replaced with your own names
+```bash
+npm i -D @abgov/nx-adsp
+```
 
-## To add a plugin to @abgov/nx-adsp
+## Quick Start
 
-nx g @nx/plugin:plugin [pluginName] --importPath .
-move the code generated into packages/ns-adsp and make changes in the plugin directory you've just generated
+```bash
+# 1. Create a workspace
+npx create-nx-workspace my-workspace
 
-## To test the plugin locally
+# 2. Install the plugin and any required peer dependencies
+npm i -D @abgov/nx-adsp @nx/node
 
-1. Generate a temp folder with a local nx-adsp using `nx run nx-adsp-e2e:e2e`
-2. Generate a new project somewhere with `npx create-nx-workspace`, following the prompts
+# 3. Generate a quickstart (interactive prompts fill missing options)
+npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
+```
 
-3. Inside the new workspace,
-   i) run
-   npm i -D [location-of-nx-tools]/dist/packages/nx-adsp //to update package.json
-   npm i -D @nx/angular //(this assumes you are building an angular plugin)
+## Generators
 
-ii) generate the plugin - tenantRealm is the realm UUID used to generate a login feature that will log into that particular tenant (eg '2a9a2c30-a094-4097-9247-8d41b39cb80e')
-`npx nx g @abgov/nx-adsp:[pluginName] my-ang-app --tenant tenantRealm`
-iii) run `npm install`
-iv) serve the plugin using `nx serve [pluginName]
+### `express-service`
+
+Creates a Node/Express backend service configured for ADSP.
+
+```bash
+npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `name` | — | Yes | Name of the service |
+| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
+| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
+| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+
+---
+
+### `react-app`
+
+Creates a React/Redux frontend application configured for ADSP. Requires `@nx/react`.
+
+```bash
+npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `name` | — | Yes | Name of the application |
+| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
+| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
+| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| `proxy` | — | No | Nginx proxy rule(s) as `{ location, proxyPass }` or an array of such objects |
+
+---
+
+### `angular-app`
+
+Creates an Angular frontend application configured for ADSP. Requires `@nx/angular`.
+
+```bash
+npx nx g @abgov/nx-adsp:angular-app my-app --env dev --tenant my-tenant
+```
+
+Accepts the same options as `react-app`.
+
+---
+
+### `dotnet-service`
+
+Creates an ASP.NET Core backend service configured for ADSP. Requires `@nx-dotnet/core`.
+
+```bash
+npx nx g @abgov/nx-adsp:dotnet-service my-service --env dev --accessToken $TOKEN
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `name` | — | Yes | Name of the service |
+| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+
+---
+
+### `react-dotnet`
+
+Composite generator that creates both a React frontend and a .NET backend as a fullstack solution. Requires `@nx/react` and `@nx-dotnet/core`.
+
+```bash
+npx nx g @abgov/nx-adsp:react-dotnet my-solution --env dev
+```
+
+Accepts the same options as `dotnet-service`.
+
+---
+
+### `react-form`
+
+Adds a React component generated from an existing [ADSP Form Definition](https://govalta.github.io/adsp-monorepo/) to an existing project. The generator fetches form definitions from the ADSP Form service for the target environment.
+
+```bash
+npx nx g @abgov/nx-adsp:react-form my-app --env test
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `project` | — | Yes | Name of the existing Nx project to add the form component to |
+| `env` | `-e` | Yes | ADSP environment to fetch form definitions from (typically `test`) |
+| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+
+---
+
+### `react-task-list`
+
+Adds a React task list component driven by an [ADSP Task Queue](https://govalta.github.io/adsp-monorepo/) to an existing project.
+
+```bash
+npx nx g @abgov/nx-adsp:react-task-list my-app --env test
+```
+
+Accepts the same options as `react-form`.
+
+---
+
+## Authentication
+
+Most generators call ADSP APIs to retrieve tenant-specific configuration during generation. Three authentication methods are supported:
+
+| Method | When to use |
+|--------|-------------|
+| `--tenant <name>` | Preferred for interactive use; looks up the Keycloak realm by tenant name and opens a single browser login |
+| `--tenantRealm <uuid>` | Use when you already know the realm UUID; can be combined with `--tenant` to override the auto-resolved realm |
+| `--accessToken <token>` | Use in CI/CD or scripts to skip interactive login entirely |
+
+If neither `--tenant`, `--tenantRealm`, nor `--accessToken` is provided, the generator will prompt interactively.
+
+## nx-oc integration
+
+If `@abgov/nx-oc` is installed in the workspace, the quickstart generators (`express-service`, `react-app`, `angular-app`, `dotnet-service`, `react-dotnet`) automatically include OpenShift deployment YAML in their output. See the [@abgov/nx-oc README](../nx-oc/README.md) for details.
+
+## Local development
+
+To test the plugin locally against a workspace:
+
+```bash
+# 1. Build the plugin
+nx run nx-adsp:build
+
+# 2. In a separate test workspace, install from the build output
+npm i -D /path/to/nx-tools/dist/packages/nx-adsp
+
+# 3. Run a generator
+npx nx g @abgov/nx-adsp:express-service my-service --tenant my-tenant-realm-uuid
+```
+
+To add a new generator to this plugin:
+
+```bash
+nx g @nx/plugin:generator [generatorName] --project nx-adsp
+```
