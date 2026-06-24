@@ -55,9 +55,9 @@ export function App() {
           <p>Don't panic. Start editing the project to build your digital service.</p>
           <h3>A few things you might want to do next:</h3>
           <ul className={styles.nextSteps}>
-            <li>Register the '<%= projectName %>' client in your realm and set CLIENT_SECRET.</li>
-            <li>Add requests to public API resources: {publicResource || 'Not retrieved'}</li>
-            <li>Add requests to private API resources: {privateResource || 'Not retrieved'}</li>
+            <li>Public API: <strong>{publicResource || 'Not retrieved — is the backend service running?'}</strong></li>
+            <li>Private API (sign in to access): <strong>{privateResource || 'Not retrieved — sign in first.'}</strong></li>
+            <li>Extend the API: add routes to <code>/<%= projectName %>/v1</code> in the backend service.</li>
           </ul>
         </section>
       </main>
