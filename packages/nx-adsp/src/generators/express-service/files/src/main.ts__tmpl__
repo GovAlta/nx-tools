@@ -82,9 +82,26 @@ async function initializeApp() {
     res.json({
       _links: {
         self: { href: '/<%= projectName %>/v1' },
+        public: { href: '/<%= projectName %>/v1/public' },
+        private: { href: '/<%= projectName %>/v1/private' },
       },
     });
   });
+
+  // Public endpoint — no authentication required.
+  app.get('/<%= projectName %>/v1/public', (_req, res) => {
+    res.json({ message: 'Hello from the public <%= projectName %> API.' });
+  });
+
+  // Private endpoint — requires an authenticated tenant user.
+  app.get(
+    '/<%= projectName %>/v1/private',
+    passport.authenticate(['tenant'], { session: false }),
+    (req, res) => {
+      const user = req.user as { name?: string } | undefined;
+      res.json({ message: `Hello, ${user?.name ?? 'authenticated user'}.` });
+    }
+  );
 
   // Example: protected route demonstrating authorize, input validation, and a domain event.
   // Require 'example-role' — replace with a role relevant to your service.
