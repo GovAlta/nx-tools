@@ -21,7 +21,7 @@ export const environment = cleanEnv(process.env, {
   CLIENT_SECRET: str({ default: '' }),
   TRUSTED_PROXY: str({ default: 'uniquelocal' }),
   LOG_LEVEL: str({ default: 'debug' }),
-  PORT: num({ default: 3000 }),
+  PORT: num({ default: 3333 }),
 <% if (database === 'postgres') { %>
   DATABASE_URL: str(),
 <% } else if (database === 'mongo') { %>
