@@ -22,8 +22,6 @@ export function createExampleEvent(id: string): DomainEvent {
   return {
     name: EXAMPLE_EVENT_NAME,
     timestamp: new Date(),
-    tenantId: null,
-    correlationId: null,
     context: {},
     payload: { id },
   };
