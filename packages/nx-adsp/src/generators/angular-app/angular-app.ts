@@ -1,5 +1,6 @@
 import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
+import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
   addDependenciesToPackageJson,
@@ -163,6 +164,34 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   updateProjectConfiguration(host, options.name, config);
 
   await formatFiles(host);
+
+  if (normalizedOptions.adsp) {
+    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
+    await ensurePublicClient(
+      normalizedOptions.adsp.accessServiceUrl,
+      normalizedOptions.adsp.tenantRealm,
+      clientId,
+      accessToken
+    );
+    if (options.serviceClientId) {
+      await ensureAudienceMapper(
+        normalizedOptions.adsp.accessServiceUrl,
+        normalizedOptions.adsp.tenantRealm,
+        clientId,
+        options.serviceClientId,
+        accessToken
+      );
+      await ensureClientRoleScope(
+        normalizedOptions.adsp.accessServiceUrl,
+        normalizedOptions.adsp.tenantRealm,
+        clientId,
+        options.serviceClientId,
+        'example-role',
+        accessToken
+      );
+    }
+  }
 
   if (normalizedOptions.adsp && !options.skipAgent) {
     const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;

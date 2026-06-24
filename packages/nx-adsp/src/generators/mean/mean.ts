@@ -4,6 +4,7 @@ import initAngularApp from '../angular-app/angular-app';
 import initExpressService from '../express-service/express-service';
 import { NormalizedSchema, Schema } from './schema';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
+import { ensureAudienceMapper, ensureClientRoleScope } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 
 async function normalizeOptions(
@@ -37,6 +38,27 @@ export default async function (host: Tree, options: Schema) {
     },
     skipAgent: true,
   });
+
+  if (normalizedOptions.adsp) {
+    const accessToken = normalizedOptions.adsp.accessToken ?? normalizedOptions.accessToken;
+    const serviceClientId = `urn:ads:${normalizedOptions.adsp.tenant}:${serviceName}`;
+    const appClientId = `urn:ads:${normalizedOptions.adsp.tenant}:${appName}`;
+    await ensureAudienceMapper(
+      normalizedOptions.adsp.accessServiceUrl,
+      normalizedOptions.adsp.tenantRealm,
+      appClientId,
+      serviceClientId,
+      accessToken
+    );
+    await ensureClientRoleScope(
+      normalizedOptions.adsp.accessServiceUrl,
+      normalizedOptions.adsp.tenantRealm,
+      appClientId,
+      serviceClientId,
+      'example-role',
+      accessToken
+    );
+  }
 
   if (normalizedOptions.adsp && !normalizedOptions.skipAgent) {
     // Single conversation covering the full stack. Files from both projects are

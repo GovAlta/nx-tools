@@ -46,6 +46,11 @@
       "description": "Access token for retrieving configuration from ADSP APIs.",
       "alias": "at"
     },
+    "serviceClientId": {
+      "type": "string",
+      "description": "Client ID of a paired backend service (e.g. urn:ads:my-tenant:my-svc). When provided with --tenant, configures audience mapping and example-role scope on the frontend client.",
+      "alias": "sc"
+    },
     "proxy": {
       "oneOf": [
         {
