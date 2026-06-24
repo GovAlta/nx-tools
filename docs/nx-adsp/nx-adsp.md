@@ -57,6 +57,7 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 | `database` | — | No | Database to scaffold: `none` (default), `postgres` (Prisma), or `mongo` (Mongoose) |
+| `skipAgent` | — | No | Skip the consultAgent interaction and generate base scaffolding only |
 
 When `--database postgres` is selected the generator also scaffolds a `prisma/schema.prisma`, a `PrismaClient` singleton, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
 
@@ -99,6 +100,7 @@ Generates `my-app-service` (Express + Mongoose) and `my-app-app` (React), with a
 | `tenant` | `-t` | No | ADSP tenant name |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID |
 | `accessToken` | `-at` | No | Access token for non-interactive use |
+| `skipAgent` | — | No | Skip the consultAgent interaction and generate base scaffolding only |
 
 ---
 
@@ -112,7 +114,7 @@ npx nx g @abgov/nx-adsp:mean my-app --env dev --tenant my-tenant
 
 Generates `my-app-service` (Express + Mongoose) and `my-app-app` (Angular), with a dev proxy and nginx production proxy wired between them.
 
-Accepts the same options as `mern`.
+Accepts the same options as `mern` (including `--skipAgent`).
 
 ---
 

@@ -30,6 +30,11 @@
     "accessToken": {
       "type": "string",
       "description": "Access token for ADSP tenant configuration (skips interactive login)."
+    },
+    "skipAgent": {
+      "type": "boolean",
+      "description": "Skip the consultAgent interaction and generate base scaffolding only.",
+      "default": false
     }
   },
   "required": ["name"]

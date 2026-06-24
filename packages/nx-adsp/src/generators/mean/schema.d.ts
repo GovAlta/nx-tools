@@ -6,6 +6,7 @@ export interface Schema {
   accessToken?: string;
   tenant?: string;
   tenantRealm?: string;
+  skipAgent?: boolean;
 }
 
 export interface NormalizedSchema extends Schema {
