@@ -13,6 +13,7 @@ import {
 import { Linter } from '@nx/eslint';
 import * as path from 'path';
 import { consultAgent } from '../../utils/agent';
+import { ensureServiceClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import { Schema, NormalizedSchema } from './schema';
 
@@ -196,6 +197,31 @@ export default async function (host: Tree, options: Schema) {
   }
 
   await formatFiles(host);
+
+  if (normalizedOptions.adsp) {
+    const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
+    const accessToken = normalizedOptions.accessToken ?? normalizedOptions.adsp.accessToken;
+    const clientSecret = await ensureServiceClient(
+      normalizedOptions.adsp.accessServiceUrl,
+      normalizedOptions.adsp.tenantRealm,
+      clientId,
+      accessToken
+    );
+    if (clientSecret) {
+      const envPath = `${normalizedOptions.projectRoot}/.env`;
+      const existing = host.exists(envPath) ? host.read(envPath).toString() : '';
+      if (!existing.includes('CLIENT_SECRET=')) {
+        host.write(envPath, `${existing ? existing.trimEnd() + '\n' : ''}CLIENT_SECRET=${clientSecret}\n`);
+      }
+      const gitignorePath = '.gitignore';
+      if (host.exists(gitignorePath)) {
+        const gitignoreContent = host.read(gitignorePath).toString();
+        if (!gitignoreContent.includes('.env')) {
+          host.write(gitignorePath, `${gitignoreContent.trimEnd()}\n${normalizedOptions.projectRoot}/.env\n`);
+        }
+      }
+    }
+  }
 
   // Consult the nx-adsp-agent to augment the project with ADSP capabilities.
   // The agent has access to template tools and a workspace; it generates new

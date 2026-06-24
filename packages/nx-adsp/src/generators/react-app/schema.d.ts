@@ -7,6 +7,7 @@ export interface Schema {
   accessToken?: string;
   tenant?: string;
   tenantRealm?: string;
+  serviceClientId?: string;
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
   /** When true, skip the agent interaction. Used by composite generators that run the agent themselves. */
   skipAgent?: boolean;
