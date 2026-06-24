@@ -98,8 +98,7 @@ async function initializeApp() {
     '/<%= projectName %>/v1/private',
     passport.authenticate(['tenant'], { session: false }),
     (req, res) => {
-      const user = req.user as { name?: string } | undefined;
-      res.json({ message: `Hello, ${user?.name ?? 'authenticated user'}.` });
+      res.json({ message: `Hello, ${req.user!.name}.` });
     }
   );
 
