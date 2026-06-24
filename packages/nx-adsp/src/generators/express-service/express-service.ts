@@ -109,7 +109,7 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/adsp-service-sdk': '^2.5.0',
+      '@abgov/adsp-service-sdk': '^2.23.0',
       compression: '^1.8.1',
       cors: '^2.8.5',
       dotenv: '^16.4.7',
@@ -117,6 +117,7 @@ export default async function (host: Tree, options: Schema) {
       helmet: '^8.0.0',
       passport: '^0.7.0',
       'passport-anonymous': '^1.0.1',
+      zod: '^3.0.0',
       ...(normalizedOptions.database === 'postgres' ? { '@prisma/client': '^6.0.0' } : {}),
       ...(normalizedOptions.database === 'mongo' ? { mongoose: '^8.0.0' } : {}),
     },
@@ -218,6 +219,11 @@ export default async function (host: Tree, options: Schema) {
 
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
+    const eventsTs = host.read(`${normalizedOptions.projectRoot}/src/events.ts`)?.toString() ?? '';
+    const databaseTs =
+      normalizedOptions.database !== 'none'
+        ? host.read(`${normalizedOptions.projectRoot}/src/database.ts`)?.toString() ?? ''
+        : undefined;
 
     const agentResult = await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
@@ -230,6 +236,8 @@ export default async function (host: Tree, options: Schema) {
         existingFiles: {
           'src/main.ts': mainTs,
           'src/environment.ts': environmentTs,
+          'src/events.ts': eventsTs,
+          ...(databaseTs ? { 'src/database.ts': databaseTs } : {}),
         },
       },
       host,

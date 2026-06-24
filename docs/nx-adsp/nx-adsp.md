@@ -60,6 +60,26 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 
 When `--database postgres` is selected the generator also scaffolds a `prisma/schema.prisma`, a `PrismaClient` singleton, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
 
+The generated `src/main.ts` includes `authorize`, `createValidationHandler`, and `createErrorHandler` from `@abgov/adsp-service-sdk`, and an example `POST /v1/example` route that shows the full pattern: role check → input validation (Zod schema) → domain event publish → error forwarding to `createErrorHandler`. Replace or remove the example route once you have real business logic.
+
+```typescript
+// Pattern used in the generated example route — adapt for your routes:
+app.post(
+  '/my-service/v1/resource',
+  authorize('my-role'),
+  createValidationHandler(MySchema),      // validates req.body; 400 on failure
+  async (req, res, next) => {
+    try {
+      const { id } = req.body as z.infer<typeof MySchema>;
+      eventService.send(createMyEvent(id));
+      res.json({ id });
+    } catch (err) {
+      next(err);                          // createErrorHandler maps to 500
+    }
+  }
+);
+```
+
 ---
 
 ### mern

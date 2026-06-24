@@ -53,18 +53,46 @@ const token = await tokenProvider.getAccessToken();
 
 ## Adding routes
 
-Add route handlers in `main.ts` under the `/<%= projectName %>/v1` path prefix:
+Add route handlers in `main.ts` under the `/<%= projectName %>/v1` path prefix.
+`passport.authenticate(['tenant', 'anonymous'])` is applied to the entire prefix —
+`req.user` is null for anonymous requests and populated for authenticated ones.
 
+**Public route:**
 ```typescript
 app.get('/<%= projectName %>/v1/my-resource', (req, res) => {
-  const user = req.user; // null for anonymous, populated for authenticated
   res.json({ ... });
 });
 ```
 
-`passport.authenticate(['tenant', 'anonymous'])` is applied to the entire
-`/<%= projectName %>/v1` prefix — check `req.user` inside handlers to
-distinguish authenticated from anonymous access.
+**Protected route** (requires a role, validates input, publishes an event):
+```typescript
+import { authorize, createValidationHandler } from '@abgov/adsp-service-sdk';
+import { z } from 'zod';
+
+const MySchema = z.object({ name: z.string().min(1) });
+
+app.post(
+  '/<%= projectName %>/v1/my-resource',
+  authorize('my-role'),                   // 403 if authenticated user lacks role
+  createValidationHandler(MySchema),      // 400 if body fails schema
+  async (req, res, next) => {
+    try {
+      const { name } = req.body as z.infer<typeof MySchema>;
+      eventService.send(createMyEvent(name));
+      res.json({ name });
+    } catch (err) {
+      next(err);                          // createErrorHandler maps to 500
+    }
+  }
+);
+```
+
+Both `authorize` and `createValidationHandler` pass errors to `next()` —
+`createErrorHandler(logger)` at the bottom of `main.ts` translates them to
+structured HTTP responses (401/403 and 400 respectively).
+
+See the `ExampleRequestSchema` and example route already in `main.ts` as a
+starting point — replace or remove it once you have real business logic.
 <% if (database === 'postgres') { %>
 
 ## Local database

@@ -35,6 +35,18 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
   }, 60000);
 
+  it('includes authorize, createValidationHandler, and example route in main.ts', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).toContain('authorize');
+    expect(mainTs).toContain('createValidationHandler');
+    expect(mainTs).toContain('createErrorHandler');
+    expect(mainTs).toContain('/v1/example');
+    expect(mainTs).toContain('eventService.send');
+  }, 60000);
+
   it('scaffolds postgres database files and targets', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, { ...options, database: 'postgres' });
