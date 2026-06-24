@@ -1,17 +1,22 @@
-import { AdspId, createErrorHandler, initializeService } from '@abgov/adsp-service-sdk';
+import { AdspId, authorize, createErrorHandler, createValidationHandler, initializeService } from '@abgov/adsp-service-sdk';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
+import { z } from 'zod';
 <% if (database === 'postgres') { %>
 import { prisma } from './database';
 <% } else if (database === 'mongo') { %>
 import { connectDatabase, disconnectDatabase } from './database';
 <% } %>
 import { environment } from './environment';
-import { exampleEventDefinition } from './events';
+import { createExampleEvent, exampleEventDefinition } from './events';
+
+const ExampleRequestSchema = z.object({
+  id: z.string().min(1),
+});
 
 async function initializeApp() {
   const serviceId = AdspId.parse(environment.CLIENT_ID);
@@ -80,6 +85,24 @@ async function initializeApp() {
       },
     });
   });
+
+  // Example: protected route demonstrating authorize, input validation, and a domain event.
+  // Require 'example-role' — replace with a role relevant to your service.
+  // Remove or replace this route once you have real business logic.
+  app.post(
+    '/<%= projectName %>/v1/example',
+    authorize('example-role'),
+    createValidationHandler(ExampleRequestSchema),
+    async (req, res, next) => {
+      try {
+        const { id } = req.body as z.infer<typeof ExampleRequestSchema>;
+        eventService.send(createExampleEvent(id));
+        res.json({ id });
+      } catch (err) {
+        next(err);
+      }
+    }
+  );
 
   // Mount error handler last — after all routes and middleware.
   app.use(createErrorHandler(logger));
