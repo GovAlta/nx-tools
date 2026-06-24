@@ -38,7 +38,7 @@ export default async function (host: Tree, options: Schema) {
     skipAgent: true,
   });
 
-  if (normalizedOptions.adsp) {
+  if (normalizedOptions.adsp && !normalizedOptions.skipAgent) {
     // Single conversation covering the full stack. Files from both projects are
     // uploaded with service/ and app/ prefixes so the agent can write to both,
     // and are routed to the correct project root when applied.
