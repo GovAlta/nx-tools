@@ -4,7 +4,7 @@ import type { DomainEvent, DomainEventDefinition } from '@abgov/adsp-service-sdk
 // a human-readable description, and a JSON Schema for the payload.
 // Register all definitions in initializeService({ events: [...] }) in main.ts.
 
-const EXAMPLE_EVENT_NAME = '<%= projectName %>:example';
+const EXAMPLE_EVENT_NAME = 'example';
 
 export const exampleEventDefinition: DomainEventDefinition = {
   name: EXAMPLE_EVENT_NAME,
