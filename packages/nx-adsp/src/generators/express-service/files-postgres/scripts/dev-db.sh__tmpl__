@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Idempotent: creates the Postgres container + volume on first run,
+# starts the existing container on subsequent runs.
+set -euo pipefail
+
+APP="<%= projectName %>"
+CONTAINER="${APP}-postgres"
+VOLUME="${APP}-postgres-data"
+DB_NAME="${APP}_dev"
+DB_USER="${APP}"
+DB_PASS="${APP}"
+PORT=5432
+
+if ! command -v podman &>/dev/null; then
+  echo "podman is required. On macOS: brew install podman" >&2
+  exit 1
+fi
+
+podman volume inspect "${VOLUME}" &>/dev/null || podman volume create "${VOLUME}"
+
+if podman container inspect "${CONTAINER}" &>/dev/null; then
+  podman start "${CONTAINER}" 2>/dev/null || true
+else
+  podman run -d \
+    --name "${CONTAINER}" \
+    -e POSTGRES_DB="${DB_NAME}" \
+    -e POSTGRES_USER="${DB_USER}" \
+    -e POSTGRES_PASSWORD="${DB_PASS}" \
+    -p "${PORT}:5432" \
+    -v "${VOLUME}:/var/lib/postgresql/data" \
+    docker.io/library/postgres:16-alpine
+fi
+
+echo "Waiting for Postgres to be ready..."
+until podman exec "${CONTAINER}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/dev/null; do
+  sleep 1
+done
+echo "Postgres is ready."
+
+# Write DATABASE_URL to .env.local so Prisma and the app pick it up without
+# manual .env editing. Overridden by the SECRET in OpenShift at runtime.
+echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost:${PORT}/${DB_NAME}" > .env.local
+echo "DATABASE_URL written to .env.local"

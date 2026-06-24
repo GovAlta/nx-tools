@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Idempotent: creates the MongoDB container + volume on first run,
+# starts the existing container on subsequent runs.
+set -euo pipefail
+
+APP="<%= projectName %>"
+CONTAINER="${APP}-mongo"
+VOLUME="${APP}-mongo-data"
+DB_NAME="${APP}_dev"
+PORT=27017
+
+if ! command -v podman &>/dev/null; then
+  echo "podman is required. On macOS: brew install podman" >&2
+  exit 1
+fi
+
+podman volume inspect "${VOLUME}" &>/dev/null || podman volume create "${VOLUME}"
+
+if podman container inspect "${CONTAINER}" &>/dev/null; then
+  podman start "${CONTAINER}" 2>/dev/null || true
+else
+  podman run -d \
+    --name "${CONTAINER}" \
+    -p "${PORT}:27017" \
+    -v "${VOLUME}:/data/db" \
+    docker.io/library/mongo:7
+fi
+
+echo "Waiting for MongoDB to be ready..."
+until podman exec "${CONTAINER}" mongosh --quiet --eval "quit()" &>/dev/null; do
+  sleep 1
+done
+echo "MongoDB is ready."
+
+# Write MONGODB_URI to .env.local so the app picks it up without manual .env editing.
+# Overridden by the Secret in OpenShift at runtime.
+echo "MONGODB_URI=mongodb://localhost:${PORT}/${DB_NAME}" > .env.local
+echo "MONGODB_URI written to .env.local"

@@ -180,6 +180,64 @@ describe('Deployment Generator', () => {
     expect(dockerfile).toContain('dotnet');
   });
 
+  it('includes DATABASE_URL secretKeyRef and init container for postgres node deployment', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await pipeline(host, {
+      pipeline: 'test',
+      registry: 'ghcr.io/test-org',
+      type: 'jenkins',
+      infra: 'test-infra',
+      envs: 'test-dev',
+    });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
+      },
+    });
+
+    await generator(host, { ...options, appType: 'node', database: 'postgres' });
+
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('DATABASE_URL');
+    expect(manifest).toContain('initContainers');
+    expect(manifest).toContain('prisma');
+    expect(manifest).toContain('migrate');
+  });
+
+  it('includes MONGODB_URI secretKeyRef without init container for mongo node deployment', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await pipeline(host, {
+      pipeline: 'test',
+      registry: 'ghcr.io/test-org',
+      type: 'jenkins',
+      infra: 'test-infra',
+      envs: 'test-dev',
+    });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
+      },
+    });
+
+    await generator(host, { ...options, appType: 'node', database: 'mongo' });
+
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('MONGODB_URI');
+    expect(manifest).not.toContain('initContainers');
+  });
+
   it('can skip unknown project type', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {

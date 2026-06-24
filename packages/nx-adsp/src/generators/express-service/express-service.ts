@@ -6,7 +6,9 @@ import {
   getWorkspaceLayout,
   installPackagesTask,
   names,
+  readProjectConfiguration,
   Tree,
+  updateProjectConfiguration,
 } from '@nx/devkit';
 import { Linter } from '@nx/eslint';
 import * as path from 'path';
@@ -64,6 +66,7 @@ async function normalizeOptions(
     projectName,
     projectRoot,
     adsp,
+    database: options.database ?? 'none',
   };
 }
 
@@ -79,6 +82,14 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     options.projectRoot,
     templateOptions
   );
+  if (options.database === 'postgres' || options.database === 'mongo') {
+    generateFiles(
+      host,
+      path.join(__dirname, `files-${options.database}`),
+      options.projectRoot,
+      templateOptions
+    );
+  }
 }
 
 export default async function (host: Tree, options: Schema) {
@@ -106,16 +117,83 @@ export default async function (host: Tree, options: Schema) {
       helmet: '^8.0.0',
       passport: '^0.7.0',
       'passport-anonymous': '^1.0.1',
+      ...(normalizedOptions.database === 'postgres' ? { '@prisma/client': '^6.0.0' } : {}),
+      ...(normalizedOptions.database === 'mongo' ? { mongoose: '^8.0.0' } : {}),
     },
     {
       '@types/compression': '^1.7.5',
       '@types/cors': '^2.8.17',
       '@types/passport': '^1.0.16',
       '@types/passport-anonymous': '^1.0.3',
+      ...(normalizedOptions.database === 'postgres' ? { prisma: '^6.0.0' } : {}),
     }
   );
 
   addFiles(host, normalizedOptions);
+
+  if (normalizedOptions.database !== 'none') {
+    const projectConfig = readProjectConfiguration(host, normalizedOptions.projectName);
+    const targets = { ...projectConfig.targets };
+
+    targets['dev-db'] = {
+      executor: 'nx:run-commands',
+      options: {
+        command: 'bash scripts/dev-db.sh',
+        cwd: '{projectRoot}',
+      },
+    };
+
+    if (targets['serve']) {
+      targets['serve'] = {
+        ...targets['serve'],
+        dependsOn: [...(targets['serve'].dependsOn ?? []), 'dev-db'],
+      };
+    }
+
+    if (normalizedOptions.database === 'postgres') {
+      targets['db:generate'] = {
+        executor: 'nx:run-commands',
+        options: { command: 'npx prisma generate', cwd: '{projectRoot}' },
+      };
+      targets['db:migrate'] = {
+        executor: 'nx:run-commands',
+        options: { command: 'npx prisma migrate dev', cwd: '{projectRoot}' },
+      };
+      targets['db:migrate:deploy'] = {
+        executor: 'nx:run-commands',
+        options: { command: 'npx prisma migrate deploy', cwd: '{projectRoot}' },
+      };
+      targets['db:studio'] = {
+        executor: 'nx:run-commands',
+        options: { command: 'npx prisma studio', cwd: '{projectRoot}' },
+      };
+
+      // Prisma client must be generated before TypeScript can compile the project.
+      if (targets['build']) {
+        targets['build'] = {
+          ...targets['build'],
+          dependsOn: [...(targets['build'].dependsOn ?? []), 'db:generate'],
+        };
+      }
+
+      // The generated client is project-scoped to src/generated/prisma — exclude
+      // it from source control so it doesn't get committed alongside app code.
+      const gitignorePath = '.gitignore';
+      const ignoreEntry = `${normalizedOptions.projectRoot}/src/generated/`;
+      if (host.exists(gitignorePath)) {
+        const content = host.read(gitignorePath).toString();
+        if (!content.includes(ignoreEntry)) {
+          host.write(gitignorePath, `${content.trimEnd()}\n${ignoreEntry}\n`);
+        }
+      }
+    }
+
+    updateProjectConfiguration(host, normalizedOptions.projectName, {
+      ...projectConfig,
+      targets,
+    });
+  }
+
   await formatFiles(host);
 
   // Consult the nx-adsp-agent to augment the project with ADSP capabilities.
@@ -179,6 +257,7 @@ export default async function (host: Tree, options: Schema) {
     ...normalizedOptions,
     appType: 'node',
     project: normalizedOptions.projectName,
+    database: normalizedOptions.database,
   });
 
   return () => {

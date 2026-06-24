@@ -56,6 +56,43 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| `database` | — | No | Database to scaffold: `none` (default), `postgres` (Prisma), or `mongo` (Mongoose) |
+
+When `--database postgres` is selected the generator also scaffolds a `prisma/schema.prisma`, a `PrismaClient` singleton, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
+
+---
+
+### mern
+
+Composite generator that creates both a React frontend and an Express backend as a fullstack solution. The Express service is pre-configured with MongoDB (Mongoose). Requires `@nx/react` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:mern my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Mongoose) and `my-app-app` (React), with a dev proxy and nginx production proxy wired between them.
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `name` | — | Yes | Base name; suffixed with `-service` and `-app` for each project |
+| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `tenant` | `-t` | No | ADSP tenant name |
+| `tenantRealm` | `-tr` | No | Keycloak realm UUID |
+| `accessToken` | `-at` | No | Access token for non-interactive use |
+
+---
+
+### mean
+
+Composite generator that creates both an Angular frontend and an Express backend as a fullstack solution. The Express service is pre-configured with MongoDB (Mongoose). Requires `@nx/angular` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:mean my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Mongoose) and `my-app-app` (Angular), with a dev proxy and nginx production proxy wired between them.
+
+Accepts the same options as `mern`.
 
 ---
 
@@ -143,6 +180,61 @@ npx nx g @abgov/nx-adsp:react-task-list my-app --env test
 ```
 
 Accepts the same options as `react-form`.
+
+---
+
+## Database setup
+
+When `--database postgres` or `--database mongo` is passed to `express-service` (or when using the `mern`/`mean` composite generators), the generated project includes a local development database driven by [Podman](https://podman.io/).
+
+### Local development
+
+Start the database container (creates it on first run, starts it on subsequent runs):
+
+```bash
+nx dev-db <service-name>
+```
+
+The `serve` target declares `dependsOn: ['dev-db']`, so `nx serve <service-name>` starts the container automatically. The connection string is written to `.env.local` in the project directory and picked up by the application without any manual configuration.
+
+**macOS one-time setup** (skip if Podman is already configured):
+
+```bash
+podman machine init
+podman machine start
+```
+
+### PostgreSQL targets
+
+| Target | Description |
+|--------|-------------|
+| `nx dev-db <service>` | Start local Postgres container (Podman) |
+| `nx db:migrate <service>` | Create and apply a new migration (`prisma migrate dev`) |
+| `nx db:migrate:deploy <service>` | Apply pending migrations in production/CI (`prisma migrate deploy`) |
+| `nx db:generate <service>` | Regenerate the Prisma client after schema changes |
+| `nx db:studio <service>` | Open Prisma Studio to browse data |
+
+The `build` target depends on `db:generate`, so the Prisma client is always generated before TypeScript compilation.
+
+### OpenShift deployment
+
+The database connection string is injected via an OpenShift Secret — it is never stored in source control. Create the Secret in each namespace before first deploy:
+
+**PostgreSQL:**
+```bash
+oc create secret generic <app-name>-database \
+  --from-literal=DATABASE_URL=postgresql://user:password@host:5432/dbname \
+  -n <namespace>
+```
+
+**MongoDB:**
+```bash
+oc create secret generic <app-name>-database \
+  --from-literal=MONGODB_URI=mongodb://user:password@host:27017/dbname \
+  -n <namespace>
+```
+
+For PostgreSQL services, the deployment manifest includes an init container that runs `prisma migrate deploy` before the application starts, ensuring migrations are applied on every deploy.
 
 ---
 

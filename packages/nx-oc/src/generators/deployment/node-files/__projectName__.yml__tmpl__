@@ -75,6 +75,21 @@ objects:
           labels:
             name: ${APP_NAME}
         spec:
+<% if (database === 'postgres') { %>
+          initContainers:
+            - name: ${APP_NAME}-migrate
+              image: image-registry.openshift-image-registry.svc:5000/${INFRA_PROJECT}/${APP_NAME}:${DEPLOY_TAG}
+              command: ["npx", "prisma", "migrate", "deploy"]
+              envFrom:
+                - configMapRef:
+                    name: ${APP_NAME}
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP_NAME}-database
+                      key: DATABASE_URL
+<% } %>
           containers:
             - name: ${APP_NAME}
               image: ${APP_NAME}:${DEPLOY_TAG}
@@ -86,6 +101,21 @@ objects:
                   value: '3333'
                 - name: LOG_LEVEL
                   value: info
+<% if (database === 'postgres') { %>
+                # Set via: oc create secret generic ${APP_NAME}-database --from-literal=DATABASE_URL=<connection-string>
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP_NAME}-database
+                      key: DATABASE_URL
+<% } else if (database === 'mongo') { %>
+                # Set via: oc create secret generic ${APP_NAME}-database --from-literal=MONGODB_URI=<connection-string>
+                - name: MONGODB_URI
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP_NAME}-database
+                      key: MONGODB_URI
+<% } %>
               imagePullPolicy: IfNotPresent
               ports:
                 - containerPort: 3333

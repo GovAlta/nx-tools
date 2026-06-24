@@ -1,12 +1,17 @@
-import { AdspId, initializeService } from '@abgov/adsp-service-sdk';
+import { AdspId, createErrorHandler, initializeService } from '@abgov/adsp-service-sdk';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
-
+<% if (database === 'postgres') { %>
+import { prisma } from './database';
+<% } else if (database === 'mongo') { %>
+import { connectDatabase, disconnectDatabase } from './database';
+<% } %>
 import { environment } from './environment';
+import { exampleEventDefinition } from './events';
 
 async function initializeApp() {
   const serviceId = AdspId.parse(environment.CLIENT_ID);
@@ -19,11 +24,15 @@ async function initializeApp() {
       clientSecret: environment.CLIENT_SECRET,
       accessServiceUrl: new URL(environment.KEYCLOAK_ROOT_URL),
       directoryUrl: new URL(environment.DIRECTORY_URL),
+      events: [exampleEventDefinition],
     },
     { logLevel: environment.LOG_LEVEL }
   );
 
-  const { logger, tenantStrategy, traceHandler, configurationHandler, healthCheck } = capabilities;
+  const { logger, tenantStrategy, traceHandler, configurationHandler, healthCheck, eventService } = capabilities;
+<% if (database === 'mongo') { %>
+  await connectDatabase();
+<% } %>
 
   const app = express();
 
@@ -72,7 +81,10 @@ async function initializeApp() {
     });
   });
 
-  return { app, logger };
+  // Mount error handler last — after all routes and middleware.
+  app.use(createErrorHandler(logger));
+
+  return { app, logger, eventService };
 }
 
 initializeApp().then(({ app, logger }) => {
@@ -81,4 +93,21 @@ initializeApp().then(({ app, logger }) => {
     logger.info(`Listening at http://localhost:${port}/<%= projectName %>/v1`);
   });
   server.on('error', (err) => logger.error(`Error encountered in server: ${err}`));
+<% if (database === 'postgres') { %>
+
+  const shutdown = async () => {
+    server.close();
+    await prisma.$disconnect();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+<% } else if (database === 'mongo') { %>
+
+  const shutdown = async () => {
+    server.close();
+    await disconnectDatabase();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+<% } %>
 });

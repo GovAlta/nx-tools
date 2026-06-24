@@ -53,6 +53,11 @@
       "type": "string",
       "description": "Access token for retrieving configuration from ADSP APIs.",
       "alias": "at"
+    },
+    "database": {
+      "type": "string",
+      "description": "Database type used by the service. When set, the deployment manifest references the appropriate Secret.",
+      "enum": ["none", "postgres", "mongo"]
     }
   },
   "required": [

@@ -45,6 +45,21 @@
       "type": "string",
       "description": "ADSP tenant name. When provided, the realm is looked up anonymously and a single browser login is used instead of the full interactive flow.",
       "alias": "t"
+    },
+    "database": {
+      "type": "string",
+      "description": "Database to include in the service.",
+      "default": "none",
+      "enum": ["none", "postgres", "mongo"],
+      "x-prompt": {
+        "message": "Which database would you like to include?",
+        "type": "list",
+        "items": [
+          { "value": "none", "label": "None — add a database later" },
+          { "value": "postgres", "label": "PostgreSQL (Prisma)" },
+          { "value": "mongo", "label": "MongoDB (Mongoose)" }
+        ]
+      }
     }
   },
   "required": [

@@ -34,4 +34,59 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/environment.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
   }, 60000);
+
+  it('scaffolds postgres database files and targets', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, { ...options, database: 'postgres' });
+
+    expect(host.exists('apps/test/prisma/schema.prisma')).toBeTruthy();
+    expect(host.exists('apps/test/src/database.ts')).toBeTruthy();
+    expect(host.exists('apps/test/scripts/dev-db.sh')).toBeTruthy();
+    expect(host.exists('apps/test/.env.example')).toBeTruthy();
+
+    const schema = host.read('apps/test/prisma/schema.prisma').toString();
+    expect(schema).toContain('postgresql');
+    expect(schema).toContain('src/generated/prisma');
+
+    const database = host.read('apps/test/src/database.ts').toString();
+    expect(database).toContain('./generated/prisma');
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.targets['dev-db']).toBeTruthy();
+    expect(config.targets['db:generate']).toBeTruthy();
+    expect(config.targets['db:migrate']).toBeTruthy();
+    expect(config.targets['db:migrate:deploy']).toBeTruthy();
+    expect(config.targets['db:studio']).toBeTruthy();
+    expect(config.targets['serve'].dependsOn).toContain('dev-db');
+    expect(config.targets['build'].dependsOn).toContain('db:generate');
+  }, 60000);
+
+  it('scaffolds mongo database files and targets', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, { ...options, database: 'mongo' });
+
+    expect(host.exists('apps/test/src/database.ts')).toBeTruthy();
+    expect(host.exists('apps/test/scripts/dev-db.sh')).toBeTruthy();
+    expect(host.exists('apps/test/.env.example')).toBeTruthy();
+
+    const database = host.read('apps/test/src/database.ts').toString();
+    expect(database).toContain('mongoose');
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.targets['dev-db']).toBeTruthy();
+    expect(config.targets['serve'].dependsOn).toContain('dev-db');
+    expect(config.targets['db:generate']).toBeFalsy();
+  }, 60000);
+
+  it('does not scaffold database files when database is none', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, { ...options, database: 'none' });
+
+    expect(host.exists('apps/test/prisma/schema.prisma')).toBeFalsy();
+    expect(host.exists('apps/test/src/database.ts')).toBeFalsy();
+    expect(host.exists('apps/test/scripts/dev-db.sh')).toBeFalsy();
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.targets['dev-db']).toBeFalsy();
+  }, 60000);
 });

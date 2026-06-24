@@ -1,5 +1,7 @@
 import type { AdspConfiguration, EnvironmentName } from '@abgov/nx-oc';
 
+export type DatabaseType = 'none' | 'postgres' | 'mongo';
+
 export interface Schema {
   name: string;
   env: EnvironmentName;
@@ -10,10 +12,13 @@ export interface Schema {
   tenant?: string;
   /** When true, skip the agent interaction. Used by composite generators that run the agent themselves. */
   skipAgent?: boolean;
+  /** Database to scaffold. Defaults to 'none'. */
+  database?: DatabaseType;
 }
 
 export interface NormalizedSchema extends Schema {
   projectName: string;
   projectRoot: string;
   adsp: AdspConfiguration;
+  database: DatabaseType;
 }

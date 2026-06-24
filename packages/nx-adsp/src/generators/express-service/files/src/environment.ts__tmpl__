@@ -4,8 +4,14 @@ import { resolve } from 'path';
 
 config({
   path: resolve(process.cwd(), 'apps/<%= projectName %>/.env'),
+});
+<% if (database !== 'none') { %>
+// .env.local is written by 'nx dev-db' with the local database connection string.
+config({
+  path: resolve(process.cwd(), 'apps/<%= projectName %>/.env.local'),
   override: true,
 });
+<% } %>
 
 export const environment = cleanEnv(process.env, {
   KEYCLOAK_ROOT_URL: str({ default: '<%= accessServiceUrl %>' }),
@@ -16,4 +22,9 @@ export const environment = cleanEnv(process.env, {
   TRUSTED_PROXY: str({ default: 'uniquelocal' }),
   LOG_LEVEL: str({ default: 'debug' }),
   PORT: num({ default: 3000 }),
+<% if (database === 'postgres') { %>
+  DATABASE_URL: str(),
+<% } else if (database === 'mongo') { %>
+  MONGODB_URI: str(),
+<% } %>
 });
