@@ -1,0 +1,30 @@
+import type { DomainEvent, DomainEventDefinition } from '@abgov/adsp-service-sdk';
+
+// Define domain events your service publishes. Each event requires a unique name,
+// a human-readable description, and a JSON Schema for the payload.
+// Register all definitions in initializeService({ events: [...] }) in main.ts.
+
+const EXAMPLE_EVENT_NAME = '<%= projectName %>:example';
+
+export const exampleEventDefinition: DomainEventDefinition = {
+  name: EXAMPLE_EVENT_NAME,
+  description: 'Replace with a description of what this event signals.',
+  payloadSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+    },
+    required: ['id'],
+  },
+};
+
+export function createExampleEvent(id: string): DomainEvent {
+  return {
+    name: EXAMPLE_EVENT_NAME,
+    timestamp: new Date(),
+    tenantId: null,
+    correlationId: null,
+    context: {},
+    payload: { id },
+  };
+}

@@ -27,7 +27,7 @@ export default async function (host: Tree, options: Schema) {
   const appRoot = `${appsDir}/${appName}`;
 
   // Scaffold both projects before the agent interaction so files exist to upload.
-  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true });
+  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true, database: 'mongo' });
   await initReactApp(host, {
     ...normalizedOptions,
     name: appName,
@@ -66,6 +66,8 @@ export default async function (host: Tree, options: Schema) {
         existingFiles: {
           'service/src/main.ts': host.read(`${serviceRoot}/src/main.ts`)?.toString() ?? '',
           'service/src/environment.ts': host.read(`${serviceRoot}/src/environment.ts`)?.toString() ?? '',
+          'service/src/database.ts': host.read(`${serviceRoot}/src/database.ts`)?.toString() ?? '',
+          'service/src/events.ts': host.read(`${serviceRoot}/src/events.ts`)?.toString() ?? '',
           'app/src/app/app.tsx': host.read(`${appRoot}/src/app/app.tsx`)?.toString() ?? '',
           'app/src/store.ts': host.read(`${appRoot}/src/store.ts`)?.toString() ?? '',
           'app/src/environments/environment.ts': host.read(`${appRoot}/src/environments/environment.ts`)?.toString() ?? '',

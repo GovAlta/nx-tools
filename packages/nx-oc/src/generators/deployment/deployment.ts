@@ -71,6 +71,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     ...options,
     ...options.adsp,
     sourceRepositoryUrl: getGitRemoteUrl(),
+    database: options.database ?? 'none',
     tmpl: '',
   };
   generateFiles(
