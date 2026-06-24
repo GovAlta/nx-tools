@@ -3,12 +3,12 @@ import { cleanEnv, num, str } from 'envalid';
 import { resolve } from 'path';
 
 config({
-  path: resolve(process.cwd(), 'apps/<%= projectName %>/.env'),
+  path: resolve(process.cwd(), '<%= projectRoot %>/.env'),
 });
 <% if (database !== 'none') { %>
 // .env.local is written by 'nx dev-db' with the local database connection string.
 config({
-  path: resolve(process.cwd(), 'apps/<%= projectName %>/.env.local'),
+  path: resolve(process.cwd(), '<%= projectRoot %>/.env.local'),
   override: true,
 });
 <% } %>

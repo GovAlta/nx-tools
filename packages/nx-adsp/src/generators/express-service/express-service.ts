@@ -103,7 +103,7 @@ export default async function (host: Tree, options: Schema) {
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
     js: false,
-    directory: `apps/${options.name}`,
+    directory: normalizedOptions.projectRoot,
   });
 
   addDependenciesToPackageJson(

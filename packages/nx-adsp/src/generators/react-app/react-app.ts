@@ -113,7 +113,7 @@ export default async function (host: Tree, options: Schema) {
     unitTestRunner: 'jest',
     e2eTestRunner: 'cypress',
     strict: false,
-    directory: `apps/${options.name}`,
+    directory: normalizedOptions.projectRoot,
   });
 
   addDependenciesToPackageJson(
@@ -136,7 +136,6 @@ export default async function (host: Tree, options: Schema) {
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
 
-  const layout = getWorkspaceLayout(host);
   const config = readProjectConfiguration(host, options.name);
 
   // Remove the generated fileReplacements for production — we use a single
@@ -151,7 +150,7 @@ export default async function (host: Tree, options: Schema) {
       ...config.targets.build.options.assets,
       {
         glob: 'nginx.conf',
-        input: `${layout.appsDir}/${options.name}`,
+        input: normalizedOptions.projectRoot,
         output: './',
       },
     ],

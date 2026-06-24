@@ -104,7 +104,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     name: options.name,
     prefix: normalizedOptions.projectName,
     linter: 'none',
-    directory: `apps/${options.name}`,
+    directory: normalizedOptions.projectRoot,
     skipFormat: true,
   });
 
@@ -130,8 +130,6 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     host.delete(`${normalizedOptions.projectRoot}/src/app/${file}`);
   }
 
-  const layout = getWorkspaceLayout(host);
-
   const config = readProjectConfiguration(host, options.name);
 
   // Remove the generated fileReplacements for production — single environment.ts
@@ -148,7 +146,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       `${normalizedOptions.projectRoot}/src/silent-check-sso.html`,
       {
         glob: 'nginx.conf',
-        input: `${layout.appsDir}/${options.name}`,
+        input: normalizedOptions.projectRoot,
         output: './',
       },
     ],
