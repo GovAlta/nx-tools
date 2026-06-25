@@ -87,6 +87,11 @@
           ]
         }
       ]
+    },
+    "skipAgent": {
+      "type": "boolean",
+      "description": "Skip the consultAgent interaction and generate base scaffolding only.",
+      "default": false
     }
   },
   "required": [

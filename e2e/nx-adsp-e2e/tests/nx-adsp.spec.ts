@@ -5,10 +5,11 @@ import {
   uniq,
 } from '@nx/plugin/testing';
 
-// nx-adsp generators make live HTTP calls to ADSP APIs (getAdspConfiguration,
-// getServiceUrls, selectTenant) which cannot run in a standard CI environment.
-// Re-enable once the e2e setup can provide a mock ADSP server or credentials.
-describe.skip('nx-adsp e2e', () => {
+// globalSetup starts a mock ADSP server and sets ADSP_E2E_DIRECTORY_URL /
+// ADSP_E2E_ACCESS_URL so that generators call the mock instead of the live
+// gov.ab.ca endpoints.  All tests pass --tenant=test --accessToken=mock-token
+// --skipAgent to avoid interactive flows and the agent-service WebSocket.
+describe('nx-adsp e2e', () => {
   beforeEach(() => {
     ensureNxProject('@abgov/nx-adsp', 'dist/packages/nx-adsp');
     // nx-adsp generators import @abgov/nx-oc at module load time; it must be in the e2e workspace
@@ -16,53 +17,49 @@ describe.skip('nx-adsp e2e', () => {
   });
 
   describe('express service', () => {
-    it('should create express-service', async () => {
+    it('should generate and build', async () => {
       const plugin = uniq('express-service');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:express-service ${plugin} test`
+        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
       );
-      expect(() => checkFilesExist(`apps/${plugin}/src/main.ts`)).not.toThrow();
-    }, 60000);
+      checkFilesExist(`apps/${plugin}/src/main.ts`);
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Executor ran');
+    }, 180000);
 
-    describe('--accessToken', () => {
-      it('should create express-service with access token', async () => {
-        const plugin = uniq('express-service');
-        await runNxCommandAsync(
-          `generate @abgov/nx-adsp:express-service ${plugin} test --accessToken mock-token`
-        );
-        expect(() =>
-          checkFilesExist(`apps/${plugin}/src/main.ts`)
-        ).not.toThrow();
-      }, 60000);
-    });
+    it('should generate with an explicit access token', async () => {
+      const plugin = uniq('express-service');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+      checkFilesExist(`apps/${plugin}/src/main.ts`);
+    }, 90000);
   });
 
   describe('react app', () => {
-    it('should create react-app', async () => {
+    it('should generate and build', async () => {
       const plugin = uniq('react-app');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:react-app ${plugin} test`
+        `generate @abgov/nx-adsp:react-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
       );
-      expect(() =>
-        checkFilesExist(`apps/${plugin}/src/app/app.tsx`)
-      ).not.toThrow();
-    }, 60000);
+      checkFilesExist(`apps/${plugin}/src/app/app.tsx`);
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Executor ran');
+    }, 180000);
   });
 
-  it('should create angular app', async () => {
+  it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(
-      `generate @abgov/nx-adsp:angular-app ${plugin} test`
+      `generate @abgov/nx-adsp:angular-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
     );
 
-    expect(() =>
-      checkFilesExist(
-        `apps/${plugin}/src/app/app.component.ts`,
-        `apps/${plugin}/src/main.ts`
-      )
-    ).not.toThrow();
+    checkFilesExist(
+      `apps/${plugin}/src/app/app.component.ts`,
+      `apps/${plugin}/src/main.ts`
+    );
 
     const result = await runNxCommandAsync(`build ${plugin}`);
     expect(result.stdout).toContain('Executor ran');
-  }, 120000);
+  }, 180000);
 });
