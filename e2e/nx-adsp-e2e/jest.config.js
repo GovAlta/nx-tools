@@ -2,6 +2,8 @@ module.exports = {
   displayName: 'nx-adsp-e2e',
   preset: '../../jest.preset.js',
   globals: {},
+  globalSetup: '<rootDir>/tests/global-setup.ts',
+  globalTeardown: '<rootDir>/tests/global-teardown.ts',
   transform: {
     '^.+\\.[tj]s$': [
       'ts-jest',
