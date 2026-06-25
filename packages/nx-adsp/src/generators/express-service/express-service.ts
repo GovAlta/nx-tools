@@ -15,6 +15,7 @@ import * as path from 'path';
 import { consultAgent } from '../../utils/agent';
 import { ensureServiceClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
+import { addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -128,14 +129,22 @@ export default async function (host: Tree, options: Schema) {
       '@types/passport': '^1.0.16',
       '@types/passport-anonymous': '^1.0.3',
       ...(normalizedOptions.database === 'postgres' ? { prisma: '^6.0.0' } : {}),
+      'eslint-plugin-security': '^3.0.0',
+      'eslint-plugin-no-secrets': '^2.0.0',
+      'eslint-plugin-jest': '^28.0.0',
     }
   );
 
   addFiles(host, normalizedOptions);
 
+  addEslintQualityRules(host, normalizedOptions.projectRoot, ['**/*.spec.ts', '**/*.test.ts']);
+  addJestCoverageConfig(host, normalizedOptions.projectRoot);
+  addVsCodeSettings(host);
+
+  const projectConfig = readProjectConfiguration(host, normalizedOptions.projectName);
+  const targets = { ...projectConfig.targets };
+
   if (normalizedOptions.database !== 'none') {
-    const projectConfig = readProjectConfiguration(host, normalizedOptions.projectName);
-    const targets = { ...projectConfig.targets };
 
     targets['dev-db'] = {
       executor: 'nx:run-commands',
@@ -190,12 +199,14 @@ export default async function (host: Tree, options: Schema) {
       }
     }
 
-    updateProjectConfiguration(host, normalizedOptions.projectName, {
-      ...projectConfig,
-      targets,
-    });
   }
 
+  updateProjectConfiguration(host, normalizedOptions.projectName, {
+    ...projectConfig,
+    targets,
+  });
+
+  addSemgrepTarget(host, normalizedOptions.projectName);
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {
