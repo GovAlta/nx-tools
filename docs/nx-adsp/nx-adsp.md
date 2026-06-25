@@ -18,7 +18,7 @@ has_children: true
 
 Nx plugin for bootstrapping [ADSP](https://adsp.alberta.ca) applications for the Government of Alberta.
 
-The plugin provides generators for Node/Express services, React and Angular frontends, .NET services, and fullstack solutions. When `@abgov/nx-oc` is also installed, OpenShift deployment YAML is automatically included in the generated output.
+The plugin provides generators for Node/Express services, React, Angular, and Vue 3 frontends, .NET services, and fullstack solutions (MERN, MEAN, MEVN, PERN, PEAN, PEVN). When `@abgov/nx-oc` is also installed, OpenShift deployment YAML is automatically included in the generated output.
 
 ## Installation
 
@@ -34,9 +34,13 @@ Some generators require additional peer dependencies:
 |-----------|--------------------------|
 | `react-app` | `@nx/react` |
 | `angular-app` | `@nx/angular` |
+| `vue-app` | `@nx/vue` |
 | `dotnet-service` | `@nx-dotnet/core` |
 | `react-dotnet` | `@nx/react`, `@nx-dotnet/core` |
 | `express-service` | `@nx/node` |
+| `mern`, `pern` | `@nx/react`, `@nx/node` |
+| `mean`, `pean` | `@nx/angular`, `@nx/node` |
+| `mevn`, `pevn` | `@nx/vue`, `@nx/node` |
 | `react-form`, `react-task-list` | existing React project in the workspace |
 
 ## Generators
@@ -118,6 +122,62 @@ Accepts the same options as `mern` (including `--skipAgent`).
 
 ---
 
+### pern
+
+Composite generator that creates both a React frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/react` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:pern my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Prisma) and `my-app-app` (React), with a dev proxy and nginx production proxy wired between them.
+
+Accepts the same options as `mern` (including `--skipAgent`).
+
+---
+
+### pean
+
+Composite generator that creates both an Angular frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/angular` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:pean my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Prisma) and `my-app-app` (Angular), with a dev proxy and nginx production proxy wired between them.
+
+Accepts the same options as `mern` (including `--skipAgent`).
+
+---
+
+### pevn
+
+Composite generator that creates both a Vue 3 frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/vue` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:pevn my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Prisma) and `my-app-app` (Vue 3), with a dev proxy and nginx production proxy wired between them.
+
+Accepts the same options as `mern` (including `--skipAgent`).
+
+---
+
+### mevn
+
+Composite generator that creates both a Vue 3 frontend and an Express backend as a fullstack solution. The Express service is pre-configured with MongoDB (Mongoose). Requires `@nx/vue` and `@nx/node`.
+
+```bash
+npx nx g @abgov/nx-adsp:mevn my-app --env dev --tenant my-tenant
+```
+
+Generates `my-app-service` (Express + Mongoose) and `my-app-app` (Vue 3), with a dev proxy and nginx production proxy wired between them.
+
+Accepts the same options as `mern` (including `--skipAgent`).
+
+---
+
 ### react-app
 
 Creates a React/Redux frontend application configured for ADSP. Requires `@nx/react`.
@@ -146,6 +206,18 @@ npx nx g @abgov/nx-adsp:angular-app my-app --env dev --tenant my-tenant
 ```
 
 Accepts the same options as `react-app`.
+
+---
+
+### vue-app
+
+Creates a Vue 3 frontend application configured for ADSP, using GoA web components (`@abgov/web-components`) and `@dsb-norge/vue-keycloak-js` for authentication. Requires `@nx/vue`.
+
+```bash
+npx nx g @abgov/nx-adsp:vue-app my-app --env dev --tenant my-tenant
+```
+
+Accepts the same options as `react-app` (including `--proxy` and `--serviceClientId`).
 
 ---
 
