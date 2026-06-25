@@ -66,6 +66,18 @@
       "schema": "./src/generators/pean/schema.json",
       "description": "Generator that creates a PEAN fullstack solution.",
       "hidden": true
+    },
+    "pevn": {
+      "factory": "./src/generators/pevn/pevn",
+      "schema": "./src/generators/pevn/schema.json",
+      "description": "Generator that creates a PEVN fullstack solution.",
+      "hidden": true
+    },
+    "mevn": {
+      "factory": "./src/generators/mevn/mevn",
+      "schema": "./src/generators/mevn/schema.json",
+      "description": "Generator that creates a MEVN fullstack solution.",
+      "hidden": true
     }
   }
 }
