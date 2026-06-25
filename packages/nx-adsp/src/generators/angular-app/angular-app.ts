@@ -143,6 +143,14 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     delete config.targets.build.configurations.production.fileReplacements;
   }
 
+  // keycloak-js pushes the initial bundle above Angular's default 1 MB error budget.
+  if (config.targets.build.configurations?.production) {
+    config.targets.build.configurations.production.budgets = [
+      { type: 'initial', maximumWarning: '2mb', maximumError: '4mb' },
+      { type: 'anyComponentStyle', maximumWarning: '6kb', maximumError: '10kb' },
+    ];
+  }
+
   config.targets.build.options = {
     ...config.targets.build.options,
     polyfills: ['zone.js'],

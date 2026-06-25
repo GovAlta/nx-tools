@@ -9,7 +9,6 @@ import {
   GoabMicrositeHeader,
 } from '@abgov/angular-components';
 import Keycloak from 'keycloak-js';
-import { getAccessToken } from './user.slice';
 
 @Component({
   selector: '<%= projectName %>-root',
@@ -39,7 +38,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       error: () => (this.publicResource = 'Error loading data'),
     });
     if (this.isLoggedIn) {
-      getAccessToken().then((token) => {
+      this.keycloak.updateToken(30).then(() => {
+        const token = this.keycloak.token ?? '';
         this.http.get<{ message: string }>('/api/v1/private', {
           headers: { Authorization: `Bearer ${token}` },
         }).subscribe({

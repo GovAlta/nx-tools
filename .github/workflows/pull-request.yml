@@ -37,3 +37,5 @@ jobs:
         run: npm run affected:test -- --base=origin/${{ github.base_ref }}
       - name: Build
         run: npm run affected:build -- --base=origin/${{ github.base_ref }}
+      - name: E2E
+        run: npx nx affected --target e2e --base=origin/${{ github.base_ref }}
