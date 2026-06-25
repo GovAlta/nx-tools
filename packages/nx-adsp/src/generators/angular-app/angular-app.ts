@@ -2,6 +2,7 @@ import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
 import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
+import { addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -125,6 +126,9 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   const addedProxy = addFiles(host, normalizedOptions);
 
+  addJestCoverageConfig(host, normalizedOptions.projectRoot);
+  addVsCodeSettings(host);
+
   // @nx/angular generates app.ts/html/css/spec.ts (new naming) and nx-welcome.ts;
   // our templates use app.component.* and don't use nx-welcome.
   for (const file of ['app.ts', 'app.html', 'app.css', 'app.spec.ts', 'nx-welcome.ts']) {
@@ -163,6 +167,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   updateProjectConfiguration(host, options.name, config);
 
+  addSemgrepTarget(host, options.name);
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {

@@ -21,6 +21,8 @@ on:
     branches:
       - main
 
+  pull_request:
+
   workflow_dispatch:
     inputs:
       SELECTED_BASE:
@@ -37,7 +39,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      AFFECTED_BASE: "origin/main"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - name: Get last successful commit
+        id: last_successful_commit
+        uses: nrwl/nx-set-shas@v5
+      - name: Set AFFECTED_BASE to last successful build commit
+        if: ${{ steps.last_successful_commit.outputs.base }}
+        run: echo "AFFECTED_BASE=${{ steps.last_successful_commit.outputs.base }}" >> $GITHUB_ENV
+      - name: Lint
+        run: npx nx affected --target=lint --base=${{ env.AFFECTED_BASE }}
+      - name: Test
+        run: npx nx affected --target=test --base=${{ env.AFFECTED_BASE }}
+      - name: Build
+        run: npx nx affected --target=build --base=${{ env.AFFECTED_BASE }}
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+      - name: Install Semgrep
+        run: pip install semgrep
+      - name: Semgrep SAST
+        run: npx nx affected --target=semgrep --base=${{ env.AFFECTED_BASE }}
+      - uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+      - uses: hadolint/hadolint-action@v3
+        with:
+          recursive: true
+
   build:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

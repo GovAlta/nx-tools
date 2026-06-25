@@ -2,6 +2,7 @@ import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
 import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
+import { addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -131,11 +132,20 @@ export default async function (host: Tree, options: Schema) {
     {
       'html-webpack-plugin': '~5.5.0',
       'redux-mock-store': '~1.5.4',
+      'eslint-plugin-security': '^3.0.0',
+      'eslint-plugin-no-secrets': '^2.0.0',
+      'eslint-plugin-jest': '^28.0.0',
     }
   );
 
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
+
+  addEslintQualityRules(host, normalizedOptions.projectRoot, [
+    '**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx',
+  ]);
+  addJestCoverageConfig(host, normalizedOptions.projectRoot);
+  addVsCodeSettings(host);
 
   const config = readProjectConfiguration(host, options.name);
 
@@ -168,6 +178,7 @@ export default async function (host: Tree, options: Schema) {
 
   updateProjectConfiguration(host, options.name, config);
 
+  addSemgrepTarget(host, options.name);
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {
