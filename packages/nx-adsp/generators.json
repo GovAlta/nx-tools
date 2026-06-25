@@ -49,6 +49,18 @@
       "schema": "./src/generators/mean/schema.json",
       "description": "Generator that creates a MEAN fullstack solution.",
       "hidden": true
+    },
+    "pern": {
+      "factory": "./src/generators/pern/pern",
+      "schema": "./src/generators/pern/schema.json",
+      "description": "Generator that creates a PERN fullstack solution.",
+      "hidden": true
+    },
+    "pean": {
+      "factory": "./src/generators/pean/pean",
+      "schema": "./src/generators/pean/schema.json",
+      "description": "Generator that creates a PEAN fullstack solution.",
+      "hidden": true
     }
   }
 }
