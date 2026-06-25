@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAdspPern",
+  "title": "PERN Stack ADSP Solution",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the PERN stack solution.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use?"
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment to target.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "e",
+      "x-prompt": {
+        "message": "Which ADSP environment do you want to target?",
+        "type": "list",
+        "items": [
+          "dev",
+          "test",
+          "prod"
+        ]
+      }
+    },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. Enables a single browser login for the full stack — service and frontend agent interactions both use the same tenant-realm token.",
+      "alias": "t"
+    },
+    "tenantRealm": {
+      "type": "string",
+      "description": "Keycloak realm UUID. Optional when --tenant is provided — overrides the realm looked up from the tenant service.",
+      "alias": "tr"
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
+    },
+    "skipAgent": {
+      "type": "boolean",
+      "description": "Skip the consultAgent interaction and generate base scaffolding only.",
+      "default": false
+    }
+  },
+  "required": [
+    "name",
+    "env"
+  ],
+  "additionalProperties": false
+}
