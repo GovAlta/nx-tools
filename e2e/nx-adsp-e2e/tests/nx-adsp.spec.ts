@@ -62,4 +62,42 @@ describe('nx-adsp e2e', () => {
     const result = await runNxCommandAsync(`build ${plugin}`);
     expect(result.stdout).toContain('Executor ran');
   }, 180000);
+
+  describe('pern', () => {
+    it('should generate fullstack with Prisma and build the service', async () => {
+      const plugin = uniq('pern');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:pern ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+
+      checkFilesExist(
+        `apps/${plugin}-service/src/main.ts`,
+        `apps/${plugin}-service/prisma/schema.prisma`,
+        `apps/${plugin}-app/nginx.conf`,
+        `apps/${plugin}-app/src/app/app.tsx`,
+      );
+
+      const result = await runNxCommandAsync(`build ${plugin}-service`);
+      expect(result.stdout).toContain('Executor ran');
+    }, 240000);
+  });
+
+  describe('pean', () => {
+    it('should generate fullstack with Prisma and build the service', async () => {
+      const plugin = uniq('pean');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:pean ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+
+      checkFilesExist(
+        `apps/${plugin}-service/src/main.ts`,
+        `apps/${plugin}-service/prisma/schema.prisma`,
+        `apps/${plugin}-app/nginx.conf`,
+        `apps/${plugin}-app/src/main.ts`,
+      );
+
+      const result = await runNxCommandAsync(`build ${plugin}-service`);
+      expect(result.stdout).toContain('Executor ran');
+    }, 240000);
+  });
 });
