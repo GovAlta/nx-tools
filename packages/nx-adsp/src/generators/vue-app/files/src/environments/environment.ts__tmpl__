@@ -1,0 +1,11 @@
+export const environment = {
+  production: false,
+  directory: {
+    url: '<%= directoryServiceUrl %>',
+  },
+  access: {
+    url: '<%= accessServiceUrl %>/auth',
+    realm: '<%= tenantRealm %>',
+    client_id: 'urn:ads:<%= tenant %>:<%= projectName %>',
+  },
+};

@@ -1,0 +1,49 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+
+const { authenticated, keycloak } = useKeycloak();
+const publicResource = ref('Not retrieved — is the backend service running?');
+const privateResource = ref('Not retrieved — sign in first.');
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/v1/public');
+    const data = await res.json();
+    publicResource.value = data.message;
+  } catch {
+    publicResource.value = 'Error loading public resource.';
+  }
+
+  if (authenticated) {
+    try {
+      await keycloak?.updateToken(30);
+      const res = await fetch('/api/v1/private', {
+        headers: { Authorization: `Bearer ${keycloak?.token}` },
+      });
+      const data = await res.json();
+      privateResource.value = data.message;
+    } catch {
+      privateResource.value = 'Error loading private resource.';
+    }
+  }
+});
+</script>
+
+<template>
+  <section>
+    <h2>Welcome to <%= projectName %>!</h2>
+    <p>Don't panic. Start editing the project to build your digital service.</p>
+    <h3>A few things you might want to do next:</h3>
+    <ul>
+      <li>Public API: <strong>{{ publicResource }}</strong></li>
+      <li>Private API (sign in to access): <strong>{{ privateResource }}</strong></li>
+      <li>
+        Extend the API: add routes to <code>/<%= projectName %>/v1</code> in the backend service.
+      </li>
+      <li>
+        <router-link to="/protected">View the protected page</router-link>
+      </li>
+    </ul>
+  </section>
+</template>

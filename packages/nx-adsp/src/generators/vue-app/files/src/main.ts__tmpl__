@@ -1,0 +1,28 @@
+import '@abgov/web-components';
+import '@abgov/web-components/index.css';
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import keycloakPlugin from '@dsb-norge/vue-keycloak-js';
+
+import App from './App.vue';
+import router from './router';
+import { environment } from './environments/environment';
+
+const app = createApp(App);
+
+app.use(createPinia());
+app.use(router);
+app.use(keycloakPlugin, {
+  config: {
+    url: environment.access.url,
+    realm: environment.access.realm,
+    clientId: environment.access.client_id,
+  },
+  init: {
+    onLoad: 'check-sso',
+    pkceMethod: 'S256',
+    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+  },
+});
+
+app.mount('#app');

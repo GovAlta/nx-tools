@@ -176,6 +176,23 @@ describe('nx-adsp e2e', () => {
     }, 180000);
   });
 
+  describe('vue app', () => {
+    it('should generate and build', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+      checkFilesExist(
+        `${plugin}/src/App.vue`,
+        `${plugin}/src/main.ts`,
+        `${plugin}/src/router/index.ts`,
+        `${plugin}/src/views/HomeView.vue`,
+      );
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(
