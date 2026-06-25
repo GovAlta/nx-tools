@@ -44,6 +44,11 @@
       "schema": "./src/generators/angular-app/schema.json",
       "description": "Generator that creates a Angular based frontend application."
     },
+    "vue-app": {
+      "factory": "./src/generators/vue-app/vue-app",
+      "schema": "./src/generators/vue-app/schema.json",
+      "description": "Generator that creates a Vue 3 frontend application using GoA web components."
+    },
     "mean": {
       "factory": "./src/generators/mean/mean",
       "schema": "./src/generators/mean/schema.json",

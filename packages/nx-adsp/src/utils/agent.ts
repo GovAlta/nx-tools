@@ -72,7 +72,7 @@ export async function consultAgent(
   accessToken: string,
   projectContext: {
     projectName: string;
-    projectType: 'express-service' | 'react-app' | 'angular-app' | 'mern' | 'mean' | 'pern' | 'pean';
+    projectType: 'express-service' | 'react-app' | 'angular-app' | 'vue-app' | 'mern' | 'mean' | 'pern' | 'pean';
     tenant: string;
     pluginVersion: string;
     /** Content of key integration files for the agent to read and potentially modify. */

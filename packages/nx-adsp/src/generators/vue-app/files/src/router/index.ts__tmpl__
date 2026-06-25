@@ -1,0 +1,29 @@
+import { createRouter, createWebHistory } from 'vue-router';
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import HomeView from '../views/HomeView.vue';
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    { path: '/', component: HomeView },
+    {
+      path: '/protected',
+      component: () => import('../views/ProtectedView.vue'),
+      meta: { requiresAuth: true },
+    },
+  ],
+});
+
+router.beforeEach((to) => {
+  if (to.meta.requiresAuth) {
+    const { authenticated, ready, keycloak } = useKeycloak();
+    if (!ready) return true;
+    if (!authenticated) {
+      keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
+      return false;
+    }
+  }
+  return true;
+});
+
+export default router;

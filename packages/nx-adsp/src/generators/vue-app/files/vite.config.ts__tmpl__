@@ -1,0 +1,50 @@
+/// <reference types='vitest' />
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+  root: __dirname,
+  cacheDir: '<%= offsetFromRoot %>node_modules/.vite/<%= projectName %>',
+
+  server: {
+    port: 4200,
+    host: 'localhost',
+  },
+
+  preview: {
+    port: 4300,
+    host: 'localhost',
+  },
+
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          // Treat goa-* custom elements as web components, not Vue components.
+          isCustomElement: (tag) => tag.startsWith('goa-'),
+        },
+      },
+    }),
+  ],
+
+  test: {
+    watch: false,
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx,vue}'],
+    reporters: ['default'],
+    coverage: {
+      reportsDirectory: '<%= offsetFromRoot %>coverage/<%= projectRoot %>',
+      provider: 'v8',
+    },
+  },
+
+  build: {
+    outDir: '<%= offsetFromRoot %>dist/<%= projectRoot %>',
+    emptyOutDir: true,
+    reportCompressedSize: true,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+  },
+});

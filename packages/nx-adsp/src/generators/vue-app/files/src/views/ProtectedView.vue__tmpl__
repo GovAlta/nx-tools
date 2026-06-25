@@ -1,0 +1,14 @@
+<script setup lang="ts">
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+
+const { fullName, tokenParsed } = useKeycloak();
+const userEmail = tokenParsed?.email ?? '';
+</script>
+
+<template>
+  <section>
+    <h2>Protected page</h2>
+    <p>You are signed in as <strong>{{ fullName }}</strong> ({{ userEmail }}).</p>
+    <router-link to="/">← Back to home</router-link>
+  </section>
+</template>
