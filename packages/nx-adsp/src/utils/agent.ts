@@ -72,7 +72,7 @@ export async function consultAgent(
   accessToken: string,
   projectContext: {
     projectName: string;
-    projectType: 'express-service' | 'react-app' | 'angular-app' | 'vue-app' | 'mern' | 'mean' | 'pern' | 'pean';
+    projectType: 'express-service' | 'react-app' | 'angular-app' | 'vue-app' | 'mern' | 'mean' | 'pern' | 'pean' | 'pevn' | 'mevn';
     tenant: string;
     pluginVersion: string;
     /** Content of key integration files for the agent to read and potentially modify. */
@@ -204,11 +204,13 @@ export async function consultAgent(
       );
     }
 
-    if (projectType === 'mern' || projectType === 'mean') {
+    if (projectType === 'mern' || projectType === 'mean' || projectType === 'pern' || projectType === 'pean' || projectType === 'pevn' || projectType === 'mevn') {
       const frontendStack =
-        projectType === 'mern'
+        projectType === 'mern' || projectType === 'pern'
           ? 'React frontend using Redux Toolkit slices and keycloak-js'
-          : 'Angular frontend using standalone components and keycloak-angular';
+          : projectType === 'mean' || projectType === 'pean'
+          ? 'Angular frontend using standalone components and keycloak-angular'
+          : 'Vue 3 frontend using Pinia and @dsb-norge/vue-keycloak-js';
       const serviceFiles = Object.keys(projectContext.existingFiles)
         .filter((f) => f.startsWith('service/'))
         .join(', ');

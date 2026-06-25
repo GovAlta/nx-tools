@@ -245,4 +245,41 @@ describe('nx-adsp e2e', () => {
       expect(result.stdout).toContain('Successfully ran target');
     }, 240000);
   });
+
+  describe('pevn', () => {
+    it('should generate fullstack with Prisma and build the service', async () => {
+      const plugin = uniq('pevn');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:pevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+
+      checkFilesExist(
+        `${plugin}-service/src/main.ts`,
+        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-app/nginx.conf`,
+        `${plugin}-app/src/App.vue`,
+      );
+
+      const result = await runNxCommandAsync(`build ${plugin}-service`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
+  describe('mevn', () => {
+    it('should generate fullstack and build the service', async () => {
+      const plugin = uniq('mevn');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:mevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+
+      checkFilesExist(
+        `${plugin}-service/src/main.ts`,
+        `${plugin}-app/nginx.conf`,
+        `${plugin}-app/src/App.vue`,
+      );
+
+      const result = await runNxCommandAsync(`build ${plugin}-service`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
 });
