@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxOcSetupSecrets",
+  "title": "Setup Pipeline Secrets",
+  "type": "object",
+  "properties": {
+    "infra": {
+      "type": "string",
+      "description": "Name of the OpenShift infra project containing the github-actions service account.",
+      "alias": "i",
+      "x-prompt": "What is the OpenShift infra project?"
+    }
+  },
+  "required": ["infra"],
+  "additionalProperties": false
+}

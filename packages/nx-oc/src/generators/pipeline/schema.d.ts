@@ -3,11 +3,12 @@ export interface Schema {
   type: string;
   infra: string;
   envs: string;
-  registry: string;
+  registry?: string;
   apply?: boolean;
 }
 
 export interface NormalizedSchema extends Schema {
+  registry: string;
   ocPipelineName: string;
   ocInfraProject: string;
   ocEnvProjects: string[];
