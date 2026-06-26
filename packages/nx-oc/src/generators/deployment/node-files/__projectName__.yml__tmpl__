@@ -5,11 +5,13 @@ metadata:
 labels:
   app: <%= projectName %>
 parameters:
+<% if (!sandbox) { %>
   - name: INFRA_PROJECT
     description: Project used for build infrastructure.
     displayName: Infrastructure Project
     value: <%= ocInfraProject %>
     required: true
+<% } %>
   - name: PROJECT
     description: Project to deploy into.
     displayName: Project
@@ -19,17 +21,21 @@ parameters:
     displayName: Application Name
     value: <%= projectName %>
     required: true
+<% if (!sandbox) { %>
   - name: DEPLOY_TAG
     description: ImageStream tag to deploy.
     displayName: Deploy Tag
     value: latest
     required: true
+<% } %>
 objects:
+<% if (!sandbox) { %>
   - apiVersion: image.openshift.io/v1
     kind: ImageStream
     metadata:
       name: ${APP_NAME}
       namespace: ${INFRA_PROJECT}
+<% } %>
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -45,6 +51,7 @@ objects:
     metadata:
       name: ${APP_NAME}
       namespace: ${PROJECT}
+<% if (!sandbox) { %>
       annotations:
         image.openshift.io/triggers: |-
           [
@@ -58,6 +65,7 @@ objects:
               "paused": true
             }
           ]
+<% } %>
     spec:
       replicas: 1
       selector:
@@ -78,21 +86,33 @@ objects:
 <% if (database === 'postgres') { %>
           initContainers:
             - name: ${APP_NAME}-migrate
+<% if (sandbox) { %>
+              image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/<%= projectName %>:sandbox
+<% } else { %>
               image: image-registry.openshift-image-registry.svc:5000/${INFRA_PROJECT}/${APP_NAME}:${DEPLOY_TAG}
+<% } %>
               command: ["npx", "prisma", "migrate", "deploy"]
               envFrom:
                 - configMapRef:
                     name: ${APP_NAME}
               env:
                 - name: DATABASE_URL
+<% if (sandbox) { %>
+                  value: postgresql://postgres:sandbox@sandbox-postgres:5432/<%= projectName %>_sandbox
+<% } else { %>
                   valueFrom:
                     secretKeyRef:
                       name: ${APP_NAME}-database
                       key: DATABASE_URL
 <% } %>
+<% } %>
           containers:
             - name: ${APP_NAME}
+<% if (sandbox) { %>
+              image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/<%= projectName %>:sandbox
+<% } else { %>
               image: ${APP_NAME}:${DEPLOY_TAG}
+<% } %>
               envFrom:
                 - configMapRef:
                     name: ${APP_NAME}
@@ -102,13 +122,22 @@ objects:
                 - name: LOG_LEVEL
                   value: info
 <% if (database === 'postgres') { %>
+<% if (sandbox) { %>
+                - name: DATABASE_URL
+                  value: postgresql://postgres:sandbox@sandbox-postgres:5432/<%= projectName %>_sandbox
+<% } else { %>
                 # Set via: oc create secret generic ${APP_NAME}-database --from-literal=DATABASE_URL=<connection-string>
                 - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
                       name: ${APP_NAME}-database
                       key: DATABASE_URL
+<% } %>
 <% } else if (database === 'mongo') { %>
+<% if (sandbox) { %>
+                - name: MONGODB_URI
+                  value: mongodb://sandbox-mongodb:27017/<%= projectName %>_sandbox
+<% } else { %>
                 # Set via: oc create secret generic ${APP_NAME}-database --from-literal=MONGODB_URI=<connection-string>
                 - name: MONGODB_URI
                   valueFrom:
@@ -116,7 +145,8 @@ objects:
                       name: ${APP_NAME}-database
                       key: MONGODB_URI
 <% } %>
-              imagePullPolicy: IfNotPresent
+<% } %>
+              imagePullPolicy: <%= sandbox ? 'Always' : 'IfNotPresent' %>
               ports:
                 - containerPort: 3333
                   name: http

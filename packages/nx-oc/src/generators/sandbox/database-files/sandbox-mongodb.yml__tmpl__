@@ -1,0 +1,98 @@
+# Shared MongoDB instance for the sandbox namespace on GoA ARO OpenShift.
+# Applied once per namespace — idempotent, safe to re-run. The PVC is never
+# deleted on re-apply, so data persists across deployments.
+#
+# Multiple apps in the same namespace share this instance. Each app uses its
+# own database (<appName>_sandbox); MongoDB creates it on first write.
+# Connect as admin: mongodb://admin:sandbox@sandbox-mongodb:27017/<db>?authSource=admin
+#
+# StorageClass: azure-disk is required on GoA ARO.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sandbox-mongodb-data
+spec:
+  storageClassName: azure-disk
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-mongodb
+  labels:
+    app: sandbox-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sandbox-mongodb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: sandbox-mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: quay.io/sclorg/mongodb-70-c9s:latest
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          env:
+            - name: MONGODB_ADMIN_PASSWORD
+              value: sandbox
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mongodb/data
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sandbox-mongodb-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-mongodb
+  labels:
+    app: sandbox-mongodb
+spec:
+  selector:
+    app: sandbox-mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+      protocol: TCP

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxOcSandbox",
+  "title": "OpenShift Sandbox Deployment",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project to add sandbox deployment for.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project to add sandbox deployment for?"
+    },
+    "sandboxProject": {
+      "type": "string",
+      "description": "OpenShift namespace to deploy the sandbox into.",
+      "alias": "s",
+      "x-prompt": "Which OpenShift namespace should be used for the sandbox?"
+    },
+    "appType": {
+      "type": "string",
+      "description": "Type of application.",
+      "alias": "t",
+      "x-prompt": {
+        "message": "What type of application is the project?",
+        "type": "list",
+        "items": ["frontend", "dotnet", "node"]
+      }
+    },
+    "database": {
+      "type": "string",
+      "description": "Database type. A shared containerized instance will be deployed to the sandbox namespace.",
+      "enum": ["none", "postgres", "mongo"]
+    },
+    "env": {
+      "type": "string",
+      "description": "ADSP environment to target.",
+      "default": "dev"
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Access token for retrieving configuration from ADSP APIs.",
+      "alias": "at"
+    }
+  },
+  "required": ["project", "sandboxProject"],
+  "additionalProperties": false
+}
