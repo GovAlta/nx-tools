@@ -112,6 +112,20 @@ objects:
                 requests:
                   cpu: 20m
                   memory: 200Mi
+              readinessProbe:
+                httpGet:
+                  path: /health
+                  port: 5000
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                failureThreshold: 3
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: 5000
+                initialDelaySeconds: 30
+                periodSeconds: 30
+                failureThreshold: 3
               volumeMounts:
                 - mountPath: /opt/app-root/app/appsettings.json
                   name: config-volume
