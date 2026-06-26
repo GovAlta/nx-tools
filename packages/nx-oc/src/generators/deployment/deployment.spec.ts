@@ -90,6 +90,10 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('nginx');
+
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('readinessProbe');
+    expect(manifest).toContain('livenessProbe');
   });
 
   it('can generate deployment for angular', async () => {
@@ -150,6 +154,10 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('node');
+
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('readinessProbe');
+    expect(manifest).toContain('livenessProbe');
   });
 
   it('can generate deployment for dotnet', async () => {
@@ -178,6 +186,10 @@ describe('Deployment Generator', () => {
 
     const dockerfile = host.read('.openshift/test/Dockerfile').toString();
     expect(dockerfile).toContain('dotnet');
+
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('readinessProbe');
+    expect(manifest).toContain('livenessProbe');
   });
 
   it('includes DATABASE_URL secretKeyRef and init container for postgres node deployment', async () => {
