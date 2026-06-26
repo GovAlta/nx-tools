@@ -22,6 +22,11 @@
       "factory": "./src/generators/deployment/deployment",
       "schema": "./src/generators/deployment/schema.json",
       "description": "Generator that creates OpenShift manifests for project deployment."
+    },
+    "sandbox": {
+      "factory": "./src/generators/sandbox/sandbox",
+      "schema": "./src/generators/sandbox/schema.json",
+      "description": "Generator that creates a sandbox deployment for rapid local iteration (local build, push to OC internal registry)."
     }
   }
 }

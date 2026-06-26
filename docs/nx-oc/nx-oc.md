@@ -18,7 +18,7 @@ has_children: true
 
 Nx plugin for generating and applying OpenShift manifests for Government of Alberta applications.
 
-The plugin provides generators for CI/CD pipeline setup and per-application deployment configuration, and an executor for running `oc apply` against an OpenShift cluster.
+The plugin provides generators for CI/CD pipeline setup, per-application deployment configuration, and sandbox deployments for rapid local iteration. An executor handles running `oc apply` against an OpenShift cluster.
 
 ## Installation
 
@@ -31,6 +31,7 @@ npm i -D @abgov/nx-oc
 - [OpenShift CLI (`oc`)](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) installed and on `PATH`
 - An active OpenShift login: `oc login <url> --token=<token>`
 - Separate OpenShift projects provisioned for build infrastructure and each runtime environment (dev, test, prod)
+- [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated (`gh auth login`) — required when using `pipeline --apply`
 
 ## Generators
 
@@ -41,9 +42,7 @@ Generates OpenShift manifests for a CI/CD pipeline, including shared build infra
 ```bash
 npx nx g @abgov/nx-oc:pipeline my-pipeline \
   --infra my-infra-project \
-  --envs "my-dev my-test my-prod" \
-  --registry ghcr.io/my-org \
-  --type actions
+  --envs "my-dev my-test my-prod"
 ```
 
 | Option | Alias | Required | Description |
@@ -51,9 +50,9 @@ npx nx g @abgov/nx-oc:pipeline my-pipeline \
 | `pipeline` | — | Yes | Name of the OpenShift pipeline |
 | `infra` | `-i` | Yes | OpenShift project name used for build infrastructure |
 | `envs` | `-e` | Yes | Space-separated names of the OpenShift environment projects (e.g. `"my-dev my-test my-prod"`) |
-| `registry` | `-r` | Yes | Container registry to publish images to (e.g. `ghcr.io/my-org`) |
+| `registry` | `-r` | No | Container registry to publish images to (e.g. `ghcr.io/my-org`). Derived automatically from the git remote when not provided. |
 | `type` | `-t` | No | Pipeline type: `actions` (default) or `jenkins` |
-| `apply` | `-a` | No | Apply the generated manifests to OpenShift immediately after generation |
+| `apply` | `-a` | No | Apply the generated manifests to OpenShift and run automated secrets setup |
 
 The generator creates the following files:
 
@@ -64,6 +63,11 @@ The generator creates the following files:
   ├─ environment.infra.yml
   └─ environments.yml
 ```
+
+When `--apply` is set, the generator also:
+- Applies the infrastructure manifests to OpenShift
+- Sets `OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` as GitHub Actions secrets automatically
+- Prompts once for a GitHub classic PAT with `read:packages` scope, creates the GHCR pull secret in the infra project, and links it to the `github-actions` service account
 
 ---
 
@@ -79,9 +83,25 @@ Use this as a follow-up to `pipeline` when you want to defer cluster provisionin
 
 ---
 
+### setup-secrets
+
+Sets GitHub Actions secrets (`OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`) and creates the GHCR pull secret in OpenShift for an existing pipeline. Run this if the pipeline was generated without `--apply`, or to re-run secrets setup independently.
+
+```bash
+npx nx g @abgov/nx-oc:setup-secrets --infra my-infra-project
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `infra` | Yes | OpenShift project name used for build infrastructure |
+
+Requires `oc` to be logged in and `gh` CLI to be authenticated.
+
+---
+
 ### deployment
 
-Adds OpenShift deployment manifests (Deployment, Service, Route, etc.) to an existing Nx project for a specific environment.
+Adds OpenShift deployment manifests (Deployment, Service, Route, ImageStream) to an existing Nx project for a specific environment. Generated manifests include liveness and readiness probes.
 
 ```bash
 npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
@@ -92,11 +112,68 @@ npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 | `project` | — | Yes | Name of the existing Nx project to add deployment manifests to |
 | `appType` | `-t` | Yes | Application type: `frontend`, `dotnet`, or `node` |
 | `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a Prisma migration init container for `postgres`. |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
 
+The database connection secret must be created manually in each environment project before the first deploy:
+
+```bash
+# postgres
+oc create secret generic my-app-database \
+  --from-literal=DATABASE_URL='postgresql://user:pass@host:5432/dbname' \
+  -n my-env-project
+
+# mongo
+oc create secret generic my-app-database \
+  --from-literal=MONGODB_URI='mongodb://user:pass@host:27017/dbname' \
+  -n my-env-project
+```
+
 Note: when `@abgov/nx-adsp` generators create a new application and `@abgov/nx-oc` is installed, the `deployment` generator is called automatically. Use `deployment` directly to add OpenShift manifests to an existing project.
+
+---
+
+### sandbox
+
+Generates a sandbox deployment for rapid local iteration — no git push or CI wait required. Builds the container image locally, pushes directly to the OpenShift internal registry, and deploys to a sandbox namespace in a single command.
+
+```bash
+npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject my-sandbox-ns
+npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --database postgres
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `project` | — | Yes | Name of the existing Nx project |
+| `sandboxProject` | `-s` | Yes | OpenShift namespace to deploy the sandbox into |
+| `appType` | `-t` | No | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided. |
+| `database` | — | No | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace. |
+| `env` | — | No | ADSP environment to target for configuration: `dev` (default), `test`, or `prod` |
+
+The generator adds a `sandbox` target to the project and creates:
+
+```
+.openshift/
+  ├─ my-app/
+  │   └─ my-app.yml          ← sandbox deployment manifest
+  └─ sandbox/
+      └─ sandbox-postgres.yml  ← shared DB (written once, reused by all apps)
+```
+
+Running `nx run my-app:sandbox` executes the full loop:
+
+1. Creates a credentials Secret (`sandbox-postgres-creds` or `sandbox-mongodb-creds`) in the namespace on first run — generates a random password. Subsequent runs skip this; the existing secret is reused by all apps in the namespace.
+2. Applies the shared DB manifest (idempotent — no-op if already deployed)
+3. Applies the app manifest (idempotent)
+4. Detects `podman` or `docker` at runtime and builds the container image locally
+5. Pushes to the OC internal registry
+6. Restarts the Deployment and waits for rollout
+
+**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`) — Prisma creates it automatically on first migrate. No manual database provisioning is required. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
+
+**Credentials:** The generated password is stored in an OC Secret. The DB pod and every app pod read from the same Secret at runtime — no credential is hardcoded in any manifest.
 
 ---
 
@@ -146,8 +223,14 @@ npx nx run my-app:deploy
 
 ## Typical workflow
 
+### Production pipeline
+
 1. Run `pipeline` once per workspace to generate shared build infrastructure manifests.
-2. Run `apply-infra` (or pass `--apply` to `pipeline`) to provision the resources on the cluster.
-3. Run `deployment` for each application and environment combination.
-4. Add an `apply` executor target to each application's `project.json`.
-5. In your GitHub Actions or Jenkins pipeline, call `npx nx run my-app:deploy` to apply manifests during CI/CD.
+2. Pass `--apply` to provision the cluster, set GitHub secrets, and configure the GHCR pull secret in one step. Or run `apply-infra` and `setup-secrets` separately to defer or re-run either step.
+3. Run `deployment` for each application and environment combination, passing `--database` if the app uses Postgres or MongoDB.
+4. In your GitHub Actions pipeline, `nx run my-app:apply-envs` applies manifests during CI/CD.
+
+### Sandbox iteration
+
+1. Run `sandbox` for each application, passing `--sandboxProject` and `--database` as needed.
+2. Run `nx run my-app:sandbox` to build, push, and deploy. Repeat on every change.

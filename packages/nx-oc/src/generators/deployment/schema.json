@@ -58,6 +58,10 @@
       "type": "string",
       "description": "Database type used by the service. When set, the deployment manifest references the appropriate Secret.",
       "enum": ["none", "postgres", "mongo"]
+    },
+    "sandbox": {
+      "type": "boolean",
+      "description": "Generate a sandbox deployment manifest (local image push, no ImageStream trigger)."
     }
   },
   "required": [
