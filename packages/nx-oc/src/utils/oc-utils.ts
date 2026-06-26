@@ -1,5 +1,71 @@
 import { execFileSync, spawnSync } from 'child_process';
 
+export function getOcServerUrl(): string | undefined {
+  try {
+    return execFileSync(
+      'oc',
+      ['config', 'view', '--minify', '-o', 'jsonpath={.clusters[0].cluster.server}'],
+      { stdio: 'pipe' }
+    ).toString().trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Creates a bounded SA token valid for one year (OCP 4.11+ TokenRequest API).
+// Falls back to the legacy `oc sa get-token` on older clusters.
+export function getSaToken(saName: string, namespace: string): string | undefined {
+  try {
+    return execFileSync(
+      'oc', ['create', 'token', saName, '-n', namespace, '--duration=8760h'],
+      { stdio: 'pipe' }
+    ).toString().trim() || undefined;
+  } catch {
+    try {
+      return execFileSync(
+        'oc', ['sa', 'get-token', saName, '-n', namespace],
+        { stdio: 'pipe' }
+      ).toString().trim() || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+export function createDockerRegistrySecret(
+  name: string,
+  server: string,
+  username: string,
+  password: string,
+  namespace: string
+): boolean {
+  try {
+    execFileSync('oc', [
+      'create', 'secret', 'docker-registry', name,
+      `--docker-server=${server}`,
+      `--docker-username=${username}`,
+      `--docker-password=${password}`,
+      '-n', namespace,
+    ], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function linkSecretToServiceAccount(
+  secretName: string,
+  saName: string,
+  namespace: string
+): boolean {
+  try {
+    execFileSync('oc', ['secrets', 'link', saName, secretName, '--for=pull', '-n', namespace], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function runOcCommand(
   command: 'project' | 'start-build' | 'process' | 'apply',
   params: string[],

@@ -1,8 +1,9 @@
 import { formatFiles, generateFiles, Tree } from '@nx/devkit';
 import * as path from 'path';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
-import { getGitRemoteUrl } from '../../utils/git-utils';
+import { deriveRegistryFromRemote, getGitRemoteUrl } from '../../utils/git-utils';
 import applyInfraGenerator from '../apply-infra/apply-infra';
+import setupSecretsGenerator from '../setup-secrets/setup-secrets';
 import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
@@ -19,12 +20,33 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
   return {
     ...options,
+    registry: options.registry ?? '',
     ocPipelineName: options.pipeline,
     ocInfraProject: options.infra,
     ocEnvProjects: ocEnvProjects,
     applyPipeline: !!options.apply,
     pipelineType: options.type === 'jenkins' ? 'jenkins' : 'actions',
   };
+}
+
+// Resolves the container registry: CLI flag → derived from git remote → prompted.
+async function resolveRegistry(registry?: string): Promise<string> {
+  if (registry) return registry;
+
+  const remoteUrl = getGitRemoteUrl()?.trim();
+  const derived = deriveRegistryFromRemote(remoteUrl);
+  if (derived) {
+    console.log(`\n✓ Container registry: ${derived} (derived from git remote)\n`);
+    return derived;
+  }
+
+  const { prompt } = await import('enquirer');
+  const answer = await prompt<{ registry: string }>({
+    type: 'input',
+    name: 'registry',
+    message: 'What container registry should images be published to (e.g., ghcr.io/my-org)?',
+  });
+  return answer.registry;
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
@@ -63,12 +85,24 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  const normalizedOptions = normalizeOptions(host, options);
+  const registry = await resolveRegistry(options.registry);
+  const normalizedOptions = normalizeOptions(host, { ...options, registry });
 
   addFiles(host, normalizedOptions);
   await formatFiles(host);
 
   if (normalizedOptions.applyPipeline) {
     await applyInfraGenerator(host);
+
+    const remoteUrl = getGitRemoteUrl()?.trim();
+    if (remoteUrl) {
+      await setupSecretsGenerator(host, { infra: normalizedOptions.ocInfraProject });
+    } else {
+      console.log(
+        '\n⚠  No git remote found — skipping GitHub secrets setup.\n' +
+        `   Push to GitHub first then run:\n` +
+        `   npx nx g @abgov/nx-oc:setup-secrets --infra ${normalizedOptions.ocInfraProject}\n`
+      );
+    }
   }
 }
