@@ -15,100 +15,247 @@ nav_order: 1
 
 # Getting started
 
-Government of Alberta's Nx Tools are a set of plugins for [nx](https://nx.dev) including plugins for working in OpenShift, generating new applications, and automating releases of published libraries.
+Step-by-step guide to creating a new Nx workspace, installing the plugins, and generating a PEVN (PostgreSQL + Express + Vue 3 + Node) fullstack solution with OpenShift deployment.
 
-## Version compatibility
+## Prerequisites
 
-@abgov libraries at version _x_ correspond to @nx workspace at version _x + 10_
+### OpenShift projects
 
-- @abgov/nx-oc@1 -> @nx/devkit@11
-- @abgov/nx-oc@2 -> @nx/devkit@12
-- @abgov/nx-oc@5 -> @nx/devkit@15
-- @abgov/nx-oc@12 -> @nx/devkit@22
+All projects must exist before running the pipeline generator:
 
-When installing @nx dependencies, make sure versions across all @nx scope dependencies are the same.
+- One **infra project** — holds ImageStreams and the CI service account (e.g. `my-project-build`)
+- One project per environment (e.g. `my-project-dev`, `my-project-test`, `my-project-prod`)
 
-## Quick start
+### GitHub Actions secrets
 
-The follow steps can be used to generate a basic React frontend, Express/Node backend solution deployed on OpenShift with a GitHub Actions based continuous delivery pipeline.
+`OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` are set automatically when the pipeline generator runs with `Apply the pipeline to OpenShift? Yes` (step 4). The following are set or needed manually:
 
-### Prerequisite
+| Secret | How set | Notes |
+|--------|---------|-------|
+| `OPENSHIFT_SERVER` | Auto (step 4) | API URL derived from current `oc` context |
+| `OPENSHIFT_TOKEN` | Auto (step 4) | Token for the `github-actions` SA |
+| `REDHAT_IO_USERNAME` | Manual | Only needed for UBI images from `registry.redhat.io` |
+| `REDHAT_IO_PASSWORD` | Manual | Paired with `REDHAT_IO_USERNAME` |
 
-- Empty Github repository
-- OpenShift Projects to use for build, dev, test, and prod
-- [ADSP](https://adsp.alberta.ca) Tenant
+`GITHUB_TOKEN` is provided automatically by GitHub Actions — no setup required.
 
-### Steps
+### GHCR pull secret in OpenShift
 
-1. Create an NX workspace.
+The `oc import-image` step runs server-side: OpenShift pulls from GHCR directly, not via the Actions runner. The pull secret is created automatically when the pipeline generator runs with apply enabled — you will be prompted once for a classic PAT with `read:packages` scope. The secret is linked to the `github-actions` SA in the infra project and persists permanently.
 
-   ```
-   npx create-nx-workspace@latest my-project --preset empty --nx-cloud false
-   ```
+To set it up manually (e.g. for an existing pipeline):
 
-2. Push the project to GitHub repository.
+```bash
+nx g @abgov/nx-oc:setup-secrets --infra my-project-build
+```
 
-   ```
-   cd my-project
-   git remote add origin <REMOTE_URL>
-   git push -u origin main
-   ```
+### Database secret
 
-3. Install dependencies needed for the React and Express based solution.
+A Postgres connection secret must exist in **each environment project** before the first deploy:
 
-   ```
-   npm i -D @nx/react @nx/express @abgov/nx-oc @abgov/nx-adsp
-   ```
+```bash
+oc create secret generic my-app-service-database \
+  --from-literal=DATABASE_URL='postgresql://user:pass@host:5432/dbname' \
+  -n <env-project>
+```
 
-   @abgov/nx-adsp includes peer dependencies for its application templates. Make sure that the appropriate ones are installed. (e.g. @nx/angular if generating Angular application.)
+Repeat for every environment project.
 
-4. Generate a GitHub pipeline for the project.
+### ADSP tenant
 
-   ```
-   oc login <URL> --token=<TOKEN>
+An existing ADSP tenant is required. The `pevn` generator provisions Keycloak clients and environment config against it. Have the tenant name ready.
 
-   npx nx g @abgov/nx-oc:pipeline
-   ? What should be the name of the oc pipeline? my-project-ci
-   ? What project should be used for build infrastructure? my-project-build
-   ? Generate a Jenkins (jenkins) based pipeline or a GitHub Actions (actions) pipeline? actions
-   ? What projects should be used for environments (dev test prod)? my-project-dev my-project-uat my-project-prod
-   ? Apply the pipeline to OpenShift? Yes
-   ```
+### GitHub Environments (optional)
 
-   This will add add yaml files for the GitHub workflow and the pipeline OpenShift resources. When you answer yes to 'Apply the pipeline to OpenShift?', the generator will also create the openshift resources specified in the manifest files.
+Create environments in **Settings → Environments** matching the names passed to `--envs` (e.g. `dev`, `test`, `prod`) to enable per-environment approval gates.
 
-   ```
-   .github/
-     └─ pipeline.yml
-   .openshift/
-     ├─ environment.infra.yml
-     └─ environments.yml
-   ```
+### Local tooling
 
-5. Generate the React frontend and Express backend projects.
+- `oc` CLI authenticated to the cluster before running the pipeline generator
+- `gh` CLI authenticated (`gh auth login`) before running the pipeline generator
+- Node 22+
 
-   ```
-   npx nx g @abgov/nx-adsp:express-service demo-service --env dev --tenant <Tenant>
-   npx nx g @abgov/nx-adsp:react-app demo-app --env dev --tenant <Tenant>
-   ```
+---
 
-   Each generator will open a browser login for your ADSP tenant. This generates the application projects along with associated OpenShift manifests.
+## Steps
 
-   ```
-   .openshift/
-     ├─ demo-app/
-     └─ demo-service/
-   apps/
-     ├─ demo-app/
-     └─ demo-service/
-   ```
+### 1. Create an Nx workspace
 
-   Note that OpenShift manifests are only generated when a pipeline has already been set up in the workspace (step 4). To add OpenShift manifests to an existing project later, use the `@abgov/nx-oc:deployment` generator.
+```bash
+npx create-nx-workspace@latest my-project --preset apps --nx-cloud false
+cd my-project
+```
 
-6. Run apply-envs target to create the OpenShift resources across dev, test and prod environments.
+### 2. Push to GitHub
 
-   ```
-   npx nx run demo-app:apply-envs
-   ```
+```bash
+git remote add origin <REMOTE_URL>
+git push -u origin main
+```
 
-7. Commit and push the updated working copy to GitHub.
+### 3. Install dependencies
+
+```bash
+npm i -D @nx/vue @nx/node @abgov/nx-oc @abgov/nx-adsp
+```
+
+`@nx/vue` and `@nx/node` are the required peers for the PEVN generators.
+
+### 4. Generate the OpenShift CI pipeline
+
+```bash
+oc login <URL> --token=<TOKEN>
+
+npx nx g @abgov/nx-oc:pipeline
+```
+
+Respond to the prompts:
+
+```
+? What should be the name of the oc pipeline?           my-project-ci
+? What project should be used for build infrastructure?  my-project-build
+? Generate a Jenkins or GitHub Actions pipeline?         actions
+? What projects should be used for environments?         my-project-dev my-project-test my-project-prod
+? Apply the pipeline to OpenShift?                       Yes
+```
+
+When `Apply` is `Yes`, the generator:
+- Applies OC infra manifests (ImageStream, RBAC, service account)
+- Sets `OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` as GitHub Actions secrets automatically
+- Prompts once for a GitHub classic PAT (`read:packages`), creates the GHCR pull secret in OC, and links it to the `github-actions` SA
+
+This writes `.github/pipeline.yml` and `.openshift/environments.yml`. OpenShift deployment manifests are only auto-generated by the app generators when this pipeline setup is in place.
+
+### 5. Generate the PEVN fullstack solution
+
+```bash
+npx nx g @abgov/nx-adsp:pevn my-app --env dev --tenant <TENANT>
+```
+
+A browser login opens for your ADSP tenant. This generates:
+
+```
+.openshift/
+  ├─ my-app-service/
+  └─ my-app-app/
+apps/
+  ├─ my-app-service/   ← Express + Prisma (Postgres)
+  └─ my-app-app/       ← Vue 3 + GoA web components + Keycloak
+```
+
+The dev proxy (`/api/` → `my-app-service:3333`) and nginx production proxy are wired automatically.
+
+Pass `--skipAgent` to skip the AI interaction and get base scaffolding only.
+
+### 6. Create the database secret in each environment
+
+```bash
+oc create secret generic my-app-service-database \
+  --from-literal=DATABASE_URL='postgresql://user:pass@host:5432/dbname' \
+  -n my-project-dev
+
+# Repeat for test and prod
+oc create secret generic my-app-service-database \
+  --from-literal=DATABASE_URL='postgresql://...' \
+  -n my-project-test
+
+oc create secret generic my-app-service-database \
+  --from-literal=DATABASE_URL='postgresql://...' \
+  -n my-project-prod
+```
+
+### 7. Apply environment resources to OpenShift
+
+```bash
+npx nx run my-app-service:apply-envs
+npx nx run my-app-app:apply-envs
+```
+
+### 8. Commit and push
+
+```bash
+git add .
+git commit -m "feat: scaffold PEVN fullstack solution"
+git push
+```
+
+The GitHub Actions pipeline triggers on push to `main` and builds, publishes, and deploys to the first environment automatically.
+
+---
+
+## Local development
+
+Start the local Postgres container (requires [Podman](https://podman.io/)):
+
+```bash
+npx nx run my-app-service:dev-db
+```
+
+Apply the initial Prisma migration:
+
+```bash
+npx nx run my-app-service:db:migrate
+```
+
+Run the service and frontend concurrently:
+
+```bash
+npx nx run my-app-service:serve
+npx nx run my-app-app:serve
+```
+
+The Vue dev server proxies `/api/` to the local Express service automatically via `vite.proxy.json`.
+
+---
+
+## Sandbox deployment
+
+For rapid iteration directly on OpenShift without committing and waiting for CI. Requires an existing OpenShift namespace and `oc` logged in.
+
+### Set up sandbox once
+
+```bash
+npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-project-sandbox --database postgres
+npx nx g @abgov/nx-oc:sandbox my-app-app --sandboxProject my-project-sandbox
+```
+
+This generates sandbox manifests under `.openshift/my-app-service/` and `.openshift/my-app-app/`, a shared `sandbox-postgres` Deployment + Service + PVC under `.openshift/sandbox/`, and adds `sandbox` and `sandbox-teardown` targets to each project.
+
+### Iterate
+
+```bash
+npx nx run my-app-service:sandbox
+npx nx run my-app-app:sandbox
+```
+
+Each command:
+1. Creates a `sandbox-postgres-creds` Secret in the namespace on first run (generates a random password). Subsequent runs skip this — the existing secret is reused.
+2. Applies the shared DB manifest and the app manifest (idempotent — no-op if unchanged)
+3. Builds the container image locally using `podman` or `docker` (whichever is available)
+4. Pushes to the OC internal registry
+5. Restarts the Deployment and waits for rollout
+
+No GitHub push, no CI wait — changes are live in ~1–2 minutes.
+
+### Credentials and databases
+
+The shared `sandbox-postgres` instance is deployed once and reused by all apps in the namespace. The generated password is stored in the `sandbox-postgres-creds` Secret — the DB pod and every app pod read it from there at runtime. No credential is hardcoded in any manifest.
+
+Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Prisma creates the database automatically on first migrate; there is no manual provisioning step.
+
+### Teardown a sandbox app
+
+To remove a single app from the sandbox namespace without touching the shared database:
+
+```bash
+npx nx run my-app-service:sandbox-teardown
+```
+
+This runs `oc delete all,configmap -l app=<name>` against the sandbox namespace, removing every resource the template created. The shared `sandbox-postgres` instance and the `sandbox-postgres-creds` Secret are left in place — other apps in the namespace may still be using them.
+
+To also remove the shared database and its credentials:
+
+```bash
+oc delete -f .openshift/sandbox/sandbox-postgres.yml -n my-project-sandbox
+oc delete secret sandbox-postgres-creds -n my-project-sandbox
+```

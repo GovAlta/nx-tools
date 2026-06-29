@@ -31,4 +31,4 @@ When installing `@nx` peer dependencies, ensure all packages under the `@nx` sco
 
 ## Getting started
 
-See the [Getting Started](getting-started) guide for a step-by-step walkthrough of scaffolding a React + Express application deployed on OpenShift.
+See the [Getting Started](getting-started) guide for a step-by-step walkthrough of scaffolding a PEVN (PostgreSQL + Express + Vue 3 + Node) fullstack application deployed on OpenShift.
