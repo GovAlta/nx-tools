@@ -14,6 +14,8 @@ export interface Schema {
   skipAgent?: boolean;
   /** Database to scaffold. Defaults to 'none'. */
   database?: DatabaseType;
+  /** Name of the paired frontend app project, set by composite generators (pevn, pern, pean, etc.). */
+  pairedProject?: string;
 }
 
 export interface NormalizedSchema extends Schema {

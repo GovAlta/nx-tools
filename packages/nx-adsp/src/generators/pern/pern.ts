@@ -28,7 +28,7 @@ export default async function (host: Tree, options: Schema) {
   const appRoot = `${appsDir}/${appName}`;
 
   // Scaffold both projects before the agent interaction so files exist to upload.
-  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true, database: 'postgres' });
+  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true, database: 'postgres', pairedProject: appName });
   await initReactApp(host, {
     ...normalizedOptions,
     name: appName,
@@ -37,6 +37,7 @@ export default async function (host: Tree, options: Schema) {
       proxyPass: `http://${serviceName}:3333/${serviceName}/`,
     },
     skipAgent: true,
+    pairedProject: serviceName,
   });
 
   if (normalizedOptions.adsp) {
