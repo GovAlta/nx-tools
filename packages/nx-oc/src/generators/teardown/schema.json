@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxOcTeardown",
+  "title": "OpenShift Environment Teardown",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project to add teardown target for.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project to add teardown for?"
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment to target for teardown.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "alias": "e",
+      "x-prompt": {
+        "message": "Which environment to target?",
+        "type": "list",
+        "items": ["dev", "test", "prod"]
+      }
+    }
+  },
+  "required": ["project", "env"],
+  "additionalProperties": false
+}

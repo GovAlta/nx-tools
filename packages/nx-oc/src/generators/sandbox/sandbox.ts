@@ -138,6 +138,14 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
         sequential: true,
       },
     },
+    'sandbox-teardown': {
+      executor: 'nx:run-commands',
+      options: {
+        commands: [
+          `oc delete all,configmap -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
+        ],
+      },
+    },
   };
 
   updateProjectConfiguration(host, options.project, config);

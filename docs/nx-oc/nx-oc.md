@@ -152,7 +152,7 @@ npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --da
 | `database` | — | No | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace. |
 | `env` | — | No | ADSP environment to target for configuration: `dev` (default), `test`, or `prod` |
 
-The generator adds a `sandbox` target to the project and creates:
+The generator adds `sandbox` and `sandbox-teardown` targets to the project and creates:
 
 ```
 .openshift/
@@ -174,6 +174,39 @@ Running `nx run my-app:sandbox` executes the full loop:
 **Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`) — Prisma creates it automatically on first migrate. No manual database provisioning is required. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
 
 **Credentials:** The generated password is stored in an OC Secret. The DB pod and every app pod read from the same Secret at runtime — no credential is hardcoded in any manifest.
+
+**Teardown:** `nx run my-app:sandbox-teardown` runs `oc delete all,configmap -l app=<name>` against the sandbox namespace, removing every resource the template created. The shared database and its PVC are left in place — other apps in the namespace may still be using them. To remove the shared database manually:
+
+```bash
+oc delete -f .openshift/sandbox/sandbox-postgres.yml -n <sandbox-namespace>
+oc delete secret sandbox-postgres-creds -n <sandbox-namespace>
+```
+
+---
+
+### teardown
+
+Adds a `teardown-<env>` target to an existing project that removes the application's runtime resources (Deployment, Service, Route, ConfigMap) from a specific OpenShift environment. Run the generator once per environment you want a teardown target for.
+
+```bash
+npx nx g @abgov/nx-oc:teardown my-app --env dev
+npx nx g @abgov/nx-oc:teardown my-app --env prod
+```
+
+| Option | Alias | Required | Description |
+|--------|-------|----------|-------------|
+| `project` | — | Yes | Name of the existing Nx project |
+| `env` | `-e` | Yes | Environment to target: `dev`, `test`, or `prod` |
+
+Running `nx run my-app:teardown-dev` runs `oc delete all,configmap -l app=<name>` against the environment's OpenShift project. The label selector matches every resource the deployment template created — if new resource types are added to the template in future, they are cleaned up automatically. `--ignore-not-found` makes it safe to run even if resources are partially absent.
+
+**Note:** The ImageStream in the infra project is not removed — it is shared across environments and managed separately. To remove it:
+
+```bash
+oc delete imagestream <app-name> -n <infra-project>
+```
+
+**Note:** Teardown targets delete resources immediately with no confirmation prompt. The target name (e.g. `teardown-prod`) is the safeguard — run only what you intend.
 
 ---
 

@@ -90,6 +90,22 @@ describe('Sandbox Generator', () => {
     expect(cmds.some((c) => c.includes('command -v podman'))).toBeTruthy();
   });
 
+  it('adds sandbox-teardown nx target', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.targets['sandbox-teardown']).toBeTruthy();
+    const cmds: string[] = config.targets['sandbox-teardown'].options.commands;
+    expect(cmds.some((c) => c.includes('oc delete'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('--ignore-not-found'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('test-sandbox'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('-l app=test'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
+  });
+
   it('generates shared postgres manifest with secret-backed DATABASE_URL', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addNodeProject(host);
