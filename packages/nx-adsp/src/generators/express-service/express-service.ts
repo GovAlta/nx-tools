@@ -76,6 +76,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
     ...options.adsp,
+    pairedProject: options.pairedProject ?? null,
     tmpl: '',
   };
   generateFiles(

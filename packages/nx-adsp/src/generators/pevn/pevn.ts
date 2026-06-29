@@ -24,7 +24,7 @@ export default async function (host: Tree, options: Schema) {
   const serviceRoot = `${appsDir}/${serviceName}`;
   const appRoot = `${appsDir}/${appName}`;
 
-  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true, database: 'postgres' });
+  await initExpressService(host, { ...normalizedOptions, name: serviceName, skipAgent: true, database: 'postgres', pairedProject: appName });
   await initVueApp(host, {
     ...normalizedOptions,
     name: appName,
@@ -33,6 +33,7 @@ export default async function (host: Tree, options: Schema) {
       proxyPass: `http://${serviceName}:3333/${serviceName}/`,
     },
     skipAgent: true,
+    pairedProject: serviceName,
   });
 
   if (normalizedOptions.adsp) {

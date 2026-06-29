@@ -51,6 +51,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     ...options.adsp,
     ...names(options.name),
     offsetFromRoot: offsetFromRoot(options.projectRoot),
+    pairedProject: options.pairedProject ?? null,
     tmpl: '',
   };
   generateFiles(
