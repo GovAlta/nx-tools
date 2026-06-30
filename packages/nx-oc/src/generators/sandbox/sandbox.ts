@@ -7,8 +7,9 @@ import {
   updateProjectConfiguration,
 } from '@nx/devkit';
 import * as path from 'path';
-import { getAdspConfiguration } from '../../adsp';
+import { getAdspConfiguration, addClientRedirectUris } from '../../adsp';
 import { getGitRemoteUrl } from '../../utils/git-utils';
+import { getClusterIngressDomain } from '../../utils/oc-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
 import { NormalizedSchema, Schema } from './schema';
 
@@ -182,6 +183,36 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
   updateProjectConfiguration(host, options.project, config);
 }
 
+// Register the sandbox deployment's Route with the frontend's public client so
+// browser sign-in works against the deployed URL — not just localhost. The
+// Route host is deterministic by convention (<app>-<namespace>.<ingressDomain>),
+// so this happens once at generate time using the token already obtained for
+// ADSP config — no per-deploy login.
+async function registerSandboxRedirectUri(options: NormalizedSchema) {
+  if (options.appType !== 'frontend') return;
+  const { adsp, projectName, sandboxProject } = options;
+  if (!adsp?.accessToken) return;
+
+  const ingressDomain = getClusterIngressDomain();
+  if (!ingressDomain) {
+    console.log(
+      '[nx-oc] Could not determine the cluster ingress domain; skipping redirect URI registration. ' +
+        'Add the deployment Route to the client manually if browser sign-in fails.'
+    );
+    return;
+  }
+
+  const routeUrl = `https://${projectName}-${sandboxProject}.${ingressDomain}`;
+  const clientId = `urn:ads:${adsp.tenant}:${projectName}`;
+  await addClientRedirectUris(
+    adsp.accessServiceUrl,
+    adsp.tenantRealm,
+    clientId,
+    [`${routeUrl}/*`],
+    adsp.accessToken
+  );
+}
+
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
   if (!normalizedOptions.appType) {
@@ -193,5 +224,6 @@ export default async function (host: Tree, options: Schema) {
   addBuildFiles(host, normalizedOptions);
   addDatabaseFiles(host, normalizedOptions);
   addSandboxTarget(host, normalizedOptions);
+  await registerSandboxRedirectUri(normalizedOptions);
   await formatFiles(host);
 }

@@ -198,3 +198,88 @@ export async function getAdspConfiguration(
 export function isAdspOptions(options: unknown): options is AdspOptions {
   return !!(options as AdspOptions)?.adsp?.tenantRealm;
 }
+
+/**
+ * Registers redirect URIs (and matching post-logout URIs) on an existing public
+ * client so a deployed app can complete browser sign-in/out against its route.
+ *
+ * Idempotent and best-effort: no-ops without a token, skips if the client isn't
+ * found, and logs (never throws) on failure so it can't break generation. The
+ * client's `webOrigins` is intentionally left as-is — the default `["+"]`
+ * already allows CORS from any redirect-URI origin.
+ */
+export async function addClientRedirectUris(
+  accessServiceUrl: string,
+  realm: string,
+  clientId: string,
+  redirectUris: string[],
+  accessToken: string | undefined
+): Promise<void> {
+  if (!accessToken || redirectUris.length === 0) return;
+
+  const base = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl)
+    .href;
+  const authHeader = { Authorization: `Bearer ${accessToken}` };
+  const union = (existing: string[] | undefined, additions: string[]) =>
+    Array.from(new Set([...(existing ?? []), ...additions]));
+
+  try {
+    const { data: clients } = await axios.get(base, {
+      params: { clientId },
+      headers: authHeader,
+    });
+    const client = clients?.[0];
+    if (!client) {
+      console.log(
+        `[nx-oc] Public client '${clientId}' not found in realm '${realm}' — skipping redirect URI update.`
+      );
+      return;
+    }
+
+    const existingPostLogout: string[] = (
+      client.attributes?.['post.logout.redirect.uris'] ?? ''
+    )
+      .split('##')
+      .filter(Boolean);
+
+    const nextRedirects = union(client.redirectUris, redirectUris);
+    const nextPostLogout = union(existingPostLogout, redirectUris).join('##');
+
+    if (
+      nextRedirects.length === (client.redirectUris?.length ?? 0) &&
+      nextPostLogout === (client.attributes?.['post.logout.redirect.uris'] ?? '')
+    ) {
+      console.log(
+        `[nx-oc] Client '${clientId}' already allows ${redirectUris.join(', ')}.`
+      );
+      return;
+    }
+
+    await axios.put(
+      `${base}/${client.id}`,
+      {
+        ...client,
+        redirectUris: nextRedirects,
+        attributes: {
+          ...client.attributes,
+          'post.logout.redirect.uris': nextPostLogout,
+        },
+      },
+      { headers: authHeader }
+    );
+    console.log(
+      `[nx-oc] Registered redirect URI(s) on client '${clientId}': ${redirectUris.join(
+        ', '
+      )}`
+    );
+  } catch (err) {
+    const detail =
+      (err as { response?: { status?: number }; message?: string })?.response
+        ?.status ??
+      (err as { message?: string })?.message ??
+      err;
+    console.log(
+      `[nx-oc] Could not update redirect URIs for '${clientId}': ${detail}`
+    );
+  }
+}
