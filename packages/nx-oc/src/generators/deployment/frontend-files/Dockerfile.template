@@ -1,8 +1,0 @@
-# This is a minimal Dockerfile for app deployment.
-FROM registry.access.redhat.com/ubi8/nginx-118
-
-# Build output path mirrors the workspace layout (from the project's build target).
-COPY ./<%= buildOutputPath %>/nginx.conf "${NGINX_CONF_PATH}"
-COPY ./<%= buildOutputPath %> .
-
-CMD nginx -g "daemon off;"
