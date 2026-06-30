@@ -65,6 +65,8 @@ Repeat for every environment project.
 
 An existing ADSP tenant is required. The `pevn` generator provisions Keycloak clients and environment config against it. Have the tenant name ready.
 
+> The generated public client allows local development (`http://localhost:4200/*`) out of the box. For **deployed** environments you must register each environment's Route URL with the client — see [Configure sign-in redirect URIs per environment](#configure-sign-in-redirect-uris-per-environment).
+
 ### GitHub Environments (optional)
 
 Create environments in **Settings → Environments** matching the names passed to `--envs` (e.g. `dev`, `test`, `prod`) to enable per-environment approval gates.
@@ -180,6 +182,35 @@ git push
 ```
 
 The GitHub Actions pipeline triggers on push to `main` and builds, publishes, and deploys to the first environment automatically.
+
+### Configure sign-in redirect URIs per environment
+
+The frontend's public Keycloak client is created during scaffolding with only `http://localhost:4200/*` as an allowed redirect URI (for local development). Browser sign-in on a **deployed** app fails with `invalid redirect_uri` until the deployed Route URL is added to that client.
+
+This is a **manual, one-time step per environment**, because each environment runs against a different ADSP tenant on a different Keycloak instance:
+
+| Environment | ADSP access (Keycloak) |
+| --- | --- |
+| `dev` | `access.adsp-dev.gov.ab.ca` |
+| `test` (UAT / pre-prod) | `access-uat.alberta.ca` |
+| `prod` | `access.alberta.ca` |
+
+Since pre-production and production are separate tenants on separate Keycloak instances, the generator (which authenticates against a single tenant) cannot configure them all — you register each one after its first deploy.
+
+For each environment, open that environment's ADSP tenant admin (Keycloak) and edit the app's public client — `urn:ads:<tenant>:<app>` (e.g. `urn:ads:my-tenant:my-app-app`). Add the deployed Route URL:
+
+```
+https://<app>-<environment-project>.<cluster-apps-domain>/*
+```
+
+for example `https://my-app-app-my-project-dev.apps.<cluster>/*` — to **both**:
+
+- **Valid redirect URIs**
+- **Valid post logout redirect URIs**
+
+Leave **Web origins** as `+` (it already allows CORS from the redirect-URI origins). The exact Route host for a deployed app is shown by `oc get route <app> -n <environment-project>`.
+
+> The [sandbox deployment](#sandbox-deployment) flow does this automatically — it targets a single tenant/Keycloak, so the generator registers the sandbox Route on the client for you. The manual step above applies only to the pipeline-deployed environments.
 
 ---
 
