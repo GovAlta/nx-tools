@@ -256,7 +256,7 @@ describe('nx-adsp e2e', () => {
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
         `${plugin}-service/prisma/schema.prisma`,
-        `${plugin}-app/nginx.conf`,
+        `${plugin}-app/public/nginx.conf`,
         `${plugin}-app/src/App.vue`,
       );
 
@@ -274,7 +274,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-app/nginx.conf`,
+        `${plugin}-app/public/nginx.conf`,
         `${plugin}-app/src/App.vue`,
       );
 

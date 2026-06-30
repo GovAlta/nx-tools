@@ -36,12 +36,18 @@ describe('Vue App Generator', () => {
     await generator(host, options);
     const config = readProjectConfiguration(host, 'test');
     expect(config.root).toBe('apps/test');
-    expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
+    // nginx.conf + silent-check-sso live in the Vite publicDir so they end up in the build output.
+    expect(host.exists('apps/test/public/nginx.conf')).toBeTruthy();
+    expect(host.exists('apps/test/public/silent-check-sso.html')).toBeTruthy();
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/App.vue')).toBeTruthy();
     expect(host.exists('apps/test/src/router/index.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/environments/environment.ts')).toBeTruthy();
     expect(host.exists('apps/test/vite.config.ts')).toBeTruthy();
+    // The duplicate @nx/vue-generated config is removed.
+    expect(host.exists('apps/test/vite.config.mts')).toBeFalsy();
+    // build output mirrors the workspace layout under the root dist/.
+    expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
   }, 30000);
 
   it('vite.config.ts marks goa-* elements as custom elements', async () => {
@@ -63,7 +69,7 @@ describe('Vue App Generator', () => {
       ...options,
       proxy: { location: '/test/', proxyPass: 'http://test-service:3333/' },
     });
-    const nginxConf = host.read('apps/test/nginx.conf').toString();
+    const nginxConf = host.read('apps/test/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
   });
 
@@ -75,7 +81,7 @@ describe('Vue App Generator', () => {
         { location: '/test2/', proxyPass: 'http://test-service2:3333/' },
       ],
     });
-    const nginxConf = host.read('apps/test/nginx.conf').toString();
+    const nginxConf = host.read('apps/test/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
     expect(nginxConf).toContain('http://test-service2:3333/');
   });
