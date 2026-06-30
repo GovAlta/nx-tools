@@ -1,5 +1,7 @@
 FROM registry.access.redhat.com/ubi9/nodejs-24
-ARG PROJECT
-COPY ./dist/apps/${PROJECT} .
+
+# Build output path mirrors the workspace layout (from the project's build target).
+COPY ./<%= buildOutputPath %> .
 COPY ./node_modules ./node_modules
+
 CMD node main.js

@@ -143,6 +143,7 @@ jobs:
           for app in $AFFECTED_APPS
           do
             buildah build \
+              --build-arg PROJECT=$app \
               --file .openshift/$app/Dockerfile \
               --tag <%= registry %>/$app:latest \
               --tag <%= registry %>/$app:${{ github.sha }} \

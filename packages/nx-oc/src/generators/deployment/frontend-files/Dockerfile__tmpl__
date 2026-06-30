@@ -1,5 +1,7 @@
 FROM registry.access.redhat.com/ubi9/nginx-120
-ARG PROJECT
-COPY ./dist/apps/${PROJECT}/nginx.conf "${NGINX_CONF_PATH}"
-COPY ./dist/apps/${PROJECT} .
+
+# Build output path mirrors the workspace layout (from the project's build target).
+COPY ./<%= buildOutputPath %>/nginx.conf "${NGINX_CONF_PATH}"
+COPY ./<%= buildOutputPath %> .
+
 CMD nginx -g "daemon off;"
