@@ -9,12 +9,17 @@ import generator from './sandbox';
 import { Schema } from './schema';
 
 jest.mock('../../adsp');
+jest.mock('../../utils/oc-utils', () => ({
+  ...jest.requireActual('../../utils/oc-utils'),
+  getClusterIngressDomain: jest.fn(() => 'apps.test.example.com'),
+}));
 const utilsMock = utils as jest.Mocked<typeof utils>;
 utilsMock.getAdspConfiguration.mockResolvedValue({
   tenant: 'test',
   tenantRealm: 'test',
   accessServiceUrl: environments.test.accessServiceUrl,
   directoryServiceUrl: environments.test.directoryServiceUrl,
+  accessToken: 'mock-token',
 });
 
 describe('Sandbox Generator', () => {
@@ -193,5 +198,33 @@ describe('Sandbox Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('oc get service'))).toBeFalsy();
+  });
+
+  it('registers the deployment Route redirect URI for a frontend client', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addFrontendProject(host);
+    utilsMock.addClientRedirectUris.mockClear();
+
+    await generator(host, options);
+
+    // Route host follows <app>-<namespace>.<ingressDomain>, registered against
+    // the public client urn:ads:<tenant>:<app> with the token from ADSP config.
+    expect(utilsMock.addClientRedirectUris).toHaveBeenCalledWith(
+      environments.test.accessServiceUrl,
+      'test',
+      'urn:ads:test:test',
+      ['https://test-test-sandbox.apps.test.example.com/*'],
+      'mock-token'
+    );
+  });
+
+  it('does not register redirect URIs for a node service', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+    utilsMock.addClientRedirectUris.mockClear();
+
+    await generator(host, options);
+
+    expect(utilsMock.addClientRedirectUris).not.toHaveBeenCalled();
   });
 });
