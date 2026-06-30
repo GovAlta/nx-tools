@@ -43,6 +43,14 @@
       "type": "string",
       "description": "Access token for retrieving configuration from ADSP APIs.",
       "alias": "at"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. Looks up the realm and does a single login, skipping the interactive tenant picker."
+    },
+    "tenantRealm": {
+      "type": "string",
+      "description": "Keycloak realm UUID. Optional when --tenant is provided; overrides the realm looked up from the tenant service."
     }
   },
   "required": ["project", "sandboxProject"],

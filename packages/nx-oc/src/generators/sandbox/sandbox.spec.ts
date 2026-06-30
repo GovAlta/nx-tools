@@ -36,10 +36,11 @@ describe('Sandbox Generator', () => {
     });
   }
 
-  function addFrontendProject(host) {
+  function addFrontendProject(host, tags?: string[]) {
     addProjectConfiguration(host, 'test', {
       root: 'apps/test',
       projectType: 'application',
+      tags,
       targets: {
         build: {
           executor: '@nx/webpack:webpack',
@@ -84,10 +85,27 @@ describe('Sandbox Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['sandbox']).toBeTruthy();
     expect(config.targets['sandbox'].executor).toBe('nx:run-commands');
+    // Commands run in order (nx:run-commands has no `sequential` option).
+    expect(config.targets['sandbox'].options.parallel).toBe(false);
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('oc rollout restart'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('oc rollout status'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('command -v podman'))).toBeTruthy();
+    // In-cluster binary build (no local podman / external registry route).
+    expect(cmds.some((c) => c.includes('nx build test'))).toBeTruthy();
+    expect(
+      cmds.some((c) => c.includes('oc start-build test --from-dir=.'))
+    ).toBeTruthy();
+    expect(cmds.some((c) => c.includes('sandbox-build.yml'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('podman'))).toBeFalsy();
+
+    // The ImageStream + BuildConfig manifest is generated.
+    expect(host.exists('.openshift/test/sandbox-build.yml')).toBeTruthy();
+    const buildManifest = host
+      .read('.openshift/test/sandbox-build.yml')
+      .toString();
+    expect(buildManifest).toContain('kind: BuildConfig');
+    expect(buildManifest).toContain('kind: ImageStream');
+    expect(buildManifest).toContain('test:sandbox');
   });
 
   it('adds sandbox-teardown nx target', async () => {
@@ -145,5 +163,35 @@ describe('Sandbox Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('sandbox-mongodb-creds'))).toBeTruthy();
+  });
+
+  it('ensures paired backend Services from proxy-service tags', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addFrontendProject(host, ['adsp:proxy-service:test-service:3333']);
+
+    await generator(host, options);
+
+    const config = readProjectConfiguration(host, 'test');
+    const cmds: string[] = config.targets['sandbox'].options.commands;
+    const guard = cmds.find((c) => c.includes('oc get service test-service'));
+    expect(guard).toBeTruthy();
+    // idempotent: only creates the Service (for DNS) when it's missing — no
+    // backend deployment, which would have no image until its own sandbox runs.
+    expect(guard).toContain('||');
+    expect(guard).toContain(
+      'oc create service clusterip test-service --tcp=3333:3333'
+    );
+    expect(guard).not.toContain('test-service.yml');
+  });
+
+  it('adds no paired-service guard when there are no proxy-service tags', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    const config = readProjectConfiguration(host, 'test');
+    const cmds: string[] = config.targets['sandbox'].options.commands;
+    expect(cmds.some((c) => c.includes('oc get service'))).toBeFalsy();
   });
 });

@@ -9,7 +9,7 @@ import {
 import * as path from 'path';
 import { getAdspConfiguration } from '../../adsp';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { ApplicationType } from '../deployment/schema';
+import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
 import { NormalizedSchema, Schema } from './schema';
 
 async function normalizeOptions(
@@ -19,25 +19,7 @@ async function normalizeOptions(
   const projectName = names(options.project).fileName;
 
   const config = readProjectConfiguration(host, projectName);
-  let appType: ApplicationType = options.appType;
-  if (!appType) {
-    switch (config.targets.build.executor) {
-      case '@nx/web:webpack':
-      case '@angular-devkit/build-angular:browser':
-        appType = 'frontend';
-        break;
-      case '@nx/node:build':
-        appType = 'node';
-        break;
-      case '@nx-dotnet/core:build':
-        appType = 'dotnet';
-        break;
-      case '@nx/webpack:webpack':
-        appType =
-          config.targets.build.options.target === 'node' ? 'node' : 'frontend';
-        break;
-    }
-  }
+  const appType = options.appType ?? detectApplicationType(config);
 
   const adsp = await getAdspConfiguration(host, {
     ...options,
@@ -49,6 +31,7 @@ async function normalizeOptions(
     appType,
     adsp,
     projectName,
+    buildOutputPath: getBuildOutputPath(config),
   };
 }
 
@@ -80,6 +63,17 @@ function addDatabaseFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
+// In-cluster build infrastructure (ImageStream + binary Docker BuildConfig).
+// The sandbox builds inside the cluster and pushes to the internal registry,
+// so it needs no GitHub repo/CI, no externally-exposed registry route, and no
+// local container runtime.
+function addBuildFiles(host: Tree, options: NormalizedSchema) {
+  generateFiles(host, path.join(__dirname, 'build-files'), './.openshift', {
+    projectName: options.projectName,
+    tmpl: '',
+  });
+}
+
 function addSandboxTarget(host: Tree, options: NormalizedSchema) {
   const config = readProjectConfiguration(host, options.project);
   const { projectName, sandboxProject, database } = options;
@@ -108,25 +102,51 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
     );
   }
 
+  // Ensure any paired backend Services exist first, so this app's nginx can
+  // resolve its proxy_pass upstreams at startup (otherwise the pod crashloops
+  // until the Service appears). Create only the Service (all nginx needs for
+  // DNS) — not the backend's deployment, which has no image until its own
+  // sandbox runs. Idempotent: skipped once the Service exists, so it doesn't
+  // slow down repeated frontend iteration. Recorded by the composite generators
+  // (pevn/mevn/…) as `adsp:proxy-service:<name>:<port>` project tags.
+  const PREFIX = 'adsp:proxy-service:';
+  const proxyServices = (config.tags ?? [])
+    .filter((tag) => tag.startsWith(PREFIX))
+    .map((tag) => {
+      const value = tag.slice(PREFIX.length);
+      const lastColon = value.lastIndexOf(':');
+      return {
+        name: value.slice(0, lastColon),
+        port: value.slice(lastColon + 1),
+      };
+    });
+  for (const { name, port } of proxyServices) {
+    commands.push(
+      `oc get service ${name} -n ${sandboxProject} >/dev/null 2>&1 || ` +
+        `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}`
+    );
+  }
+
+  // Ensure the in-cluster build infrastructure (ImageStream + BuildConfig).
   commands.push(
-    `oc process -f .openshift/${projectName}/${projectName}.yml -p PROJECT=${sandboxProject} | oc apply -f -`
+    `oc apply -f .openshift/${projectName}/sandbox-build.yml -n ${sandboxProject}`
+  );
+  // Build locally, then build the image in-cluster from the uploaded context
+  // and push to the internal registry — no external registry route required.
+  commands.push(`npx nx build ${projectName} --configuration production`);
+  commands.push(
+    `oc start-build ${projectName} --from-dir=. --follow --wait -n ${sandboxProject}`
   );
 
   commands.push(
-    [
-      `REGISTRY=$(oc registry info)`,
-      `CONTAINER_CLI=$(command -v podman || command -v docker)`,
-      `$CONTAINER_CLI login -u $(oc whoami) -p $(oc whoami -t) $REGISTRY`,
-      `$CONTAINER_CLI build -t $REGISTRY/${sandboxProject}/${projectName}:sandbox -f .openshift/${projectName}/Dockerfile .`,
-      `$CONTAINER_CLI push $REGISTRY/${sandboxProject}/${projectName}:sandbox`,
-    ].join(' && ')
+    `oc process -f .openshift/${projectName}/${projectName}.yml -p PROJECT=${sandboxProject} | oc apply -f -`
   );
 
   commands.push(
     `oc rollout restart deployment/${projectName} -n ${sandboxProject}`
   );
   commands.push(
-    `oc rollout status deployment/${projectName} -n ${sandboxProject} --timeout=120s`
+    `oc rollout status deployment/${projectName} -n ${sandboxProject} --timeout=180s`
   );
 
   config.targets = {
@@ -135,14 +155,14 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
       executor: 'nx:run-commands',
       options: {
         commands,
-        sequential: true,
+        parallel: false,
       },
     },
     'sandbox-teardown': {
       executor: 'nx:run-commands',
       options: {
         commands: [
-          `oc delete all,configmap -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
+          `oc delete all,configmap,bc,is -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
         ],
       },
     },
@@ -159,6 +179,7 @@ export default async function (host: Tree, options: Schema) {
   }
 
   addManifestFiles(host, normalizedOptions);
+  addBuildFiles(host, normalizedOptions);
   addDatabaseFiles(host, normalizedOptions);
   addSandboxTarget(host, normalizedOptions);
   await formatFiles(host);
