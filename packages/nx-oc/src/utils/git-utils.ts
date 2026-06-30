@@ -8,8 +8,10 @@ export function getGitRemoteUrl(): string | undefined {
     ).toString()
 
     return stdout
-  } catch (e) {
-    console.log(`Failed to execute git`, e)
+  } catch {
+    // No 'origin' remote (e.g. a freshly-created workspace) — not an error;
+    // sourceRepositoryUrl is simply left unset.
+    return undefined
   }
 }
 
