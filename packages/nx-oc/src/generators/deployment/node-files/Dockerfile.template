@@ -1,8 +1,8 @@
 # This is a minimal Dockerfile for app deployment.
 FROM registry.access.redhat.com/ubi8/nodejs-18
 
-ARG PROJECT
-COPY ./dist/apps/${PROJECT} .
+# Build output path mirrors the workspace layout (from the project's build target).
+COPY ./<%= buildOutputPath %> .
 COPY ./node_modules ./node_modules
 
 CMD node main.js

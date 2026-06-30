@@ -10,7 +10,8 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl } from '../../utils/git-utils';
-import { ApplicationType, NormalizedSchema, Schema } from './schema';
+import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import { NormalizedSchema, Schema } from './schema';
 import { getAdspConfiguration } from '../../adsp';
 
 const infraManifestFile = '.openshift/environments.yml';
@@ -30,29 +31,8 @@ async function normalizeOptions(
     ?.filter((s) => s.kind === 'Group' && s.name.startsWith(SA_PREFIX))
     .map((s) => s.name.replace(SA_PREFIX, ''));
 
-  // TODO: Find a better way to determine this.
   const config = readProjectConfiguration(host, projectName);
-  let appType: ApplicationType = options.appType;
-  if (!appType) {
-    switch (config.targets.build.executor) {
-      case '@nx/web:webpack':
-      case '@angular-devkit/build-angular:browser':
-        appType = 'frontend';
-        break;
-      case '@nx/node:build':
-        appType = 'node';
-        break;
-      case '@nx-dotnet/core:build':
-        appType = 'dotnet';
-        break;
-      case '@nx/webpack:webpack': {
-        // More recent version of NX switched to use a generic webpack executor for builds.
-        appType =
-          config.targets.build.options.target === 'node' ? 'node' : 'frontend';
-        break;
-      }
-    }
-  }
+  const appType = options.appType ?? detectApplicationType(config);
 
   const adsp = await getAdspConfiguration(host, options);
 
@@ -63,6 +43,7 @@ async function normalizeOptions(
     projectName,
     ocInfraProject,
     ocEnvProjects,
+    buildOutputPath: getBuildOutputPath(config),
   };
 }
 

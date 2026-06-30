@@ -19,4 +19,5 @@ export interface NormalizedSchema extends Schema {
   ocInfraProject: string;
   ocEnvProjects: string[];
   adsp: AdspConfiguration;
+  buildOutputPath: string;
 }
