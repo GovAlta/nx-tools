@@ -37,8 +37,8 @@ describe('MEVN Generator', () => {
     const serviceConfig = readProjectConfiguration(host, 'test-service');
     expect(serviceConfig.root).toBe('apps/test-service');
 
-    expect(host.exists('apps/test-app/nginx.conf')).toBeTruthy();
-    const nginxConf = host.read('apps/test-app/nginx.conf').toString();
+    expect(host.exists('apps/test-app/public/nginx.conf')).toBeTruthy();
+    const nginxConf = host.read('apps/test-app/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
 
     expect(host.exists('apps/test-app/src/App.vue')).toBeTruthy();
