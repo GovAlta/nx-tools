@@ -90,6 +90,17 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
     commands.push(
       `oc apply -f .openshift/sandbox/sandbox-postgres.yml -n ${sandboxProject}`
     );
+    // The shared Postgres instance only creates the admin database; each app
+    // needs its own <app>_sandbox database created before its migrate init
+    // container runs (neither the image nor the ORM creates it). Wait for
+    // Postgres to be ready, then create the database idempotently.
+    const dbName = `${projectName}_sandbox`;
+    commands.push(
+      `oc rollout status deployment/sandbox-postgres -n ${sandboxProject} --timeout=180s && ` +
+        `oc exec -n ${sandboxProject} deployment/sandbox-postgres -- ` +
+        `bash -lc "psql -U postgres -tc \\"SELECT 1 FROM pg_database WHERE datname='${dbName}'\\" ` +
+        `| grep -q 1 || createdb -U postgres ${dbName}"`
+    );
   } else if (database === 'mongo') {
     commands.push(
       `oc get secret sandbox-mongodb-creds -n ${sandboxProject} 2>/dev/null || ` +
