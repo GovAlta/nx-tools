@@ -11,6 +11,7 @@ export interface Schema {
   accessToken?: string;
   tenant?: string;
   tenantRealm?: string;
+  registry?: string;
 }
 
 export interface NormalizedSchema extends Schema {
@@ -18,4 +19,10 @@ export interface NormalizedSchema extends Schema {
   appType: ApplicationType;
   adsp: AdspConfiguration;
   buildOutputPath: string;
+  registry: string;
+  registryHost: string;
+  registryOrg: string;
+  imageName: string;
+  imageRef: string;
+  sourceRepositoryUrl?: string;
 }

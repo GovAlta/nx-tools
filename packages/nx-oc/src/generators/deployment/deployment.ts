@@ -9,7 +9,7 @@ import {
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
-import { getGitRemoteUrl } from '../../utils/git-utils';
+import { getGitRemoteUrl, getGitHubRepo } from '../../utils/git-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
 import { NormalizedSchema, Schema } from './schema';
 import { getAdspConfiguration } from '../../adsp';
@@ -51,7 +51,12 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
     ...options.adsp,
-    sourceRepositoryUrl: getGitRemoteUrl(),
+    // Clean https URL for the image's source label (never the raw remote, which
+    // may be an SSH URL or carry a trailing newline).
+    sourceRepositoryUrl: (() => {
+      const repo = getGitHubRepo(getGitRemoteUrl());
+      return repo ? `https://github.com/${repo}` : '';
+    })(),
     database: options.database ?? 'none',
     sandbox: options.sandbox ?? false,
     tmpl: '',

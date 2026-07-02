@@ -267,7 +267,11 @@ The Vue dev server proxies `/api/` to the local Express service automatically vi
 
 ## Sandbox deployment
 
-For rapid iteration directly on OpenShift without committing and waiting for CI. Requires an existing OpenShift namespace and `oc` logged in.
+For rapid iteration directly on OpenShift without committing and waiting for CI. Prerequisites:
+
+- an existing OpenShift namespace (per-user) and `oc` logged in;
+- `podman` installed;
+- `gh auth login` as an account with **`write:packages`** on your GHCR org (the same login backs both the image push and the pull secret — no PAT is stored).
 
 ### Set up sandbox once
 
@@ -286,13 +290,12 @@ npx nx run my-app-app:sandbox
 ```
 
 Each command:
-1. Creates a `sandbox-postgres-creds` Secret in the namespace on first run (generates a random password). Subsequent runs skip this — the existing secret is reused.
-2. Applies the shared DB manifest and the app manifest (idempotent — no-op if unchanged)
-3. Builds the container image locally using `podman` or `docker` (whichever is available)
-4. Pushes to the OC internal registry
-5. Restarts the Deployment and waits for rollout
+1. Creates the app's Secrets on first run (ADSP client secret, `sandbox-postgres-creds`) and the per-app database. Idempotent.
+2. Builds the image locally (`podman build --platform=linux/amd64`) and pushes it to `<registry>/<sandboxProject>-<app>:sandbox` (registry resolved from the git remote on first run, persisted to `nx.json`).
+3. Imports the image into the namespace's imagestream (`reference-policy=local`, so pods pull from the internal registry) and applies the manifest.
+4. Restarts the Deployment and waits for rollout.
 
-No GitHub push, no CI wait — changes are live in ~1–2 minutes.
+No GitHub push, no CI wait — and local layer caching means only the changed app layer re-uploads, so repeat iterations are fast.
 
 ### Credentials and databases
 
