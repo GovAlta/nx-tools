@@ -51,6 +51,11 @@
     "tenantRealm": {
       "type": "string",
       "description": "Keycloak realm UUID. Optional when --tenant is provided; overrides the realm looked up from the tenant service."
+    },
+    "registry": {
+      "type": "string",
+      "description": "Container registry to publish the sandbox image to (e.g., ghcr.io/my-org). Defaults to the value stored in nx.json, then derived from the git remote. Persisted to nx.json on first use.",
+      "alias": "r"
     }
   },
   "required": ["project", "sandboxProject"],

@@ -1,5 +1,6 @@
 import {
   addProjectConfiguration,
+  readNxJson,
   readProjectConfiguration,
 } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
@@ -26,6 +27,7 @@ describe('Sandbox Generator', () => {
   const options: Schema = {
     project: 'test',
     sandboxProject: 'test-sandbox',
+    registry: 'ghcr.io/test-org',
   };
 
   function addNodeProject(host) {
@@ -95,13 +97,36 @@ describe('Sandbox Generator', () => {
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('oc rollout restart'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('oc rollout status'))).toBeTruthy();
-    // In-cluster binary build (no local podman / external registry route).
     expect(cmds.some((c) => c.includes('nx build test'))).toBeTruthy();
+
+    // Local podman build + push to the prescribed registry, with the image name
+    // prefixed by the (per-user) sandbox namespace to avoid GHCR's org-global
+    // name collisions.
+    const imageRef = 'ghcr.io/test-org/test-sandbox-test:sandbox';
     expect(
-      cmds.some((c) => c.includes('oc start-build test --from-dir=.'))
+      cmds.some((c) => c.includes('podman build') && c.includes(imageRef))
     ).toBeTruthy();
-    expect(cmds.some((c) => c.includes('sandbox-build.yml'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('podman'))).toBeFalsy();
+    expect(cmds.some((c) => c.includes(`podman push ${imageRef}`))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('podman login ghcr.io'))).toBeTruthy();
+
+    // Import into the namespace imagestream; pods pull from the internal registry.
+    expect(
+      cmds.some((c) =>
+        c.includes(`oc tag ${imageRef} test:sandbox --reference-policy=local`)
+      )
+    ).toBeTruthy();
+    expect(
+      cmds.some((c) => c.includes('oc import-image test:sandbox --confirm'))
+    ).toBeTruthy();
+    // Per-deploy pull secret from the gh session (no stored PAT).
+    expect(
+      cmds.some((c) => c.includes('oc create secret docker-registry ghcr-pull'))
+    ).toBeTruthy();
+
+    // The in-cluster BuildConfig flow is gone.
+    expect(cmds.some((c) => c.includes('oc start-build'))).toBeFalsy();
+    expect(host.exists('.openshift/test/sandbox-build.yml')).toBeFalsy();
+
     // A node service's ADSP client secret is mirrored from .env into an
     // OpenShift Secret the deployment reads.
     expect(
@@ -111,15 +136,20 @@ describe('Sandbox Generator', () => {
           c.includes('CLIENT_SECRET')
       )
     ).toBeTruthy();
+  });
 
-    // The ImageStream + BuildConfig manifest is generated.
-    expect(host.exists('.openshift/test/sandbox-build.yml')).toBeTruthy();
-    const buildManifest = host
-      .read('.openshift/test/sandbox-build.yml')
-      .toString();
-    expect(buildManifest).toContain('kind: BuildConfig');
-    expect(buildManifest).toContain('kind: ImageStream');
-    expect(buildManifest).toContain('test:sandbox');
+  it('persists the resolved registry to nx.json for reuse', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    const nxJson = readNxJson(host);
+    expect(
+      (nxJson.generators as Record<string, { registry?: string }>)[
+        '@abgov/nx-oc:sandbox'
+      ].registry
+    ).toBe('ghcr.io/test-org');
   });
 
   it('adds sandbox-teardown nx target', async () => {
@@ -136,6 +166,12 @@ describe('Sandbox Generator', () => {
     expect(cmds.some((c) => c.includes('test-sandbox'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('-l app=test'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
+    // Teardown also removes the sandbox package (best-effort).
+    expect(
+      cmds.some((c) =>
+        c.includes('packages/container/test-sandbox-test')
+      )
+    ).toBeTruthy();
   });
 
   it('generates shared postgres manifest with secret-backed DATABASE_URL', async () => {

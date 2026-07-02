@@ -2,16 +2,74 @@ import {
   formatFiles,
   generateFiles,
   names,
+  readNxJson,
   readProjectConfiguration,
   Tree,
+  updateNxJson,
   updateProjectConfiguration,
 } from '@nx/devkit';
 import * as path from 'path';
 import { getAdspConfiguration, addClientRedirectUris } from '../../adsp';
-import { getGitRemoteUrl } from '../../utils/git-utils';
+import {
+  getGitRemoteUrl,
+  deriveRegistryFromRemote,
+  getGitHubRepo,
+} from '../../utils/git-utils';
 import { getClusterIngressDomain } from '../../utils/oc-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
 import { NormalizedSchema, Schema } from './schema';
+
+const SANDBOX_GENERATOR = '@abgov/nx-oc:sandbox';
+
+// Resolves the sandbox container registry once per workspace and persists it to
+// nx.json so subsequent sandbox generations reuse it without re-prompting:
+//   --registry flag → nx.json → derived from git remote (ghcr.io/<org>) → prompt.
+async function resolveRegistry(
+  host: Tree,
+  registry: string | undefined,
+  remoteUrl: string | undefined
+): Promise<string> {
+  if (registry) return persistRegistry(host, registry);
+
+  const stored = (
+    readNxJson(host)?.generators as
+      | Record<string, { registry?: string }>
+      | undefined
+  )?.[SANDBOX_GENERATOR]?.registry;
+  if (stored) return stored;
+
+  const derived = deriveRegistryFromRemote(remoteUrl);
+  if (derived) {
+    console.log(`\n✓ Sandbox registry: ${derived.toLowerCase()} (derived from git remote)\n`);
+    return persistRegistry(host, derived);
+  }
+
+  const { prompt } = await import('enquirer');
+  const { registry: answered } = await prompt<{ registry: string }>({
+    type: 'input',
+    name: 'registry',
+    message:
+      'What container registry should sandbox images be published to (e.g., ghcr.io/my-org)?',
+  });
+  return persistRegistry(host, answered);
+}
+
+// Container registries (GHCR) require lowercase paths, so normalize on store.
+function persistRegistry(host: Tree, registry: string): string {
+  const value = registry.toLowerCase();
+  const nxJson = readNxJson(host) ?? {};
+  const generators = (nxJson.generators ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  generators[SANDBOX_GENERATOR] = {
+    ...(generators[SANDBOX_GENERATOR] ?? {}),
+    registry: value,
+  };
+  nxJson.generators = generators;
+  updateNxJson(host, nxJson);
+  return value;
+}
 
 async function normalizeOptions(
   host: Tree,
@@ -27,12 +85,25 @@ async function normalizeOptions(
     env: (options.env as 'dev' | 'test' | 'prod') ?? 'dev',
   });
 
+  const remoteUrl = getGitRemoteUrl();
+  const registry = (await resolveRegistry(host, options.registry, remoteUrl)).toLowerCase();
+  // Prefix the image with the (per-user) sandbox namespace so images from
+  // different experimenters never collide on GHCR's org-global package names.
+  const imageName = `${options.sandboxProject}-${projectName}`.toLowerCase();
+  const repoSlug = getGitHubRepo(remoteUrl);
+
   return {
     ...options,
     appType,
     adsp,
     projectName,
     buildOutputPath: getBuildOutputPath(config),
+    registry,
+    registryHost: registry.split('/')[0],
+    registryOrg: registry.split('/').slice(1).join('/'),
+    imageName,
+    imageRef: `${registry}/${imageName}:sandbox`,
+    sourceRepositoryUrl: repoSlug ? `https://github.com/${repoSlug}` : undefined,
   };
 }
 
@@ -40,7 +111,8 @@ function addManifestFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
     ...options.adsp,
-    sourceRepositoryUrl: getGitRemoteUrl(),
+    // Clean https URL for the image's source label (provenance / UI connect).
+    sourceRepositoryUrl: options.sourceRepositoryUrl ?? '',
     database: options.database ?? 'none',
     sandbox: true,
     ocInfraProject: options.sandboxProject,
@@ -64,20 +136,18 @@ function addDatabaseFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
-// In-cluster build infrastructure (ImageStream + binary Docker BuildConfig).
-// The sandbox builds inside the cluster and pushes to the internal registry,
-// so it needs no GitHub repo/CI, no externally-exposed registry route, and no
-// local container runtime.
-function addBuildFiles(host: Tree, options: NormalizedSchema) {
-  generateFiles(host, path.join(__dirname, 'build-files'), './.openshift', {
-    projectName: options.projectName,
-    tmpl: '',
-  });
-}
-
 function addSandboxTarget(host: Tree, options: NormalizedSchema) {
   const config = readProjectConfiguration(host, options.project);
-  const { projectName, sandboxProject, database, appType } = options;
+  const {
+    projectName,
+    sandboxProject,
+    database,
+    appType,
+    imageRef,
+    registryHost,
+    registryOrg,
+    imageName,
+  } = options;
 
   const commands: string[] = [];
 
@@ -152,15 +222,35 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
     );
   }
 
-  // Ensure the in-cluster build infrastructure (ImageStream + BuildConfig).
-  commands.push(
-    `oc apply -f .openshift/${projectName}/sandbox-build.yml -n ${sandboxProject}`
-  );
-  // Build locally, then build the image in-cluster from the uploaded context
-  // and push to the internal registry — no external registry route required.
+  // Build the image locally and push to the container registry, then import it
+  // into the namespace's imagestream. reference-policy=local mirrors it into the
+  // internal registry so pods pull in-cluster (no per-pod pull secret, no node
+  // egress to the registry). This replaces the in-cluster BuildConfig: no
+  // full-workspace upload, and local layer caching makes iteration fast.
   commands.push(`npx nx build ${projectName} --configuration production`);
   commands.push(
-    `oc start-build ${projectName} --from-dir=. --follow --wait -n ${sandboxProject}`
+    `podman build --platform=linux/amd64 -f .openshift/${projectName}/Dockerfile -t ${imageRef} .`
+  );
+  // Prereq: the publishing account is logged in with write:packages. gh supplies
+  // the token so no PAT is stored; the same session token backs the pull secret.
+  commands.push(
+    `gh auth token | podman login ${registryHost} -u "$(gh api user -q .login)" --password-stdin`
+  );
+  commands.push(`podman push ${imageRef}`);
+  // Per-deploy pull secret from the gh session (sandbox images are re-imported
+  // every run, so a session token is sufficient — no long-lived PAT needed).
+  commands.push(
+    `oc create secret docker-registry ghcr-pull ` +
+      `--docker-server=${registryHost} --docker-username="$(gh api user -q .login)" --docker-password="$(gh auth token)" ` +
+      `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`
+  );
+  // oc tag sets/repoints the imagestream tag (import-image refuses to change an
+  // existing tag's source); import --confirm then pulls the manifest.
+  commands.push(
+    `oc tag ${imageRef} ${projectName}:sandbox --reference-policy=local -n ${sandboxProject}`
+  );
+  commands.push(
+    `oc import-image ${projectName}:sandbox --confirm -n ${sandboxProject}`
   );
 
   commands.push(
@@ -187,7 +277,12 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
       executor: 'nx:run-commands',
       options: {
         commands: [
-          `oc delete all,configmap,bc,is -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
+          `oc delete all,configmap,is -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
+          `oc delete imagestream ${projectName} -n ${sandboxProject} --ignore-not-found`,
+          // Remove the sandbox package (needs delete:packages). Best-effort:
+          // sandbox packages are the unlinked ones and can also be pruned org-wide
+          // via `select(.repository == null)`.
+          `gh api --method DELETE /orgs/${registryOrg}/packages/container/${imageName} 2>/dev/null || true`,
         ],
       },
     },
@@ -234,7 +329,6 @@ export default async function (host: Tree, options: Schema) {
   }
 
   addManifestFiles(host, normalizedOptions);
-  addBuildFiles(host, normalizedOptions);
   addDatabaseFiles(host, normalizedOptions);
   addSandboxTarget(host, normalizedOptions);
   await registerSandboxRedirectUri(normalizedOptions);

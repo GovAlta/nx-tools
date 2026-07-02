@@ -1,7 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
 import { AddressInfo } from 'net';
 import { execSync } from 'child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import {
   checkFilesExist,
@@ -173,14 +173,13 @@ describe('nx-adsp e2e', () => {
     }, 90000);
   });
 
-  // Runs the nx-oc sandbox generator against the *installed* plugin (dist), not
-  // the source tree, so it guards template files that only exist as packaged
-  // assets — e.g. the Dockerfile templates, which a dist packaging bug once
-  // dropped without any test noticing (the BuildConfig referenced a Dockerfile
-  // that was never written). Behaviour, not dist layout: the manifests must
-  // actually be produced.
+  // Runs the nx-oc sandbox generator against the *installed* plugin (dist), so
+  // it guards the packaged Dockerfile template and the local-build wiring end to
+  // end — the target must build locally (podman) and import the image, and must
+  // NOT emit the old in-cluster BuildConfig manifest. --registry is passed so
+  // the test doesn't depend on the workspace's git remote.
   describe('sandbox deployment', () => {
-    it('writes a Dockerfile and manifests for a node service', async () => {
+    it('writes a Dockerfile and imports it locally for a node service', async () => {
       const svc = uniq('sbx-svc');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
@@ -189,13 +188,23 @@ describe('nx-adsp e2e', () => {
       // the real ADSP URLs — re-point them at the mock before the sandbox generate.
       writeMockEnvironments(mockUrl);
       await runNxCommandAsync(
-        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
+        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
       );
       checkFilesExist(
         `.openshift/${svc}/Dockerfile`,
-        `.openshift/${svc}/${svc}.yml`,
-        `.openshift/${svc}/sandbox-build.yml`
+        `.openshift/${svc}/${svc}.yml`
       );
+      // The in-cluster BuildConfig manifest is gone.
+      expect(
+        existsSync(join(tmpProjPath(), `.openshift/${svc}/sandbox-build.yml`))
+      ).toBe(false);
+      // The sandbox target builds locally with podman and imports the image.
+      const projectJson = readFileSync(
+        join(tmpProjPath(), `${svc}/project.json`),
+        'utf-8'
+      );
+      expect(projectJson).toContain('podman build');
+      expect(projectJson).toContain('oc import-image');
       const dockerfile = readFileSync(
         join(tmpProjPath(), `.openshift/${svc}/Dockerfile`),
         'utf-8'
@@ -203,19 +212,22 @@ describe('nx-adsp e2e', () => {
       expect(dockerfile).toContain('node');
     }, 180000);
 
-    it('writes a Dockerfile and manifests for a frontend app', async () => {
+    it('writes a Dockerfile and imports it locally for a frontend app', async () => {
       const app = uniq('sbx-app');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`
       );
       writeMockEnvironments(mockUrl);
       await runNxCommandAsync(
-        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
+        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
       );
       checkFilesExist(
         `.openshift/${app}/Dockerfile`,
         `.openshift/${app}/${app}.yml`
       );
+      expect(
+        existsSync(join(tmpProjPath(), `.openshift/${app}/sandbox-build.yml`))
+      ).toBe(false);
       const dockerfile = readFileSync(
         join(tmpProjPath(), `.openshift/${app}/Dockerfile`),
         'utf-8'
