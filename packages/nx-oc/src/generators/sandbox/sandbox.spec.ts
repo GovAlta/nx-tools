@@ -102,6 +102,15 @@ describe('Sandbox Generator', () => {
     ).toBeTruthy();
     expect(cmds.some((c) => c.includes('sandbox-build.yml'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('podman'))).toBeFalsy();
+    // A node service's ADSP client secret is mirrored from .env into an
+    // OpenShift Secret the deployment reads.
+    expect(
+      cmds.some(
+        (c) =>
+          c.includes('oc create secret generic test-secrets') &&
+          c.includes('CLIENT_SECRET')
+      )
+    ).toBeTruthy();
 
     // The ImageStream + BuildConfig manifest is generated.
     expect(host.exists('.openshift/test/sandbox-build.yml')).toBeTruthy();

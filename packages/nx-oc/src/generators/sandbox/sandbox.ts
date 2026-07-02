@@ -77,9 +77,22 @@ function addBuildFiles(host: Tree, options: NormalizedSchema) {
 
 function addSandboxTarget(host: Tree, options: NormalizedSchema) {
   const config = readProjectConfiguration(host, options.project);
-  const { projectName, sandboxProject, database } = options;
+  const { projectName, sandboxProject, database, appType } = options;
 
   const commands: string[] = [];
+
+  // ADSP services authenticate with the access service using a confidential
+  // Keycloak client secret. The express-service generator writes it to the
+  // service's .env (CLIENT_SECRET=...) at generate time; mirror it into an
+  // OpenShift Secret the deployment reads. Upserted from the current .env so
+  // re-runs pick up a rotated secret. Non-node app types have no client secret.
+  if (appType === 'node') {
+    commands.push(
+      `oc create secret generic ${projectName}-secrets ` +
+        `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${config.root}/.env 2>/dev/null | cut -d= -f2-)" ` +
+        `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`
+    );
+  }
 
   if (database === 'postgres') {
     commands.push(

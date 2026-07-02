@@ -158,6 +158,10 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('readinessProbe');
     expect(manifest).toContain('livenessProbe');
+    // The service authenticates with ADSP using a confidential client secret,
+    // injected from the ${APP_NAME}-secrets Secret.
+    expect(manifest).toContain('CLIENT_SECRET');
+    expect(manifest).toContain('${APP_NAME}-secrets');
   });
 
   it('can generate deployment for dotnet', async () => {
