@@ -38,6 +38,15 @@ function setupE2eWorkspace(mockUrl: string) {
   });
   // npm caches file: deps by tarball hash and may install a stale compiled version.
   // Directly overwrite environments.js so the generator always uses the mock URLs.
+  writeMockEnvironments(mockUrl);
+}
+
+// Overwrite @abgov/nx-oc's compiled environments.js so ADSP calls hit the mock
+// server. Generators that finish with installPackagesTask reinstall the file:
+// dep and restore the real URLs, so this must be re-applied before any later
+// generate that resolves ADSP config (e.g. the sandbox generator run after an
+// app generate).
+function writeMockEnvironments(mockUrl: string) {
   writeFileSync(
     join(tmpProjPath(), 'node_modules/@abgov/nx-oc/src/adsp/environments.js'),
     `"use strict";
@@ -176,6 +185,9 @@ describe('nx-adsp e2e', () => {
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
       );
+      // The app generate reinstalls @abgov/nx-oc (installPackagesTask), restoring
+      // the real ADSP URLs — re-point them at the mock before the sandbox generate.
+      writeMockEnvironments(mockUrl);
       await runNxCommandAsync(
         `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
       );
@@ -196,6 +208,7 @@ describe('nx-adsp e2e', () => {
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`
       );
+      writeMockEnvironments(mockUrl);
       await runNxCommandAsync(
         `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
       );
