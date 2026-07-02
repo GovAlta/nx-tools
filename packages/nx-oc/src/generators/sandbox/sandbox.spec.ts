@@ -143,6 +143,12 @@ describe('Sandbox Generator', () => {
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBeTruthy();
+    // The per-app database is created idempotently before the app deploys.
+    expect(cmds.some((c) => c.includes('createdb -U postgres test_sandbox'))).toBeTruthy();
+    const createDbIdx = cmds.findIndex((c) => c.includes('createdb'));
+    const rolloutIdx = cmds.findIndex((c) => c.includes('rollout status deployment/test'));
+    expect(createDbIdx).toBeGreaterThanOrEqual(0);
+    expect(createDbIdx).toBeLessThan(rolloutIdx);
   });
 
   it('generates shared mongodb manifest with secret-backed MONGODB_URI', async () => {
