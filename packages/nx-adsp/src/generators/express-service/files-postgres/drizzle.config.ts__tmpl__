@@ -1,0 +1,17 @@
+import { config } from 'dotenv';
+import { defineConfig } from 'drizzle-kit';
+
+// drizzle-kit (generate/migrate/studio) is a dev-only CLI. Load the local
+// DATABASE_URL the same way the app does: .env first, then .env.local (written
+// by `nx dev-db`) taking precedence.
+config({ path: '.env' });
+config({ path: '.env.local', override: true });
+
+export default defineConfig({
+  schema: './src/db/schema.ts',
+  out: './drizzle',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL as string,
+  },
+});

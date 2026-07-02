@@ -51,17 +51,20 @@ describe('Express Service Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, { ...options, database: 'postgres' });
 
-    expect(host.exists('apps/test/prisma/schema.prisma')).toBeTruthy();
+    expect(host.exists('apps/test/src/db/schema.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/database.ts')).toBeTruthy();
+    expect(host.exists('apps/test/src/migrate.ts')).toBeTruthy();
+    expect(host.exists('apps/test/drizzle.config.ts')).toBeTruthy();
     expect(host.exists('apps/test/scripts/dev-db.sh')).toBeTruthy();
     expect(host.exists('apps/test/.env.example')).toBeTruthy();
 
-    const schema = host.read('apps/test/prisma/schema.prisma').toString();
-    expect(schema).toContain('postgresql');
-    expect(schema).toContain('src/generated/prisma');
-
     const database = host.read('apps/test/src/database.ts').toString();
-    expect(database).toContain('./generated/prisma');
+    expect(database).toContain('drizzle-orm/node-postgres');
+    expect(database).toContain('closeDatabase');
+
+    // webpack emits a second bundle (migrate.js) for the deploy init container.
+    const webpackConfig = host.read('apps/test/webpack.config.js').toString();
+    expect(webpackConfig).toContain('migrate');
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['dev-db']).toBeTruthy();
@@ -70,7 +73,17 @@ describe('Express Service Generator', () => {
     expect(config.targets['db:migrate:deploy']).toBeTruthy();
     expect(config.targets['db:studio']).toBeTruthy();
     expect(config.targets['serve'].dependsOn).toContain('dev-db');
-    expect(config.targets['build'].dependsOn).toContain('db:generate');
+
+    // Drizzle has no client codegen, so build must NOT depend on db:generate.
+    expect(config.targets['build'].dependsOn ?? []).not.toContain('db:generate');
+    // The SQL migrations are shipped as a build asset.
+    const assets = config.targets['build'].options.assets ?? [];
+    expect(
+      assets.some(
+        (a: unknown) =>
+          typeof a === 'object' && (a as { output?: string }).output === 'drizzle'
+      )
+    ).toBe(true);
   }, 60000);
 
   it('scaffolds mongo database files and targets', async () => {
@@ -94,7 +107,7 @@ describe('Express Service Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, { ...options, database: 'none' });
 
-    expect(host.exists('apps/test/prisma/schema.prisma')).toBeFalsy();
+    expect(host.exists('apps/test/src/db/schema.ts')).toBeFalsy();
     expect(host.exists('apps/test/src/database.ts')).toBeFalsy();
     expect(host.exists('apps/test/scripts/dev-db.sh')).toBeFalsy();
 

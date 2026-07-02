@@ -1,0 +1,17 @@
+// Drizzle schema — define your tables here.
+//
+// After editing this file:
+//   1. nx db:generate <%= projectName %>   — writes a SQL migration to ./drizzle
+//   2. nx db:migrate <%= projectName %>    — applies pending migrations to your dev DB
+//
+// Example (uncomment and adapt, then run the two commands above):
+//
+// import { pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+//
+// export const items = pgTable('items', {
+//   id: serial('id').primaryKey(),
+//   name: text('name').notNull(),
+//   createdAt: timestamp('created_at').defaultNow().notNull(),
+// });
+
+export {};

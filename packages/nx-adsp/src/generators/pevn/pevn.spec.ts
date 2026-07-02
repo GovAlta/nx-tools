@@ -44,6 +44,6 @@ describe('PEVN Generator', () => {
     expect(nginxConf).toContain('http://test-service:3333/');
 
     expect(host.exists('apps/test-app/src/App.vue')).toBeTruthy();
-    expect(host.exists('apps/test-service/prisma/schema.prisma')).toBeTruthy();
+    expect(host.exists('apps/test-service/src/db/schema.ts')).toBeTruthy();
   }, 30000);
 });
