@@ -65,7 +65,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initVue } = await import('@nx/vue');
+  const { applicationGenerator: initVue } = await import('@nx/vue').catch(() => {
+    throw new Error(
+      "The 'vue-app' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue"
+    );
+  });
   await initVue(host, {
     name: options.name,
     style: 'css',

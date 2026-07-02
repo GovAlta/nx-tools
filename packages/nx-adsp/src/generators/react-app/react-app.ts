@@ -105,7 +105,13 @@ function removeFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initReact } = await import('@nx/react');
+  const { applicationGenerator: initReact } = await import('@nx/react').catch(
+    () => {
+      throw new Error(
+        "The 'react-app' generator requires the '@nx/react' plugin. Install it and re-run:\n  npm i -D @nx/react"
+      );
+    }
+  );
 
   // Setting strict to false because of: https://github.com/nrwl/nx/issues/8180
   await initReact(host, {
