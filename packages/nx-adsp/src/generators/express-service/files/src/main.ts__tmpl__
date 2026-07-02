@@ -7,7 +7,7 @@ import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
 import { z } from 'zod';
 <% if (database === 'postgres') { %>
-import { prisma } from './database';
+import { closeDatabase } from './database';
 <% } else if (database === 'mongo') { %>
 import { connectDatabase, disconnectDatabase } from './database';
 <% } %>
@@ -136,7 +136,7 @@ initializeApp().then(({ app, logger }) => {
 
   const shutdown = async () => {
     server.close();
-    await prisma.$disconnect();
+    await closeDatabase();
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);

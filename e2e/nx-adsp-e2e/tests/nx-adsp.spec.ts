@@ -209,7 +209,7 @@ describe('nx-adsp e2e', () => {
   }, 180000);
 
   describe('pern', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pern');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pern ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -217,7 +217,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-service/src/db/schema.ts`,
         `${plugin}-app/nginx.conf`,
         `${plugin}-app/src/app/app.tsx`,
       );
@@ -228,7 +228,7 @@ describe('nx-adsp e2e', () => {
   });
 
   describe('pean', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pean');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pean ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -236,7 +236,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-service/src/db/schema.ts`,
         `${plugin}-app/nginx.conf`,
         `${plugin}-app/src/main.ts`,
       );
@@ -247,7 +247,7 @@ describe('nx-adsp e2e', () => {
   });
 
   describe('pevn', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pevn');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -255,7 +255,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-service/src/db/schema.ts`,
         `${plugin}-app/public/nginx.conf`,
         `${plugin}-app/src/App.vue`,
       );

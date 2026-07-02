@@ -1,0 +1,36 @@
+const { composePlugins, withNx } = require('@nx/webpack');
+const path = require('path');
+
+// Nx plugins for webpack.
+module.exports = composePlugins(
+  withNx({
+    target: 'node',
+  }),
+  (config) => {
+    // Emit a second bundle, migrate.js, from src/migrate.ts. The deployment runs
+    // it as an init container (`node migrate.js`) to apply Drizzle migrations
+    // before the app starts — using only runtime deps, no CLI, no native engine.
+    const mainEntry = config.entry.main;
+    const migrateEntry = path.resolve(__dirname, 'src/migrate.ts');
+    config.entry = {
+      ...config.entry,
+      migrate:
+        mainEntry && typeof mainEntry === 'object' && !Array.isArray(mainEntry)
+          ? { ...mainEntry, import: [migrateEntry] }
+          : [migrateEntry],
+    };
+    config.output = {
+      ...config.output,
+      // Per-entry filenames so main.js and migrate.js don't collide.
+      filename: '[name].js',
+      ...(process.env.NODE_ENV !== 'production' && {
+        clean: true,
+        devtoolModuleFilenameTemplate: '[absolute-resource-path]',
+      }),
+    };
+    config.devtool = 'source-map';
+    // Update the webpack config as needed here.
+    // e.g. `config.plugins.push(new MyPlugin())`
+    return config;
+  },
+);

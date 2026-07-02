@@ -56,7 +56,7 @@
         "type": "list",
         "items": [
           { "value": "none", "label": "None — add a database later" },
-          { "value": "postgres", "label": "PostgreSQL (Prisma)" },
+          { "value": "postgres", "label": "PostgreSQL (Drizzle)" },
           { "value": "mongo", "label": "MongoDB (Mongoose)" }
         ]
       }
