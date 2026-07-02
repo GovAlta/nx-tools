@@ -112,7 +112,7 @@ npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 | `project` | — | Yes | Name of the existing Nx project to add deployment manifests to |
 | `appType` | `-t` | Yes | Application type: `frontend`, `dotnet`, or `node` |
 | `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a Prisma migration init container for `postgres`. |
+| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a migration init container (node migrate.js) for `postgres`. |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
@@ -171,7 +171,7 @@ Running `nx run my-app:sandbox` executes the full loop:
 5. Pushes to the OC internal registry
 6. Restarts the Deployment and waits for rollout
 
-**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`) — Prisma creates it automatically on first migrate. No manual database provisioning is required. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
+**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`); migrations are applied on deploy by the app's migrate init container. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
 
 **Credentials:** The generated password is stored in an OC Secret. The DB pod and every app pod read from the same Secret at runtime — no credential is hardcoded in any manifest.
 

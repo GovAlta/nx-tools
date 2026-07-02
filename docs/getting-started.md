@@ -139,7 +139,7 @@ A browser login opens for your ADSP tenant. This generates:
   ├─ my-app-service/
   └─ my-app-app/
 apps/
-  ├─ my-app-service/   ← Express + Prisma (Postgres)
+  ├─ my-app-service/   ← Express + Drizzle (Postgres)
   └─ my-app-app/       ← Vue 3 + GoA web components + Keycloak
 ```
 
@@ -191,10 +191,12 @@ Start the local Postgres container (requires [Podman](https://podman.io/)):
 npx nx run my-app-service:dev-db
 ```
 
-Apply the initial Prisma migration:
+Generate and apply the initial migration (only needed once you have added a
+table to `src/db/schema.ts`):
 
 ```bash
-npx nx run my-app-service:db:migrate
+npx nx run my-app-service:db:generate   # writes SQL to drizzle/
+npx nx run my-app-service:db:migrate    # applies it to the local DB
 ```
 
 Run the service and frontend concurrently:
@@ -241,7 +243,7 @@ No GitHub push, no CI wait — changes are live in ~1–2 minutes.
 
 The shared `sandbox-postgres` instance is deployed once and reused by all apps in the namespace. The generated password is stored in the `sandbox-postgres-creds` Secret — the DB pod and every app pod read it from there at runtime. No credential is hardcoded in any manifest.
 
-Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Prisma creates the database automatically on first migrate; there is no manual provisioning step.
+Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Migrations are applied automatically on every deploy by the service's `migrate.js` init container.
 
 ### Teardown a sandbox app
 
