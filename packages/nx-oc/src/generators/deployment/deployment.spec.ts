@@ -218,8 +218,7 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('DATABASE_URL');
     expect(manifest).toContain('initContainers');
-    expect(manifest).toContain('prisma');
-    expect(manifest).toContain('migrate');
+    expect(manifest).toContain('migrate.js');
   });
 
   it('includes MONGODB_URI secretKeyRef without init container for mongo node deployment', async () => {

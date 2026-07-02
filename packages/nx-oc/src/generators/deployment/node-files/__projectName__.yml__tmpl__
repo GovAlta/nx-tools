@@ -91,7 +91,7 @@ objects:
 <% } else { %>
               image: image-registry.openshift-image-registry.svc:5000/${INFRA_PROJECT}/${APP_NAME}:${DEPLOY_TAG}
 <% } %>
-              command: ["npx", "prisma", "migrate", "deploy"]
+              command: ["node", "migrate.js"]
               envFrom:
                 - configMapRef:
                     name: ${APP_NAME}
