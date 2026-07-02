@@ -98,7 +98,13 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initExpress } = await import('@nx/express');
+  const { applicationGenerator: initExpress } = await import('@nx/express').catch(
+    () => {
+      throw new Error(
+        "The 'express-service' generator requires the '@nx/express' plugin. Install it and re-run:\n  npm i -D @nx/express"
+      );
+    }
+  );
   await initExpress(host, {
     ...options,
     skipFormat: true,
