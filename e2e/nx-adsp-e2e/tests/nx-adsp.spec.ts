@@ -1,7 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
 import { AddressInfo } from 'net';
 import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import {
   checkFilesExist,
@@ -162,6 +162,53 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(`${plugin}/src/main.ts`);
     }, 90000);
+  });
+
+  // Runs the nx-oc sandbox generator against the *installed* plugin (dist), not
+  // the source tree, so it guards template files that only exist as packaged
+  // assets — e.g. the Dockerfile templates, which a dist packaging bug once
+  // dropped without any test noticing (the BuildConfig referenced a Dockerfile
+  // that was never written). Behaviour, not dist layout: the manifests must
+  // actually be produced.
+  describe('sandbox deployment', () => {
+    it('writes a Dockerfile and manifests for a node service', async () => {
+      const svc = uniq('sbx-svc');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
+      );
+      checkFilesExist(
+        `.openshift/${svc}/Dockerfile`,
+        `.openshift/${svc}/${svc}.yml`,
+        `.openshift/${svc}/sandbox-build.yml`
+      );
+      const dockerfile = readFileSync(
+        join(tmpProjPath(), `.openshift/${svc}/Dockerfile`),
+        'utf-8'
+      );
+      expect(dockerfile).toContain('node');
+    }, 180000);
+
+    it('writes a Dockerfile and manifests for a frontend app', async () => {
+      const app = uniq('sbx-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --tenant=test --accessToken=mock-token`
+      );
+      checkFilesExist(
+        `.openshift/${app}/Dockerfile`,
+        `.openshift/${app}/${app}.yml`
+      );
+      const dockerfile = readFileSync(
+        join(tmpProjPath(), `.openshift/${app}/Dockerfile`),
+        'utf-8'
+      );
+      expect(dockerfile).toContain('nginx');
+    }, 180000);
   });
 
   describe('react app', () => {
