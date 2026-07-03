@@ -1,3 +1,14 @@
-import { PrismaClient } from './generated/prisma';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
-export const prisma = new PrismaClient();
+import { environment } from './environment';
+import * as schema from './db/schema';
+
+// Drizzle is pure TypeScript: the node-postgres (pg) driver owns the connection,
+// so there is no native database engine to download, ship, or run — the
+// container image needs nothing beyond the app's JS and node_modules.
+const pool = new Pool({ connectionString: environment.DATABASE_URL });
+
+export const db = drizzle(pool, { schema });
+
+export const closeDatabase = (): Promise<void> => pool.end();

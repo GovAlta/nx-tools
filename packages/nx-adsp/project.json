@@ -39,6 +39,11 @@
             "output": "./src"
           },
           {
+            "input": "./packages/nx-adsp/src",
+            "glob": "**/*__tmpl__",
+            "output": "./src"
+          },
+          {
             "input": "./packages/nx-adsp",
             "glob": "generators.json",
             "output": "."

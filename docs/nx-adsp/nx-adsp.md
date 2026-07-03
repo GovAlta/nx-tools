@@ -60,10 +60,10 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
-| `database` | — | No | Database to scaffold: `none` (default), `postgres` (Prisma), or `mongo` (Mongoose) |
+| `database` | — | No | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
 | `skipAgent` | — | No | Skip the consultAgent interaction and generate base scaffolding only |
 
-When `--database postgres` is selected the generator also scaffolds a `prisma/schema.prisma`, a `PrismaClient` singleton, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
+When `--database postgres` is selected the generator scaffolds a Drizzle setup — `src/db/schema.ts`, a `db` instance (`src/database.ts`), a standalone migration runner (`src/migrate.ts`, bundled to `migrate.js` for the deploy init container), `drizzle.config.ts`, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). Drizzle is pure TypeScript with a `node-postgres` driver — no native engine, so it runs cleanly under OpenShift's arbitrary UID. When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
 
 The generated `src/main.ts` includes `authorize`, `createValidationHandler`, and `createErrorHandler` from `@abgov/adsp-service-sdk`, and an example `POST /v1/example` route that shows the full pattern: role check → input validation (Zod schema) → domain event publish → error forwarding to `createErrorHandler`. Replace or remove the example route once you have real business logic.
 
@@ -124,13 +124,13 @@ Accepts the same options as `mern` (including `--skipAgent`).
 
 ### pern
 
-Composite generator that creates both a React frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/react` and `@nx/node`.
+Composite generator that creates both a React frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Drizzle). Requires `@nx/react` and `@nx/node`.
 
 ```bash
 npx nx g @abgov/nx-adsp:pern my-app --env dev --tenant my-tenant
 ```
 
-Generates `my-app-service` (Express + Prisma) and `my-app-app` (React), with a dev proxy and nginx production proxy wired between them.
+Generates `my-app-service` (Express + Drizzle) and `my-app-app` (React), with a dev proxy and nginx production proxy wired between them.
 
 Accepts the same options as `mern` (including `--skipAgent`).
 
@@ -138,13 +138,13 @@ Accepts the same options as `mern` (including `--skipAgent`).
 
 ### pean
 
-Composite generator that creates both an Angular frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/angular` and `@nx/node`.
+Composite generator that creates both an Angular frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Drizzle). Requires `@nx/angular` and `@nx/node`.
 
 ```bash
 npx nx g @abgov/nx-adsp:pean my-app --env dev --tenant my-tenant
 ```
 
-Generates `my-app-service` (Express + Prisma) and `my-app-app` (Angular), with a dev proxy and nginx production proxy wired between them.
+Generates `my-app-service` (Express + Drizzle) and `my-app-app` (Angular), with a dev proxy and nginx production proxy wired between them.
 
 Accepts the same options as `mern` (including `--skipAgent`).
 
@@ -152,13 +152,13 @@ Accepts the same options as `mern` (including `--skipAgent`).
 
 ### pevn
 
-Composite generator that creates both a Vue 3 frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Prisma). Requires `@nx/vue` and `@nx/node`.
+Composite generator that creates both a Vue 3 frontend and an Express backend as a fullstack solution. The Express service is pre-configured with PostgreSQL (Drizzle). Requires `@nx/vue` and `@nx/node`.
 
 ```bash
 npx nx g @abgov/nx-adsp:pevn my-app --env dev --tenant my-tenant
 ```
 
-Generates `my-app-service` (Express + Prisma) and `my-app-app` (Vue 3), with a dev proxy and nginx production proxy wired between them.
+Generates `my-app-service` (Express + Drizzle) and `my-app-app` (Vue 3), with a dev proxy and nginx production proxy wired between them.
 
 Accepts the same options as `mern` (including `--skipAgent`).
 
@@ -303,12 +303,12 @@ podman machine start
 | Target | Description |
 |--------|-------------|
 | `nx dev-db <service>` | Start local Postgres container (Podman) |
-| `nx db:migrate <service>` | Create and apply a new migration (`prisma migrate dev`) |
-| `nx db:migrate:deploy <service>` | Apply pending migrations in production/CI (`prisma migrate deploy`) |
-| `nx db:generate <service>` | Regenerate the Prisma client after schema changes |
-| `nx db:studio <service>` | Open Prisma Studio to browse data |
+| `nx db:generate <service>` | Generate a SQL migration from `src/db/schema.ts` changes (`drizzle-kit generate`) |
+| `nx db:migrate <service>` | Apply pending migrations to the dev DB (`drizzle-kit migrate`) |
+| `nx db:migrate:deploy <service>` | Apply pending migrations in a dev/CI shell (`drizzle-kit migrate`) |
+| `nx db:studio <service>` | Open Drizzle Studio to browse data |
 
-The `build` target depends on `db:generate`, so the Prisma client is always generated before TypeScript compilation.
+Drizzle has no client codegen step, so the `build` target has no `db:generate` prerequisite. The generated SQL in `drizzle/` is shipped into the build output as an asset so the deploy init container can apply it.
 
 ### OpenShift deployment
 
@@ -328,7 +328,7 @@ oc create secret generic <app-name>-database \
   -n <namespace>
 ```
 
-For PostgreSQL services, the deployment manifest includes an init container that runs `prisma migrate deploy` before the application starts, ensuring migrations are applied on every deploy.
+For PostgreSQL services, the deployment manifest includes an init container that runs `node migrate.js` before the application starts, ensuring migrations are applied on every deploy. `migrate.js` uses only `drizzle-orm` + `pg` (no CLI, no native engine), so it runs under OpenShift's arbitrary UID.
 
 ---
 

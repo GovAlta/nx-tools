@@ -12,6 +12,25 @@ export function getOcServerUrl(): string | undefined {
   }
 }
 
+// Derives the cluster's ingress (apps) domain from the console URL, e.g.
+// https://console-openshift-console.apps.example.com -> apps.example.com.
+// Used to predict a deployment's default Route host by convention. Readable by
+// any logged-in user (no cluster-scoped permissions needed).
+export function getClusterIngressDomain(): string | undefined {
+  try {
+    const consoleUrl = execFileSync('oc', ['whoami', '--show-console'], {
+      stdio: 'pipe',
+    })
+      .toString()
+      .trim();
+    if (!consoleUrl) return undefined;
+    const host = new URL(consoleUrl).host;
+    return host.replace(/^console-openshift-console\./, '') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Creates a bounded SA token valid for one year (OCP 4.11+ TokenRequest API).
 // Falls back to the legacy `oc sa get-token` on older clusters.
 export function getSaToken(saName: string, namespace: string): string | undefined {

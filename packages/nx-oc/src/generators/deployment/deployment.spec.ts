@@ -158,6 +158,10 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('readinessProbe');
     expect(manifest).toContain('livenessProbe');
+    // The service authenticates with ADSP using a confidential client secret,
+    // injected from the ${APP_NAME}-secrets Secret.
+    expect(manifest).toContain('CLIENT_SECRET');
+    expect(manifest).toContain('${APP_NAME}-secrets');
   });
 
   it('can generate deployment for dotnet', async () => {
@@ -218,8 +222,7 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('DATABASE_URL');
     expect(manifest).toContain('initContainers');
-    expect(manifest).toContain('prisma');
-    expect(manifest).toContain('migrate');
+    expect(manifest).toContain('migrate.js');
   });
 
   it('includes MONGODB_URI secretKeyRef without init container for mongo node deployment', async () => {

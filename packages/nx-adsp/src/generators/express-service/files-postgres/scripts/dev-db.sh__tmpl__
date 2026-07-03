@@ -37,7 +37,7 @@ until podman exec "${CONTAINER}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/d
 done
 echo "Postgres is ready."
 
-# Write DATABASE_URL to .env.local so Prisma and the app pick it up without
+# Write DATABASE_URL to .env.local so Drizzle and the app pick it up without
 # manual .env editing. Overridden by the SECRET in OpenShift at runtime.
 echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost:${PORT}/${DB_NAME}" > .env.local
 echo "DATABASE_URL written to .env.local"

@@ -65,7 +65,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initVue } = await import('@nx/vue');
+  const { applicationGenerator: initVue } = await import('@nx/vue').catch(() => {
+    throw new Error(
+      "The 'vue-app' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue"
+    );
+  });
   await initVue(host, {
     name: options.name,
     style: 'css',
@@ -93,11 +97,14 @@ export default async function (host: Tree, options: Schema) {
     }
   );
 
-  // Remove Nx scaffold files replaced by our templates.
+  // Remove Nx scaffold files replaced by our templates. The @nx/vue generator
+  // emits vite.config.mts; we provide a GoA-aware vite.config.ts, so drop the
+  // duplicate to avoid two competing configs.
   for (const f of [
     'src/App.vue',
     'src/components/HelloWorld.vue',
     'src/views/AboutView.vue',
+    'vite.config.mts',
   ]) {
     if (host.exists(`${normalizedOptions.projectRoot}/${f}`)) {
       host.delete(`${normalizedOptions.projectRoot}/${f}`);
@@ -119,19 +126,40 @@ export default async function (host: Tree, options: Schema) {
     };
   }
 
-  // Ensure silent-check-sso.html is served as a static asset.
+  // nginx.conf and silent-check-sso.html live in the Vite publicDir
+  // (<projectRoot>/public) so they are emitted to the build output root — the
+  // @nx/vite:build executor ignores webpack-style `assets`. Pin outputPath to
+  // the workspace-root dist so it matches the vite config's outDir and the
+  // generated Dockerfile's COPY path.
   if (config.targets.build?.options) {
     config.targets.build.options = {
       ...config.targets.build.options,
-      assets: [
-        ...(config.targets.build.options.assets ?? []),
-        {
-          glob: 'nginx.conf',
-          input: normalizedOptions.projectRoot,
-          output: './',
-        },
-      ],
+      outputPath: `dist/${normalizedOptions.projectRoot}`,
     };
+  }
+
+  // Record the paired backend (name + port) so the sandbox generator can ensure
+  // its Service exists before this frontend's nginx starts — nginx resolves
+  // proxy_pass upstreams at startup, so a missing Service would crashloop the
+  // pod. Only the Service is needed (for DNS), not the backend's deployment.
+  if (normalizedOptions.pairedProject) {
+    const pairedService = names(normalizedOptions.pairedProject).fileName;
+    const proxy = normalizedOptions.nginxProxies.find((p) => {
+      try {
+        return new URL(p.proxyPass).hostname === pairedService;
+      } catch {
+        return false;
+      }
+    });
+    let port = 3333;
+    if (proxy) {
+      const url = new URL(proxy.proxyPass);
+      port = Number(url.port) || (url.protocol === 'https:' ? 443 : 80);
+    }
+    config.tags = [
+      ...(config.tags ?? []),
+      `adsp:proxy-service:${pairedService}:${port}`,
+    ];
   }
 
   updateProjectConfiguration(host, options.name, config);
