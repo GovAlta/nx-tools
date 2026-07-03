@@ -151,26 +151,10 @@ nx run <%= projectName %>:teardown-dev      # remove from dev environment
 
 ## Sandbox deployment (local build)
 
-The `sandbox` targets are added by the nx-oc sandbox generator — run it once per app first:
+`nx run <%= projectName %>:sandbox` builds the image **locally with podman**, pushes it to GHCR, and deploys it to your namespace — no git push or CI wait. Run the generator once first to add the targets:
 
 ```bash
 nx g @abgov/nx-oc:sandbox <%= projectName %> --sandboxProject <your-namespace>
 ```
 
-Then `nx run <%= projectName %>:sandbox` builds the image **locally with podman**, pushes it to GHCR, and imports it into your sandbox namespace — no git push or CI wait. Prerequisites (one-time):
-
-- `podman` installed and running (`podman machine start` on macOS).
-- `oc` logged in, targeting your (per-user) sandbox namespace.
-- `gh auth login` as an account with **`write:packages`** on the registry org. That account must be the **active** `gh` account when you run the target — the sandbox reads `gh auth token` for both the image push and the pull secret (no PAT is stored). Check with `gh auth status`; switch with `gh auth switch -u <account>`.
-
-The registry (`ghcr.io/<org>`) is derived from the git remote on first run and saved in `nx.json`. The image is `<registry>/<sandboxProject>-<app>:sandbox` (namespace-prefixed to avoid collisions). If a push or import fails, it's almost always the active `gh` account lacking `write:packages` or access to the org — re-run after `gh auth switch`.
-
-### Verify & troubleshoot a sandbox deploy
-
-The target ends with `oc rollout status`. To confirm and diagnose:
-
-- **Health:** `oc get pods -n <namespace> -l name=<%= projectName %>` and `curl https://$(oc get route <%= projectName %> -n <namespace> -o jsonpath='{.spec.host}')/health`.
-- **Push or import failed:** almost always the active `gh` account lacks `write:packages` or access to the org — check `gh auth status`, then `gh auth switch -u <account>` and re-run.
-- **Pod CrashLoopBackOff / not ready:** `oc logs -n <namespace> <pod> -c <%= projectName %>`. For a service with a database, also check the migration init container: `oc logs -n <namespace> <pod> -c <%= projectName %>-migrate`.
-- **`podman` errors:** ensure the machine is running — `podman machine start` (macOS).
-- **Namespace missing:** create it with `oc new-project <namespace>`.
+That also writes **`.openshift/<%= projectName %>/SANDBOX.md`** — the full deploy runbook: prerequisites (`podman`, `oc` login, a `gh` account with **`write:packages`** as the *active* `gh` account), preflight failures and their fixes, `--skipBuild`/`--skipPush` to resume a partial deploy, a copy-paste manual-completion sequence, and troubleshooting (CPU quota, `CrashLoopBackOff`, registry auth, redirect URIs). Read it whenever a deploy misbehaves.

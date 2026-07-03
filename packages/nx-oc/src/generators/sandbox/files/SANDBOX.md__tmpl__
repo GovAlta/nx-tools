@@ -1,0 +1,91 @@
+# Sandbox deploy — <%= projectName %>
+
+Deploy runbook for coding agents. `nx run <%= projectName %>:sandbox` builds the
+image **locally with podman**, pushes it to GHCR, imports it into the
+`<%= sandboxProject %>` namespace, and rolls out — no git push or CI wait. The
+orchestration lives in the `@abgov/nx-oc:sandbox` executor (versioned in the
+plugin), so the steps below are what it runs for you.
+
+## What the target does, in order
+
+1. **Preflight** — `oc` login, `gh` auth, and `podman` machine are checked up
+   front; a failure here stops before the build with an actionable message.
+2. Upsert the pull secret + <% if (appType === 'node') { %>the `CLIENT_SECRET` secret + <% } %>any paired Services<% if (database && database !== 'none') { %> + the shared `<%= database %>` database<% } %>.
+3. `nx build <%= projectName %> --configuration production`
+4. `podman build` → `podman login` (gh token) → `podman push` to
+   `<%= registry %>/<%= imageName %>:sandbox`.
+5. `oc tag … --reference-policy=local` then `oc import-image` (retried to absorb
+   the tag-reconcile 409).
+6. `oc process | oc apply` the manifest, then `oc rollout restart` + `status`.
+
+## Options (resume a partial deploy without rebuilding)
+
+```bash
+nx run <%= projectName %>:sandbox --skipBuild            # reuse the built image; re-push + import + roll out
+nx run <%= projectName %>:sandbox --skipBuild --skipPush # reuse the pushed image; re-import + roll out only
+nx run <%= projectName %>:sandbox --imageTag=<tag>       # push/import under a different tag
+nx run <%= projectName %>:sandbox --importRetries=8      # more import retries on a slow cluster
+```
+
+## Preflight failures — cause → fix
+
+- **`'podman' is required …`** — podman not installed. `brew install podman` (macOS).
+- **`podman is installed but not responding`** — machine stopped. `podman machine start`.
+- **`'gh' is required …`** — GitHub CLI not installed. See https://cli.github.com.
+- **`gh is installed but not authenticated`** — run `gh auth login`.
+- **oc login prompts / fails** — `oc login` to your cluster, targeting the
+  `<%= sandboxProject %>` namespace (`oc project <%= sandboxProject %>`).
+
+## If the deploy fails mid-way (work around by hand)
+
+The executor stops at the first failing step. After fixing the cause, the
+fastest path is usually `--skipBuild` (or `--skipBuild --skipPush`) to resume.
+If you need to drive it manually, these are the remaining steps — the image ref
+is `<%= registry %>/<%= imageName %>:sandbox`:
+
+```bash
+NS=<%= sandboxProject %>
+REF=<%= registry %>/<%= imageName %>:sandbox
+# (1) push, if not already pushed
+gh auth token | podman login <%= registryHost %> -u "$(gh api user -q .login)" --password-stdin
+podman push "$REF"
+# (2) point the imagestream at it and import (retry absorbs the tag race)
+oc tag "$REF" <%= projectName %>:sandbox --reference-policy=local -n "$NS"
+until oc import-image <%= projectName %>:sandbox --confirm -n "$NS"; do sleep 3; done
+# (3) apply the manifest and roll out
+oc process -f .openshift/<%= projectName %>/<%= projectName %>.yml -p PROJECT="$NS" | oc apply -f -
+oc rollout restart deployment/<%= projectName %> -n "$NS"
+oc rollout status  deployment/<%= projectName %> -n "$NS" --timeout=180s
+```
+
+## Verify
+
+```bash
+oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
+<% if (appType === 'node') { %>curl "https://$(oc get route <%= projectName %> -n <%= sandboxProject %> -o jsonpath='{.spec.host}')/health"<% } else { %>curl -I "https://$(oc get route <%= projectName %> -n <%= sandboxProject %> -o jsonpath='{.spec.host}')/"<% } %>
+```
+
+## Known issues & workarounds
+
+- **`podman push` / import fails with an auth error** — the *active* `gh`
+  account lacks `write:packages` (or access to the org). Preflight only confirms
+  *an* account is logged in, not its scope. Check `gh auth status`; switch with
+  `gh auth switch -u <account>`, then re-run with `--skipBuild`.
+- **Pod `FailedCreate` "exceeded quota"** — the namespace CPU quota is full.
+  Free room: `oc get deploy -n <%= sandboxProject %>` then delete stale apps
+  (`oc delete all,configmap,is -l app=<old-app> -n <%= sandboxProject %>`), and re-run.
+- **Pod `CrashLoopBackOff`** — `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>`.<% if (appType === 'node' && database && database !== 'none') { %>
+  For the DB migration, also check the init container:
+  `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>-migrate`.<% } %>
+<% if (appType === 'frontend') { %>- **Sign-in returns `Invalid redirect_uri`** — the sandbox Route wasn't
+  registered on the Keycloak public client (the generator does this when it can
+  resolve the cluster ingress domain). Add `https://<%= projectName %>-<%= sandboxProject %>.<ingress-domain>/*`
+  to the client's valid redirect URIs.
+<% } %>- **Import 409 "object has been modified"** — the `oc tag` reconcile race; the
+  executor already retries. If you hit it manually, just re-run the import.
+
+## Teardown
+
+```bash
+nx run <%= projectName %>:sandbox-teardown   # remove sandbox resources + delete the GHCR image
+```
