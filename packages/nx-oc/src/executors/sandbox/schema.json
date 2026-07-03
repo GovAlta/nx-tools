@@ -40,6 +40,11 @@
       "default": false,
       "description": "Skip the registry login + push and reuse the already-pushed image (resume from the import step)."
     },
+    "deployBackend": {
+      "type": "boolean",
+      "default": false,
+      "description": "For a frontend: deploy each paired backend (its own sandbox target) first, so proxied /api calls work. Off by default; without it, a missing backend is warned about, not deployed."
+    },
     "importRetries": {
       "type": "number",
       "default": 5,

@@ -1,4 +1,4 @@
-import { ExecutorContext } from '@nx/devkit';
+import { ExecutorContext, logger } from '@nx/devkit';
 import runExecutor from './sandbox';
 import { SandboxExecutorSchema } from './schema';
 
@@ -182,5 +182,42 @@ describe('sandbox executor', () => {
   it('adds no paired-service guard without proxy-service tags', async () => {
     await runExecutor(baseOptions, context());
     expect(commands().some((c) => c.includes('oc get service'))).toBe(false);
+  });
+
+  it('warns when a paired backend has no running pods', async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    // default mock returns '' for `oc get endpoints` → no endpoints
+    await runExecutor(
+      { ...baseOptions, appType: 'frontend' },
+      context(['adsp:proxy-service:test-service:3333'])
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('test-service'));
+    // warn only — does not deploy the backend
+    expect(commands().some((c) => c.includes('nx run test-service:sandbox'))).toBe(false);
+    warn.mockRestore();
+  });
+
+  it('does not warn when the paired backend has endpoints', async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    execSync.mockImplementation((cmd: string) =>
+      Buffer.from(cmd.includes('oc get endpoints test-service') ? '10.1.2.3' : '')
+    );
+    await runExecutor(
+      { ...baseOptions, appType: 'frontend' },
+      context(['adsp:proxy-service:test-service:3333'])
+    );
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('deployBackend deploys each paired backend first (no warning)', async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    await runExecutor(
+      { ...baseOptions, appType: 'frontend', deployBackend: true },
+      context(['adsp:proxy-service:test-service:3333'])
+    );
+    expect(commands().some((c) => c.includes('npx nx run test-service:sandbox'))).toBe(true);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
