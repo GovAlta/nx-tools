@@ -21,13 +21,8 @@
     },
     "appType": {
       "type": "string",
-      "description": "Type of application.",
-      "alias": "t",
-      "x-prompt": {
-        "message": "What type of application is the project?",
-        "type": "list",
-        "items": ["frontend", "dotnet", "node"]
-      }
+      "description": "Application type. Auto-detected from the project's build target; only pass this to override detection (e.g. for a custom build executor).",
+      "enum": ["frontend", "node", "dotnet"]
     },
     "database": {
       "type": "string",
