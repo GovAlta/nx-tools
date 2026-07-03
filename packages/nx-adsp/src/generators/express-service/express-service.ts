@@ -209,9 +209,19 @@ export default async function (host: Tree, options: Schema) {
 
   }
 
+  // Record the database as a project tag so the nx-oc sandbox generator can
+  // wire DATABASE_URL + the migrate init container without a --database flag.
+  const dbTag = `adsp:database:${normalizedOptions.database}`;
+  const tags =
+    normalizedOptions.database !== 'none' &&
+    !(projectConfig.tags ?? []).includes(dbTag)
+      ? [...(projectConfig.tags ?? []), dbTag]
+      : projectConfig.tags;
+
   updateProjectConfiguration(host, normalizedOptions.projectName, {
     ...projectConfig,
     targets,
+    tags,
   });
 
   addSemgrepTarget(host, normalizedOptions.projectName);

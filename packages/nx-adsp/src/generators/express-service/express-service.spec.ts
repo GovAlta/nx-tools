@@ -84,6 +84,9 @@ describe('Express Service Generator', () => {
           typeof a === 'object' && (a as { output?: string }).output === 'drizzle'
       )
     ).toBe(true);
+
+    // Tagged so the sandbox generator wires the DB without a --database flag.
+    expect(config.tags).toContain('adsp:database:postgres');
   }, 60000);
 
   it('scaffolds mongo database files and targets', async () => {
@@ -101,6 +104,7 @@ describe('Express Service Generator', () => {
     expect(config.targets['dev-db']).toBeTruthy();
     expect(config.targets['serve'].dependsOn).toContain('dev-db');
     expect(config.targets['db:generate']).toBeFalsy();
+    expect(config.tags).toContain('adsp:database:mongo');
   }, 60000);
 
   it('does not scaffold database files when database is none', async () => {
@@ -113,5 +117,8 @@ describe('Express Service Generator', () => {
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['dev-db']).toBeFalsy();
+    expect((config.tags ?? []).some((t) => t.startsWith('adsp:database:'))).toBe(
+      false
+    );
   }, 60000);
 });

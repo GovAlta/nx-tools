@@ -216,6 +216,75 @@ describe('Sandbox Generator', () => {
     expect(config.targets['sandbox'].options.database).toBe('mongo');
   });
 
+  describe('database auto-detection (no --database flag)', () => {
+    function addServiceProject(host, extra: Record<string, unknown> = {}) {
+      addProjectConfiguration(host, 'test', {
+        root: 'apps/test',
+        projectType: 'application',
+        targets: {
+          build: {
+            executor: '@nx/webpack:webpack',
+            options: { compiler: 'tsc', target: 'node' },
+          },
+        },
+        ...extra,
+      });
+    }
+
+    it('detects postgres from the adsp:database tag', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, { tags: ['adsp:database:postgres'] });
+      await generator(host, options); // options has no database
+      expect(
+        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+      ).toBe('postgres');
+    });
+
+    it('detects mongo from the adsp:database tag', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, { tags: ['adsp:database:mongo'] });
+      await generator(host, options);
+      expect(
+        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+      ).toBe('mongo');
+    });
+
+    it('falls back to postgres from a drizzle db:migrate target (pre-tag projects)', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, {
+        targets: {
+          build: {
+            executor: '@nx/webpack:webpack',
+            options: { compiler: 'tsc', target: 'node' },
+          },
+          'db:migrate': { executor: 'nx:run-commands', options: {} },
+        },
+      });
+      await generator(host, options);
+      expect(
+        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+      ).toBe('postgres');
+    });
+
+    it('the --database flag overrides detection', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, { tags: ['adsp:database:postgres'] });
+      await generator(host, { ...options, database: 'none' });
+      expect(
+        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+      ).toBeUndefined(); // explicit none → no database key
+    });
+
+    it('leaves database unset when there is no signal', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host);
+      await generator(host, options);
+      expect(
+        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+      ).toBeUndefined();
+    });
+  });
+
   it('registers the deployment Route redirect URI for a frontend client', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addFrontendProject(host);

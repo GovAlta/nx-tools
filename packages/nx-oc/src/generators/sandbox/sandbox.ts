@@ -2,6 +2,7 @@ import {
   formatFiles,
   generateFiles,
   names,
+  ProjectConfiguration,
   readNxJson,
   readProjectConfiguration,
   Tree,
@@ -17,9 +18,22 @@ import {
 } from '../../utils/git-utils';
 import { getClusterIngressDomain } from '../../utils/oc-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import { DatabaseType } from '../deployment/schema';
 import { NormalizedSchema, Schema } from './schema';
 
 const SANDBOX_GENERATOR = '@abgov/nx-oc:sandbox';
+const DATABASE_TAG_PREFIX = 'adsp:database:';
+
+// Infer the database when --database wasn't passed, so a DB-backed service isn't
+// silently deployed without its DATABASE_URL/migrate wiring. Prefer the explicit
+// tag the express-service generator records; fall back to a drizzle db:migrate
+// target (postgres) for projects generated before the tag existed.
+function detectDatabase(config: ProjectConfiguration): DatabaseType | undefined {
+  const tag = (config.tags ?? []).find((t) => t.startsWith(DATABASE_TAG_PREFIX));
+  if (tag) return tag.slice(DATABASE_TAG_PREFIX.length) as DatabaseType;
+  if (config.targets?.['db:migrate']) return 'postgres';
+  return undefined;
+}
 
 // Resolves the sandbox container registry once per workspace and persists it to
 // nx.json so subsequent sandbox generations reuse it without re-prompting:
@@ -95,6 +109,7 @@ async function normalizeOptions(
   return {
     ...options,
     appType,
+    database: options.database ?? detectDatabase(config) ?? 'none',
     adsp,
     projectName,
     buildOutputPath: getBuildOutputPath(config),
