@@ -115,8 +115,13 @@ describe('Sandbox Generator', () => {
         c.includes(`oc tag ${imageRef} test:sandbox --reference-policy=local`)
       )
     ).toBeTruthy();
+    // import-image is retried to absorb the 409 from oc tag's async reconcile.
     expect(
-      cmds.some((c) => c.includes('oc import-image test:sandbox --confirm'))
+      cmds.some(
+        (c) =>
+          c.includes('oc import-image test:sandbox --confirm') &&
+          c.includes('until')
+      )
     ).toBeTruthy();
     // Per-deploy pull secret from the gh session (no stored PAT).
     expect(

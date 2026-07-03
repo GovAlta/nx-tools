@@ -249,8 +249,11 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
   commands.push(
     `oc tag ${imageRef} ${projectName}:sandbox --reference-policy=local -n ${sandboxProject}`
   );
+  // oc tag triggers an async imagestream reconcile, so a back-to-back
+  // import-image can 409 ("object has been modified"). Retry until it settles.
   commands.push(
-    `oc import-image ${projectName}:sandbox --confirm -n ${sandboxProject}`
+    `n=0; until oc import-image ${projectName}:sandbox --confirm -n ${sandboxProject}; do ` +
+      `n=$((n+1)); [ $n -ge 5 ] && exit 1; sleep 3; done`
   );
 
   commands.push(
