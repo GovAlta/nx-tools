@@ -83,64 +83,61 @@ describe('Sandbox Generator', () => {
     expect(manifest).not.toContain('ImageStream');
   });
 
-  it('adds sandbox nx target', async () => {
+  it('adds a sandbox target wired to the @abgov/nx-oc:sandbox executor', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addNodeProject(host);
 
     await generator(host, options);
 
     const config = readProjectConfiguration(host, 'test');
-    expect(config.targets['sandbox']).toBeTruthy();
-    expect(config.targets['sandbox'].executor).toBe('nx:run-commands');
-    // Commands run in order (nx:run-commands has no `sequential` option).
-    expect(config.targets['sandbox'].options.parallel).toBe(false);
-    const cmds: string[] = config.targets['sandbox'].options.commands;
-    expect(cmds.some((c) => c.includes('oc rollout restart'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('oc rollout status'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('nx build test'))).toBeTruthy();
-
-    // Local podman build + push to the prescribed registry, with the image name
-    // prefixed by the (per-user) sandbox namespace to avoid GHCR's org-global
-    // name collisions.
-    const imageRef = 'ghcr.io/test-org/test-sandbox-test:sandbox';
-    expect(
-      cmds.some((c) => c.includes('podman build') && c.includes(imageRef))
-    ).toBeTruthy();
-    expect(cmds.some((c) => c.includes(`podman push ${imageRef}`))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('podman login ghcr.io'))).toBeTruthy();
-
-    // Import into the namespace imagestream; pods pull from the internal registry.
-    expect(
-      cmds.some((c) =>
-        c.includes(`oc tag ${imageRef} test:sandbox --reference-policy=local`)
-      )
-    ).toBeTruthy();
-    // import-image is retried to absorb the 409 from oc tag's async reconcile.
-    expect(
-      cmds.some(
-        (c) =>
-          c.includes('oc import-image test:sandbox --confirm') &&
-          c.includes('until')
-      )
-    ).toBeTruthy();
-    // Per-deploy pull secret from the gh session (no stored PAT).
-    expect(
-      cmds.some((c) => c.includes('oc create secret docker-registry ghcr-pull'))
-    ).toBeTruthy();
+    const target = config.targets['sandbox'];
+    expect(target).toBeTruthy();
+    // Deploy orchestration lives in the executor (versioned in the plugin), so
+    // the target is thin config — no baked-in command list.
+    expect(target.executor).toBe('@abgov/nx-oc:sandbox');
+    expect(target.options).toMatchObject({
+      sandboxProject: 'test-sandbox',
+      registry: 'ghcr.io/test-org',
+      appType: 'node',
+    });
+    // No database key when the app has no database.
+    expect(target.options.database).toBeUndefined();
 
     // The in-cluster BuildConfig flow is gone.
-    expect(cmds.some((c) => c.includes('oc start-build'))).toBeFalsy();
     expect(host.exists('.openshift/test/sandbox-build.yml')).toBeFalsy();
+  });
 
-    // A node service's ADSP client secret is mirrored from .env into an
-    // OpenShift Secret the deployment reads.
-    expect(
-      cmds.some(
-        (c) =>
-          c.includes('oc create secret generic test-secrets') &&
-          c.includes('CLIENT_SECRET')
-      )
-    ).toBeTruthy();
+  it('writes a SANDBOX.md deploy/troubleshooting runbook next to the manifests', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    expect(host.exists('.openshift/test/SANDBOX.md')).toBeTruthy();
+    const doc = host.read('.openshift/test/SANDBOX.md').toString();
+    expect(doc).toContain('nx run test:sandbox');
+    // resume flags + the copy-paste manual-completion sequence
+    expect(doc).toContain('--skipBuild');
+    expect(doc).toContain('oc import-image test:sandbox');
+    expect(doc).toContain('ghcr.io/test-org/test-sandbox-test:sandbox');
+    // no unrendered EJS tags leaked through
+    expect(doc).not.toContain('<%');
+  });
+
+  it('SANDBOX.md is app-type aware (frontend redirect URI; node+db migrate logs)', async () => {
+    const fe = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addFrontendProject(fe);
+    await generator(fe, options);
+    const feDoc = fe.read('.openshift/test/SANDBOX.md').toString();
+    expect(feDoc).toContain('Invalid redirect_uri');
+    expect(feDoc).not.toContain('-migrate');
+
+    const node = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(node);
+    await generator(node, { ...options, database: 'postgres' });
+    const nodeDoc = node.read('.openshift/test/SANDBOX.md').toString();
+    expect(nodeDoc).toContain('test-migrate');
+    expect(nodeDoc).not.toContain('Invalid redirect_uri');
   });
 
   it('persists the resolved registry to nx.json for reuse', async () => {
@@ -194,16 +191,10 @@ describe('Sandbox Generator', () => {
     expect(appManifest).toContain('sandbox-postgres-creds');
     expect(appManifest).toContain('$(POSTGRES_PASSWORD)');
 
+    // The database type is passed to the executor, which provisions the shared
+    // instance + per-app database at deploy time.
     const config = readProjectConfiguration(host, 'test');
-    const cmds: string[] = config.targets['sandbox'].options.commands;
-    expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBeTruthy();
-    // The per-app database is created idempotently before the app deploys.
-    expect(cmds.some((c) => c.includes('createdb -U postgres test_sandbox'))).toBeTruthy();
-    const createDbIdx = cmds.findIndex((c) => c.includes('createdb'));
-    const rolloutIdx = cmds.findIndex((c) => c.includes('rollout status deployment/test'));
-    expect(createDbIdx).toBeGreaterThanOrEqual(0);
-    expect(createDbIdx).toBeLessThan(rolloutIdx);
+    expect(config.targets['sandbox'].options.database).toBe('postgres');
   });
 
   it('generates shared mongodb manifest with secret-backed MONGODB_URI', async () => {
@@ -222,38 +213,7 @@ describe('Sandbox Generator', () => {
     expect(appManifest).toContain('$(MONGO_PASSWORD)');
 
     const config = readProjectConfiguration(host, 'test');
-    const cmds: string[] = config.targets['sandbox'].options.commands;
-    expect(cmds.some((c) => c.includes('sandbox-mongodb-creds'))).toBeTruthy();
-  });
-
-  it('ensures paired backend Services from proxy-service tags', async () => {
-    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-    addFrontendProject(host, ['adsp:proxy-service:test-service:3333']);
-
-    await generator(host, options);
-
-    const config = readProjectConfiguration(host, 'test');
-    const cmds: string[] = config.targets['sandbox'].options.commands;
-    const guard = cmds.find((c) => c.includes('oc get service test-service'));
-    expect(guard).toBeTruthy();
-    // idempotent: only creates the Service (for DNS) when it's missing — no
-    // backend deployment, which would have no image until its own sandbox runs.
-    expect(guard).toContain('||');
-    expect(guard).toContain(
-      'oc create service clusterip test-service --tcp=3333:3333'
-    );
-    expect(guard).not.toContain('test-service.yml');
-  });
-
-  it('adds no paired-service guard when there are no proxy-service tags', async () => {
-    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-    addNodeProject(host);
-
-    await generator(host, options);
-
-    const config = readProjectConfiguration(host, 'test');
-    const cmds: string[] = config.targets['sandbox'].options.commands;
-    expect(cmds.some((c) => c.includes('oc get service'))).toBeFalsy();
+    expect(config.targets['sandbox'].options.database).toBe('mongo');
   });
 
   it('registers the deployment Route redirect URI for a frontend client', async () => {
