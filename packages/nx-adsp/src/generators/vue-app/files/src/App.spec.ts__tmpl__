@@ -1,0 +1,27 @@
+import { mount } from '@vue/test-utils';
+import { ref } from 'vue';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('@dsb-norge/vue-keycloak-js', () => ({
+  useKeycloak: () => ({
+    authenticated: ref(false),
+    fullName: ref(''),
+    // ready stays false — Keycloak's check-sso hasn't resolved (or failed).
+    ready: ref(false),
+    keycloak: { login: vi.fn(), logout: vi.fn() },
+  }),
+}));
+
+import App from './App.vue';
+
+describe('App shell header', () => {
+  it('shows Sign in when unauthenticated even before Keycloak is ready', () => {
+    const wrapper = mount(App, { global: { stubs: { RouterView: true } } });
+
+    // The sign-in affordance must not be gated on `ready`: if check-sso never
+    // resolves, the button would be hidden and the user could never log in.
+    const group = wrapper.find('goa-button-group');
+    expect(group.exists()).toBe(true);
+    expect(group.html()).toContain('Sign in');
+  });
+});

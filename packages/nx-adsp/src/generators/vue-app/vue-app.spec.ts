@@ -83,6 +83,27 @@ describe('Vue App Generator', () => {
     expect(viteConfig).toContain("isCustomElement: (tag) => tag.startsWith('goa-')");
   }, 30000);
 
+  it('shows the Sign in button without gating on Keycloak readiness', async () => {
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('Sign in');
+    // The reported bug: gating Sign in on `ready` hides it when check-sso never
+    // resolves. It must gate on !authenticated only (like the react/angular apps).
+    expect(app).not.toContain('!authenticated && ready');
+    // Header actions grouped for layout, matching react/angular.
+    expect(app).toContain('goa-button-group');
+  }, 30000);
+
+  it('removes the @nx/vue demo scaffold and ships a passing App test', async () => {
+    await generator(host, options);
+    // The stale nx demo + its failing test must be gone (they fail against our shell).
+    expect(host.exists('apps/test/src/app/App.vue')).toBeFalsy();
+    expect(host.exists('apps/test/src/app/App.spec.ts')).toBeFalsy();
+    expect(host.exists('apps/test/src/app/NxWelcome.vue')).toBeFalsy();
+    // Replaced by our own App test.
+    expect(host.exists('apps/test/src/App.spec.ts')).toBeTruthy();
+  }, 30000);
+
   it('environment.ts is pre-populated with tenant config', async () => {
     await generator(host, options);
     const env = host.read('apps/test/src/environments/environment.ts').toString();
