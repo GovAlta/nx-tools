@@ -97,11 +97,17 @@ export default async function (host: Tree, options: Schema) {
     }
   );
 
-  // Remove Nx scaffold files replaced by our templates. The @nx/vue generator
-  // emits vite.config.mts; we provide a GoA-aware vite.config.ts, so drop the
-  // duplicate to avoid two competing configs.
+  // Remove Nx scaffold files replaced by our templates. @nx/vue (Nx 23) scaffolds
+  // its demo under src/app/ (App.vue, App.spec.ts, NxWelcome.vue) and emits
+  // vite.config.mts; we provide our own App.vue (at src root), views, and a
+  // GoA-aware vite.config.ts. Drop the demo + its now-stale test (which fails
+  // against our shell) and the duplicate config. Paths from older @nx/vue
+  // layouts are kept for safety — host.delete is a no-op when they're absent.
   for (const f of [
     'src/App.vue',
+    'src/app/App.vue',
+    'src/app/App.spec.ts',
+    'src/app/NxWelcome.vue',
     'src/components/HelloWorld.vue',
     'src/views/AboutView.vue',
     'vite.config.mts',

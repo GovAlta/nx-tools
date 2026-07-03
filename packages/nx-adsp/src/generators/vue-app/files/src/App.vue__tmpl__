@@ -2,7 +2,7 @@
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView } from 'vue-router';
 
-const { authenticated, fullName, ready, keycloak } = useKeycloak();
+const { authenticated, fullName, keycloak } = useKeycloak();
 
 function login() { keycloak?.login(); }
 function logout() { keycloak?.logout({ redirectUri: window.location.origin }); }
@@ -11,13 +11,18 @@ function logout() { keycloak?.logout({ redirectUri: window.location.origin }); }
 <template>
   <goa-microsite-header type="alpha" />
   <goa-app-header url="/" heading="<%= projectName %>">
-    <span v-if="ready && fullName">{{ fullName }}</span>
-    <goa-button v-if="!authenticated && ready" type="tertiary" @_click="login">
-      Sign in
-    </goa-button>
-    <goa-button v-if="authenticated" type="tertiary" @_click="logout">
-      Sign out
-    </goa-button>
+    <goa-button-group alignment="end">
+      <span v-if="authenticated && fullName">{{ fullName }}</span>
+      <!-- Gate on !authenticated only, not `ready`: if Keycloak's check-sso
+           doesn't resolve (e.g. the silent-SSO iframe is blocked), we still
+           want the sign-in affordance — login() does a full redirect anyway. -->
+      <goa-button v-if="!authenticated" type="tertiary" @_click="login">
+        Sign in
+      </goa-button>
+      <goa-button v-if="authenticated" type="tertiary" @_click="logout">
+        Sign out
+      </goa-button>
+    </goa-button-group>
   </goa-app-header>
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
   <main>
