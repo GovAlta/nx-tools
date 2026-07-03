@@ -15,17 +15,14 @@
     },
     "env": {
       "type": "string",
-      "description": "Environment to target for teardown.",
+      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to test.",
       "$default": {
         "$source": "argv",
         "index": 1
       },
       "alias": "e",
-      "x-prompt": {
-        "message": "Which environment to target?",
-        "type": "list",
-        "items": ["dev", "test", "prod"]
-      }
+      "enum": ["test", "prod", "dev"],
+      "default": "test"
     }
   },
   "required": ["project", "env"],

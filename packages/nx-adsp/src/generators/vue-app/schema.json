@@ -15,21 +15,14 @@
     },
     "env": {
       "type": "string",
-      "description": "Environment to target.",
+      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to test.",
       "$default": {
         "$source": "argv",
         "index": 1
       },
       "alias": "e",
-      "x-prompt": {
-        "message": "Which ADSP environment do you want to target?",
-        "type": "list",
-        "items": [
-          "dev",
-          "test",
-          "prod"
-        ]
-      }
+      "enum": ["test", "prod", "dev"],
+      "default": "test"
     },
     "tenant": {
       "type": "string",
@@ -58,8 +51,12 @@
           "items": {
             "type": "object",
             "properties": {
-              "location": { "type": "string" },
-              "proxyPass": { "type": "string" }
+              "location": {
+                "type": "string"
+              },
+              "proxyPass": {
+                "type": "string"
+              }
             },
             "required": ["location", "proxyPass"]
           }
@@ -67,8 +64,12 @@
         {
           "type": "object",
           "properties": {
-            "location": { "type": "string" },
-            "proxyPass": { "type": "string" }
+            "location": {
+              "type": "string"
+            },
+            "proxyPass": {
+              "type": "string"
+            }
           },
           "required": ["location", "proxyPass"]
         }
