@@ -64,6 +64,19 @@ describe('Vue App Generator', () => {
     expect(indexHtml).toContain(`id="${mountId}"`);
   }, 30000);
 
+  it('static assets live in public/ so Vite serves them at the referenced URLs', async () => {
+    await generator(host, options);
+    // App.vue's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
+    // index.html's favicon.ico are absolute-URL string refs, so they must be in
+    // the Vite publicDir (public/) — a src/assets file is not served at /assets.
+    const appVue = host.read('apps/test/src/App.vue').toString();
+    const bannerUrl = appVue.match(/backgroundurl="([^"]+)"/)?.[1];
+    expect(bannerUrl).toBe('/assets/banner.jpg');
+    expect(host.exists('apps/test/public/assets/banner.jpg')).toBeTruthy();
+    expect(host.exists('apps/test/src/assets/banner.jpg')).toBeFalsy();
+    expect(host.exists('apps/test/public/favicon.ico')).toBeTruthy();
+  }, 30000);
+
   it('vite.config.ts marks goa-* elements as custom elements', async () => {
     await generator(host, options);
     const viteConfig = host.read('apps/test/vite.config.ts').toString();
