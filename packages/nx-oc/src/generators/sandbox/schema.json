@@ -31,8 +31,9 @@
     },
     "env": {
       "type": "string",
-      "description": "ADSP environment to target.",
-      "default": "dev"
+      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to test.",
+      "default": "test",
+      "enum": ["test", "prod", "dev"]
     },
     "accessToken": {
       "type": "string",

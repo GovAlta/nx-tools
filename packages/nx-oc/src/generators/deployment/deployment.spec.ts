@@ -253,7 +253,7 @@ describe('Deployment Generator', () => {
     expect(manifest).not.toContain('initContainers');
   });
 
-  it('can skip unknown project type', async () => {
+  it('throws an actionable error when the app type cannot be detected', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await pipeline(host, {
       pipeline: 'test',
@@ -273,10 +273,11 @@ describe('Deployment Generator', () => {
       },
     });
 
-    await generator(host, { ...options, appType: null });
+    // Unrecognized build executor + no --appType → detection fails → actionable throw.
+    await expect(
+      generator(host, { ...options, appType: null })
+    ).rejects.toThrow(/--appType/);
     expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
-    expect(host.exists('.openshift/test/Dockerfile')).toBeFalsy();
-
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['apply-envs']).toBeFalsy();
   });

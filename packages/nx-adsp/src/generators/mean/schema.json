@@ -8,14 +8,17 @@
     "name": {
       "type": "string",
       "description": "Name of the project.",
-      "$default": { "$source": "argv", "index": 0 },
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
       "x-prompt": "What name would you like to use for the project?"
     },
     "env": {
       "type": "string",
-      "description": "ADSP environment to initialize the project for.",
-      "enum": ["dev", "test", "prod"],
-      "default": "prod"
+      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to test.",
+      "enum": ["test", "prod", "dev"],
+      "default": "test"
     },
     "tenant": {
       "type": "string",

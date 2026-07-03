@@ -92,7 +92,7 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | Option | Alias | Required | Description |
 |--------|-------|----------|-------------|
 | `name` | — | Yes | Name of the service |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
 | `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
@@ -110,7 +110,7 @@ npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 | Option | Alias | Required | Description |
 |--------|-------|----------|-------------|
 | `name` | — | Yes | Name of the application |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
 | `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
@@ -141,7 +141,7 @@ npx nx g @abgov/nx-adsp:dotnet-service my-service --env dev --accessToken $TOKEN
 | Option | Alias | Required | Description |
 |--------|-------|----------|-------------|
 | `name` | — | Yes | Name of the service |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
+| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
 ---
@@ -169,7 +169,7 @@ npx nx g @abgov/nx-adsp:react-form my-app --env test
 | Option | Alias | Required | Description |
 |--------|-------|----------|-------------|
 | `project` | — | Yes | Name of the existing Nx project to add the form component to |
-| `env` | `-e` | Yes | ADSP environment to fetch form definitions from (typically `test`) |
+| `env` | `-e` | No | ADSP environment to fetch form definitions from. Defaults to `test` (UAT / access-uat.alberta.ca) |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
 ---
