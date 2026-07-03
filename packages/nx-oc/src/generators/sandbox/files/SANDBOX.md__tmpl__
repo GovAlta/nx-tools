@@ -25,7 +25,15 @@ nx run <%= projectName %>:sandbox --skipBuild            # reuse the built image
 nx run <%= projectName %>:sandbox --skipBuild --skipPush # reuse the pushed image; re-import + roll out only
 nx run <%= projectName %>:sandbox --imageTag=<tag>       # push/import under a different tag
 nx run <%= projectName %>:sandbox --importRetries=8      # more import retries on a slow cluster
-```
+<% if (appType === 'frontend') { %>nx run <%= projectName %>:sandbox --deployBackend         # deploy each paired backend (its own sandbox) first
+<% } %>```
+<% if (appType === 'frontend') { %>
+This frontend proxies `/api` to its paired backend Service. The target always
+ensures that Service exists (so nginx doesn't crashloop), but by default it does
+**not** deploy the backend — if the backend has no running pods it **warns** that
+proxied calls will 502, and names the target to run. Pass `--deployBackend` to
+deploy each paired backend as part of this run instead.
+<% } %>
 
 ## Preflight failures — cause → fix
 

@@ -56,6 +56,17 @@ function run(label: string, cmd: string, cwd: string): void {
   execSync(cmd, { stdio: 'inherit', cwd, shell: '/bin/bash' });
 }
 
+// Run a command and capture stdout; returns '' on any failure.
+function capture(cmd: string, cwd: string): string {
+  try {
+    return execSync(cmd, { cwd, shell: '/bin/bash', stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return '';
+  }
+}
+
 // oc tag triggers an async imagestream reconcile, so a back-to-back
 // import-image can 409 ("object has been modified"). Retry until it settles.
 function importWithRetry(
@@ -106,6 +117,7 @@ export default async function runExecutor(
     imageTag = 'sandbox',
     skipBuild = false,
     skipPush = false,
+    deployBackend = false,
     importRetries = 5,
   } = options;
 
@@ -217,6 +229,35 @@ export default async function runExecutor(
           `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}`,
         cwd
       );
+    }
+
+    // The Service stub above only stops nginx crashlooping; the backend needs
+    // its own pods for /api proxying to work. Deploy it (opt-in) or warn that
+    // proxied calls will 502 until it is deployed separately.
+    for (const { name } of proxyServices) {
+      if (deployBackend) {
+        try {
+          run(`Deploy paired backend ${name}`, `npx nx run ${name}:sandbox`, cwd);
+        } catch {
+          throw new Error(
+            `--deployBackend: could not deploy paired backend "${name}". Ensure it has a sandbox target ` +
+              `(nx g @abgov/nx-oc:sandbox ${name} --sandboxProject ${sandboxProject}).`
+          );
+        }
+      } else {
+        const endpoints = capture(
+          `oc get endpoints ${name} -n ${sandboxProject} -o jsonpath='{.subsets[*].addresses[*].ip}'`,
+          cwd
+        );
+        if (!endpoints) {
+          logger.warn(
+            `\n⚠ Paired backend "${name}" has no running pods in ${sandboxProject}. ` +
+              `The frontend will deploy, but requests proxied to ${name} will 502 until it is deployed:\n` +
+              `    nx run ${name}:sandbox\n` +
+              `  (or re-run this target with --deployBackend to deploy it first).`
+          );
+        }
+      }
     }
 
     // ---- build locally + push to the registry ----

@@ -8,5 +8,6 @@ export interface SandboxExecutorSchema {
   imageTag?: string;
   skipBuild?: boolean;
   skipPush?: boolean;
+  deployBackend?: boolean;
   importRetries?: number;
 }
