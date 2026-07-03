@@ -139,6 +139,49 @@ npx nx run my-app:deploy
 
 ---
 
+## Sandbox deployment (local build)
+
+For rapid iteration, the `sandbox` generator wires a per-app deploy that builds
+the image **locally with podman**, pushes it to a container registry (GHCR), and
+imports it into your OpenShift namespace — no git push or CI wait. The Nx 23 line
+that ships this is on the `@beta` dist-tag.
+
+```bash
+# Add the sandbox targets to a project (run once per app)
+npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject=<namespace> --registry=ghcr.io/<org>
+
+# Build → podman → push → import → roll out
+npx nx run my-app:sandbox
+
+# Tear down the sandbox resources + delete the pushed image
+npx nx run my-app:sandbox-teardown
+```
+
+Prerequisites: `podman` (machine started on macOS), `oc` logged in to the
+cluster, and `gh` authenticated as an account with **`write:packages`** on the
+registry org (the deploy reads `gh auth token` for the push and pull secret — no
+PAT is stored, so that account must be the **active** `gh` account).
+
+The deploy is the `@abgov/nx-oc:sandbox` **executor**, so its logic is versioned
+in the plugin (fixes reach every project on `npm update`). It:
+
+- **preflights** `oc`/`gh`/`podman` and fails fast with actionable messages
+  before the build;
+- **retries `oc import-image`** to absorb the `oc tag` reconcile race;
+- **auto-detects the database** (from an `adsp:database:*` project tag, or a
+  drizzle `db:migrate` target) and provisions a shared Postgres/Mongo instance +
+  the per-app database + migrate init container — no `--database` flag needed;
+- for a **frontend**, ensures each paired backend's Service exists and **warns**
+  if the backend has no running pods (proxied `/api` calls would 502); pass
+  `--deployBackend` to deploy the backend in the same run;
+- supports `--skipBuild` / `--skipPush` to **resume** a partial deploy.
+
+Running the generator also writes `.openshift/<app>/SANDBOX.md` — a
+deploy/troubleshooting runbook (preflight fixes, resume flags, a manual-completion
+sequence, quota/auth/CrashLoopBackOff guidance).
+
+---
+
 ## Typical workflow
 
 1. Run `pipeline` once per workspace to generate shared build infrastructure manifests.

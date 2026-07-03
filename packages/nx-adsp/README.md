@@ -6,13 +6,20 @@ The plugin provides generators for Node/Express services, React and Angular fron
 
 ## Prerequisites
 
+Install only the framework peers for the generators you use — they are declared
+as **optional** peer dependencies, so a workspace that only builds Vue apps
+doesn't need `@nx/react`, `@nx/angular`, etc.
+
 | Generator | Required peer dependency |
 |-----------|--------------------------|
 | `react-app` | `@nx/react` |
 | `angular-app` | `@nx/angular` |
+| `vue-app` | `@nx/vue` |
 | `dotnet-service` | `@nx-dotnet/core` |
 | `react-dotnet` | `@nx/react`, `@nx-dotnet/core` |
-| `express-service` | `@nx/node` |
+| `express-service` | `@nx/express` |
+| `pevn`, `mevn` (full-stack) | `@nx/express`, `@nx/vue` |
+| `pern`, `pean` (full-stack) | `@nx/express`, `@nx/react`/`@nx/angular` |
 | `react-form`, `react-task-list` | existing React project in the workspace |
 
 ## Installation
@@ -28,11 +35,49 @@ npm i -D @abgov/nx-adsp
 npx create-nx-workspace my-workspace
 
 # 2. Install the plugin and any required peer dependencies
-npm i -D @abgov/nx-adsp @nx/node
+npm i -D @abgov/nx-adsp @nx/express
 
 # 3. Generate a quickstart (interactive prompts fill missing options)
 npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ```
+
+## Full-stack quickstart (PEVN → sandbox)
+
+This is the end-to-end path a coding agent can follow from an empty folder to a
+running full-stack app in an OpenShift sandbox. **The Nx 23 line is published on
+the `@beta` dist-tag** — append `@beta` to installs until it is promoted to
+`latest`.
+
+Prerequisites for the sandbox deploy (steps 4–5): `podman` (machine started on
+macOS), `oc` logged in to the sandbox cluster, and the GitHub CLI (`gh`)
+authenticated as an account with **`write:packages`** on your registry org.
+
+```bash
+# 1. Empty folder → Nx workspace (the plugins require Nx 23)
+npx create-nx-workspace@latest my-solution --preset=apps --workspaceType=integrated --nxCloud=skip --no-interactive
+cd my-solution
+
+# 2. Install the plugins + stack peers (match @nx/* to the workspace nx version)
+NXV=$(node -p "require('./node_modules/nx/package.json').version")
+npm i -D @abgov/nx-oc@beta @abgov/nx-adsp@beta "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
+
+# 3. Scaffold a Postgres + Express + Vue + Node solution (opens a browser for the ADSP tenant login)
+npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant
+
+# 4. Add sandbox targets (registry derives from the git remote, or pass --registry=ghcr.io/<org>;
+#    the database is auto-detected from the service — no --database needed)
+npx nx g @abgov/nx-oc:sandbox acme-service --sandboxProject=<namespace> --registry=ghcr.io/<org> --tenant=my-tenant --env=dev
+npx nx g @abgov/nx-oc:sandbox acme-app --sandboxProject=<namespace> --tenant=my-tenant --env=dev
+
+# 5. Deploy — backend first so the frontend's /api proxy resolves
+npx nx run acme-service:sandbox
+npx nx run acme-app:sandbox            # or: --deployBackend to bring the backend up in the same run
+```
+
+Each generated app has an `AGENTS.md` (framework + ADSP context) and, once
+step 4 runs, a `.openshift/<app>/SANDBOX.md` deploy/troubleshooting runbook.
+See [`@abgov/nx-oc`](https://www.npmjs.com/package/@abgov/nx-oc) for the sandbox
+deploy details.
 
 ## Generators
 
