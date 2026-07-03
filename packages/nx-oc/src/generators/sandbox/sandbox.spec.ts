@@ -107,6 +107,18 @@ describe('Sandbox Generator', () => {
     expect(host.exists('.openshift/test/sandbox-build.yml')).toBeFalsy();
   });
 
+  it('throws an actionable error when the app type cannot be detected', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    // An unrecognized build executor → detectApplicationType returns undefined.
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: { build: { executor: '@nx/js:tsc', options: {} } },
+    });
+
+    await expect(generator(host, options)).rejects.toThrow(/--appType/);
+  });
+
   it('writes a SANDBOX.md deploy/troubleshooting runbook next to the manifests', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addNodeProject(host);

@@ -250,8 +250,10 @@ async function registerSandboxRedirectUri(options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
   if (!normalizedOptions.appType) {
-    console.log('Cannot generate sandbox deployment for unknown project type.');
-    return;
+    throw new Error(
+      `Could not detect the application type for "${normalizedOptions.projectName}" from its build target. ` +
+        `Pass --appType=node|frontend|dotnet to set it explicitly.`
+    );
   }
 
   addManifestFiles(host, normalizedOptions);
