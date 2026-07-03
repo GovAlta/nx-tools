@@ -9,7 +9,16 @@ This app is paired with **`<%= pairedProject %>`** — the Express backend it ta
 API calls use the `/api/` prefix which the webpack dev proxy rewrites to `/<%= pairedProject %>/` on port 3333.
 When working on a feature that spans both projects, read `apps/<%= pairedProject %>/AGENTS.md` for the service context.
 <% } %>
+## Running Nx commands (coding agents)
+
+Run generators with `--no-interactive` **and** every required option supplied. With
+`--no-interactive`, a missing required option errors instead of prompting, so an
+interactive prompt never blocks your session (`CI=true` in the env does the same and
+also skips the Nx Cloud prompt). This applies to `nx g` generators; `nx run <target>`
+executors read options from `project.json` and do not prompt.
+
 ## Stack
+
 
 - **UI**: React 18 + GoA design system (`@abgov/react-components` — `Goab*` components)
 - **Auth**: `keycloak-js` via Redux Toolkit slice (`src/app/user.slice.ts`)

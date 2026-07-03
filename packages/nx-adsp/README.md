@@ -52,6 +52,13 @@ Prerequisites for the sandbox deploy (steps 4–5): `podman` (machine started on
 macOS), `oc` logged in to the sandbox cluster, and the GitHub CLI (`gh`)
 authenticated as an account with **`write:packages`** on your registry org.
 
+> **Coding agents:** run generators with `--no-interactive` **and** every required
+> option (name, `--env`, `--sandboxProject`, etc.) supplied — otherwise Nx prompts
+> and your session hangs waiting for input. Setting `CI=true` in the env has the
+> same effect and also skips the Nx Cloud prompt. (`nx run <target>` executors
+> don't prompt — this only applies to `nx g` generators.) The commands below
+> already follow this.
+
 ```bash
 # 1. Empty folder → Nx workspace (the plugins require Nx 23)
 npx create-nx-workspace@latest my-solution --preset=apps --workspaceType=integrated --nxCloud=skip --no-interactive
@@ -62,12 +69,12 @@ NXV=$(node -p "require('./node_modules/nx/package.json').version")
 npm i -D @abgov/nx-oc@beta @abgov/nx-adsp@beta "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
 
 # 3. Scaffold a Postgres + Express + Vue + Node solution (opens a browser for the ADSP tenant login)
-npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant
+npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant --no-interactive
 
 # 4. Add sandbox targets (registry derives from the git remote, or pass --registry=ghcr.io/<org>;
 #    the database is auto-detected from the service — no --database needed)
-npx nx g @abgov/nx-oc:sandbox acme-service --sandboxProject=<namespace> --registry=ghcr.io/<org> --tenant=my-tenant --env=dev
-npx nx g @abgov/nx-oc:sandbox acme-app --sandboxProject=<namespace> --tenant=my-tenant --env=dev
+npx nx g @abgov/nx-oc:sandbox acme-service --sandboxProject=<namespace> --registry=ghcr.io/<org> --tenant=my-tenant --env=dev --no-interactive
+npx nx g @abgov/nx-oc:sandbox acme-app --sandboxProject=<namespace> --tenant=my-tenant --env=dev --no-interactive
 
 # 5. Deploy — backend first so the frontend's /api proxy resolves
 npx nx run acme-service:sandbox
