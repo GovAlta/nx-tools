@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "generators": {
+    "convert-sandbox-target-to-executor": {
+      "version": "13.0.0-beta.3",
+      "description": "Convert generated sandbox `nx:run-commands` targets to the @abgov/nx-oc:sandbox executor.",
+      "implementation": "./src/migrations/convert-sandbox-target/convert-sandbox-target"
+    }
+  }
+}

@@ -2,6 +2,7 @@ import {
   formatFiles,
   generateFiles,
   names,
+  ProjectConfiguration,
   readNxJson,
   readProjectConfiguration,
   Tree,
@@ -17,9 +18,22 @@ import {
 } from '../../utils/git-utils';
 import { getClusterIngressDomain } from '../../utils/oc-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import { DatabaseType } from '../deployment/schema';
 import { NormalizedSchema, Schema } from './schema';
 
 const SANDBOX_GENERATOR = '@abgov/nx-oc:sandbox';
+const DATABASE_TAG_PREFIX = 'adsp:database:';
+
+// Infer the database when --database wasn't passed, so a DB-backed service isn't
+// silently deployed without its DATABASE_URL/migrate wiring. Prefer the explicit
+// tag the express-service generator records; fall back to a drizzle db:migrate
+// target (postgres) for projects generated before the tag existed.
+function detectDatabase(config: ProjectConfiguration): DatabaseType | undefined {
+  const tag = (config.tags ?? []).find((t) => t.startsWith(DATABASE_TAG_PREFIX));
+  if (tag) return tag.slice(DATABASE_TAG_PREFIX.length) as DatabaseType;
+  if (config.targets?.['db:migrate']) return 'postgres';
+  return undefined;
+}
 
 // Resolves the sandbox container registry once per workspace and persists it to
 // nx.json so subsequent sandbox generations reuse it without re-prompting:
@@ -95,6 +109,7 @@ async function normalizeOptions(
   return {
     ...options,
     appType,
+    database: options.database ?? detectDatabase(config) ?? 'none',
     adsp,
     projectName,
     buildOutputPath: getBuildOutputPath(config),
@@ -126,6 +141,27 @@ function addManifestFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
+// Emit the per-app deploy + troubleshooting runbook next to the manifests, so a
+// coding agent has one canonical, app-aware source (rather than the guidance
+// being duplicated across every app's AGENTS.md).
+function addSandboxDoc(host: Tree, options: NormalizedSchema) {
+  generateFiles(
+    host,
+    path.join(__dirname, 'files'),
+    `./.openshift/${options.projectName}`,
+    {
+      projectName: options.projectName,
+      appType: options.appType,
+      database: options.database ?? 'none',
+      sandboxProject: options.sandboxProject,
+      registry: options.registry,
+      registryHost: options.registryHost,
+      imageName: options.imageName,
+      tmpl: '',
+    }
+  );
+}
+
 function addDatabaseFiles(host: Tree, options: NormalizedSchema) {
   if (!options.database || options.database === 'none') return;
   generateFiles(
@@ -143,137 +179,24 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
     sandboxProject,
     database,
     appType,
-    imageRef,
-    registryHost,
+    registry,
     registryOrg,
     imageName,
   } = options;
 
-  const commands: string[] = [];
-
-  // ADSP services authenticate with the access service using a confidential
-  // Keycloak client secret. The express-service generator writes it to the
-  // service's .env (CLIENT_SECRET=...) at generate time; mirror it into an
-  // OpenShift Secret the deployment reads. Upserted from the current .env so
-  // re-runs pick up a rotated secret. Non-node app types have no client secret.
-  if (appType === 'node') {
-    commands.push(
-      `oc create secret generic ${projectName}-secrets ` +
-        `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${config.root}/.env 2>/dev/null | cut -d= -f2-)" ` +
-        `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`
-    );
-  }
-
-  if (database === 'postgres') {
-    commands.push(
-      `oc get secret sandbox-postgres-creds -n ${sandboxProject} 2>/dev/null || ` +
-        `oc create secret generic sandbox-postgres-creds ` +
-        `--from-literal=POSTGRESQL_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
-        `-n ${sandboxProject}`
-    );
-    commands.push(
-      `oc apply -f .openshift/sandbox/sandbox-postgres.yml -n ${sandboxProject}`
-    );
-    // The shared Postgres instance only creates the admin database; each app
-    // needs its own <app>_sandbox database created before its migrate init
-    // container runs (neither the image nor the ORM creates it). Wait for
-    // Postgres to be ready, then create the database idempotently.
-    const dbName = `${projectName}_sandbox`;
-    commands.push(
-      `oc rollout status deployment/sandbox-postgres -n ${sandboxProject} --timeout=180s && ` +
-        `oc exec -n ${sandboxProject} deployment/sandbox-postgres -- ` +
-        `bash -lc "psql -U postgres -tc \\"SELECT 1 FROM pg_database WHERE datname='${dbName}'\\" ` +
-        `| grep -q 1 || createdb -U postgres ${dbName}"`
-    );
-  } else if (database === 'mongo') {
-    commands.push(
-      `oc get secret sandbox-mongodb-creds -n ${sandboxProject} 2>/dev/null || ` +
-        `oc create secret generic sandbox-mongodb-creds ` +
-        `--from-literal=MONGODB_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
-        `-n ${sandboxProject}`
-    );
-    commands.push(
-      `oc apply -f .openshift/sandbox/sandbox-mongodb.yml -n ${sandboxProject}`
-    );
-  }
-
-  // Ensure any paired backend Services exist first, so this app's nginx can
-  // resolve its proxy_pass upstreams at startup (otherwise the pod crashloops
-  // until the Service appears). Create only the Service (all nginx needs for
-  // DNS) — not the backend's deployment, which has no image until its own
-  // sandbox runs. Idempotent: skipped once the Service exists, so it doesn't
-  // slow down repeated frontend iteration. Recorded by the composite generators
-  // (pevn/mevn/…) as `adsp:proxy-service:<name>:<port>` project tags.
-  const PREFIX = 'adsp:proxy-service:';
-  const proxyServices = (config.tags ?? [])
-    .filter((tag) => tag.startsWith(PREFIX))
-    .map((tag) => {
-      const value = tag.slice(PREFIX.length);
-      const lastColon = value.lastIndexOf(':');
-      return {
-        name: value.slice(0, lastColon),
-        port: value.slice(lastColon + 1),
-      };
-    });
-  for (const { name, port } of proxyServices) {
-    commands.push(
-      `oc get service ${name} -n ${sandboxProject} >/dev/null 2>&1 || ` +
-        `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}`
-    );
-  }
-
-  // Build the image locally and push to the container registry, then import it
-  // into the namespace's imagestream. reference-policy=local mirrors it into the
-  // internal registry so pods pull in-cluster (no per-pod pull secret, no node
-  // egress to the registry). This replaces the in-cluster BuildConfig: no
-  // full-workspace upload, and local layer caching makes iteration fast.
-  commands.push(`npx nx build ${projectName} --configuration production`);
-  commands.push(
-    `podman build --platform=linux/amd64 -f .openshift/${projectName}/Dockerfile -t ${imageRef} .`
-  );
-  // Prereq: the publishing account is logged in with write:packages. gh supplies
-  // the token so no PAT is stored; the same session token backs the pull secret.
-  commands.push(
-    `gh auth token | podman login ${registryHost} -u "$(gh api user -q .login)" --password-stdin`
-  );
-  commands.push(`podman push ${imageRef}`);
-  // Per-deploy pull secret from the gh session (sandbox images are re-imported
-  // every run, so a session token is sufficient — no long-lived PAT needed).
-  commands.push(
-    `oc create secret docker-registry ghcr-pull ` +
-      `--docker-server=${registryHost} --docker-username="$(gh api user -q .login)" --docker-password="$(gh auth token)" ` +
-      `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`
-  );
-  // oc tag sets/repoints the imagestream tag (import-image refuses to change an
-  // existing tag's source); import --confirm then pulls the manifest.
-  commands.push(
-    `oc tag ${imageRef} ${projectName}:sandbox --reference-policy=local -n ${sandboxProject}`
-  );
-  // oc tag triggers an async imagestream reconcile, so a back-to-back
-  // import-image can 409 ("object has been modified"). Retry until it settles.
-  commands.push(
-    `n=0; until oc import-image ${projectName}:sandbox --confirm -n ${sandboxProject}; do ` +
-      `n=$((n+1)); [ $n -ge 5 ] && exit 1; sleep 3; done`
-  );
-
-  commands.push(
-    `oc process -f .openshift/${projectName}/${projectName}.yml -p PROJECT=${sandboxProject} | oc apply -f -`
-  );
-
-  commands.push(
-    `oc rollout restart deployment/${projectName} -n ${sandboxProject}`
-  );
-  commands.push(
-    `oc rollout status deployment/${projectName} -n ${sandboxProject} --timeout=180s`
-  );
-
+  // The deploy orchestration (preflight, build → podman → push → import with
+  // retry → rollout, database/paired-service provisioning) lives in the
+  // @abgov/nx-oc:sandbox executor, versioned in the plugin — so bug fixes reach
+  // every project on `npm update` instead of being baked into project.json.
   config.targets = {
     ...config.targets,
     sandbox: {
-      executor: 'nx:run-commands',
+      executor: '@abgov/nx-oc:sandbox',
       options: {
-        commands,
-        parallel: false,
+        sandboxProject,
+        registry,
+        appType,
+        ...(database && database !== 'none' ? { database } : {}),
       },
     },
     'sandbox-teardown': {
@@ -333,6 +256,7 @@ export default async function (host: Tree, options: Schema) {
 
   addManifestFiles(host, normalizedOptions);
   addDatabaseFiles(host, normalizedOptions);
+  addSandboxDoc(host, normalizedOptions);
   addSandboxTarget(host, normalizedOptions);
   await registerSandboxRedirectUri(normalizedOptions);
   await formatFiles(host);

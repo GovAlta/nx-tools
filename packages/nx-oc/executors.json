@@ -5,6 +5,11 @@
       "implementation": "./src/executors/apply/apply",
       "schema": "./src/executors/apply/schema.json",
       "description": "Executor that applies deployment template to OpenShift."
+    },
+    "sandbox": {
+      "implementation": "./src/executors/sandbox/sandbox",
+      "schema": "./src/executors/sandbox/schema.json",
+      "description": "Build locally with podman, push to the registry, import into the sandbox namespace, and roll out."
     }
   }
 }

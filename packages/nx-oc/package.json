@@ -10,7 +10,7 @@
     "directory": "packages/nx-oc"
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0",
+    "@nx/devkit": "^23.0.0",
     "tslib": "^2.0.0"
   },
   "dependencies": {
@@ -23,5 +23,8 @@
   },
   "generators": "./generators.json",
   "executors": "./executors.json",
+  "nx-migrations": {
+    "migrations": "./migrations.json"
+  },
   "scripts": {}
 }

@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "outputCapture": "direct-nodejs",
+  "$schema": "http://json-schema.org/schema",
+  "title": "Sandbox deploy executor",
+  "description": "Builds the project image locally with podman, pushes it to the container registry, imports it into the sandbox namespace, and rolls out the deployment.",
+  "type": "object",
+  "properties": {
+    "sandboxProject": {
+      "type": "string",
+      "description": "The OpenShift namespace to deploy the sandbox into."
+    },
+    "registry": {
+      "type": "string",
+      "description": "Container registry the sandbox image is published to (e.g. ghcr.io/my-org)."
+    },
+    "database": {
+      "type": "string",
+      "enum": ["none", "postgres", "mongo"],
+      "default": "none",
+      "description": "Provision a shared sandbox database of this type before deploying."
+    },
+    "appType": {
+      "type": "string",
+      "enum": ["node", "frontend", "dotnet"],
+      "description": "Application type. Detected from the project configuration when omitted."
+    },
+    "imageTag": {
+      "type": "string",
+      "default": "sandbox",
+      "description": "Image tag pushed and imported into the namespace imagestream."
+    },
+    "skipBuild": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip the nx build + podman build steps and reuse the already-built image (resume a partial deploy)."
+    },
+    "skipPush": {
+      "type": "boolean",
+      "default": false,
+      "description": "Skip the registry login + push and reuse the already-pushed image (resume from the import step)."
+    },
+    "deployBackend": {
+      "type": "boolean",
+      "default": false,
+      "description": "For a frontend: deploy each paired backend (its own sandbox target) first, so proxied /api calls work. Off by default; without it, a missing backend is warned about, not deployed."
+    },
+    "importRetries": {
+      "type": "number",
+      "default": 5,
+      "description": "How many times to retry oc import-image (absorbs the 409 from oc tag's async reconcile)."
+    }
+  },
+  "required": ["sandboxProject", "registry"]
+}

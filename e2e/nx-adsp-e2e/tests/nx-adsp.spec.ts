@@ -179,13 +179,16 @@ describe('nx-adsp e2e', () => {
       expect(
         existsSync(join(tmpProjPath(), `.openshift/${svc}/sandbox-build.yml`))
       ).toBe(false);
-      // The sandbox target builds locally with podman and imports the image.
-      const projectJson = readFileSync(
-        join(tmpProjPath(), `${svc}/project.json`),
-        'utf-8'
+      // The sandbox target is wired to the executor (which builds locally with
+      // podman and imports the image); orchestration lives in the plugin now.
+      const projectJson = JSON.parse(
+        readFileSync(join(tmpProjPath(), `${svc}/project.json`), 'utf-8')
       );
-      expect(projectJson).toContain('podman build');
-      expect(projectJson).toContain('oc import-image');
+      expect(projectJson.targets.sandbox.executor).toBe('@abgov/nx-oc:sandbox');
+      expect(projectJson.targets.sandbox.options).toMatchObject({
+        sandboxProject: 'test-build',
+        registry: 'ghcr.io/test-org',
+      });
       const dockerfile = readFileSync(
         join(tmpProjPath(), `.openshift/${svc}/Dockerfile`),
         'utf-8'

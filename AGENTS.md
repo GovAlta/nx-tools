@@ -94,7 +94,19 @@ schema.d.ts       # TypeScript interface: Schema
 [name].spec.ts    # Jest unit tests
 ```
 
-New executors must be registered in `packages/nx-oc/executors.json`.
+New executors must be registered in `packages/nx-oc/executors.json`. `nx-oc` ships two:
+`apply` (wraps `oc apply`) and `sandbox` (local-podman-build deploy — see **Sandbox
+deployment** below).
+
+### Migrations
+
+`nx-oc` has an `nx migrate` migrations registry at `packages/nx-oc/migrations.json`
+(wired via the `nx-migrations` field in its `package.json`, and packaged by an asset glob
+in `project.json`). Migrations live under `packages/nx-oc/src/migrations/[name]/`. A
+migration's `version` must be on the branch's release line (e.g. `13.0.0-beta.3` on
+`beta`) so `nx migrate` runs it for the right upgrade range. Migrations retrofit generated
+config in consuming workspaces — e.g. `convert-sandbox-target-to-executor` rewrites older
+`nx:run-commands` sandbox targets to the `@abgov/nx-oc:sandbox` executor.
 
 ---
 
@@ -166,12 +178,20 @@ unless explicitly directed.
 
 ## Branching and Release
 
-- **`main`** — stable releases (e.g. `12.0.0`)
-- **`beta`** — pre-releases (e.g. `12.1.0-beta.1`); use this channel only when a
-  change needs to be validated by importing the published package from a consuming
-  project before it reaches stable. Changes that can be fully verified within this
-  repo (docs, dependency updates, refactors, generator logic covered by unit/e2e
-  tests) should target `main` directly.
+- **`main`** — the current stable line (Nx 22 / `@abgov/*@12`).
+- **`beta`** — the **next major line**, currently Nx 23 / `@abgov/*@13`, published on
+  the `@beta` dist-tag (e.g. `13.0.0-beta.4`). This is a standing major-version track,
+  not just an occasional validation channel: features that require Nx 23 (the sandbox
+  executor, DB auto-detection, `--deployBackend`, etc.) live here and graduate to `main`
+  when the major line does. A change targets `beta` when it depends on the Nx 23 line or
+  needs validation by importing the published package from a consuming project; changes
+  fully verifiable within this repo against the stable line (docs, refactors, generator
+  logic covered by tests) target `main`.
+
+Version-pinned specs written for the `beta` prerelease (peer ranges like `^13.0.0-0`,
+migration `version`s like `13.0.0-beta.3`) are deliberately valid for both the prerelease
+and the eventual stable release, so they carry to `main` on promotion without edits — and
+promotion merges must stay pure (never fold a content edit into a merge commit).
 
 ### Version convention
 
@@ -182,7 +202,13 @@ unless explicitly directed.
 | @nrwl/cli@11 | @abgov/nx-oc@1 |
 | @nrwl/cli@12 | @abgov/nx-oc@2 |
 | @nrwl/cli@15 | @abgov/nx-oc@5 |
-| @nx/devkit@22 | @abgov/nx-oc@12 |
+| @nx/devkit@22 | @abgov/nx-oc@12 (`main`) |
+| @nx/devkit@23 | @abgov/nx-oc@13 (`beta`) |
+
+So the `beta` branch's package peers are `@nx/* ^23`, and its sibling peer is
+`@abgov/nx-oc@^13.0.0-0` (the `-0` accepts the `13.0.0-beta.x` prereleases). When
+bumping a version-pinned spec on `beta` (peer range, migration `version`), keep it on
+the 13 line, not 12.
 
 The `package.json` `version` field in this repo is a placeholder `0.0.0`.
 Semantic-release sets the real published version at CI publish time.
@@ -219,8 +245,16 @@ Publishing uses OIDC (no stored NPM token); `NUGET_API_KEY` is used by `semantic
 
 ## ADSP Platform Notes
 
-Generators that call `getAdspConfiguration()` — `angular-app`, `react-app`, `dotnet-service`,
-`react-dotnet`, `deployment` — perform a live OAuth browser login at generation time to
+App/service generators: `express-service` (Node/Express; `--database postgres` uses Drizzle
+with a migrate init container, `mongo` uses Mongoose), `vue-app`, `react-app`, `angular-app`,
+`dotnet-service`, `react-dotnet`, plus the composite full-stack generators `pevn` / `mevn` /
+`pern` / `pean` (which compose a service + a frontend). Framework peers (`@nx/react`,
+`@nx/angular`, `@nx/vue`, `@nx/express`, `@nx-dotnet/core`) are declared **optional** in
+`nx-adsp`'s `package.json` (`peerDependenciesMeta`), so a consuming workspace installs only
+the peers for the generators it uses and gets a clean, no-`--legacy-peer-deps` install.
+
+Generators that call `getAdspConfiguration()` — the above app/service generators and
+`deployment` — perform a live OAuth browser login at generation time to
 retrieve tenant configuration from ADSP APIs. In unit tests these generators must be mocked:
 
 ```typescript
@@ -239,6 +273,41 @@ ADSP environments (dev, test, prod) are defined in
 - `nx-oc` generators produce `.openshift/` YAML manifests from EJS templates named `*.yml__tmpl__`.
 - The `apply` executor wraps the `oc` CLI; it expects `oc` to be on `PATH`.
 - `pipeline.ts` supports two `pipelineType` values: `'jenkins'` and `'actions'` (GitHub Actions).
+
+---
+
+## Sandbox deployment (nx-oc)
+
+The `sandbox` generator (`packages/nx-oc/src/generators/sandbox/`) sets up a rapid local
+deploy for a single app. It emits, into `.openshift/<app>/`, a `Dockerfile`, the deploy
+manifest, and a `SANDBOX.md` runbook (`files/SANDBOX.md__tmpl__`), and adds two targets to
+the project:
+
+- `sandbox` → the **`@abgov/nx-oc:sandbox` executor** (thin `{ options }`; orchestration is
+  versioned in the plugin, not baked into `project.json`).
+- `sandbox-teardown` → `nx:run-commands` (kept as commands intentionally — simple/idempotent).
+
+The executor (`packages/nx-oc/src/executors/sandbox/`) runs: preflight (`oc` login, `gh auth`,
+`podman info` — fail fast before the build) → optional secret/DB/paired-service provisioning →
+`nx build` → `podman build --platform=linux/amd64` → `podman push` to `ghcr.io/<org>/<ns>-<app>` →
+per-deploy pull secret → `oc tag … --reference-policy=local` → **`oc import-image` with retry**
+(absorbs the tag-reconcile 409) → `oc process | oc apply` → `oc rollout`. Pods pull in-cluster
+via the local reference policy. Options include `--database`, `--imageTag`, `--importRetries`,
+`--deployBackend`, and `--skipBuild`/`--skipPush` (resume a partial deploy).
+
+Key wiring to preserve when editing:
+
+- **DB auto-detection**: `express-service` records an `adsp:database:<type>` project tag; the
+  sandbox generator reads it (falling back to a drizzle `db:migrate` target ⇒ `postgres`), so
+  no `--database` flag is needed. Mirrors the `adsp:proxy-service:<name>:<port>` tag that
+  `vue-app`/frontends record for the executor's paired-Service handling.
+- **Registry** resolves as `--registry` → `nx.json` (persisted) → derived from the git remote →
+  prompt; it's lowercased and stored under `generators['@abgov/nx-oc:sandbox']` in `nx.json`.
+- **Auth**: the deploy reads `gh auth token` for both the image push and the pull secret (no PAT
+  stored), so the **active** `gh` account must have `write:packages` on the registry org — the
+  preflight checks `gh auth status` but not the scope/identity.
+- The generator unit tests assert the target/manifest shape; the executor tests mock `child_process`
+  `execSync` and assert the command sequence/preflight/retry.
 
 ---
 

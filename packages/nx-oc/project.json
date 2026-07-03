@@ -52,6 +52,11 @@
             "input": "./packages/nx-oc",
             "glob": "executors.json",
             "output": "."
+          },
+          {
+            "input": "./packages/nx-oc",
+            "glob": "migrations.json",
+            "output": "."
           }
         ]
       }

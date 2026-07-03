@@ -10,14 +10,14 @@
     "directory": "packages/nx-adsp"
   },
   "peerDependencies": {
-    "@abgov/nx-oc": "^12.3.0",
+    "@abgov/nx-oc": "^13.0.0-0",
     "@nx-dotnet/core": "^3.0.0",
-    "@nx/angular": "^22.0.0",
-    "@nx/devkit": "^22.0.0",
-    "@nx/eslint": "^22.0.0",
-    "@nx/express": "^22.0.0",
-    "@nx/react": "^22.0.0",
-    "@nx/vue": "^22.0.0",
+    "@nx/angular": "^23.0.0",
+    "@nx/devkit": "^23.0.0",
+    "@nx/eslint": "^23.0.0",
+    "@nx/express": "^23.0.0",
+    "@nx/react": "^23.0.0",
+    "@nx/vue": "^23.0.0",
     "tslib": "^2.0.0"
   },
   "peerDependenciesMeta": {
