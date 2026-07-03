@@ -9,7 +9,16 @@ This service is paired with **`<%= pairedProject %>`** — the frontend app it s
 The frontend proxies `/api/` to `/<%= projectName %>/` on port 3333 (dev) and via nginx (production).
 When working on a feature that spans both projects, read `apps/<%= pairedProject %>/AGENTS.md` for the frontend context.
 <% } %>
+## Running Nx commands (coding agents)
+
+Run generators with `--no-interactive` **and** every required option supplied. With
+`--no-interactive`, a missing required option errors instead of prompting, so an
+interactive prompt never blocks your session (`CI=true` in the env does the same and
+also skips the Nx Cloud prompt). This applies to `nx g` generators; `nx run <target>`
+executors read options from `project.json` and do not prompt.
+
 ## Stack
+
 
 - **Runtime**: Node.js + Express
 - **Auth**: passport.js with tenant strategy from `@abgov/adsp-service-sdk`
