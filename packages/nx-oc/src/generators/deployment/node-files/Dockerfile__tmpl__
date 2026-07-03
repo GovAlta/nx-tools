@@ -1,5 +1,10 @@
 FROM registry.access.redhat.com/ubi9/nodejs-24
-ARG PROJECT
-COPY ./dist/apps/${PROJECT} .
+<% if (sourceRepositoryUrl) { %>
+# Provenance: associate the image with its source repo (shown in GHCR).
+LABEL org.opencontainers.image.source=<%= sourceRepositoryUrl %>
+<% } %>
+# Build output path mirrors the workspace layout (from the project's build target).
+COPY ./<%= buildOutputPath %> .
 COPY ./node_modules ./node_modules
+
 CMD node main.js

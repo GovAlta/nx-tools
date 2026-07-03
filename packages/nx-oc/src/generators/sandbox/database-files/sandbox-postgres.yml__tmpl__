@@ -3,7 +3,9 @@
 # deleted on re-apply, so data persists across deployments.
 #
 # Multiple apps in the same namespace share this instance. Each app uses its
-# own database (<appName>_sandbox) created automatically by Prisma migrate.
+# own database (<appName>_sandbox): the `nx run <app>:sandbox` target creates it
+# (idempotently) after Postgres is ready, and the app's migrate init container
+# applies the schema on deploy.
 #
 # Credentials are stored in the sandbox-postgres-creds Secret, created once
 # per namespace by `nx run <app>:sandbox` on first use. Subsequent apps read

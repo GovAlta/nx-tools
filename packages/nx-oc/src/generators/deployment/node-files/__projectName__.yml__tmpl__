@@ -91,7 +91,7 @@ objects:
 <% } else { %>
               image: image-registry.openshift-image-registry.svc:5000/${INFRA_PROJECT}/${APP_NAME}:${DEPLOY_TAG}
 <% } %>
-              command: ["npx", "prisma", "migrate", "deploy"]
+              command: ["node", "migrate.js"]
               envFrom:
                 - configMapRef:
                     name: ${APP_NAME}
@@ -127,6 +127,17 @@ objects:
                   value: '3333'
                 - name: LOG_LEVEL
                   value: info
+                # ADSP confidential-client secret the service uses to authenticate
+                # with the access service. Sandbox: created by `nx run <app>:sandbox`
+                # from the service's .env.
+<% if (!sandbox) { %>
+                # Other envs: oc create secret generic ${APP_NAME}-secrets --from-literal=CLIENT_SECRET=<secret>
+<% } %>
+                - name: CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${APP_NAME}-secrets
+                      key: CLIENT_SECRET
 <% if (database === 'postgres') { %>
 <% if (sandbox) { %>
                 - name: POSTGRES_PASSWORD

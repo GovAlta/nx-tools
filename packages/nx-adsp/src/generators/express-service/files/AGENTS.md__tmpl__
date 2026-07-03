@@ -18,7 +18,7 @@ When working on a feature that spans both projects, read `apps/<%= pairedProject
   event publishing, configuration management, and service discovery
 - **Tests**: Jest
 <% if (database === 'postgres') { %>
-- **Database**: PostgreSQL via Prisma ORM
+- **Database**: PostgreSQL via Drizzle ORM (pure TypeScript, node-postgres driver)
 <% } else if (database === 'mongo') { %>
 - **Database**: MongoDB via Mongoose
 <% } %>
@@ -31,8 +31,10 @@ When working on a feature that spans both projects, read `apps/<%= pairedProject
 | `src/environment.ts` | Validated env config with defaults pre-set from ADSP tenant |
 | `src/events.ts` | Domain event definitions — register in `initializeService({ events })` |
 <% if (database === 'postgres') { %>
-| `src/database.ts` | PrismaClient singleton — import `{ prisma }` in route handlers |
-| `prisma/schema.prisma` | Prisma schema — edit to add models, then run `nx db:migrate <%= projectName %>` |
+| `src/database.ts` | Drizzle `db` instance — import `{ db }` in route handlers |
+| `src/db/schema.ts` | Drizzle table definitions — edit to add tables, then run `nx db:generate <%= projectName %>` |
+| `src/migrate.ts` | Standalone migration runner — bundled to `migrate.js`, run as the deploy init container |
+| `drizzle.config.ts` | drizzle-kit config (schema path, migrations output, connection) |
 <% } else if (database === 'mongo') { %>
 | `src/database.ts` | Mongoose connection helpers — `connectDatabase()` and `disconnectDatabase()` |
 <% } %>
@@ -144,35 +146,43 @@ podman machine init
 podman machine start
 ```
 
-## Adding a Prisma model
+## Adding a table
 
-1. Edit `prisma/schema.prisma` to add your model
-2. Run `nx db:migrate <%= projectName %>` — creates and applies the migration
-3. Run `nx db:generate <%= projectName %>` if the client isn't updated automatically
-4. Import `{ prisma }` from `./database` in your route handler
+1. Edit `src/db/schema.ts` to add your table (Drizzle `pgTable`)
+2. Run `nx db:generate <%= projectName %>` — writes a SQL migration to `drizzle/`
+3. Run `nx db:migrate <%= projectName %>` — applies pending migrations to your dev DB
+4. Import `{ db }` from `./database` and your table from `./db/schema` in a handler
 
 ```typescript
-// Example route using Prisma
+// Example route using Drizzle
+import { db } from './database';
+import { items } from './db/schema';
+
 app.get('/<%= projectName %>/v1/items', async (_req, res) => {
-  const items = await prisma.item.findMany();
-  res.json(items);
+  const rows = await db.select().from(items);
+  res.json(rows);
 });
 ```
 
-## Prisma targets
+## Drizzle targets
 
 | Target | Command | Use |
 |--------|---------|-----|
-| `nx db:migrate <%= projectName %>` | `prisma migrate dev` | Create + apply migration during development |
-| `nx db:migrate:deploy <%= projectName %>` | `prisma migrate deploy` | Apply pending migrations in production/CI |
-| `nx db:generate <%= projectName %>` | `prisma generate` | Regenerate the Prisma client after schema changes |
-| `nx db:studio <%= projectName %>` | `prisma studio` | Open Prisma Studio to browse data |
+| `nx db:generate <%= projectName %>` | `drizzle-kit generate` | Generate a SQL migration from schema changes |
+| `nx db:migrate <%= projectName %>` | `drizzle-kit migrate` | Apply pending migrations to the dev DB |
+| `nx db:migrate:deploy <%= projectName %>` | `drizzle-kit migrate` | Apply pending migrations in a dev/CI shell |
+| `nx db:studio <%= projectName %>` | `drizzle-kit studio` | Open Drizzle Studio to browse data |
+
+`drizzle-kit` is a dev-only dependency. In the container, migrations are applied
+by `migrate.js` (bundled from `src/migrate.ts`), which uses only `drizzle-orm` +
+`pg` — no CLI and no native engine — so it runs under OpenShift's arbitrary UID.
 
 ## OpenShift deployment — database
 
 The deployment manifest references a Secret named `{appName}-database` for the
-`DATABASE_URL` value, and runs `prisma migrate deploy` as an init container
-before the application starts.
+`DATABASE_URL` value, and runs `node migrate.js` as an init container before the
+application starts. The generated SQL migrations in `drizzle/` are shipped into
+the build output as assets so the init container can apply them.
 
 Create the Secret in each OpenShift namespace before first deploy:
 
@@ -308,8 +318,8 @@ nginx in production. All API routes live under `/<%= projectName %>/v1/`.
 ## OpenShift targets
 
 ```bash
-nx run <%= projectName %>:sandbox           # build + push to OC internal registry + deploy
-nx run <%= projectName %>:sandbox-teardown  # remove sandbox resources
+nx run <%= projectName %>:sandbox           # build locally (podman) + push to GHCR + deploy
+nx run <%= projectName %>:sandbox-teardown  # remove sandbox resources + delete the GHCR image
 nx run <%= projectName %>:apply-envs        # apply manifests to all environments
 nx run <%= projectName %>:teardown-dev      # remove from dev environment
 ```
@@ -322,3 +332,29 @@ nx run <%= projectName %>:teardown-dev      # remove from dev environment
 - `configurationHandler` on the API path — provides configuration service
   integration; keep it applied before route handlers
 - `createErrorHandler(logger)` — must remain the last `app.use()` call
+
+## Sandbox deployment (local build)
+
+The `sandbox` targets are added by the nx-oc sandbox generator — run it once per app first:
+
+```bash
+nx g @abgov/nx-oc:sandbox <%= projectName %> --sandboxProject <your-namespace>
+```
+
+Then `nx run <%= projectName %>:sandbox` builds the image **locally with podman**, pushes it to GHCR, and imports it into your sandbox namespace — no git push or CI wait. Prerequisites (one-time):
+
+- `podman` installed and running (`podman machine start` on macOS).
+- `oc` logged in, targeting your (per-user) sandbox namespace.
+- `gh auth login` as an account with **`write:packages`** on the registry org. That account must be the **active** `gh` account when you run the target — the sandbox reads `gh auth token` for both the image push and the pull secret (no PAT is stored). Check with `gh auth status`; switch with `gh auth switch -u <account>`.
+
+The registry (`ghcr.io/<org>`) is derived from the git remote on first run and saved in `nx.json`. The image is `<registry>/<sandboxProject>-<app>:sandbox` (namespace-prefixed to avoid collisions). If a push or import fails, it's almost always the active `gh` account lacking `write:packages` or access to the org — re-run after `gh auth switch`.
+
+### Verify & troubleshoot a sandbox deploy
+
+The target ends with `oc rollout status`. To confirm and diagnose:
+
+- **Health:** `oc get pods -n <namespace> -l name=<%= projectName %>` and `curl https://$(oc get route <%= projectName %> -n <namespace> -o jsonpath='{.spec.host}')/health`.
+- **Push or import failed:** almost always the active `gh` account lacks `write:packages` or access to the org — check `gh auth status`, then `gh auth switch -u <account>` and re-run.
+- **Pod CrashLoopBackOff / not ready:** `oc logs -n <namespace> <pod> -c <%= projectName %>`. For a service with a database, also check the migration init container: `oc logs -n <namespace> <pod> -c <%= projectName %>-migrate`.
+- **`podman` errors:** ensure the machine is running — `podman machine start` (macOS).
+- **Namespace missing:** create it with `oc new-project <namespace>`.

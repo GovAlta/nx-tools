@@ -112,7 +112,7 @@ npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 | `project` | — | Yes | Name of the existing Nx project to add deployment manifests to |
 | `appType` | `-t` | Yes | Application type: `frontend`, `dotnet`, or `node` |
 | `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a Prisma migration init container for `postgres`. |
+| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a migration init container (node migrate.js) for `postgres`. |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
@@ -137,7 +137,7 @@ Note: when `@abgov/nx-adsp` generators create a new application and `@abgov/nx-o
 
 ### sandbox
 
-Generates a sandbox deployment for rapid local iteration — no git push or CI wait required. Builds the container image locally, pushes directly to the OpenShift internal registry, and deploys to a sandbox namespace in a single command.
+Generates a sandbox deployment for rapid local iteration — no git push or CI wait required. Builds the container image locally with `podman`, pushes it to a container registry (GHCR), and imports it into a sandbox namespace in a single command.
 
 ```bash
 npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject my-sandbox-ns
@@ -147,16 +147,23 @@ npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --da
 | Option | Alias | Required | Description |
 |--------|-------|----------|-------------|
 | `project` | — | Yes | Name of the existing Nx project |
-| `sandboxProject` | `-s` | Yes | OpenShift namespace to deploy the sandbox into |
+| `sandboxProject` | `-s` | Yes | OpenShift namespace to deploy the sandbox into (expected to be per-user) |
 | `appType` | `-t` | No | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided. |
 | `database` | — | No | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace. |
 | `env` | — | No | ADSP environment to target for configuration: `dev` (default), `test`, or `prod` |
+| `registry` | `-r` | No | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided. |
+
+**Prerequisites** (local build, one-time):
+
+- `podman` installed.
+- `gh auth login` as an account with **`write:packages`** on the registry org (the same login supplies both the push and the per-deploy pull secret — no PAT is stored).
 
 The generator adds `sandbox` and `sandbox-teardown` targets to the project and creates:
 
 ```
 .openshift/
   ├─ my-app/
+  │   ├─ Dockerfile          ← built locally by the sandbox target
   │   └─ my-app.yml          ← sandbox deployment manifest
   └─ sandbox/
       └─ sandbox-postgres.yml  ← shared DB (written once, reused by all apps)
@@ -164,18 +171,23 @@ The generator adds `sandbox` and `sandbox-teardown` targets to the project and c
 
 Running `nx run my-app:sandbox` executes the full loop:
 
-1. Creates a credentials Secret (`sandbox-postgres-creds` or `sandbox-mongodb-creds`) in the namespace on first run — generates a random password. Subsequent runs skip this; the existing secret is reused by all apps in the namespace.
-2. Applies the shared DB manifest (idempotent — no-op if already deployed)
-3. Applies the app manifest (idempotent)
-4. Detects `podman` or `docker` at runtime and builds the container image locally
-5. Pushes to the OC internal registry
-6. Restarts the Deployment and waits for rollout
+1. Creates the ADSP client Secret (node) and DB credentials Secret on first run; creates the per-app database (postgres). Idempotent.
+2. `nx build` → `podman build --platform=linux/amd64` → `podman push` to `<registry>/<sandboxProject>-<app>:sandbox`.
+3. Refreshes the `ghcr-pull` Secret from the current `gh` session token.
+4. `oc tag` + `oc import-image --reference-policy=local` — the internal registry serves the image, so pods pull in-cluster (no per-pod pull secret, no node egress).
+5. Applies the manifest, restarts the Deployment, waits for rollout.
 
-**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`) — Prisma creates it automatically on first migrate. No manual database provisioning is required. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
+Local layer caching makes iteration fast — after the first push, only the changed app layer is re-uploaded.
 
-**Credentials:** The generated password is stored in an OC Secret. The DB pod and every app pod read from the same Secret at runtime — no credential is hardcoded in any manifest.
+**Registry & naming:** the image name is prefixed with the (per-user) `sandboxProject` — `<registry>/<sandboxProject>-<app>:sandbox` — so images from different experimenters never collide on GHCR's org-global package namespace. Sandbox packages are **not repo-linked** (only Actions-published packages are), so they're identifiable as the org's unlinked container packages:
 
-**Teardown:** `nx run my-app:sandbox-teardown` runs `oc delete all,configmap -l app=<name>` against the sandbox namespace, removing every resource the template created. The shared database and its PVC are left in place — other apps in the namespace may still be using them. To remove the shared database manually:
+```bash
+gh api "/orgs/<org>/packages?package_type=container" -q '.[] | select(.repository == null) | .name'
+```
+
+**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`); migrations are applied on deploy by the app's migrate init container. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
+
+**Teardown:** `nx run my-app:sandbox-teardown` deletes the app's OpenShift resources **and** its GHCR package (best-effort; deleting the package needs `delete:packages`). The shared database and its PVC are left in place — other apps in the namespace may still be using them. To remove the shared database manually:
 
 ```bash
 oc delete -f .openshift/sandbox/sandbox-postgres.yml -n <sandbox-namespace>

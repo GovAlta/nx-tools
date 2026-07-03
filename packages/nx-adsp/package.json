@@ -27,6 +27,12 @@
     "@nx/angular": {
       "optional": true
     },
+    "@nx/express": {
+      "optional": true
+    },
+    "@nx/react": {
+      "optional": true
+    },
     "@nx/vue": {
       "optional": true
     }

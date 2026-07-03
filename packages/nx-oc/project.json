@@ -39,6 +39,11 @@
             "output": "./src"
           },
           {
+            "input": "./packages/nx-oc/src",
+            "glob": "**/*__tmpl__",
+            "output": "./src"
+          },
+          {
             "input": "./packages/nx-oc",
             "glob": "generators.json",
             "output": "."

@@ -1,7 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
 import { AddressInfo } from 'net';
 import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import {
   checkFilesExist,
@@ -36,20 +36,6 @@ function setupE2eWorkspace(mockUrl: string) {
     cwd: tmpProjPath(),
     stdio: ['ignore', 'ignore', 'ignore'],
   });
-  // npm caches file: deps by tarball hash and may install a stale compiled version.
-  // Directly overwrite environments.js so the generator always uses the mock URLs.
-  writeFileSync(
-    join(tmpProjPath(), 'node_modules/@abgov/nx-oc/src/adsp/environments.js'),
-    `"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.environments = void 0;
-exports.environments = {
-  dev:  { accessServiceUrl: "${mockUrl}", directoryServiceUrl: "${mockUrl}" },
-  test: { accessServiceUrl: "${mockUrl}", directoryServiceUrl: "${mockUrl}" },
-  prod: { accessServiceUrl: "${mockUrl}", directoryServiceUrl: "${mockUrl}" },
-};
-`
-  );
 }
 
 const MOCK_CLIENT_UUID = 'aaaa1111-bbbb-cccc-dddd-eeee22223333';
@@ -130,6 +116,13 @@ describe('nx-adsp e2e', () => {
     await new Promise<void>((resolve) => mockServer.listen(0, '127.0.0.1', resolve));
     port = (mockServer.address() as AddressInfo).port;
     mockUrl = `http://localhost:${port}`;
+    // Point the generators' ADSP calls at the mock via the ADSP_E2E_* overrides
+    // that environments.ts honours. Do NOT overwrite the compiled
+    // environments.js — that mutation can leak into the published package (it
+    // once shipped a localhost URL). Env vars are inherited by the generator
+    // subprocesses that runNxCommandAsync spawns.
+    process.env.ADSP_E2E_ACCESS_URL = mockUrl;
+    process.env.ADSP_E2E_DIRECTORY_URL = mockUrl;
   }, 30000);
 
   afterAll(async () => {
@@ -162,6 +155,65 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(`${plugin}/src/main.ts`);
     }, 90000);
+  });
+
+  // Runs the nx-oc sandbox generator against the *installed* plugin (dist), so
+  // it guards the packaged Dockerfile template and the local-build wiring end to
+  // end — the target must build locally (podman) and import the image, and must
+  // NOT emit the old in-cluster BuildConfig manifest. --registry is passed so
+  // the test doesn't depend on the workspace's git remote.
+  describe('sandbox deployment', () => {
+    it('writes a Dockerfile and imports it locally for a node service', async () => {
+      const svc = uniq('sbx-svc');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
+      );
+      checkFilesExist(
+        `.openshift/${svc}/Dockerfile`,
+        `.openshift/${svc}/${svc}.yml`
+      );
+      // The in-cluster BuildConfig manifest is gone.
+      expect(
+        existsSync(join(tmpProjPath(), `.openshift/${svc}/sandbox-build.yml`))
+      ).toBe(false);
+      // The sandbox target builds locally with podman and imports the image.
+      const projectJson = readFileSync(
+        join(tmpProjPath(), `${svc}/project.json`),
+        'utf-8'
+      );
+      expect(projectJson).toContain('podman build');
+      expect(projectJson).toContain('oc import-image');
+      const dockerfile = readFileSync(
+        join(tmpProjPath(), `.openshift/${svc}/Dockerfile`),
+        'utf-8'
+      );
+      expect(dockerfile).toContain('node');
+    }, 180000);
+
+    it('writes a Dockerfile and imports it locally for a frontend app', async () => {
+      const app = uniq('sbx-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
+      );
+      checkFilesExist(
+        `.openshift/${app}/Dockerfile`,
+        `.openshift/${app}/${app}.yml`
+      );
+      expect(
+        existsSync(join(tmpProjPath(), `.openshift/${app}/sandbox-build.yml`))
+      ).toBe(false);
+      const dockerfile = readFileSync(
+        join(tmpProjPath(), `.openshift/${app}/Dockerfile`),
+        'utf-8'
+      );
+      expect(dockerfile).toContain('nginx');
+    }, 180000);
   });
 
   describe('react app', () => {
@@ -209,7 +261,7 @@ describe('nx-adsp e2e', () => {
   }, 180000);
 
   describe('pern', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pern');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pern ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -217,7 +269,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-service/src/db/schema.ts`,
         `${plugin}-app/nginx.conf`,
         `${plugin}-app/src/app/app.tsx`,
       );
@@ -228,7 +280,7 @@ describe('nx-adsp e2e', () => {
   });
 
   describe('pean', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pean');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pean ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -236,7 +288,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
+        `${plugin}-service/src/db/schema.ts`,
         `${plugin}-app/nginx.conf`,
         `${plugin}-app/src/main.ts`,
       );
@@ -247,7 +299,7 @@ describe('nx-adsp e2e', () => {
   });
 
   describe('pevn', () => {
-    it('should generate fullstack with Prisma and build the service', async () => {
+    it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pevn');
       await runNxCommandAsync(
         `generate @abgov/nx-adsp:pevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
@@ -255,8 +307,8 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-service/prisma/schema.prisma`,
-        `${plugin}-app/nginx.conf`,
+        `${plugin}-service/src/db/schema.ts`,
+        `${plugin}-app/public/nginx.conf`,
         `${plugin}-app/src/App.vue`,
       );
 
@@ -274,7 +326,7 @@ describe('nx-adsp e2e', () => {
 
       checkFilesExist(
         `${plugin}-service/src/main.ts`,
-        `${plugin}-app/nginx.conf`,
+        `${plugin}-app/public/nginx.conf`,
         `${plugin}-app/src/App.vue`,
       );
 

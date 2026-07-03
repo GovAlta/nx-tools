@@ -98,7 +98,13 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   const normalizedOptions = await normalizeOptions(host, options);
 
-  const { applicationGenerator: initExpress } = await import('@nx/express');
+  const { applicationGenerator: initExpress } = await import('@nx/express').catch(
+    () => {
+      throw new Error(
+        "The 'express-service' generator requires the '@nx/express' plugin. Install it and re-run:\n  npm i -D @nx/express"
+      );
+    }
+  );
   await initExpress(host, {
     ...options,
     skipFormat: true,
@@ -121,7 +127,7 @@ export default async function (host: Tree, options: Schema) {
       passport: '^0.7.0',
       'passport-anonymous': '^1.0.1',
       zod: '^3.0.0',
-      ...(normalizedOptions.database === 'postgres' ? { '@prisma/client': '^6.0.0' } : {}),
+      ...(normalizedOptions.database === 'postgres' ? { 'drizzle-orm': '^0.44.0', pg: '^8.11.0' } : {}),
       ...(normalizedOptions.database === 'mongo' ? { mongoose: '^8.0.0' } : {}),
     },
     {
@@ -129,7 +135,7 @@ export default async function (host: Tree, options: Schema) {
       '@types/cors': '^2.8.17',
       '@types/passport': '^1.0.16',
       '@types/passport-anonymous': '^1.0.3',
-      ...(normalizedOptions.database === 'postgres' ? { prisma: '^6.0.0' } : {}),
+      ...(normalizedOptions.database === 'postgres' ? { 'drizzle-kit': '^0.31.0', '@types/pg': '^8.11.0' } : {}),
       'eslint-plugin-security': '^3.0.0',
       'eslint-plugin-no-secrets': '^2.0.0',
       'eslint-plugin-jest': '^28.0.0',
@@ -165,38 +171,39 @@ export default async function (host: Tree, options: Schema) {
     if (normalizedOptions.database === 'postgres') {
       targets['db:generate'] = {
         executor: 'nx:run-commands',
-        options: { command: 'npx prisma generate', cwd: '{projectRoot}' },
+        options: { command: 'npx drizzle-kit generate', cwd: '{projectRoot}' },
       };
       targets['db:migrate'] = {
         executor: 'nx:run-commands',
-        options: { command: 'npx prisma migrate dev', cwd: '{projectRoot}' },
+        options: { command: 'npx drizzle-kit migrate', cwd: '{projectRoot}' },
       };
       targets['db:migrate:deploy'] = {
         executor: 'nx:run-commands',
-        options: { command: 'npx prisma migrate deploy', cwd: '{projectRoot}' },
+        options: { command: 'npx drizzle-kit migrate', cwd: '{projectRoot}' },
       };
       targets['db:studio'] = {
         executor: 'nx:run-commands',
-        options: { command: 'npx prisma studio', cwd: '{projectRoot}' },
+        options: { command: 'npx drizzle-kit studio', cwd: '{projectRoot}' },
       };
 
-      // Prisma client must be generated before TypeScript can compile the project.
-      if (targets['build']) {
+      // Ship the SQL migrations (drizzle/) into the build output so the migrate.js
+      // init container can apply them at deploy time. Drizzle is pure TypeScript
+      // with no client codegen, so the build has no db:generate prerequisite.
+      if (targets['build']?.options) {
         targets['build'] = {
           ...targets['build'],
-          dependsOn: [...(targets['build'].dependsOn ?? []), 'db:generate'],
+          options: {
+            ...targets['build'].options,
+            assets: [
+              ...(targets['build'].options.assets ?? []),
+              {
+                input: `${normalizedOptions.projectRoot}/drizzle`,
+                glob: '**/*',
+                output: 'drizzle',
+              },
+            ],
+          },
         };
-      }
-
-      // The generated client is project-scoped to src/generated/prisma — exclude
-      // it from source control so it doesn't get committed alongside app code.
-      const gitignorePath = '.gitignore';
-      const ignoreEntry = `${normalizedOptions.projectRoot}/src/generated/`;
-      if (host.exists(gitignorePath)) {
-        const content = host.read(gitignorePath).toString();
-        if (!content.includes(ignoreEntry)) {
-          host.write(gitignorePath, `${content.trimEnd()}\n${ignoreEntry}\n`);
-        }
       }
     }
 

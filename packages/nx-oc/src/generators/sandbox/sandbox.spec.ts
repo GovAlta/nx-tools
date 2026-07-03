@@ -1,5 +1,6 @@
 import {
   addProjectConfiguration,
+  readNxJson,
   readProjectConfiguration,
 } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
@@ -9,18 +10,24 @@ import generator from './sandbox';
 import { Schema } from './schema';
 
 jest.mock('../../adsp');
+jest.mock('../../utils/oc-utils', () => ({
+  ...jest.requireActual('../../utils/oc-utils'),
+  getClusterIngressDomain: jest.fn(() => 'apps.test.example.com'),
+}));
 const utilsMock = utils as jest.Mocked<typeof utils>;
 utilsMock.getAdspConfiguration.mockResolvedValue({
   tenant: 'test',
   tenantRealm: 'test',
   accessServiceUrl: environments.test.accessServiceUrl,
   directoryServiceUrl: environments.test.directoryServiceUrl,
+  accessToken: 'mock-token',
 });
 
 describe('Sandbox Generator', () => {
   const options: Schema = {
     project: 'test',
     sandboxProject: 'test-sandbox',
+    registry: 'ghcr.io/test-org',
   };
 
   function addNodeProject(host) {
@@ -36,10 +43,11 @@ describe('Sandbox Generator', () => {
     });
   }
 
-  function addFrontendProject(host) {
+  function addFrontendProject(host, tags?: string[]) {
     addProjectConfiguration(host, 'test', {
       root: 'apps/test',
       projectType: 'application',
+      tags,
       targets: {
         build: {
           executor: '@nx/webpack:webpack',
@@ -84,10 +92,69 @@ describe('Sandbox Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['sandbox']).toBeTruthy();
     expect(config.targets['sandbox'].executor).toBe('nx:run-commands');
+    // Commands run in order (nx:run-commands has no `sequential` option).
+    expect(config.targets['sandbox'].options.parallel).toBe(false);
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('oc rollout restart'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('oc rollout status'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('command -v podman'))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('nx build test'))).toBeTruthy();
+
+    // Local podman build + push to the prescribed registry, with the image name
+    // prefixed by the (per-user) sandbox namespace to avoid GHCR's org-global
+    // name collisions.
+    const imageRef = 'ghcr.io/test-org/test-sandbox-test:sandbox';
+    expect(
+      cmds.some((c) => c.includes('podman build') && c.includes(imageRef))
+    ).toBeTruthy();
+    expect(cmds.some((c) => c.includes(`podman push ${imageRef}`))).toBeTruthy();
+    expect(cmds.some((c) => c.includes('podman login ghcr.io'))).toBeTruthy();
+
+    // Import into the namespace imagestream; pods pull from the internal registry.
+    expect(
+      cmds.some((c) =>
+        c.includes(`oc tag ${imageRef} test:sandbox --reference-policy=local`)
+      )
+    ).toBeTruthy();
+    // import-image is retried to absorb the 409 from oc tag's async reconcile.
+    expect(
+      cmds.some(
+        (c) =>
+          c.includes('oc import-image test:sandbox --confirm') &&
+          c.includes('until')
+      )
+    ).toBeTruthy();
+    // Per-deploy pull secret from the gh session (no stored PAT).
+    expect(
+      cmds.some((c) => c.includes('oc create secret docker-registry ghcr-pull'))
+    ).toBeTruthy();
+
+    // The in-cluster BuildConfig flow is gone.
+    expect(cmds.some((c) => c.includes('oc start-build'))).toBeFalsy();
+    expect(host.exists('.openshift/test/sandbox-build.yml')).toBeFalsy();
+
+    // A node service's ADSP client secret is mirrored from .env into an
+    // OpenShift Secret the deployment reads.
+    expect(
+      cmds.some(
+        (c) =>
+          c.includes('oc create secret generic test-secrets') &&
+          c.includes('CLIENT_SECRET')
+      )
+    ).toBeTruthy();
+  });
+
+  it('persists the resolved registry to nx.json for reuse', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    const nxJson = readNxJson(host);
+    expect(
+      (nxJson.generators as Record<string, { registry?: string }>)[
+        '@abgov/nx-oc:sandbox'
+      ].registry
+    ).toBe('ghcr.io/test-org');
   });
 
   it('adds sandbox-teardown nx target', async () => {
@@ -104,6 +171,12 @@ describe('Sandbox Generator', () => {
     expect(cmds.some((c) => c.includes('test-sandbox'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('-l app=test'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
+    // Teardown also removes the sandbox package (best-effort).
+    expect(
+      cmds.some((c) =>
+        c.includes('packages/container/test-sandbox-test')
+      )
+    ).toBeTruthy();
   });
 
   it('generates shared postgres manifest with secret-backed DATABASE_URL', async () => {
@@ -125,6 +198,12 @@ describe('Sandbox Generator', () => {
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBeTruthy();
+    // The per-app database is created idempotently before the app deploys.
+    expect(cmds.some((c) => c.includes('createdb -U postgres test_sandbox'))).toBeTruthy();
+    const createDbIdx = cmds.findIndex((c) => c.includes('createdb'));
+    const rolloutIdx = cmds.findIndex((c) => c.includes('rollout status deployment/test'));
+    expect(createDbIdx).toBeGreaterThanOrEqual(0);
+    expect(createDbIdx).toBeLessThan(rolloutIdx);
   });
 
   it('generates shared mongodb manifest with secret-backed MONGODB_URI', async () => {
@@ -145,5 +224,63 @@ describe('Sandbox Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     const cmds: string[] = config.targets['sandbox'].options.commands;
     expect(cmds.some((c) => c.includes('sandbox-mongodb-creds'))).toBeTruthy();
+  });
+
+  it('ensures paired backend Services from proxy-service tags', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addFrontendProject(host, ['adsp:proxy-service:test-service:3333']);
+
+    await generator(host, options);
+
+    const config = readProjectConfiguration(host, 'test');
+    const cmds: string[] = config.targets['sandbox'].options.commands;
+    const guard = cmds.find((c) => c.includes('oc get service test-service'));
+    expect(guard).toBeTruthy();
+    // idempotent: only creates the Service (for DNS) when it's missing — no
+    // backend deployment, which would have no image until its own sandbox runs.
+    expect(guard).toContain('||');
+    expect(guard).toContain(
+      'oc create service clusterip test-service --tcp=3333:3333'
+    );
+    expect(guard).not.toContain('test-service.yml');
+  });
+
+  it('adds no paired-service guard when there are no proxy-service tags', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+
+    await generator(host, options);
+
+    const config = readProjectConfiguration(host, 'test');
+    const cmds: string[] = config.targets['sandbox'].options.commands;
+    expect(cmds.some((c) => c.includes('oc get service'))).toBeFalsy();
+  });
+
+  it('registers the deployment Route redirect URI for a frontend client', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addFrontendProject(host);
+    utilsMock.addClientRedirectUris.mockClear();
+
+    await generator(host, options);
+
+    // Route host follows <app>-<namespace>.<ingressDomain>, registered against
+    // the public client urn:ads:<tenant>:<app> with the token from ADSP config.
+    expect(utilsMock.addClientRedirectUris).toHaveBeenCalledWith(
+      environments.test.accessServiceUrl,
+      'test',
+      'urn:ads:test:test',
+      ['https://test-test-sandbox.apps.test.example.com/*'],
+      'mock-token'
+    );
+  });
+
+  it('does not register redirect URIs for a node service', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addNodeProject(host);
+    utilsMock.addClientRedirectUris.mockClear();
+
+    await generator(host, options);
+
+    expect(utilsMock.addClientRedirectUris).not.toHaveBeenCalled();
   });
 });

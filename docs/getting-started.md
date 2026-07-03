@@ -65,6 +65,8 @@ Repeat for every environment project.
 
 An existing ADSP tenant is required. The `pevn` generator provisions Keycloak clients and environment config against it. Have the tenant name ready.
 
+> The generated public client allows local development (`http://localhost:4200/*`) out of the box. For **deployed** environments you must register each environment's Route URL with the client — see [Configure sign-in redirect URIs per environment](#configure-sign-in-redirect-uris-per-environment).
+
 ### GitHub Environments (optional)
 
 Create environments in **Settings → Environments** matching the names passed to `--envs` (e.g. `dev`, `test`, `prod`) to enable per-environment approval gates.
@@ -139,7 +141,7 @@ A browser login opens for your ADSP tenant. This generates:
   ├─ my-app-service/
   └─ my-app-app/
 apps/
-  ├─ my-app-service/   ← Express + Prisma (Postgres)
+  ├─ my-app-service/   ← Express + Drizzle (Postgres)
   └─ my-app-app/       ← Vue 3 + GoA web components + Keycloak
 ```
 
@@ -147,7 +149,9 @@ The dev proxy (`/api/` → `my-app-service:3333`) and nginx production proxy are
 
 Pass `--skipAgent` to skip the AI interaction and get base scaffolding only.
 
-### 6. Create the database secret in each environment
+### 6. Create the deploy secrets in each environment
+
+**Database** — a Postgres connection string:
 
 ```bash
 oc create secret generic my-app-service-database \
@@ -163,6 +167,28 @@ oc create secret generic my-app-service-database \
   --from-literal=DATABASE_URL='postgresql://...' \
   -n my-project-prod
 ```
+
+**ADSP client secret** — the service authenticates with the access service using
+its confidential Keycloak client secret. Scaffolding writes it to the service's
+`.env` (`CLIENT_SECRET=...`) for the generator's tenant; each environment runs
+against its own tenant, so create the Secret per environment with that
+environment's client secret:
+
+```bash
+oc create secret generic my-app-service-secrets \
+  --from-literal=CLIENT_SECRET='<client-secret-for-this-environment>' \
+  -n my-project-dev
+
+# Repeat for test and prod (each has its own client secret)
+```
+
+> The `dev` value is in `apps/my-app-service/.env` after scaffolding. For
+> test/prod, get the client secret from that environment's ADSP tenant admin
+> (Keycloak) for client `urn:ads:<tenant>:my-app-service`.
+
+The sandbox deploy (`nx run my-app-service:sandbox`) creates this Secret
+automatically from the service's `.env` — the manual step is only for the
+GitHub Actions / `apply-envs` environments.
 
 ### 7. Apply environment resources to OpenShift
 
@@ -181,6 +207,35 @@ git push
 
 The GitHub Actions pipeline triggers on push to `main` and builds, publishes, and deploys to the first environment automatically.
 
+### Configure sign-in redirect URIs per environment
+
+The frontend's public Keycloak client is created during scaffolding with only `http://localhost:4200/*` as an allowed redirect URI (for local development). Browser sign-in on a **deployed** app fails with `invalid redirect_uri` until the deployed Route URL is added to that client.
+
+This is a **manual, one-time step per environment**, because each environment runs against a different ADSP tenant on a different Keycloak instance:
+
+| Environment | ADSP access (Keycloak) |
+| --- | --- |
+| `dev` | `access.adsp-dev.gov.ab.ca` |
+| `test` (UAT / pre-prod) | `access-uat.alberta.ca` |
+| `prod` | `access.alberta.ca` |
+
+Since pre-production and production are separate tenants on separate Keycloak instances, the generator (which authenticates against a single tenant) cannot configure them all — you register each one after its first deploy.
+
+For each environment, open that environment's ADSP tenant admin (Keycloak) and edit the app's public client — `urn:ads:<tenant>:<app>` (e.g. `urn:ads:my-tenant:my-app-app`). Add the deployed Route URL:
+
+```
+https://<app>-<environment-project>.<cluster-apps-domain>/*
+```
+
+for example `https://my-app-app-my-project-dev.apps.<cluster>/*` — to **both**:
+
+- **Valid redirect URIs**
+- **Valid post logout redirect URIs**
+
+Leave **Web origins** as `+` (it already allows CORS from the redirect-URI origins). The exact Route host for a deployed app is shown by `oc get route <app> -n <environment-project>`.
+
+> The [sandbox deployment](#sandbox-deployment) flow does this automatically — it targets a single tenant/Keycloak, so the generator registers the sandbox Route on the client for you. The manual step above applies only to the pipeline-deployed environments.
+
 ---
 
 ## Local development
@@ -191,10 +246,12 @@ Start the local Postgres container (requires [Podman](https://podman.io/)):
 npx nx run my-app-service:dev-db
 ```
 
-Apply the initial Prisma migration:
+Generate and apply the initial migration (only needed once you have added a
+table to `src/db/schema.ts`):
 
 ```bash
-npx nx run my-app-service:db:migrate
+npx nx run my-app-service:db:generate   # writes SQL to drizzle/
+npx nx run my-app-service:db:migrate    # applies it to the local DB
 ```
 
 Run the service and frontend concurrently:
@@ -210,7 +267,11 @@ The Vue dev server proxies `/api/` to the local Express service automatically vi
 
 ## Sandbox deployment
 
-For rapid iteration directly on OpenShift without committing and waiting for CI. Requires an existing OpenShift namespace and `oc` logged in.
+For rapid iteration directly on OpenShift without committing and waiting for CI. Prerequisites:
+
+- an existing OpenShift namespace (per-user) and `oc` logged in;
+- `podman` installed;
+- `gh auth login` as an account with **`write:packages`** on your GHCR org (the same login backs both the image push and the pull secret — no PAT is stored).
 
 ### Set up sandbox once
 
@@ -229,19 +290,18 @@ npx nx run my-app-app:sandbox
 ```
 
 Each command:
-1. Creates a `sandbox-postgres-creds` Secret in the namespace on first run (generates a random password). Subsequent runs skip this — the existing secret is reused.
-2. Applies the shared DB manifest and the app manifest (idempotent — no-op if unchanged)
-3. Builds the container image locally using `podman` or `docker` (whichever is available)
-4. Pushes to the OC internal registry
-5. Restarts the Deployment and waits for rollout
+1. Creates the app's Secrets on first run (ADSP client secret, `sandbox-postgres-creds`) and the per-app database. Idempotent.
+2. Builds the image locally (`podman build --platform=linux/amd64`) and pushes it to `<registry>/<sandboxProject>-<app>:sandbox` (registry resolved from the git remote on first run, persisted to `nx.json`).
+3. Imports the image into the namespace's imagestream (`reference-policy=local`, so pods pull from the internal registry) and applies the manifest.
+4. Restarts the Deployment and waits for rollout.
 
-No GitHub push, no CI wait — changes are live in ~1–2 minutes.
+No GitHub push, no CI wait — and local layer caching means only the changed app layer re-uploads, so repeat iterations are fast.
 
 ### Credentials and databases
 
 The shared `sandbox-postgres` instance is deployed once and reused by all apps in the namespace. The generated password is stored in the `sandbox-postgres-creds` Secret — the DB pod and every app pod read it from there at runtime. No credential is hardcoded in any manifest.
 
-Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Prisma creates the database automatically on first migrate; there is no manual provisioning step.
+Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Migrations are applied automatically on every deploy by the service's `migrate.js` init container.
 
 ### Teardown a sandbox app
 

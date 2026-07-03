@@ -1,0 +1,41 @@
+import { existsSync } from 'fs';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+
+const MIGRATIONS_FOLDER = 'drizzle';
+
+// Standalone migration runner — the deployment runs this as an init container
+// (`node migrate.js`) before the app starts. It uses only drizzle-orm + pg,
+// both runtime dependencies, so it survives `npm prune --omit=dev` and needs no
+// CLI or native engine in the image. The SQL files in ./drizzle are shipped as
+// build assets alongside this bundle.
+async function main() {
+  // A freshly generated service has no models yet, so there are no migrations
+  // to apply. Skip cleanly instead of failing the init container.
+  if (!existsSync(`${MIGRATIONS_FOLDER}/meta/_journal.json`)) {
+    // eslint-disable-next-line no-console
+    console.log('No migrations to apply.');
+    return;
+  }
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not set.');
+  }
+
+  const pool = new Pool({ connectionString });
+  try {
+    await migrate(drizzle(pool), { migrationsFolder: MIGRATIONS_FOLDER });
+    // eslint-disable-next-line no-console
+    console.log('Migrations applied.');
+  } finally {
+    await pool.end();
+  }
+}
+
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('Migration failed:', err);
+  process.exit(1);
+});

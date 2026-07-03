@@ -33,15 +33,17 @@ describe('PEVN Generator', () => {
 
     const appConfig = readProjectConfiguration(host, 'test-app');
     expect(appConfig.root).toBe('apps/test-app');
+    // The paired backend (name + port) is recorded so the sandbox generator ensures its Service first.
+    expect(appConfig.tags).toContain('adsp:proxy-service:test-service:3333');
 
     const serviceConfig = readProjectConfiguration(host, 'test-service');
     expect(serviceConfig.root).toBe('apps/test-service');
 
-    expect(host.exists('apps/test-app/nginx.conf')).toBeTruthy();
-    const nginxConf = host.read('apps/test-app/nginx.conf').toString();
+    expect(host.exists('apps/test-app/public/nginx.conf')).toBeTruthy();
+    const nginxConf = host.read('apps/test-app/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
 
     expect(host.exists('apps/test-app/src/App.vue')).toBeTruthy();
-    expect(host.exists('apps/test-service/prisma/schema.prisma')).toBeTruthy();
+    expect(host.exists('apps/test-service/src/db/schema.ts')).toBeTruthy();
   }, 30000);
 });
