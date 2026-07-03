@@ -50,6 +50,33 @@ describe('Vue App Generator', () => {
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
   }, 30000);
 
+  it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {
+    await generator(host, options);
+    // Vite's entry is <projectRoot>/index.html, not src/index.html — a template
+    // shipped under src/ is ignored, leaving @nx/vue's #root div while main.ts
+    // mounts #app, so nothing renders. Guard both: correct path and matched id.
+    expect(host.exists('apps/test/index.html')).toBeTruthy();
+    expect(host.exists('apps/test/src/index.html')).toBeFalsy();
+    const indexHtml = host.read('apps/test/index.html').toString();
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    const mountId = mainTs.match(/\.mount\(['"]#([\w-]+)['"]\)/)?.[1];
+    expect(mountId).toBeTruthy();
+    expect(indexHtml).toContain(`id="${mountId}"`);
+  }, 30000);
+
+  it('static assets live in public/ so Vite serves them at the referenced URLs', async () => {
+    await generator(host, options);
+    // App.vue's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
+    // index.html's favicon.ico are absolute-URL string refs, so they must be in
+    // the Vite publicDir (public/) — a src/assets file is not served at /assets.
+    const appVue = host.read('apps/test/src/App.vue').toString();
+    const bannerUrl = appVue.match(/backgroundurl="([^"]+)"/)?.[1];
+    expect(bannerUrl).toBe('/assets/banner.jpg');
+    expect(host.exists('apps/test/public/assets/banner.jpg')).toBeTruthy();
+    expect(host.exists('apps/test/src/assets/banner.jpg')).toBeFalsy();
+    expect(host.exists('apps/test/public/favicon.ico')).toBeTruthy();
+  }, 30000);
+
   it('vite.config.ts marks goa-* elements as custom elements', async () => {
     await generator(host, options);
     const viteConfig = host.read('apps/test/vite.config.ts').toString();
