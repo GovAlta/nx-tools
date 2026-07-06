@@ -6,6 +6,32 @@ import { getServiceUrls } from '@abgov/nx-oc';
 const AGENT_SERVICE_URN = 'urn:ads:platform:agent-service:v1';
 const AGENT_ID = 'nxAdspAgent';
 
+// The agent consultation is an interactive, stdin-driven conversation, so it must
+// not run unattended (a coding agent, CI, or a piped shell) — it would hang or
+// corrupt stdin.
+//
+// NOTE: this relies on Nx *internal* behavior (not a public API), so re-verify it
+// on Nx upgrades — the two `argv` clauses below are the fragile part:
+//   1. Nx deletes `--interactive` from the generator's options before invoking it
+//      (`delete generatorOptions.interactive` in nx's command-line/generate/generate.js),
+//      so we can't read it from `options`.
+//   2. Nx runs generators in-process, so the CLI args are still on `process.argv`.
+// If Nx ever runs generators out-of-process, or stops stripping the option, the
+// argv detection may go stale. The TTY/CI fallback is the resilient part — it
+// mirrors Nx's own prompt gate (`isTTY()` in command-line utils/params.js:
+// `process.stdout.isTTY && CI !== 'true'`) and still catches unattended runs even
+// if the flag detection breaks. Worst case if all detection fails: the generator
+// prompts and the caller can still pass `--skipAgent`.
+export function isNonInteractive(): boolean {
+  const argv = process.argv;
+  const interactiveIdx = argv.indexOf('--interactive');
+  const flagged =
+    argv.includes('--no-interactive') ||
+    argv.includes('--interactive=false') ||
+    (interactiveIdx !== -1 && argv[interactiveIdx + 1] === 'false');
+  return flagged || !process.stdout.isTTY || process.env.CI === 'true';
+}
+
 // Keep CapabilitySpec exported for backward compatibility and tests,
 // but the primary flow now uses the workspace approach.
 export interface AgentCapability {
@@ -97,6 +123,12 @@ export async function consultAgent(
     additionalRoots?: Record<string, string>;
   }
 ): Promise<AgentResult | null> {
+  if (isNonInteractive()) {
+    process.stdout.write(
+      '\n[nx-adsp] Non-interactive run (--no-interactive / no TTY / CI) — skipping the agent consultation; base scaffolding only.\n'
+    );
+    return null;
+  }
   if (!accessToken) {
     process.stdout.write('\n[nx-adsp] No access token — skipping agent interaction.\n');
     return null;
