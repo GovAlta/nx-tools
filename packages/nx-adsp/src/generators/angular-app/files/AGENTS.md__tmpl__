@@ -62,13 +62,25 @@ const authGuard = createAuthGuard(async (_route, _state, { authenticated, keyclo
 
 ## GoA design system
 
-Components are imported from `@abgov/angular-components` with the `Goab` prefix
-and added to each standalone component's `imports` array:
+**Find a component:** browse the gallery at
+[design.alberta.ca/components](https://design.alberta.ca/components/) — press ⌘K to
+search components and examples. Each component's page documents its properties,
+events, and usage; treat it as the source of truth. Angular uses the `Goab*`
+wrappers from `@abgov/angular-components`, imported into each standalone component's
+`imports` array:
 
 ```typescript
 import { GoabButton, GoabAppHeader } from '@abgov/angular-components';
 
 @Component({ imports: [GoabButton, GoabAppHeader], ... })
+```
+
+**Events**: the Angular wrappers expose events as outputs — bind with `(onClick)`,
+`(onChange)`, etc. on the `goab-*` element:
+
+```html
+<goab-button type="tertiary" (onClick)="login()">Sign in</goab-button>
+<goab-dropdown (onChange)="handleSelect($event)"></goab-dropdown>
 ```
 
 **Known limitation:** `GoabHeroBanner.backgroundUrl` does not bind reliably via

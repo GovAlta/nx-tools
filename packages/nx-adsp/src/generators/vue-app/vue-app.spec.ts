@@ -49,6 +49,14 @@ describe('Vue App Generator', () => {
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
   }, 30000);
 
+  it('AGENTS.md points at the current design system docs', async () => {
+    await generator(host, options);
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('design.alberta.ca/components');
+    // guard against the retired ui-components.alberta.ca URL creeping back in
+    expect(agents).not.toContain('ui-components.alberta.ca');
+  }, 30000);
+
   it('inits Keycloak with no hidden iframes so init never hangs', async () => {
     await generator(host, options);
     // Strip // comments — they legitimately reference the disabled iframe options
