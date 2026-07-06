@@ -107,3 +107,29 @@ export function addVsCodeSettings(host: Tree): void {
     writeJson(host, settingsPath, settings);
   }
 }
+
+/**
+ * Registers the @abgov/adsp-sdk-mcp-server MCP server in the workspace-root
+ * `.mcp.json` so a coding agent (Claude Code and other MCP clients) can look up
+ * grounded ADSP docs and `@abgov/adsp-service-sdk` reference instead of guessing.
+ *
+ * It's a stdio knowledge server (no credentials, run via npx), so wiring is just
+ * config. Merges into an existing `.mcp.json` and never clobbers a user-customized
+ * `adsp-sdk` entry, so it's safe to re-run and to run for every generated service.
+ */
+export function addAdspMcpServer(host: Tree): void {
+  const mcpPath = '.mcp.json';
+  const server = { command: 'npx', args: ['-y', '@abgov/adsp-sdk-mcp-server'] };
+
+  if (host.exists(mcpPath)) {
+    updateJson(host, mcpPath, (existing) => {
+      const mcpServers = { ...(existing?.mcpServers ?? {}) };
+      // Preserve an existing entry (a team may have pinned a version or repointed
+      // it at a local build) — only add ours when it isn't already configured.
+      mcpServers['adsp-sdk'] = mcpServers['adsp-sdk'] ?? server;
+      return { ...existing, mcpServers };
+    });
+  } else {
+    writeJson(host, mcpPath, { mcpServers: { 'adsp-sdk': server } });
+  }
+}

@@ -1,4 +1,4 @@
-import { readProjectConfiguration } from '@nx/devkit';
+import { readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
@@ -33,6 +33,40 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/environment.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
+  }, 60000);
+
+  it('wires the ADSP SDK MCP server into the workspace .mcp.json', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    expect(host.exists('.mcp.json')).toBeTruthy();
+    const mcp = readJson(host, '.mcp.json');
+    expect(mcp.mcpServers['adsp-sdk']).toEqual({
+      command: 'npx',
+      args: ['-y', '@abgov/adsp-sdk-mcp-server'],
+    });
+    // Agents are pointed at the tools, not left to guess the SDK.
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('@abgov/adsp-sdk-mcp-server');
+    expect(agents).toContain('get_platform_quickstart');
+    expect(agents).toContain('search_sdk_reference');
+  }, 60000);
+
+  it('merges .mcp.json without clobbering other servers or a customized entry', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    writeJson(host, '.mcp.json', {
+      mcpServers: {
+        other: { command: 'other-cmd', args: [] },
+        'adsp-sdk': { command: 'node', args: ['/local/build/main.js'] },
+      },
+    });
+    await generator(host, options);
+
+    const mcp = readJson(host, '.mcp.json');
+    // Unrelated server preserved.
+    expect(mcp.mcpServers.other).toEqual({ command: 'other-cmd', args: [] });
+    // A team's customized adsp-sdk entry is not overwritten.
+    expect(mcp.mcpServers['adsp-sdk']).toEqual({ command: 'node', args: ['/local/build/main.js'] });
   }, 60000);
 
   it('includes authorize, createValidationHandler, and example route in main.ts', async () => {

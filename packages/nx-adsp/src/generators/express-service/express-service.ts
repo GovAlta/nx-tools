@@ -15,7 +15,7 @@ import * as path from 'path';
 import { consultAgent } from '../../utils/agent';
 import { ensureServiceClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
+import { addAdspMcpServer, addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -147,6 +147,8 @@ export default async function (host: Tree, options: Schema) {
   addEslintQualityRules(host, normalizedOptions.projectRoot, ['**/*.spec.ts', '**/*.test.ts']);
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
   addVsCodeSettings(host);
+  // Equip coding agents with grounded ADSP docs + Node SDK reference lookup.
+  addAdspMcpServer(host);
 
   const projectConfig = readProjectConfiguration(host, normalizedOptions.projectName);
   const targets = { ...projectConfig.targets };

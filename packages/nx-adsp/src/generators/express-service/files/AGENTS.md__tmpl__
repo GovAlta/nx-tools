@@ -17,6 +17,25 @@ interactive prompt never blocks your session (`CI=true` in the env does the same
 also skips the Nx Cloud prompt). This applies to `nx g` generators; `nx run <target>`
 executors read options from `project.json` and do not prompt.
 
+## ADSP knowledge (MCP)
+
+This workspace is wired with the **`@abgov/adsp-sdk-mcp-server`** MCP server (see
+`.mcp.json` at the workspace root). It gives grounded, sourced answers about ADSP
+and the Node SDK. **Prefer these tools over recalling `@abgov/adsp-service-sdk`
+APIs from memory** when integrating ADSP capabilities:
+
+- `get_platform_quickstart` — the canonical `initializePlatform` usage pattern and
+  a capabilities summary. Start here for "how do I use ADSP from this service?".
+- `search_sdk_reference` — look up `@abgov/adsp-service-sdk` by symbol, module, or
+  keyword; returns kind, description, option/return shape, example, deprecation.
+- `search_adsp_docs` — keyword search across ADSP platform docs (getting started,
+  architecture, service concepts, tutorials).
+- `read_adsp_doc` — read the full content of a doc page found via search.
+
+If these tools aren't available, your MCP client hasn't loaded `.mcp.json` yet —
+Claude Code prompts to approve project MCP servers on first use; other clients may
+need project-scoped MCP enabled. The server runs via `npx` and needs no credentials.
+
 ## Stack
 
 
