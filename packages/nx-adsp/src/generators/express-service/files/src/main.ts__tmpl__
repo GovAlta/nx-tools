@@ -1,22 +1,18 @@
-import { AdspId, authorize, createErrorHandler, createValidationHandler, initializeService } from '@abgov/adsp-service-sdk';
+import { AdspId, createErrorHandler, initializeService } from '@abgov/adsp-service-sdk';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
-import { z } from 'zod';
 <% if (database === 'postgres') { %>
 import { closeDatabase } from './database';
 <% } else if (database === 'mongo') { %>
 import { connectDatabase, disconnectDatabase } from './database';
 <% } %>
 import { environment } from './environment';
-import { createExampleEvent, exampleEventDefinition } from './events';
-
-const ExampleRequestSchema = z.object({
-  id: z.string().min(1),
-});
+import { exampleEventDefinition } from './events';
+import { exampleRouter } from './routes/example';
 
 async function initializeApp() {
   const serviceId = AdspId.parse(environment.CLIENT_ID);
@@ -56,12 +52,6 @@ async function initializeApp() {
   passport.use('tenant', tenantStrategy);
   app.use(passport.initialize());
 
-  app.use(
-    '/<%= projectName %>/v1',
-    passport.authenticate(['tenant', 'anonymous'], { session: false }),
-    configurationHandler
-  );
-
   app.get('/health', async (_req, res) => {
     const platform = await healthCheck();
     res.json({ ...platform });
@@ -78,46 +68,14 @@ async function initializeApp() {
     });
   });
 
-  app.get('/<%= projectName %>/v1', (_req, res) => {
-    res.json({
-      _links: {
-        self: { href: '/<%= projectName %>/v1' },
-        public: { href: '/<%= projectName %>/v1/public' },
-        private: { href: '/<%= projectName %>/v1/private' },
-      },
-    });
-  });
-
-  // Public endpoint — no authentication required.
-  app.get('/<%= projectName %>/v1/public', (_req, res) => {
-    res.json({ message: 'Hello from the public <%= projectName %> API.' });
-  });
-
-  // Private endpoint — requires an authenticated tenant user.
-  app.get(
-    '/<%= projectName %>/v1/private',
-    passport.authenticate(['tenant'], { session: false }),
-    (req, res) => {
-      res.json({ message: `Hello, ${req.user!.name}.` });
-    }
-  );
-
-  // Example: protected route demonstrating authorize, input validation, and a domain event.
-  // Require 'example-role' — replace with a role relevant to your service.
-  // Remove or replace this route once you have real business logic.
-  app.post(
-    '/<%= projectName %>/v1/example',
-    authorize('example-role'),
-    createValidationHandler(ExampleRequestSchema),
-    async (req, res, next) => {
-      try {
-        const { id } = req.body as z.infer<typeof ExampleRequestSchema>;
-        eventService.send(createExampleEvent(id));
-        res.json({ id });
-      } catch (err) {
-        next(err);
-      }
-    }
+  // v1 API: authenticate (tenant or anonymous) and resolve tenant configuration
+  // for the whole subtree, then mount the resource routers. Add one router per
+  // resource under routes/ and mount it here — keep handlers out of main.ts.
+  app.use(
+    '/<%= projectName %>/v1',
+    passport.authenticate(['tenant', 'anonymous'], { session: false }),
+    configurationHandler,
+    exampleRouter(eventService)
   );
 
   // Mount error handler last — after all routes and middleware.

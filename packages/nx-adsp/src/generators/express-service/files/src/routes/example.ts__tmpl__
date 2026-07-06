@@ -1,0 +1,59 @@
+import { authorize, createValidationHandler, type EventService } from '@abgov/adsp-service-sdk';
+import { Router } from 'express';
+import passport from 'passport';
+import { z } from 'zod';
+import { createExampleEvent } from '../events';
+
+const ExampleRequestSchema = z.object({
+  id: z.string().min(1),
+});
+
+// Thin HTTP handlers for the example resource, grouped in an express.Router().
+// Capabilities from initializeService() are passed in (not imported) so the router
+// stays testable — mount it with supertest and pass a mock eventService (see the
+// spec). This is a starter: add one router per resource under routes/ and replace
+// this once you have real business logic.
+export function exampleRouter(eventService: EventService): Router {
+  const router = Router();
+
+  // Resource index — hypermedia links to this resource's routes. req.baseUrl is
+  // the mount path, so the router doesn't hard-code where it's mounted.
+  router.get('/', (req, res) => {
+    res.json({
+      _links: {
+        self: { href: req.baseUrl },
+        public: { href: `${req.baseUrl}/public` },
+        private: { href: `${req.baseUrl}/private` },
+      },
+    });
+  });
+
+  // Public endpoint — no authentication required.
+  router.get('/public', (_req, res) => {
+    res.json({ message: 'Hello from the public <%= projectName %> API.' });
+  });
+
+  // Private endpoint — requires an authenticated tenant user.
+  router.get('/private', passport.authenticate(['tenant'], { session: false }), (req, res) => {
+    res.json({ message: `Hello, ${req.user!.name}.` });
+  });
+
+  // Protected route demonstrating authorize, input validation, and a domain event.
+  // Require 'example-role' — replace with a role relevant to your service.
+  router.post(
+    '/example',
+    authorize('example-role'),
+    createValidationHandler(ExampleRequestSchema),
+    async (req, res, next) => {
+      try {
+        const { id } = req.body as z.infer<typeof ExampleRequestSchema>;
+        eventService.send(createExampleEvent(id));
+        res.json({ id });
+      } catch (err) {
+        next(err);
+      }
+    }
+  );
+
+  return router;
+}
