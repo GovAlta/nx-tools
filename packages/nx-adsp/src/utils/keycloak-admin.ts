@@ -64,12 +64,18 @@ async function ensureClientRole(
       headers: { Authorization: `Bearer ${accessToken}` },
     });
   } catch (err) {
+    // Best-effort, like the other ensure* helpers: a role we can't read/create
+    // must not abort provisioning or cause the client secret to be dropped.
     if ((err as { response?: { status?: number } })?.response?.status === 404) {
-      await axios.post(baseUrl, { name: roleName, description }, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      try {
+        await axios.post(baseUrl, { name: roleName, description }, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      } catch (createErr) {
+        logAdminError(clientUuid, createErr);
+      }
     } else {
-      throw err;
+      logAdminError(clientUuid, err);
     }
   }
 }
@@ -130,20 +136,25 @@ async function ensureServiceAccountRoles(
   accessToken: string
 ): Promise<void> {
   const { default: axios } = await import('axios');
+  // Best-effort, like the other ensure* helpers: don't abort provisioning or
+  // drop the client secret if a platform service-account role can't be assigned.
+  try {
+    const userUrl = new URL(
+      `/auth/admin/realms/${realm}/clients/${serviceClientUuid}/service-account-user`,
+      accessServiceUrl
+    ).href;
+    const { data: user } = await axios.get<{ id: string }>(userUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-  const userUrl = new URL(
-    `/auth/admin/realms/${realm}/clients/${serviceClientUuid}/service-account-user`,
-    accessServiceUrl
-  ).href;
-  const { data: user } = await axios.get<{ id: string }>(userUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  await Promise.all(
-    roles.map(({ platformClientId, roleName }) =>
-      assignRoleToServiceAccount(accessServiceUrl, realm, user.id, platformClientId, roleName, accessToken)
-    )
-  );
+    await Promise.all(
+      roles.map(({ platformClientId, roleName }) =>
+        assignRoleToServiceAccount(accessServiceUrl, realm, user.id, platformClientId, roleName, accessToken)
+      )
+    );
+  } catch (err) {
+    logAdminError(serviceClientUuid, err);
+  }
 }
 
 async function getClientSecret(
