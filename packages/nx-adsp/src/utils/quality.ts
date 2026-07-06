@@ -56,9 +56,13 @@ export function addJestCoverageConfig(host: Tree, projectRoot: string): void {
   if (!host.exists(jestPath)) return;
 
   const existing = host.read(jestPath).toString();
+  // Capture the coverageDirectory line WITHOUT its trailing comma, then re-emit
+  // it with one before the inserted properties. @nx/jest may leave
+  // coverageDirectory as the last property (no trailing comma), so appending
+  // properties after it verbatim would produce an invalid object literal.
   const modified = existing.replace(
-    /([ \t]*coverageDirectory:[^\n]+\n)/,
-    `$1  collectCoverage: true,\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`
+    /([ \t]*coverageDirectory:[^\n]*?),?\n/,
+    `$1,\n  collectCoverage: true,\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`
   );
   if (modified !== existing) {
     host.write(jestPath, modified);
