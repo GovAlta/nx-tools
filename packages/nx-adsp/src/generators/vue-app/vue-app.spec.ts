@@ -36,9 +36,8 @@ describe('Vue App Generator', () => {
     await generator(host, options);
     const config = readProjectConfiguration(host, 'test');
     expect(config.root).toBe('apps/test');
-    // nginx.conf + silent-check-sso live in the Vite publicDir so they end up in the build output.
+    // nginx.conf lives in the Vite publicDir so it ends up in the build output.
     expect(host.exists('apps/test/public/nginx.conf')).toBeTruthy();
-    expect(host.exists('apps/test/public/silent-check-sso.html')).toBeTruthy();
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/App.vue')).toBeTruthy();
     expect(host.exists('apps/test/src/router/index.ts')).toBeTruthy();
@@ -48,6 +47,26 @@ describe('Vue App Generator', () => {
     expect(host.exists('apps/test/vite.config.mts')).toBeFalsy();
     // build output mirrors the workspace layout under the root dist/.
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
+  }, 30000);
+
+  it('inits Keycloak without the hanging silent-SSO iframe check', async () => {
+    await generator(host, options);
+    // Strip // comments — they legitimately reference silentCheckSsoRedirectUri to
+    // explain its absence; assert against the actual init code.
+    const code = host
+      .read('apps/test/src/main.ts')
+      .toString()
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    // keycloak-js's silent check-sso (silentCheckSsoRedirectUri) waits on an
+    // untimed iframe postMessage that hangs when third-party cookies are blocked,
+    // leaving keycloak.login() a no-op. Use check-sso via full redirect instead.
+    expect(code).not.toContain('silentCheckSsoRedirectUri');
+    expect(code).toContain("onLoad: 'check-sso'");
+    expect(code).toContain("pkceMethod: 'S256'");
+    // the now-unused silent-check-sso.html is no longer generated
+    expect(host.exists('apps/test/public/silent-check-sso.html')).toBeFalsy();
   }, 30000);
 
   it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {

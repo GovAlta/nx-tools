@@ -86,8 +86,9 @@ export default async function (host: Tree, options: Schema) {
     {
       '@abgov/design-tokens': '1.8.0',
       '@abgov/web-components': '1.39.3',
+      // keycloak-js is a transitive dependency of @dsb-norge/vue-keycloak-js;
+      // don't pin it directly or the versions diverge into two copies.
       '@dsb-norge/vue-keycloak-js': '^3.0.0',
-      'keycloak-js': '^23.0.7',
       'pinia': '^2.0.0',
       'vue-router': '^4.0.0',
     },
@@ -132,8 +133,8 @@ export default async function (host: Tree, options: Schema) {
     };
   }
 
-  // nginx.conf and silent-check-sso.html live in the Vite publicDir
-  // (<projectRoot>/public) so they are emitted to the build output root — the
+  // nginx.conf lives in the Vite publicDir
+  // (<projectRoot>/public) so it's emitted to the build output root — the
   // @nx/vite:build executor ignores webpack-style `assets`. Pin outputPath to
   // the workspace-root dist so it matches the vite config's outDir and the
   // generated Dockerfile's COPY path.
