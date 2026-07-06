@@ -101,11 +101,15 @@ router.beforeEach((to) => {
 
 ## GoA design system
 
-Use `goa-*` web components directly in Vue templates. The vite.config.ts
-`isCustomElement` option prevents Vue from warning about unknown elements.
+**Find a component:** browse the gallery at
+[design.alberta.ca/components](https://design.alberta.ca/components/) — press ⌘K to
+search components and examples. Each component's page documents its properties,
+events, and usage; treat it as the source of truth. Vue uses the framework-agnostic
+`goa-*` web components (`@abgov/web-components`) directly — the `vite.config.ts`
+`isCustomElement` option stops Vue from warning about them.
 
-**Event names**: GoA web component interactive elements emit custom events with
-a `_` prefix to avoid conflicts with native browser events:
+**Events**: GoA web components emit custom events with a `_` prefix (to avoid
+clashing with native browser events); bind them with Vue's `@` syntax:
 
 ```html
 <goa-button type="primary" @_click="handleSave">Save</goa-button>
@@ -115,8 +119,6 @@ a `_` prefix to avoid conflicts with native browser events:
 ```
 
 Use `@_click` for buttons and `@_change` for inputs, dropdowns, and checkboxes.
-See [GoA web components docs](https://ui-components.alberta.ca) for the full
-component and event reference.
 
 ## Adding a view
 

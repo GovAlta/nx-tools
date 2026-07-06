@@ -39,6 +39,14 @@ describe('angular app generator', () => {
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 120000);
 
+  it('AGENTS.md points at the current design system docs', async () => {
+    await angularApp(appTree, options);
+    const agents = appTree.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('design.alberta.ca/components');
+    // guard against the retired ui-components.alberta.ca URL creeping back in
+    expect(agents).not.toContain('ui-components.alberta.ca');
+  }, 120000);
+
   it('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await angularApp(host, {

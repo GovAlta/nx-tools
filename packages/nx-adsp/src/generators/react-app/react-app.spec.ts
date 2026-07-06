@@ -31,6 +31,15 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 30000);
 
+  it('AGENTS.md points at the current design system docs', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('design.alberta.ca/components');
+    // guard against the retired ui-components.alberta.ca URL creeping back in
+    expect(agents).not.toContain('ui-components.alberta.ca');
+  }, 30000);
+
   it('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, {

@@ -54,13 +54,18 @@ const token = await getAccessToken(); // refreshes token if needed
 
 ## GoA design system
 
-Components are imported from `@abgov/react-components` with the `Goab` prefix:
+**Find a component:** browse the gallery at
+[design.alberta.ca/components](https://design.alberta.ca/components/) — press ⌘K to
+search components and examples. Each component's page documents its properties,
+events, and usage; treat it as the source of truth. React uses the `Goab*` wrappers
+from `@abgov/react-components` over those components:
 
 ```typescript
 import { GoabButton, GoabAppHeader, GoabButtonGroup } from '@abgov/react-components';
 ```
 
-**Event names**: GoA React components use `onGoab*` handlers (not standard React synthetic events):
+**Events**: GoA React components use `onGoab*` handlers (not standard React synthetic
+events); the payload is on `e.detail`:
 
 ```tsx
 <GoabButton onGoabClick={handleSave}>Save</GoabButton>
@@ -69,8 +74,8 @@ import { GoabButton, GoabAppHeader, GoabButtonGroup } from '@abgov/react-compone
 <GoabCheckbox onGoabChange={(e) => setChecked(e.detail.checked)} />
 ```
 
-Event detail shapes vary by component — check the `detail` type in `@abgov/react-components`.
-See [GoA web components docs](https://ui-components.alberta.ca) for the full component reference.
+Event `detail` shapes vary by component — check the component's gallery page or the
+`detail` type in `@abgov/react-components`.
 
 ## Adding a new route
 
