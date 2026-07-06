@@ -135,6 +135,8 @@ export default async function (host: Tree, options: Schema) {
       '@types/cors': '^2.8.17',
       '@types/passport': '^1.0.16',
       '@types/passport-anonymous': '^1.0.3',
+      supertest: '^7.0.0',
+      '@types/supertest': '^6.0.0',
       ...(normalizedOptions.database === 'postgres' ? { 'drizzle-kit': '^0.31.0', '@types/pg': '^8.11.0' } : {}),
       'eslint-plugin-security': '^3.0.0',
       'eslint-plugin-no-secrets': '^2.0.0',

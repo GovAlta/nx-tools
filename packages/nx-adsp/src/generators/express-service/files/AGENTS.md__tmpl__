@@ -55,7 +55,8 @@ need project-scoped MCP enabled. The server runs via `npx` and needs no credenti
 
 | File | Purpose |
 |------|---------|
-| `src/main.ts` | App entry — SDK init, middleware, routes, server start |
+| `src/main.ts` | Composition root — SDK init, middleware, mounts routers, server start |
+| `src/routes/example.ts` | Example `express.Router()` — starter resource; copy it per resource |
 | `src/environment.ts` | Validated env config with defaults pre-set from ADSP tenant |
 | `src/events.ts` | Domain event definitions — register in `initializeService({ events })` |
 <% if (database === 'postgres') { %>
@@ -109,8 +110,9 @@ src/
 Rules of thumb:
 
 - **Do not inline route handlers in `main.ts`.** Add an `express.Router()` per
-  resource under `routes/` and mount it. The example routes in `main.ts` are
-  starters — replace them with mounted routers as you build real features.
+  resource under `routes/` and mount it. `src/routes/example.ts` is the shipped
+  starter (with a `example.spec.ts` supertest test) — copy its shape per resource
+  and replace it as you build real features.
 - **Keep handlers thin** — validate input, call a service, shape the response.
   Put non-trivial logic in `services/` so it can be tested without HTTP.
 - **One responsibility per module** — routers do HTTP, services do logic, the db

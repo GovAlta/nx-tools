@@ -69,16 +69,29 @@ describe('Express Service Generator', () => {
     expect(mcp.mcpServers['adsp-sdk']).toEqual({ command: 'node', args: ['/local/build/main.js'] });
   }, 60000);
 
-  it('includes authorize, createValidationHandler, and example route in main.ts', async () => {
+  it('factors routes into a router module mounted in main.ts (not inlined)', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);
 
+    // main.ts holds infra + the mount, not route handlers.
     const mainTs = host.read('apps/test/src/main.ts').toString();
-    expect(mainTs).toContain('authorize');
-    expect(mainTs).toContain('createValidationHandler');
     expect(mainTs).toContain('createErrorHandler');
-    expect(mainTs).toContain('/v1/example');
-    expect(mainTs).toContain('eventService.send');
+    expect(mainTs).toContain("import { exampleRouter } from './routes/example'");
+    expect(mainTs).toContain('exampleRouter(eventService)');
+    // The handler internals moved out of main.ts.
+    expect(mainTs).not.toContain('authorize');
+    expect(mainTs).not.toContain('/v1/example');
+
+    // The router module carries the handlers, capabilities passed in as args.
+    expect(host.exists('apps/test/src/routes/example.ts')).toBeTruthy();
+    const routerTs = host.read('apps/test/src/routes/example.ts').toString();
+    expect(routerTs).toContain('export function exampleRouter(eventService: EventService)');
+    expect(routerTs).toContain('authorize');
+    expect(routerTs).toContain('createValidationHandler');
+    expect(routerTs).toContain('eventService.send');
+
+    // Shipped with a supertest test demonstrating the router-testing pattern.
+    expect(host.exists('apps/test/src/routes/example.spec.ts')).toBeTruthy();
   }, 60000);
 
   it('scaffolds postgres database files and targets', async () => {

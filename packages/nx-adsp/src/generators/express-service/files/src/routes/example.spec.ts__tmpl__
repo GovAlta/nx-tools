@@ -1,0 +1,26 @@
+import type { EventService } from '@abgov/adsp-service-sdk';
+import express from 'express';
+import request from 'supertest';
+import { exampleRouter } from './example';
+
+describe('exampleRouter', () => {
+  // The router only needs eventService.send — mock it, so the test needs no DB
+  // and no real auth. This is the pattern for testing any resource router.
+  const eventService = { send: jest.fn() } as unknown as EventService;
+
+  const app = express();
+  app.use(express.json());
+  app.use('/<%= projectName %>/v1', exampleRouter(eventService));
+
+  it('serves the public endpoint without authentication', async () => {
+    const res = await request(app).get('/<%= projectName %>/v1/public');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('public');
+  });
+
+  it('exposes resource links at the index', async () => {
+    const res = await request(app).get('/<%= projectName %>/v1');
+    expect(res.status).toBe(200);
+    expect(res.body._links.public.href).toBe('/<%= projectName %>/v1/public');
+  });
+});
