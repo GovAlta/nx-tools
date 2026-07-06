@@ -69,45 +69,163 @@ To call another service with an access token:
 const token = await tokenProvider.getAccessToken();
 ```
 
+## Project structure & code factoring
+
+`main.ts` is the **composition root** — it initializes the SDK, wires middleware,
+mounts routers, starts the server, and mounts the error handler last. Keep feature
+code out of it. Conventional layout:
+
+```
+src/
+  main.ts                  # composition root — no business logic
+  routes/<resource>.ts     # one express.Router() per resource; thin HTTP handlers
+  services/<resource>.ts   # business logic — no req/res, unit-testable
+<% if (database === 'postgres') { %>  db/schema.ts             # Drizzle tables
+  database.ts              # shared `db` instance
+<% } else if (database === 'mongo') { %>  models/<resource>.ts     # Mongoose models
+  database.ts              # connection helpers
+<% } %>  events.ts                # domain event definitions
+```
+
+Rules of thumb:
+
+- **Do not inline route handlers in `main.ts`.** Add an `express.Router()` per
+  resource under `routes/` and mount it. The example routes in `main.ts` are
+  starters — replace them with mounted routers as you build real features.
+- **Keep handlers thin** — validate input, call a service, shape the response.
+  Put non-trivial logic in `services/` so it can be tested without HTTP.
+- **One responsibility per module** — routers do HTTP, services do logic, the db
+  layer does persistence.
+- **Pass runtime capabilities in; don't import them.** `logger` and `eventService`
+  come from `initializeService()` in `main.ts`, so pass them into a router/service
+  as arguments (e.g. `itemsRouter(eventService)`). Only module-level singletons —
+  the `db` instance, Mongoose models — are imported directly.
+
 ## Adding routes
 
-Add route handlers in `main.ts` under the `/<%= projectName %>/v1` path prefix.
-`passport.authenticate(['tenant', 'anonymous'])` is applied to the entire prefix —
-`req.user` is null for anonymous requests and populated for authenticated ones.
+Factor each resource into its own router module and mount it in `main.ts`.
 
-**Public route:**
 ```typescript
-app.get('/<%= projectName %>/v1/my-resource', (req, res) => {
-  res.json({ ... });
-});
-```
-
-**Protected route** (requires a role, validates input, publishes an event):
-```typescript
+// src/routes/items.ts
+import { Router } from 'express';
 import { authorize, createValidationHandler } from '@abgov/adsp-service-sdk';
 import { z } from 'zod';
+import * as items from '../services/items';
 
-const MySchema = z.object({ name: z.string().min(1) });
+const CreateItem = z.object({ name: z.string().min(1) });
 
-app.post(
-  '/<%= projectName %>/v1/my-resource',
-  authorize('my-role'),                   // 403 if authenticated user lacks role
-  createValidationHandler(MySchema),      // 400 if body fails schema
-  async (req, res, next) => {
+export function itemsRouter(): Router {
+  const router = Router();
+
+  // Anonymous is allowed on the /v1 prefix, so req.user may be null here.
+  router.get('/', async (_req, res, next) => {
     try {
-      const { name } = req.body as z.infer<typeof MySchema>;
-      eventService.send(createMyEvent(name));
-      res.json({ name });
+      res.json(await items.list());
     } catch (err) {
-      next(err);                          // createErrorHandler maps to 500
+      next(err);
     }
-  }
-);
+  });
+
+  // Protected: require a role, validate the body, then delegate to the service.
+  router.post(
+    '/',
+    authorize('item-writer'),
+    createValidationHandler(CreateItem),
+    async (req, res, next) => {
+      try {
+        const { name } = req.body as z.infer<typeof CreateItem>;
+        res.status(201).json(await items.create(name));
+      } catch (err) {
+        next(err);
+      }
+    }
+  );
+
+  return router;
+}
 ```
 
-Both `authorize` and `createValidationHandler` pass errors to `next()` —
-`createErrorHandler(logger)` at the bottom of `main.ts` translates them to
-structured HTTP responses (401/403 and 400 respectively).
+Mount it in `main.ts` — after the passport/configuration middleware, before
+`createErrorHandler`:
+
+```typescript
+import { itemsRouter } from './routes/items';
+// ...
+app.use('/<%= projectName %>/v1/items', itemsRouter());
+```
+
+`authorize(role)` → 403 if the user lacks the role; `createValidationHandler(schema)`
+→ 400 on a bad body. Both forward errors to `next()`, which `createErrorHandler`
+(mounted last in `main.ts`) turns into structured HTTP responses.
+
+## Recipe: add a resource end to end
+
+Build a feature the conventional way — persistence, a service, a router, wiring,
+and a test. (Replace the inline example routes in `main.ts` with resources built
+like this.)
+
+<% if (database === 'postgres') { %>1. **Table** — add it to `src/db/schema.ts`, then `nx db:generate <%= projectName %>` and `nx db:migrate <%= projectName %>` (see "Adding a table").
+<% } else if (database === 'mongo') { %>1. **Model** — add a Mongoose model (see "Adding a Mongoose model").
+<% } else { %>1. **Data source** — back the resource with your store (this service has no database configured).
+<% } %>
+2. **Service** — put the logic in `src/services/items.ts`, with no `req`/`res` so
+   it is unit-testable in isolation:
+
+```typescript
+// src/services/items.ts
+<% if (database === 'postgres') { %>import { db } from '../database';
+import { items } from '../db/schema';
+
+export const list = () => db.select().from(items);
+export const create = async (name: string) => {
+  const [row] = await db.insert(items).values({ name }).returning();
+  return row;
+};<% } else if (database === 'mongo') { %>import { ItemModel } from '../models/item';
+
+export const list = () => ItemModel.find().lean();
+export const create = (name: string) => ItemModel.create({ name });<% } else { %>const store: { id: number; name: string }[] = [];
+
+export const list = async () => store;
+export const create = async (name: string) => {
+  const row = { id: store.length + 1, name };
+  store.push(row);
+  return row;
+};<% } %>
+```
+
+3. **Event** (optional) — define it in `src/events.ts` and register it in
+   `initializeService({ events })`. To emit it, have the router factory accept
+   `eventService` — `itemsRouter(eventService)` — and call `eventService.send(...)`
+   in the handler after a successful write (see "Domain events").
+
+4. **Router** — create `src/routes/items.ts` as in "Adding routes" above: thin
+   handlers that validate, call the service, and shape the response.
+
+5. **Mount** — in `main.ts`: `app.use('/<%= projectName %>/v1/items', itemsRouter());`
+
+6. **Test** — mount the router with supertest and mock the service (no DB, no
+   server needed):
+
+```typescript
+import request from 'supertest';
+import express from 'express';
+import { itemsRouter } from './items';
+
+jest.mock('../services/items', () => ({
+  list: async () => [{ id: 1, name: 'first' }],
+  create: jest.fn(),
+}));
+
+describe('items router', () => {
+  it('GET / returns items', async () => {
+    const app = express().use(express.json());
+    app.use('/items', itemsRouter());
+    const res = await request(app).get('/items');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ id: 1, name: 'first' }]);
+  });
+});
+```
 
 ## Adding an environment variable
 
