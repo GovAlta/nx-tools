@@ -1,4 +1,4 @@
-import { consultAgent } from './agent';
+import { consultAgent, isNonInteractive } from './agent';
 
 jest.mock('readline', () => ({
   createInterface: jest.fn(() => ({
@@ -61,9 +61,23 @@ function makeMockSocket() {
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('consultAgent', () => {
+  const ORIGINAL_ARGV = process.argv;
+  const ORIGINAL_TTY = process.stdout.isTTY;
+  const ORIGINAL_CI = process.env.CI;
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    // consultAgent short-circuits when non-interactive; force an interactive
+    // TTY (no flag, no CI) so these tests exercise the interactive flow.
+    process.argv = ['node', 'nx'];
+    Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+    delete process.env.CI;
+  });
+  afterAll(() => {
+    process.argv = ORIGINAL_ARGV;
+    Object.defineProperty(process.stdout, 'isTTY', { value: ORIGINAL_TTY, configurable: true });
+    if (ORIGINAL_CI === undefined) delete process.env.CI;
+    else process.env.CI = ORIGINAL_CI;
   });
 
   it('returns null when agent-service is not in directory', async () => {
@@ -146,5 +160,53 @@ describe('consultAgent', () => {
         content: expect.stringContaining('src/main.ts'),
       })
     );
+  });
+});
+
+describe('isNonInteractive', () => {
+  const ORIGINAL_ARGV = process.argv;
+  const ORIGINAL_TTY = process.stdout.isTTY;
+  const ORIGINAL_CI = process.env.CI;
+  const setTTY = (v: boolean | undefined) =>
+    Object.defineProperty(process.stdout, 'isTTY', { value: v, configurable: true });
+
+  afterEach(() => {
+    process.argv = ORIGINAL_ARGV;
+    setTTY(ORIGINAL_TTY);
+    if (ORIGINAL_CI === undefined) delete process.env.CI;
+    else process.env.CI = ORIGINAL_CI;
+  });
+
+  it('is true when --no-interactive is passed, even in an interactive TTY', () => {
+    setTTY(true);
+    delete process.env.CI;
+    process.argv = ['node', 'nx', 'g', 'x', '--no-interactive'];
+    expect(isNonInteractive()).toBe(true);
+  });
+
+  it('honors --interactive=false and --interactive false', () => {
+    setTTY(true);
+    delete process.env.CI;
+    process.argv = ['node', 'nx', 'g', 'x', '--interactive=false'];
+    expect(isNonInteractive()).toBe(true);
+    process.argv = ['node', 'nx', 'g', 'x', '--interactive', 'false'];
+    expect(isNonInteractive()).toBe(true);
+  });
+
+  it('is true without a TTY or on CI', () => {
+    setTTY(false);
+    delete process.env.CI;
+    process.argv = ['node', 'nx'];
+    expect(isNonInteractive()).toBe(true);
+    setTTY(true);
+    process.env.CI = 'true';
+    expect(isNonInteractive()).toBe(true);
+  });
+
+  it('is false in an interactive TTY with no flag and no CI', () => {
+    setTTY(true);
+    delete process.env.CI;
+    process.argv = ['node', 'nx', 'g', 'x'];
+    expect(isNonInteractive()).toBe(false);
   });
 });
