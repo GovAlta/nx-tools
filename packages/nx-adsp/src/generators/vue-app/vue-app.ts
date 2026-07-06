@@ -84,8 +84,8 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/design-tokens': '1.8.0',
-      '@abgov/web-components': '1.39.3',
+      '@abgov/design-tokens': '2.9.0',
+      '@abgov/web-components': '2.3.0',
       // keycloak-js is a transitive dependency of @dsb-norge/vue-keycloak-js;
       // don't pin it directly or the versions diverge into two copies.
       '@dsb-norge/vue-keycloak-js': '^3.0.0',
