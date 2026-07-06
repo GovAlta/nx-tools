@@ -186,17 +186,34 @@ app.get('/<%= projectName %>/v1/items', async (_req, res) => {
 by `migrate.js` (bundled from `src/migrate.ts`), which uses only `drizzle-orm` +
 `pg` — no CLI and no native engine — so it runs under OpenShift's arbitrary UID.
 
-## OpenShift deployment — database
+## Database in OpenShift — migrations run automatically
 
-The deployment manifest references a Secret named `{appName}-database` for the
-`DATABASE_URL` value, and runs `node migrate.js` as an init container before the
-application starts. The generated SQL migrations in `drizzle/` are shipped into
-the build output as assets so the init container can apply them.
+Migrations are applied at deploy time by an **init container** named
+`<%= projectName %>-migrate`, which runs `node migrate.js` (everything in
+`drizzle/`) against the database **before the app container starts** — so a
+deploy always brings the schema up to date, and the app never starts against a
+stale DB. `migrate.js` is bundled from `src/migrate.ts` using only `drizzle-orm`
++ `pg` (no `drizzle-kit` CLI, no native engine), so it runs under OpenShift's
+arbitrary UID; it logs `No migrations to apply.` and exits 0 when `drizzle/` is
+empty. The `drizzle/` folder is shipped into the build output as a build asset.
 
-Create the Secret in each OpenShift namespace before first deploy:
+**Sandbox** (`nx run <%= projectName %>:sandbox`) — nothing to set up. The
+sandbox target provisions a shared `sandbox-postgres` instance, creates this
+service's `<%= projectName %>_sandbox` database, and injects `DATABASE_URL`
+(sourced from the `sandbox-postgres-creds` secret) into both the init container
+and the app. If a deploy fails on migrations, read the init container's logs:
 
 ```bash
-oc create secret generic <app-name>-database \
+oc logs -n <namespace> <pod> -c <%= projectName %>-migrate
+```
+
+See `.openshift/<%= projectName %>/SANDBOX.md` for the full sandbox runbook.
+
+**dev / test / prod** — the deployment reads `DATABASE_URL` from a Secret named
+`<%= projectName %>-database`. Create it once per namespace before the first deploy:
+
+```bash
+oc create secret generic <%= projectName %>-database \
   --from-literal=DATABASE_URL=postgresql://user:password@host:5432/dbname \
   -n <namespace>
 ```
@@ -265,15 +282,18 @@ app.get('/<%= projectName %>/v1/items', async (_req, res) => {
 });
 ```
 
-## OpenShift deployment — database
+## Database in OpenShift
 
-The deployment manifest references a Secret named `{appName}-database` for the
-`MONGODB_URI` value.
+**Sandbox** (`nx run <%= projectName %>:sandbox`) — nothing to set up. The
+sandbox target provisions a shared `sandbox-mongodb` instance and injects
+`MONGODB_URI` (sourced from the `sandbox-mongodb-creds` secret) into the app.
+See `.openshift/<%= projectName %>/SANDBOX.md` for the full sandbox runbook.
 
-Create the Secret in each OpenShift namespace before first deploy:
+**dev / test / prod** — the deployment reads `MONGODB_URI` from a Secret named
+`<%= projectName %>-database`. Create it once per namespace before the first deploy:
 
 ```bash
-oc create secret generic <app-name>-database \
+oc create secret generic <%= projectName %>-database \
   --from-literal=MONGODB_URI=mongodb://user:password@host:27017/dbname \
   -n <namespace>
 ```
