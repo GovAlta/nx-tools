@@ -44,9 +44,8 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ## Full-stack quickstart (PEVN → sandbox)
 
 This is the end-to-end path a coding agent can follow from an empty folder to a
-running full-stack app in an OpenShift sandbox. **The Nx 23 line is published on
-the `@beta` dist-tag** — append `@beta` to installs until it is promoted to
-`latest`.
+running full-stack app in an OpenShift sandbox. The plugins require **Nx 23**,
+which `create-nx-workspace@latest` produces by default.
 
 Prerequisites for the sandbox deploy (steps 4–5): `podman` (machine started on
 macOS), `oc` logged in to the sandbox cluster, and the GitHub CLI (`gh`)
@@ -66,7 +65,7 @@ cd my-solution
 
 # 2. Install the plugins + stack peers (match @nx/* to the workspace nx version)
 NXV=$(node -p "require('./node_modules/nx/package.json').version")
-npm i -D @abgov/nx-oc@beta @abgov/nx-adsp@beta "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
+npm i -D @abgov/nx-oc @abgov/nx-adsp "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
 
 # 3. Scaffold a Postgres + Express + Vue + Node solution (opens a browser for the ADSP tenant login)
 npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant --no-interactive

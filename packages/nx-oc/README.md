@@ -143,8 +143,8 @@ npx nx run my-app:deploy
 
 For rapid iteration, the `sandbox` generator wires a per-app deploy that builds
 the image **locally with podman**, pushes it to a container registry (GHCR), and
-imports it into your OpenShift namespace — no git push or CI wait. The Nx 23 line
-that ships this is on the `@beta` dist-tag.
+imports it into your OpenShift namespace — no git push or CI wait. (Requires the
+Nx 23 line, `@abgov/nx-oc` 13.x.)
 
 ```bash
 # Add the sandbox targets to a project (run once per app)
