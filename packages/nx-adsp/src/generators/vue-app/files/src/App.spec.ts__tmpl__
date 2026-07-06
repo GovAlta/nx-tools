@@ -1,27 +1,38 @@
 import { mount } from '@vue/test-utils';
-import { ref } from 'vue';
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('@dsb-norge/vue-keycloak-js', () => ({
-  useKeycloak: () => ({
-    authenticated: ref(false),
-    fullName: ref(''),
-    // ready stays false — Keycloak's check-sso hasn't resolved (or failed).
-    ready: ref(false),
+// Mirror the real wrapper: useKeycloak() returns a reactive() whose fields are
+// plain values (NOT refs), with login/logout on the nested `keycloak` instance.
+// Build the state inside the (hoisted) factory to dodge vi.mock hoisting issues.
+vi.mock('@dsb-norge/vue-keycloak-js', async () => {
+  const { reactive } = await import('vue');
+  const kc = reactive({
+    authenticated: false,
+    fullName: '',
+    ready: true,
     keycloak: { login: vi.fn(), logout: vi.fn() },
-  }),
-}));
+  });
+  return { useKeycloak: () => kc };
+});
 
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import App from './App.vue';
 
 describe('App shell header', () => {
-  it('shows Sign in when unauthenticated even before Keycloak is ready', () => {
+  it('shows Sign in when unauthenticated', () => {
     const wrapper = mount(App, { global: { stubs: { RouterView: true } } });
-
-    // The sign-in affordance must not be gated on `ready`: if check-sso never
-    // resolves, the button would be hidden and the user could never log in.
     const group = wrapper.find('goa-button-group');
     expect(group.exists()).toBe(true);
     expect(group.html()).toContain('Sign in');
+  });
+
+  it('Sign in click calls keycloak.login (guards against lost reactivity)', async () => {
+    // The bug: destructuring useKeycloak() froze `keycloak` at undefined, so
+    // login() was a permanent no-op. Reactive access must reach the instance.
+    const kc = useKeycloak();
+    const wrapper = mount(App, { global: { stubs: { RouterView: true } } });
+    const btn = wrapper.findAll('goa-button').find((b) => b.text().includes('Sign in'));
+    await btn?.trigger('_click');
+    expect(kc.keycloak?.login).toHaveBeenCalled();
   });
 });

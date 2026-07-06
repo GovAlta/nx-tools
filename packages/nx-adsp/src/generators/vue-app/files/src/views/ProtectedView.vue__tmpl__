@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 
-const { fullName, tokenParsed } = useKeycloak();
-const userEmail = tokenParsed?.email ?? '';
+// Keep the reactive instance — do NOT destructure (see App.vue): fullName and
+// tokenParsed populate asynchronously once Keycloak settles, so a destructured
+// snapshot would freeze them at undefined and the page would render blank.
+const kc = useKeycloak();
+const userEmail = computed(() => kc.tokenParsed?.email ?? '');
 </script>
 
 <template>
   <section>
     <h2>Protected page</h2>
-    <p>You are signed in as <strong>{{ fullName }}</strong> ({{ userEmail }}).</p>
+    <p>You are signed in as <strong>{{ kc.fullName }}</strong> ({{ userEmail }}).</p>
     <router-link to="/">← Back to home</router-link>
   </section>
 </template>

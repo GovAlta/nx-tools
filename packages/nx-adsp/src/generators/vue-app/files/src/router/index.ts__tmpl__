@@ -16,10 +16,12 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.requiresAuth) {
-    const { authenticated, ready, keycloak } = useKeycloak();
-    if (!ready) return true;
-    if (!authenticated) {
-      keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
+    // Read fields off the reactive instance (don't destructure) — consistent with
+    // the views and safe if this ever moves out of the per-navigation callback.
+    const kc = useKeycloak();
+    if (!kc.ready) return true;
+    if (!kc.authenticated) {
+      kc.keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
       return false;
     }
   }

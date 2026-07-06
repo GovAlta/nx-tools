@@ -43,21 +43,33 @@ executors read options from `project.json` and do not prompt.
 ```typescript
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 
-// useKeycloak() returns a DeepReadonly<VueKeycloakInstance>
-const { authenticated, fullName, ready, token, tokenParsed, keycloak } = useKeycloak();
+// useKeycloak() returns a readonly(reactive(...)) instance. Keep the object and
+// read fields off it — do NOT destructure. Destructuring snapshots each field at
+// setup time, so `kc.keycloak` would freeze at `undefined` (login() a no-op) and
+// `kc.authenticated` would never flip to true. All fields populate asynchronously
+// once Keycloak's init settles.
+const kc = useKeycloak();
 
-authenticated       // Ref<boolean> — true after sign-in
-fullName            // Ref<string | undefined> — display name from token
-ready               // Ref<boolean> — true once Keycloak init has settled
-token               // Ref<string | undefined> — current access token
+kc.authenticated    // boolean — true after sign-in
+kc.fullName         // string | undefined — display name from token
+kc.ready            // boolean — true once Keycloak init has settled
+kc.token            // string | undefined — current access token
 
 // Call Keycloak actions via the underlying keycloak-js instance:
-keycloak?.login()
-keycloak?.logout({ redirectUri: window.location.origin })
+kc.keycloak?.login()
+kc.keycloak?.logout({ redirectUri: window.location.origin })
 
 // Refresh token before an authenticated API call:
-await keycloak?.updateToken(30);
-const bearer = keycloak?.token;
+await kc.keycloak?.updateToken(30);
+const bearer = kc.keycloak?.token;
+```
+
+To run work when auth settles (it flips after mount, e.g. on return from the
+login redirect), `watch` it rather than reading once:
+
+```typescript
+import { watch } from 'vue';
+watch(() => kc.authenticated, (authed) => { if (authed) loadPrivateData(); }, { immediate: true });
 ```
 
 Route guard (in `router/index.ts`):
@@ -65,10 +77,10 @@ Route guard (in `router/index.ts`):
 ```typescript
 router.beforeEach((to) => {
   if (to.meta.requiresAuth) {
-    const { authenticated, ready, keycloak } = useKeycloak();
-    if (!ready) return true;    // let Keycloak init settle first
-    if (!authenticated) {
-      keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
+    const kc = useKeycloak();
+    if (!kc.ready) return true;    // let Keycloak init settle first
+    if (!kc.authenticated) {
+      kc.keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
       return false;
     }
   }
