@@ -26,10 +26,6 @@ http {
       add_header Cache-Control "public, no-transform";
     }
 
-    location = /silent-check-sso.html {
-      add_header Cache-Control "no-store";
-    }
-
     location / {
       try_files $uri /index.html;
     }

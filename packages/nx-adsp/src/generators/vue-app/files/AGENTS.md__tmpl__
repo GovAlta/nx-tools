@@ -155,7 +155,6 @@ nx run <%= projectName %>:teardown-dev      # remove from dev environment
 
 - `src/main.ts` — Keycloak plugin is registered once here; do not call `new Keycloak()` elsewhere
 - `environments/environment.ts` — access URL and realm are pre-configured for the ADSP tenant
-- `silent-check-sso.html` — required for keycloak-js silent SSO; must be served from the app root
 - `vite.config.ts` — the `isCustomElement` predicate must stay to suppress Vue warnings for `goa-*` elements
 
 ## Sandbox deployment (local build)
