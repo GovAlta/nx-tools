@@ -40,6 +40,17 @@ executors read options from `project.json` and do not prompt.
 
 ## Auth pattern
 
+> ⚠️ **Never destructure `useKeycloak()`.** Unlike most Vue composables (which
+> return `ref`s that survive destructuring), this wrapper returns a
+> `readonly(reactive({...}))` whose fields are **plain values** — `authenticated`
+> is a `boolean`, `keycloak` is the instance-or-`undefined`, etc. Every field is
+> `false`/`undefined` at setup time and only populates **asynchronously** once
+> Keycloak's init settles. `const { keycloak } = useKeycloak()` therefore captures
+> a permanent `undefined`, so `keycloak?.login()` becomes a silent no-op and
+> `authenticated` never flips — and it *looks* fine because the initial render is
+> correct. Always keep the object (`const kc = useKeycloak()`) and read `kc.field`
+> at call/render time. This is the single most common way to break auth here.
+
 ```typescript
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 
