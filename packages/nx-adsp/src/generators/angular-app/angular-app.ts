@@ -114,10 +114,14 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/angular-components': '5.2.1',
-      '@abgov/design-tokens': '1.8.0',
-      '@abgov/ui-components-common': '^2.0.0',
-      '@abgov/web-components': '1.39.3',
+      '@abgov/angular-components': '5.3.0',
+      '@abgov/design-tokens': '2.9.0',
+      // Pin exact (not ^2.0.0): angular-components 5.3.0 imports symbols added in
+      // ui-components-common 2.3.0 (e.g. GoabWorkspaceLayoutScrollState), so a
+      // lower 2.x resolves and fails the build. Keep this in lockstep with the
+      // angular-components version above.
+      '@abgov/ui-components-common': '2.3.0',
+      '@abgov/web-components': '2.3.0',
       'keycloak-angular': '^19.0.2',
       'keycloak-js': '^23.0.7',
       'zone.js': '~0.15.0',
