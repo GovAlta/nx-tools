@@ -49,24 +49,46 @@ describe('Vue App Generator', () => {
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
   }, 30000);
 
-  it('inits Keycloak without the hanging silent-SSO iframe check', async () => {
+  it('inits Keycloak with no hidden iframes so init never hangs', async () => {
     await generator(host, options);
-    // Strip // comments — they legitimately reference silentCheckSsoRedirectUri to
-    // explain its absence; assert against the actual init code.
+    // Strip // comments — they legitimately reference the disabled iframe options
+    // to explain their absence; assert against the actual init code.
     const code = host
       .read('apps/test/src/main.ts')
       .toString()
       .split('\n')
       .filter((l) => !l.trim().startsWith('//'))
       .join('\n');
-    // keycloak-js's silent check-sso (silentCheckSsoRedirectUri) waits on an
-    // untimed iframe postMessage that hangs when third-party cookies are blocked,
-    // leaving keycloak.login() a no-op. Use check-sso via full redirect instead.
+    // keycloak-js's silent-SSO (silentCheckSsoRedirectUri) and login-status
+    // (checkLoginIframe) iframes both wait on an untimed postMessage that hangs
+    // when third-party cookies are blocked, leaving keycloak.login() a no-op. We
+    // disable both and skip the load-time check (empty onLoad) so init settles.
     expect(code).not.toContain('silentCheckSsoRedirectUri');
-    expect(code).toContain("onLoad: 'check-sso'");
+    expect(code).toContain('checkLoginIframe: false');
+    expect(code).toContain("onLoad: ''");
     expect(code).toContain("pkceMethod: 'S256'");
     // the now-unused silent-check-sso.html is no longer generated
     expect(host.exists('apps/test/public/silent-check-sso.html')).toBeFalsy();
+  }, 30000);
+
+  it('reads Keycloak fields off the reactive instance without destructuring', async () => {
+    await generator(host, options);
+    // The Sign in no-op bug: destructuring useKeycloak() (a readonly(reactive()))
+    // froze `keycloak` at undefined so login() never fired. Every consumer must
+    // keep the instance and read fields off it.
+    for (const file of [
+      'apps/test/src/App.vue',
+      'apps/test/src/views/HomeView.vue',
+      'apps/test/src/views/ProtectedView.vue',
+      'apps/test/src/router/index.ts',
+    ]) {
+      const code = host.read(file).toString();
+      expect(code).toContain('= useKeycloak()');
+      // no destructuring assignment off useKeycloak()
+      expect(code).not.toMatch(/const\s*\{[^}]*\}\s*=\s*useKeycloak\(\)/);
+    }
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('kc.keycloak?.login()');
   }, 30000);
 
   it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {

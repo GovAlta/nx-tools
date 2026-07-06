@@ -2,24 +2,28 @@
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView } from 'vue-router';
 
-const { authenticated, fullName, keycloak } = useKeycloak();
+// Keep the reactive instance — do NOT destructure. useKeycloak() returns a
+// readonly(reactive()); destructuring snapshots each field at setup time, so
+// `keycloak` would be frozen at its initial `undefined` (login() a no-op) and
+// `authenticated` would never flip. Access fields on `kc` to stay reactive.
+const kc = useKeycloak();
 
-function login() { keycloak?.login(); }
-function logout() { keycloak?.logout({ redirectUri: window.location.origin }); }
+function login() { kc.keycloak?.login(); }
+function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin }); }
 </script>
 
 <template>
   <goa-microsite-header type="alpha" />
   <goa-app-header url="/" heading="<%= projectName %>">
     <goa-button-group alignment="end">
-      <span v-if="authenticated && fullName">{{ fullName }}</span>
-      <!-- Gate on !authenticated only, not `ready`: if Keycloak's check-sso
-           doesn't resolve (e.g. the silent-SSO iframe is blocked), we still
-           want the sign-in affordance — login() does a full redirect anyway. -->
-      <goa-button v-if="!authenticated" type="tertiary" @_click="login">
+      <span v-if="kc.authenticated && kc.fullName">{{ kc.fullName }}</span>
+      <!-- Gate on !authenticated only, never on `ready`: with no load-time SSO
+           check, `ready` flips true immediately but stays informational — the
+           sign-in affordance must always show until the user is authenticated. -->
+      <goa-button v-if="!kc.authenticated" type="tertiary" @_click="login">
         Sign in
       </goa-button>
-      <goa-button v-if="authenticated" type="tertiary" @_click="logout">
+      <goa-button v-if="kc.authenticated" type="tertiary" @_click="logout">
         Sign out
       </goa-button>
     </goa-button-group>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 
-const { authenticated, keycloak } = useKeycloak();
+// Keep the reactive instance — do NOT destructure (see App.vue): a destructured
+// `authenticated`/`keycloak` freezes at its setup-time value, so the private
+// fetch below would never see the user sign in and the bearer token stays undefined.
+const kc = useKeycloak();
 const publicResource = ref('Not retrieved — is the backend service running?');
 const privateResource = ref('Not retrieved — sign in first.');
 
@@ -14,20 +17,27 @@ onMounted(async () => {
   } catch {
     publicResource.value = 'Error loading public resource.';
   }
+});
 
-  if (authenticated) {
+// React to authentication (which settles asynchronously and may flip after mount,
+// e.g. on return from the login redirect) rather than reading it once on mount.
+watch(
+  () => kc.authenticated,
+  async (authenticated) => {
+    if (!authenticated) return;
     try {
-      await keycloak?.updateToken(30);
+      await kc.keycloak?.updateToken(30);
       const res = await fetch('/api/v1/private', {
-        headers: { Authorization: `Bearer ${keycloak?.token}` },
+        headers: { Authorization: `Bearer ${kc.keycloak?.token}` },
       });
       const data = await res.json();
       privateResource.value = data.message;
     } catch {
       privateResource.value = 'Error loading private resource.';
     }
-  }
-});
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

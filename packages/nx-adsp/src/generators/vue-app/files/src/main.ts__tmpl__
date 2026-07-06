@@ -18,18 +18,23 @@ app.use(keycloakPlugin, {
     realm: environment.access.realm,
     clientId: environment.access.client_id,
   },
-  // check-sso WITHOUT silentCheckSsoRedirectUri: on load, do a full-page redirect
-  // to Keycloak (prompt=none) and back — detecting an existing SSO session while
-  // still allowing anonymous access. We deliberately DON'T use the silent-SSO
-  // iframe (silentCheckSsoRedirectUri): keycloak-js's silent check waits on an
-  // untimed iframe postMessage that hangs forever when third-party cookies are
-  // blocked (common cross-origin), which would leave keycloak.login() a permanent
-  // no-op (the wrapper only exposes the instance after init() settles). The
-  // wrapper requires an `onLoad`, so 'check-sso' with a redirect is the anonymous-
-  // friendly, hang-free choice ('login-required' would force login on every load).
+  // No load-time SSO check and no hidden iframes. keycloak-js's silent-SSO
+  // (silentCheckSsoRedirectUri) and login-status (checkLoginIframe) iframes both
+  // wait on an untimed postMessage that never arrives when third-party cookies are
+  // blocked (common cross-origin, e.g. behind the ADSP gateway) — init() then
+  // hangs forever, the wrapper never populates its `keycloak` ref, and login()
+  // stays a permanent no-op. So we disable every iframe: checkLoginIframe:false
+  // drops the login-status iframe, omitting silentCheckSsoRedirectUri drops the
+  // silent iframe (that combination also skips the 3p-cookie probe iframe), and an
+  // empty onLoad skips the load-time check entirely — the wrapper requires onLoad
+  // to be a string, and keycloak-js treats a falsy onLoad as "no check". Result:
+  // init settles immediately as anonymous and Sign in redirects on demand. To
+  // auto-detect an existing session where the environment allows it, set
+  // onLoad: 'check-sso' (adds a prompt=none redirect round-trip on every load).
   init: {
-    onLoad: 'check-sso',
+    onLoad: '',
     pkceMethod: 'S256',
+    checkLoginIframe: false,
   },
 });
 
