@@ -88,7 +88,9 @@ export async function ensureAdspToken(options: {
   // Force the CLI to talk to the generator's target environment. Note: we set
   // ADSP_ENV, never ADSP_TENANT_REALM — the latter would make getStatus() drop
   // the persisted tenantName (it can't trust a name against an overridden realm).
-  process.env.ADSP_ENV = env || process.env.ADSP_ENV || 'prod';
+  // Default to 'test' (UAT), never 'prod' — matches every generator's schema
+  // default and avoids an accidental production hit if env is ever unset.
+  process.env.ADSP_ENV = env || process.env.ADSP_ENV || 'test';
 
   const fetchToken = async (): Promise<string | undefined> => {
     const result = await getAccessToken(scopes.length ? { scopes } : undefined);
@@ -144,7 +146,7 @@ export async function getAdspConfiguration(
   options: { env: EnvironmentName; accessToken?: string; tenant?: string; tenantRealm?: string }
 ): Promise<AdspConfiguration> {
   const { env, accessToken } = options;
-  const environment = environments[env || 'prod'];
+  const environment = environments[env || 'test'];
 
   if (isAdspOptions(options)) {
     // Adsp configuration already resolved — return it directly.
