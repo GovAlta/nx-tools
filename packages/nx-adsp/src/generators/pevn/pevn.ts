@@ -1,5 +1,5 @@
 import { formatFiles, getWorkspaceLayout, installPackagesTask, names, Tree } from '@nx/devkit';
-import { getAdspConfiguration, realmLogin } from '@abgov/nx-oc';
+import { getAdspConfiguration } from '@abgov/nx-oc';
 import initExpressService from '../express-service/express-service';
 import initVueApp from '../vue-app/vue-app';
 import { Schema, NormalizedSchema } from './schema';
@@ -58,17 +58,9 @@ export default async function (host: Tree, options: Schema) {
   }
 
   if (normalizedOptions.adsp && !normalizedOptions.skipAgent) {
-    const accessToken =
-      normalizedOptions.adsp.accessToken ??
-      (await realmLogin(
-        normalizedOptions.adsp.accessServiceUrl,
-        normalizedOptions.adsp.tenantRealm
-      ).catch((err) => {
-        process.stdout.write(
-          `\n[nx-adsp] Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`
-        );
-        return undefined;
-      }));
+    // getAdspConfiguration now returns a tenant-realm token (via @abgov/adsp-cli)
+    // in every path, so no separate agent-token login is needed.
+    const accessToken = normalizedOptions.adsp.accessToken;
     await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       accessToken,

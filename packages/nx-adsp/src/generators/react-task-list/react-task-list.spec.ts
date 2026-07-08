@@ -22,8 +22,7 @@ utilsMock.getServiceUrls.mockResolvedValue({
   'urn:ads:platform:configuration-service': 'https://configuration-service',
 });
 
-utilsMock.realmLogin.mockResolvedValue('token');
-utilsMock.selectTenant.mockResolvedValue({ name: 'demo', realm: 'demo' });
+utilsMock.ensureAdspToken.mockResolvedValue('token');
 
 jest.mock('axios');
 const axiosMock = axios as jest.Mocked<typeof axios>;

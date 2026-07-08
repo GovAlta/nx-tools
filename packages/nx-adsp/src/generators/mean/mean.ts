@@ -1,5 +1,5 @@
 import { formatFiles, getWorkspaceLayout, installPackagesTask, names, Tree } from '@nx/devkit';
-import { getAdspConfiguration, realmLogin } from '@abgov/nx-oc';
+import { getAdspConfiguration } from '@abgov/nx-oc';
 import initAngularApp from '../angular-app/angular-app';
 import initExpressService from '../express-service/express-service';
 import { NormalizedSchema, Schema } from './schema';
@@ -14,7 +14,7 @@ async function normalizeOptions(
   const adsp = await getAdspConfiguration(host, options);
   // Propagate the token from adsp to the Schema-level accessToken so that
   // sub-generators (express-service, angular-app) that check options.accessToken
-  // see it and skip their own realmLogin fallback.
+  // see it and reuse it instead of resolving a token again.
   return { ...options, accessToken: adsp.accessToken ?? options.accessToken, adsp };
 }
 
@@ -66,17 +66,9 @@ export default async function (host: Tree, options: Schema) {
     // and are routed to the correct project root when applied.
     // Use the token from --tenant login if available; fall back to a realm login
     // when the interactive flow was used (which only obtains a core-realm token).
-    const accessToken =
-      normalizedOptions.adsp.accessToken ??
-      (await realmLogin(
-        normalizedOptions.adsp.accessServiceUrl,
-        normalizedOptions.adsp.tenantRealm
-      ).catch((err) => {
-        process.stdout.write(
-          `\n[nx-adsp] Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`
-        );
-        return undefined;
-      }));
+    // getAdspConfiguration now returns a tenant-realm token (via @abgov/adsp-cli)
+    // in every path, so no separate agent-token login is needed.
+    const accessToken = normalizedOptions.adsp.accessToken;
     await confirmAfterAgentInterrupt(await consultAgent(
       normalizedOptions.adsp.directoryServiceUrl,
       accessToken,
