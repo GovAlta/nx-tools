@@ -14,11 +14,9 @@
     "tslib": "^2.0.0"
   },
   "dependencies": {
+    "@abgov/adsp-cli": "^1.1.0",
     "axios": "^1.16.0",
     "enquirer": "^2.3.6",
-    "express": "^4.18.2",
-    "open": "^8.4.0",
-    "simple-oauth2": "^5.0.0",
     "yaml": "~2.9.0"
   },
   "generators": "./generators.json",

@@ -1,4 +1,4 @@
-import { deploymentGenerator, environments, getAdspConfiguration, getServiceUrls, realmLogin } from '@abgov/nx-oc';
+import { deploymentGenerator, environments, getAdspConfiguration, getServiceUrls, ensureAdspToken, ADSP_ADMIN_SCOPE } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -29,7 +29,7 @@ async function normalizeOptions(
 
   if (options.tenant) {
     // Resolve realm from tenant name via the public tenant service API (no auth required),
-    // then do a single browser login for the tenant realm.
+    // then obtain a token for that realm via @abgov/adsp-cli.
     const env = environments[options.env ?? 'prod'];
     const tenantServiceUrl = (await getServiceUrls(env.directoryServiceUrl))['urn:ads:platform:tenant-service'];
 
@@ -49,7 +49,12 @@ async function normalizeOptions(
     if (!options.accessToken) {
       options = {
         ...options,
-        accessToken: await realmLogin(env.accessServiceUrl, tenantRealm).catch(() => undefined),
+        accessToken: await ensureAdspToken({
+          env: options.env ?? 'prod',
+          realm: tenantRealm,
+          tenant: options.tenant,
+          scopes: [ADSP_ADMIN_SCOPE],
+        }).catch(() => undefined),
       };
     }
 
@@ -262,19 +267,10 @@ export default async function (host: Tree, options: Schema) {
   // which are applied directly to the Nx Tree.
   // Falls back silently if agent-service is unreachable or no accessToken.
   if (normalizedOptions.adsp && !options.skipAgent) {
-    // When --tenant was provided, normalizedOptions.accessToken holds the token
-    // from the single realm login already performed during normalizeOptions.
-    // token from the single realm login. Fall back to a new login only when the
-    // full interactive flow was used and no token is available.
+    // Both normalizeOptions paths resolve a tenant-realm token via @abgov/adsp-cli,
+    // so it's already on normalizedOptions.accessToken (--tenant) or adsp.accessToken.
     const accessToken =
-      normalizedOptions.accessToken ??
-      (await realmLogin(
-        normalizedOptions.adsp.accessServiceUrl,
-        normalizedOptions.adsp.tenantRealm
-      ).catch((err) => {
-        process.stdout.write(`Agent sign-in failed (${err?.message ?? err}) — skipping agent interaction.\n`);
-        return undefined;
-      }));
+      normalizedOptions.accessToken ?? normalizedOptions.adsp.accessToken;
 
     const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
     const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
