@@ -132,28 +132,43 @@ async function ensureServiceAccountRoles(
   accessServiceUrl: string,
   realm: string,
   serviceClientUuid: string,
+  serviceClientId: string,
   roles: Array<{ platformClientId: string; roleName: string }>,
   accessToken: string
 ): Promise<void> {
   const { default: axios } = await import('axios');
-  // Best-effort, like the other ensure* helpers: don't abort provisioning or
-  // drop the client secret if a platform service-account role can't be assigned.
+  const allRoles = roles.map((r) => `${r.platformClientId}:${r.roleName}`);
+
+  // Best-effort — never abort provisioning or drop the client secret. But unlike
+  // the other ensure* helpers, these roles are LOAD-BEARING: initializeService()
+  // 401/403s at startup without them. So report failures per-role, by service
+  // name, and spell out the impact/fix (assigning a client role to the
+  // service-account user needs manage-users, not just manage-clients).
+  let userId: string;
   try {
     const userUrl = new URL(
       `/auth/admin/realms/${realm}/clients/${serviceClientUuid}/service-account-user`,
       accessServiceUrl
     ).href;
-    const { data: user } = await axios.get<{ id: string }>(userUrl, {
+    const { data } = await axios.get<{ id: string }>(userUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-
-    await Promise.all(
-      roles.map(({ platformClientId, roleName }) =>
-        assignRoleToServiceAccount(accessServiceUrl, realm, user.id, platformClientId, roleName, accessToken)
-      )
-    );
+    userId = data.id;
   } catch (err) {
-    logAdminError(serviceClientUuid, err);
+    logRoleProvisioningFailure(serviceClientId, realm, allRoles, err);
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    roles.map(({ platformClientId, roleName }) =>
+      assignRoleToServiceAccount(accessServiceUrl, realm, userId, platformClientId, roleName, accessToken)
+    )
+  );
+  const failed = results.flatMap((r, i) =>
+    r.status === 'rejected' ? [{ role: allRoles[i], reason: r.reason }] : []
+  );
+  if (failed.length > 0) {
+    logRoleProvisioningFailure(serviceClientId, realm, failed.map((f) => f.role), failed[0].reason);
   }
 }
 
@@ -189,6 +204,37 @@ function logAdminError(clientId: string, err: unknown): void {
 }
 
 /**
+ * Reports a failure to grant the platform service-account roles. Unlike a generic
+ * admin error, these roles are required for the generated service to boot, so the
+ * message names the service, lists exactly which role(s) failed, states the
+ * runtime impact, and gives the fix — rather than a bare "create it manually".
+ */
+function logRoleProvisioningFailure(
+  serviceClientId: string,
+  realm: string,
+  failedRoles: string[],
+  err: unknown
+): void {
+  const status = (err as { response?: { status?: number } })?.response?.status;
+  const serviceName = serviceClientId.split(':').pop() ?? serviceClientId;
+  const cause =
+    status === 401 || status === 403
+      ? 'your ADSP login lacks the manage-users permission on this realm'
+      : `${(err as Error)?.message ?? err}`;
+  process.stdout.write(
+    `\n[nx-adsp] WARNING: could not grant required platform role(s) to service '${serviceName}':\n` +
+      failedRoles.map((r) => `             - ${r}\n`).join('') +
+      `          Cause: ${cause}.\n` +
+      `          These roles are REQUIRED — '${serviceName}' will fail to start (401/403 in\n` +
+      `          initializeService()) until they are granted. To fix, either:\n` +
+      `            1) sign in with the admin scope and re-run this generator:\n` +
+      `                 npx @abgov/adsp-cli login --scope adsp-cli-admin\n` +
+      `            2) or add these client roles to the '${serviceName}' service-account user\n` +
+      `               in the ADSP admin portal (realm ${realm}).\n\n`
+  );
+}
+
+/**
  * Ensures a confidential service-account client exists in the tenant realm.
  * Returns the client secret when a new client is created; returns null when
  * the client already existed or the operation could not be completed.
@@ -221,7 +267,7 @@ export async function ensureServiceClient(
         accessToken
       );
       await Promise.all([
-        ensureServiceAccountRoles(accessServiceUrl, realm, existingClient.id, platformRoles, accessToken),
+        ensureServiceAccountRoles(accessServiceUrl, realm, existingClient.id, clientId, platformRoles, accessToken),
         ensureAudienceMapper(accessServiceUrl, realm, clientId, 'urn:ads:platform:push-service', accessToken),
       ]);
       return getClientSecret(accessServiceUrl, realm, existingClient.id, accessToken);
@@ -252,7 +298,7 @@ export async function ensureServiceClient(
       accessToken
     );
     await Promise.all([
-      ensureServiceAccountRoles(accessServiceUrl, realm, uuid, platformRoles, accessToken),
+      ensureServiceAccountRoles(accessServiceUrl, realm, uuid, clientId, platformRoles, accessToken),
       ensureAudienceMapper(accessServiceUrl, realm, clientId, 'urn:ads:platform:push-service', accessToken),
     ]);
     process.stdout.write(`[nx-adsp] Created service client '${clientId}'.\n`);
