@@ -14,7 +14,7 @@
     "tslib": "^2.0.0"
   },
   "dependencies": {
-    "@abgov/adsp-cli": "^1.1.0",
+    "@abgov/adsp-cli": "^1.1.1",
     "axios": "^1.16.0",
     "enquirer": "^2.3.6",
     "yaml": "~2.9.0"
