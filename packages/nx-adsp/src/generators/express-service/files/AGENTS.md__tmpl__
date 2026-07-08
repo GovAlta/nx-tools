@@ -89,6 +89,30 @@ To call another service with an access token:
 const token = await tokenProvider.getAccessToken();
 ```
 
+## Service won't start (401/403)
+
+If `nx serve` exits with `Failed to start: ADSP service registration did not
+complete` (401/403 from `TenantService`/`ServiceRegistration`), the service's
+Keycloak **service-account user** is missing required platform roles:
+
+| Platform client | Role |
+|---|---|
+| `urn:ads:platform:tenant-service` | `platform-service` |
+| `urn:ads:platform:event-service` | `event-sender` |
+| `urn:ads:platform:configuration-service` | `configured-service` |
+
+The generator assigns these when it creates the client, but that needs an admin
+login (`manage-users`). If it printed a `WARNING: could not grant required
+platform role(s)` during generation, fix it by either:
+
+1. signing in with the admin scope and **re-running the generator** (its
+   existing-client path back-fills the roles):
+   ```bash
+   npx @abgov/adsp-cli login --tenant <tenant> --scope adsp-cli-admin
+   ```
+2. or adding those three client roles to the `<%= projectName %>` service-account
+   user in the ADSP admin portal.
+
 ## Project structure & code factoring
 
 `main.ts` is the **composition root** — it initializes the SDK, wires middleware,
