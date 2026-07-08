@@ -67,21 +67,24 @@ cd my-solution
 NXV=$(node -p "require('./node_modules/nx/package.json').version")
 npm i -D @abgov/nx-oc @abgov/nx-adsp "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
 
-# 3. Scaffold a Postgres + Express + Vue + Node solution (opens a browser for the ADSP tenant login)
+# 3. Sign in to ADSP once (opens a browser; token is cached for later generator runs)
+npx @abgov/adsp-cli login --env test --tenant "<Your Tenant>" --scope adsp-cli-admin
+
+# 4. Scaffold a Postgres + Express + Vue + Node solution
 npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant --no-interactive
 
-# 4. Add sandbox targets (registry derives from the git remote, or pass --registry=ghcr.io/<org>;
+# 5. Add sandbox targets (registry derives from the git remote, or pass --registry=ghcr.io/<org>;
 #    the database is auto-detected from the service — no --database needed)
 npx nx g @abgov/nx-oc:sandbox acme-service --sandboxProject=<namespace> --registry=ghcr.io/<org> --tenant=my-tenant --env=dev --no-interactive
 npx nx g @abgov/nx-oc:sandbox acme-app --sandboxProject=<namespace> --tenant=my-tenant --env=dev --no-interactive
 
-# 5. Deploy — backend first so the frontend's /api proxy resolves
+# 6. Deploy — backend first so the frontend's /api proxy resolves
 npx nx run acme-service:sandbox
 npx nx run acme-app:sandbox            # or: --deployBackend to bring the backend up in the same run
 ```
 
 Each generated app has an `AGENTS.md` (framework + ADSP context) and, once
-step 4 runs, a `.openshift/<app>/SANDBOX.md` deploy/troubleshooting runbook.
+step 5 runs, a `.openshift/<app>/SANDBOX.md` deploy/troubleshooting runbook.
 See [`@abgov/nx-oc`](https://www.npmjs.com/package/@abgov/nx-oc) for the sandbox
 deploy details.
 
@@ -99,7 +102,7 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 |--------|-------|----------|-------------|
 | `name` | — | Yes | Name of the service |
 | `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
-| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
+| `tenant` | `-t` | No | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication) |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
@@ -117,7 +120,7 @@ npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 |--------|-------|----------|-------------|
 | `name` | — | Yes | Name of the application |
 | `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
-| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm automatically via a single browser login |
+| `tenant` | `-t` | No | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication) |
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 | `proxy` | — | No | Nginx proxy rule(s) as `{ location, proxyPass }` or an array of such objects |
@@ -194,15 +197,33 @@ Accepts the same options as `react-form`.
 
 ## Authentication
 
-Most generators call ADSP APIs to retrieve tenant-specific configuration during generation. Three authentication methods are supported:
+Most generators call ADSP APIs during generation, which needs an ADSP access
+token. Sign-in is delegated to **[`@abgov/adsp-cli`](https://www.npmjs.com/package/@abgov/adsp-cli)** —
+log in once (interactive browser) and its cached token is reused across generator
+runs. There's no separate login built into this plugin.
 
-| Method | When to use |
-|--------|-------------|
-| `--tenant <name>` | Preferred for interactive use; looks up the Keycloak realm by tenant name and opens a single browser login |
-| `--tenantRealm <uuid>` | Use when you already know the realm UUID; can be combined with `--tenant` to override the auto-resolved realm |
-| `--accessToken <token>` | Use in CI/CD or scripts to skip interactive login entirely |
+```bash
+# Sign in once. --scope adsp-cli-admin grants the Keycloak-admin capability some
+# generators use to provision a service's OAuth client (safe to request without it).
+npx @abgov/adsp-cli login --env <dev|test|prod> --tenant "<Your Tenant>" --scope adsp-cli-admin
+```
 
-If neither `--tenant`, `--tenantRealm`, nor `--accessToken` is provided, the generator will prompt interactively.
+When you run a generator:
+
+- if a valid cached token exists, generation proceeds with no prompt;
+- if not, an **interactive** run launches `adsp login` for you (browser); a
+  **non-interactive** run (`--no-interactive` / CI) fails with the exact
+  `adsp login` command to run first.
+
+Generator flags that steer which tenant/token is used:
+
+| Flag | Effect |
+|------|--------|
+| `--tenant <name>` | Resolves the Keycloak realm by tenant name (anonymous lookup) and targets it |
+| `--tenantRealm <uuid>` | Use the realm UUID directly; combine with `--tenant` to override the resolved realm |
+| `--accessToken <token>` | Supply a pre-obtained token directly (CI/CD), bypassing the CLI |
+
+With none of these, the generator lets `adsp login`'s interactive picker resolve the tenant.
 
 ## nx-oc integration
 

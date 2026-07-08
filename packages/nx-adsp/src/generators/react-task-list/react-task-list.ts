@@ -1,8 +1,7 @@
 import {
   environments,
   getServiceUrls,
-  realmLogin,
-  selectTenant,
+  ensureAdspToken,
 } from '@abgov/nx-oc';
 import {
   Tree,
@@ -124,23 +123,17 @@ async function normalizeOptions(
 
   const environment = environments[env || 'prod'];
   const urls = await getServiceUrls(environment.directoryServiceUrl);
-  const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
   const configurationServiceUrl =
     urls['urn:ads:platform:configuration-service'];
 
   let tenantToken = accessToken;
   if (!accessToken) {
     const environmentFile = `${projectRoot}/src/environments/environment.ts`;
-
     const result = host.read(environmentFile)?.toString();
-    let realm = /realm: '([a-zA-Z0-9-]{36})',/.exec(result)?.[1];
-    if (!realm) {
-      const token = await realmLogin(environment.accessServiceUrl, 'core');
-      const tenant = await selectTenant(tenantServiceUrl, token);
-      realm = tenant.realm;
-    }
-
-    tenantToken = await realmLogin(environment.accessServiceUrl, realm);
+    // Prefer the realm baked into the generated app; otherwise let @abgov/adsp-cli
+    // resolve the tenant (its no-args login lists tenants and prompts).
+    const realm = /realm: '([a-zA-Z0-9-]{36})',/.exec(result)?.[1];
+    tenantToken = await ensureAdspToken({ env: env ?? 'prod', realm });
   }
 
   const { queueDefinition, updateStreamId } = await getQueueDefinition(

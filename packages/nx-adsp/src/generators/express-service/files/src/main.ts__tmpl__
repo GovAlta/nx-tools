@@ -107,4 +107,16 @@ initializeApp().then(({ app, logger }) => {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 <% } %>
+}).catch((err) => {
+  // Startup failed. The most common cause is the service's Keycloak service-account
+  // missing required ADSP platform roles, so initializeService() 401/403s (see the
+  // "Service won't start (401/403)" section in AGENTS.md). Exit deliberately with a
+  // clear message instead of surfacing a raw unhandled-rejection stack trace.
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(
+    `[<%= projectName %>] Failed to start: ADSP service registration did not complete. ` +
+      `The Keycloak service-account may be missing required platform roles ` +
+      `(platform-service / event-sender / configured-service). See AGENTS.md. Cause: ${message}`
+  );
+  process.exit(1);
 });
