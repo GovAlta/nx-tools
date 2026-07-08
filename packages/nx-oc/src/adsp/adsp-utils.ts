@@ -7,6 +7,7 @@ import * as path from 'path';
 import { getAccessToken, getStatus } from '@abgov/adsp-cli';
 import { AdspConfiguration, AdspOptions } from './adsp';
 import { EnvironmentName, environments } from './environments';
+import { isNonInteractive } from '../utils/interactive';
 
 interface Package {
   dependencies: Record<string, string>;
@@ -30,17 +31,6 @@ export function hasDependency(host: Tree, dependency: string): boolean {
 // everyone else, so requesting it is always safe.
 export const ADSP_ADMIN_SCOPE = 'adsp-cli-admin';
 
-// Mirrors nx-adsp's isNonInteractive (utils/agent.ts) — duplicated because nx-oc
-// is the lower-level package and can't import from nx-adsp. Keep them in sync.
-function isNonInteractive(): boolean {
-  const argv = process.argv;
-  const interactiveIdx = argv.indexOf('--interactive');
-  const flagged =
-    argv.includes('--no-interactive') ||
-    argv.includes('--interactive=false') ||
-    (interactiveIdx !== -1 && argv[interactiveIdx + 1] === 'false');
-  return flagged || !process.stdout.isTTY || process.env.CI === 'true';
-}
 
 /** Resolve the `adsp` binary shipped by the @abgov/adsp-cli dependency. */
 function adspCliBinPath(): string {
