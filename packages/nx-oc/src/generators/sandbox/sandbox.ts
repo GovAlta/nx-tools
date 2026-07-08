@@ -18,6 +18,7 @@ import {
 } from '../../utils/git-utils';
 import { getClusterIngressDomain } from '../../utils/oc-utils';
 import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import { isNonInteractive } from '../../utils/interactive';
 import { DatabaseType } from '../deployment/schema';
 import { NormalizedSchema, Schema } from './schema';
 
@@ -56,6 +57,17 @@ async function resolveRegistry(
   if (derived) {
     console.log(`\n✓ Sandbox registry: ${derived.toLowerCase()} (derived from git remote)\n`);
     return persistRegistry(host, derived);
+  }
+
+  // Nx's --no-interactive doesn't suppress this manual enquirer prompt, so guard
+  // it ourselves — otherwise a non-interactive/CI run hangs here when the registry
+  // can't be derived (no --registry, nothing in nx.json, no git remote).
+  if (isNonInteractive()) {
+    throw new Error(
+      'Could not determine the sandbox container registry: no --registry flag, ' +
+        'nothing persisted in nx.json, and none derivable from a git remote. ' +
+        'Re-run with --registry=<host>/<org> (e.g. --registry=ghcr.io/my-org).'
+    );
   }
 
   const { prompt } = await import('enquirer');

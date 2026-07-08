@@ -6,6 +6,7 @@ import {
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import * as utils from '../../adsp';
 import { environments } from '../../adsp';
+import * as gitUtils from '../../utils/git-utils';
 import generator from './sandbox';
 import { Schema } from './schema';
 
@@ -69,6 +70,21 @@ describe('Sandbox Generator', () => {
     expect(manifest).not.toContain('ImageStream');
     expect(manifest).not.toContain('DEPLOY_TAG');
     expect(manifest).toContain('sandbox');
+  });
+
+  it('errors (does not prompt) when the registry cannot be resolved non-interactively', async () => {
+    // Jest has no TTY, so isNonInteractive() is true. With no --registry, nothing
+    // persisted in nx.json, and no git remote to derive from, the generator must
+    // throw an actionable error rather than hang on the enquirer prompt.
+    const spy = jest.spyOn(gitUtils, 'getGitRemoteUrl').mockReturnValue(undefined);
+    try {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addNodeProject(host);
+      const noRegistry: Schema = { project: 'test', sandboxProject: 'test-sandbox' };
+      await expect(generator(host, noRegistry)).rejects.toThrow(/--registry/);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('generates sandbox manifest for frontend app', async () => {
