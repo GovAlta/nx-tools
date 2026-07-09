@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 
 export default defineConfig({
   root: __dirname,
@@ -21,10 +22,13 @@ export default defineConfig({
       template: {
         compilerOptions: {
           // Treat goa-* custom elements as web components, not Vue components.
+          // Applies to the shared vue-components lib too (compiled from source).
           isCustomElement: (tag) => tag.startsWith('goa-'),
         },
       },
     }),
+    // Resolve workspace TS path aliases (e.g. the shared @<scope>/vue-components lib).
+    nxViteTsPaths(),
   ],
 
   test: {

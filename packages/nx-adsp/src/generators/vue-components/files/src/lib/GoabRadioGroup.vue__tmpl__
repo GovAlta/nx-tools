@@ -1,0 +1,22 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds v-model to <goa-radio-group>.
+// `name` is required by the underlying element and falls through.
+//
+// Usage:
+//   <GoabRadioGroup v-model="contact" name="contact">
+//     <goa-radio-item value="email" label="Email" />
+//     <goa-radio-item value="phone" label="Phone" />
+//   </GoabRadioGroup>
+const model = defineModel<string>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ value: string }>).detail.value;
+}
+</script>
+
+<template>
+  <goa-radio-group :value="model" @_change="onChange">
+    <slot />
+  </goa-radio-group>
+</template>

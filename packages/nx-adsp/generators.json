@@ -49,6 +49,12 @@
       "schema": "./src/generators/vue-app/schema.json",
       "description": "Generator that creates a Vue 3 frontend application using GoA web components."
     },
+    "vue-components": {
+      "factory": "./src/generators/vue-components/vue-components",
+      "schema": "./src/generators/vue-components/schema.json",
+      "description": "Ensures the shared GoA Vue wrapper library (interim). Invoked by vue-app; runnable directly to repair.",
+      "hidden": true
+    },
     "mean": {
       "factory": "./src/generators/mean/mean",
       "schema": "./src/generators/mean/schema.json",

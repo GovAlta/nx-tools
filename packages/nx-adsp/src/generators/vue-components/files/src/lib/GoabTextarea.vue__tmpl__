@@ -1,0 +1,17 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds v-model to <goa-textarea>.
+//
+// Usage: <GoabTextarea v-model="notes" name="notes" :rows="4" />
+const model = defineModel<string>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ value: string }>).detail.value;
+}
+</script>
+
+<template>
+  <goa-textarea :value="model" @_change="onChange">
+    <slot />
+  </goa-textarea>
+</template>

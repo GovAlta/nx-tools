@@ -17,6 +17,7 @@ import {
   writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
+import vueComponentsGenerator, { vueComponentsImportPath } from '../vue-components/vue-components';
 import { NormalizedSchema, Schema } from './schema';
 
 async function normalizeOptions(host: Tree, options: Schema): Promise<NormalizedSchema> {
@@ -38,6 +39,8 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     ...options.adsp,
     offsetFromRoot: offsetFromRoot(options.projectRoot),
     pairedProject: options.pairedProject ?? null,
+    // Import specifier for the shared GoA wrapper lib (AGENTS.md references it).
+    goaImportPath: vueComponentsImportPath(host),
     tmpl: '',
   };
   generateFiles(host, path.join(__dirname, 'files'), options.projectRoot, templateOptions);
@@ -84,6 +87,11 @@ export default async function (host: Tree, options: Schema) {
   // Let the Playwright e2e target the deployed URL (BASE_URL) in CI instead of
   // always starting a local dev server — see the nx-oc pipeline's e2e jobs.
   guardPlaywrightWebServer(host, `${normalizedOptions.projectRoot}-e2e`);
+
+  // Ensure the shared GoA wrapper library exists (idempotent — created once per
+  // workspace, refreshed on later runs). Apps import it instead of each carrying
+  // their own copy, so it's one place to swap for @abgov/vue-components later.
+  await vueComponentsGenerator(host);
 
   addDependenciesToPackageJson(
     host,

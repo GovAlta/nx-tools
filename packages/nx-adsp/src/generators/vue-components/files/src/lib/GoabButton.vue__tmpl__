@@ -1,0 +1,16 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). No v-model (a button has no value); this
+// re-exposes goa-button's `_click` as a plain `@click` so views don't have to
+// remember the underscore convention. Props (type, size, disabled, leadingicon,
+// …) fall through to <goa-button>.
+//
+// Usage: <GoabButton type="primary" @click="save">Save</GoabButton>
+const emit = defineEmits<{ click: [event: CustomEvent] }>();
+</script>
+
+<template>
+  <goa-button @_click="emit('click', $event as CustomEvent)">
+    <slot />
+  </goa-button>
+</template>
