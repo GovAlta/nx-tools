@@ -1,0 +1,21 @@
+import { describe, it, expect } from 'vitest';
+import * as lib from './index';
+
+// Smoke test: the barrel resolves and every wrapper SFC compiles under the test
+// runner. It also gives the library a test target with real content, so
+// `nx test vue-components` doesn't fail on "no test files found".
+describe('vue-components', () => {
+  it('exports every GoA wrapper', () => {
+    for (const name of [
+      'GoabInput',
+      'GoabTextarea',
+      'GoabDropdown',
+      'GoabCheckbox',
+      'GoabRadioGroup',
+      'GoabButton',
+      'GoabModal',
+    ]) {
+      expect(lib[name as keyof typeof lib]).toBeTruthy();
+    }
+  });
+});
