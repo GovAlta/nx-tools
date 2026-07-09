@@ -31,6 +31,10 @@ describe('Vue Components Generator', () => {
     expect(index).toContain("export { default as GoabInput }");
     expect(index).toContain('@abgov/vue-components'); // interim marker
 
+    // Ships a spec so the vitest test target isn't empty (vitest exits non-zero
+    // on "no test files found").
+    expect(host.exists('libs/vue-components/src/vue-components.spec.ts')).toBeTruthy();
+
     // Ships agent direction for maintaining the (interim) lib, incl. a recipe
     // for wrapping additional components.
     expect(host.exists('libs/vue-components/AGENTS.md')).toBeTruthy();
