@@ -31,6 +31,17 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 30000);
 
+  it('scaffolds a Playwright e2e project (consistent across frontends)', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+    expect(host.exists('apps/test-e2e/project.json')).toBeTruthy();
+    expect(
+      host.exists('apps/test-e2e/playwright.config.ts') ||
+        host.exists('apps/test-e2e/playwright.config.mts')
+    ).toBe(true);
+    expect(host.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
+  }, 30000);
+
   it('AGENTS.md points at the current design system docs', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);

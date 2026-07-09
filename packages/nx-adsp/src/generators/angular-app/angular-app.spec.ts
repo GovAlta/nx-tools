@@ -39,6 +39,16 @@ describe('angular app generator', () => {
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 120000);
 
+  it('scaffolds a Playwright e2e project (consistent across frontends)', async () => {
+    await angularApp(appTree, options);
+    expect(appTree.exists('apps/test-e2e/project.json')).toBeTruthy();
+    expect(
+      appTree.exists('apps/test-e2e/playwright.config.ts') ||
+        appTree.exists('apps/test-e2e/playwright.config.mts')
+    ).toBe(true);
+    expect(appTree.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
+  }, 120000);
+
   it('AGENTS.md points at the current design system docs', async () => {
     await angularApp(appTree, options);
     const agents = appTree.read('apps/test/AGENTS.md').toString();
