@@ -31,11 +31,14 @@ describe('Vue Components Generator', () => {
     expect(index).toContain("export { default as GoabInput }");
     expect(index).toContain('@abgov/vue-components'); // interim marker
 
-    // Ships agent direction for maintaining the (interim) lib.
+    // Ships agent direction for maintaining the (interim) lib, incl. a recipe
+    // for wrapping additional components.
     expect(host.exists('libs/vue-components/AGENTS.md')).toBeTruthy();
     const agents = host.read('libs/vue-components/AGENTS.md').toString();
     expect(agents).toContain('Interim');
     expect(agents).toContain('detail.value');
+    expect(agents).toContain('Wrapping a new component');
+    expect(agents).toContain('defineModel<boolean>');
   }, 30000);
 
   it('is idempotent — a second run does not throw and keeps the wrappers', async () => {
