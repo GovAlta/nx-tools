@@ -76,7 +76,7 @@ export default async function (host: Tree, options: Schema) {
     skipFormat: true,
     linter: 'eslint',
     unitTestRunner: 'vitest',
-    e2eTestRunner: 'none',
+    e2eTestRunner: 'playwright',
     routing: true,
     directory: normalizedOptions.projectRoot,
   });

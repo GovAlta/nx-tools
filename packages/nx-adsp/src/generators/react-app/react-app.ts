@@ -120,7 +120,7 @@ export default async function (host: Tree, options: Schema) {
     skipFormat: true,
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
-    e2eTestRunner: 'cypress',
+    e2eTestRunner: 'playwright',
     strict: false,
     directory: normalizedOptions.projectRoot,
   });
