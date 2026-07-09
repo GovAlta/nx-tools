@@ -35,6 +35,11 @@ describe('Vue Components Generator', () => {
     // on "no test files found").
     expect(host.exists('libs/vue-components/src/vue-components.spec.ts')).toBeTruthy();
 
+    // GoabModal uses goa-modal's native `slot` attribute (web component, not the
+    // deprecated Vue 2 slot syntax) — the rule is turned off for this lib.
+    const eslintrc = host.read('libs/vue-components/.eslintrc.json').toString();
+    expect(eslintrc).toContain('"vue/no-deprecated-slot-attribute": "off"');
+
     // Ships agent direction for maintaining the (interim) lib, incl. a recipe
     // for wrapping additional components.
     expect(host.exists('libs/vue-components/AGENTS.md')).toBeTruthy();

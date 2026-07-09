@@ -25,6 +25,7 @@ function onClose() {
 <template>
   <goa-modal :open="open" @_close="onClose">
     <slot />
+    <!-- `slot="actions"` is goa-modal's native web-component slot, not the Vue 2 slot syntax. The vue/no-deprecated-slot-attribute rule is turned off for this lib (see .eslintrc.json). -->
     <div v-if="slots.actions" slot="actions">
       <slot name="actions" />
     </div>
