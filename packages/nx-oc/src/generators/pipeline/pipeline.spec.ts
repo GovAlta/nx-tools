@@ -65,6 +65,31 @@ describe('Pipeline Generator', () => {
       expect(workflow).toContain('oc set triggers');
     });
 
+    it('adds a deployed-env Playwright e2e job + the self-hosted runner manifest', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      await generator(host, options);
+
+      const workflow = host.read('.github/workflows/pipeline.yml').toString();
+      // e2e runs on the in-cluster self-hosted runner, gated so it can't queue
+      // before the runner exists, resolves the deployed URL, and is report-style.
+      expect(workflow).toContain('[self-hosted, playwright]');
+      expect(workflow).toContain("vars.RUN_E2E == 'true'");
+      expect(workflow).toContain('oc get route');
+      expect(workflow).toContain('BASE_URL=');
+      // --exclude-task-dependencies skips nx's inferred serve dependency so no
+      // local server runs when targeting the deployed URL.
+      expect(workflow).toContain('nx e2e "$e2e" --exclude-task-dependencies');
+
+      // Runner provisioning ships as in-repo manifests referencing the shared
+      // public image (no per-repo build, no pull secret).
+      expect(host.exists('.openshift/github-runner/deployment.yml')).toBeTruthy();
+      const dep = host.read('.openshift/github-runner/deployment.yml').toString();
+      expect(dep).toContain('ghcr.io/govalta/github-runner-playwright');
+      expect(dep).toContain('RUNNER_LABELS');
+      expect(dep).toContain('test-infra'); // namespace = the infra project
+      expect(host.exists('.openshift/github-runner/README.md')).toBeTruthy();
+    });
+
     it('can generate multiple envs', async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await generator(host, { ...options, envs: 'test-dev test-test' });

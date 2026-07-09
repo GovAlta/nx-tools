@@ -2,7 +2,7 @@ import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
 import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
+import { addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings, guardPlaywrightWebServer } from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -111,6 +111,10 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     directory: normalizedOptions.projectRoot,
     skipFormat: true,
   });
+
+  // Let the Playwright e2e target the deployed URL (BASE_URL) in CI instead of
+  // always starting a local dev server — see the nx-oc pipeline's e2e jobs.
+  guardPlaywrightWebServer(host, `${normalizedOptions.projectRoot}-e2e`);
 
   addDependenciesToPackageJson(
     host,

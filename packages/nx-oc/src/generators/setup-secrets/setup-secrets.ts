@@ -6,7 +6,7 @@ import {
   getSaToken,
   linkSecretToServiceAccount,
 } from '../../utils/oc-utils';
-import { checkGhCli, setGhSecret } from '../../utils/gh-utils';
+import { checkGhCli, promptForGitHubPat, setGhSecret } from '../../utils/gh-utils';
 import { deriveRegistryFromRemote, getGitHubRepo, getGitRemoteUrl } from '../../utils/git-utils';
 import { Schema } from './schema';
 
@@ -60,19 +60,12 @@ export default async function (host: Tree, options: Schema) {
     return;
   }
 
-  const { prompt } = await import('enquirer');
-  let pat: string;
-  try {
-    const answer = await prompt<{ pat: string }>({
-      type: 'password',
-      name: 'pat',
-      message: 'Enter a GitHub PAT with read:packages scope (for OpenShift image import):',
-    });
-    pat = answer.pat;
-  } catch {
-    return;
-  }
-
+  // read:packages lets OpenShift pull/import app images from GHCR. The pipeline
+  // generator prompts once and passes the PAT in (options.pat); a standalone run
+  // prompts here.
+  const pat = options.pat ?? await promptForGitHubPat(
+    'Enter a GitHub PAT with read:packages scope (for OpenShift image import):'
+  );
   if (!pat) return;
 
   const secretCreated = createDockerRegistrySecret('ghcr-pull-secret', 'ghcr.io', org, pat, options.infra);

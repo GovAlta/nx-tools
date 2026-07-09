@@ -72,6 +72,40 @@ export function createDockerRegistrySecret(
   }
 }
 
+// Creates (or updates) an opaque secret from literal key/values. Uses
+// `create --dry-run=client -o yaml | apply` so it's idempotent — re-running the
+// generator refreshes the value instead of failing on an existing secret.
+export function createGenericSecret(
+  name: string,
+  literals: Record<string, string>,
+  namespace: string
+): boolean {
+  try {
+    const manifest = execFileSync('oc', [
+      'create', 'secret', 'generic', name,
+      ...Object.entries(literals).map(([k, v]) => `--from-literal=${k}=${v}`),
+      '-n', namespace, '--dry-run=client', '-o', 'yaml',
+    ], { stdio: 'pipe' });
+    execFileSync('oc', ['apply', '-n', namespace, '-f', '-'], { stdio: 'pipe', input: manifest });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Restarts a Deployment's pods (patches the pod-template annotation). Needed
+// after changing a referenced Secret, since env vars from secretKeyRef are read
+// only at pod start. Best-effort — harmless right after first creating the
+// Deployment.
+export function rolloutRestartDeployment(name: string, namespace: string): boolean {
+  try {
+    execFileSync('oc', ['rollout', 'restart', `deployment/${name}`, '-n', namespace], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function linkSecretToServiceAccount(
   secretName: string,
   saName: string,

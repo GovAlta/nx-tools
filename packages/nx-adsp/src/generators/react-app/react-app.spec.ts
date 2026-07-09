@@ -40,6 +40,11 @@ describe('React App Generator', () => {
         host.exists('apps/test-e2e/playwright.config.mts')
     ).toBe(true);
     expect(host.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
+    // webServer guarded so CI can target a deployed URL (BASE_URL) instead of a local server
+    const cfg = host.exists('apps/test-e2e/playwright.config.mts')
+      ? 'apps/test-e2e/playwright.config.mts'
+      : 'apps/test-e2e/playwright.config.ts';
+    expect(host.read(cfg).toString()).toContain('process.env.BASE_URL');
   }, 30000);
 
   it('AGENTS.md points at the current design system docs', async () => {

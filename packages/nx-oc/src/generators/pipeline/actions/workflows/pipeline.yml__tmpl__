@@ -226,4 +226,64 @@ jobs:
               oc rollout status dc/$app -n <%= ocEnvProject %>
             fi
           done
+
+  e2e<%= envs[i] %>:
+    # Smoke-test the deployed <%= envs[i] %> apps with Playwright against their live
+    # routes. Runs on the in-cluster self-hosted runner (label "playwright") so it
+    # can reach network-private URLs GitHub-hosted runners can't. Report-style: it
+    # does NOT gate promotion (the next deploy depends on deploy<%= envs[i] %>, not this).
+    # Requires the runner + the RUN_E2E repo variable — see
+    # .openshift/github-runner/README.md.
+    if: needs.build.outputs.affected_apps && vars.RUN_E2E == 'true'
+    needs: [build, deploy<%= envs[i] %>]
+    runs-on: [self-hosted, playwright]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      AFFECTED_APPS: ${{ needs.build.outputs.affected_apps }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - name: OC login
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: <%= ocEnvProject %>
+          insecure_skip_tls_verify: true
+      - name: Smoke e2e against <%= envs[i] %>
+        run: |
+          set -eo pipefail
+          npx playwright install chromium
+          for app in $AFFECTED_APPS
+          do
+            e2e="${app}-e2e"
+            root=$(npx nx show project "$e2e" --json 2>/dev/null \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).root||"")}catch{}}') || true
+            if [ -z "$root" ] || ! ls "$root"/playwright.config.* > /dev/null 2>&1 ; then
+              echo "skip $app — no Playwright e2e project"
+              continue
+            fi
+            host=$(oc get route "$app" -n <%= ocEnvProject %> -o jsonpath='{.spec.host}' 2>/dev/null || true)
+            if [ -z "$host" ] ; then
+              echo "skip $app — no Route in <%= ocEnvProject %>"
+              continue
+            fi
+            echo "e2e $e2e against https://$host"
+            # We test the deployed URL, so no local server should run. Two guards,
+            # because @nx/playwright can start a local server two ways and neither
+            # has a clean built-in "test a hosted target" mode (nrwl/nx#34698):
+            #   1. The Playwright config's own webServer — guarded on BASE_URL in
+            #      the frontend generators (webServer undefined when BASE_URL set).
+            #   2. nx's inferred `serve` dependsOn, derived from that webServer and
+            #      cached by config-file hash (not env), so it can persist even with
+            #      BASE_URL set — --exclude-task-dependencies skips it.
+            # https://github.com/nrwl/nx/issues/34698
+            BASE_URL="https://$host" npx nx e2e "$e2e" --exclude-task-dependencies
+          done
 <% }); -%>

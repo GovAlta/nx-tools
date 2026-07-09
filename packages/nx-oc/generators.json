@@ -18,6 +18,11 @@
       "schema": "./src/generators/setup-secrets/schema.json",
       "description": "Sets GitHub Actions secrets and OpenShift GHCR pull secret for the pipeline."
     },
+    "setup-runner": {
+      "factory": "./src/generators/setup-runner/setup-runner",
+      "schema": "./src/generators/setup-runner/schema.json",
+      "description": "Provisions the self-hosted GitHub Actions runner for deployed-env Playwright e2e (secret, Deployment, RUN_E2E)."
+    },
     "deployment": {
       "factory": "./src/generators/deployment/deployment",
       "schema": "./src/generators/deployment/schema.json",

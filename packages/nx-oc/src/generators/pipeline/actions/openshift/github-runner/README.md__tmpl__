@@ -1,0 +1,108 @@
+# Playwright e2e runner (`<%= ocInfraProject %>`)
+
+A self-hosted GitHub Actions runner (label **`playwright`**) that the pipeline's
+`e2e<Env>` jobs run on, so they can reach the **network-private** environment
+routes that GitHub-hosted runners can't. It uses the shared **public** image
+[`ghcr.io/govalta/github-runner-playwright`](https://github.com/GovAlta/github-runner-images)
+— no pull secret needed.
+
+## Setup
+
+### Create the PAT (the one manual github.com step)
+
+Registration itself is automatic — the runner self-registers using the PAT, with
+no click-through on github.com to approve it. But **creating** the PAT is a
+browser step that can't be automated (it's credential issuance): generate a
+classic token at <https://github.com/settings/tokens> with **`read:packages` +
+`repo`** scope (`admin:org` instead of `repo` for an org-wide runner), and keep
+it handy for the step below. Everything after (`oc apply` → self-register →
+*Idle*) needs no further GitHub UI.
+
+> If an **org** has restricted self-hosted runners (org setting or runner-group
+> policy), registration returns 403 until an org admin permits this repo — even
+> with a valid PAT. Repos allow self-hosted runners by default, so usually
+> there's nothing to toggle.
+
+### Provision the runner
+
+If you generated the pipeline with `--apply` this is **done for you**. To
+provision (or repair) the runner on its own at any time:
+
+```bash
+nx g @abgov/nx-oc:setup-runner --infra <%= ocInfraProject %>
+```
+
+It prompts for the PAT, creates the `github-runner-pat` secret, applies this
+Deployment, and sets `RUN_E2E=true`.
+
+The only step that can't be automated is the private-CA configmap (we don't have
+your cert), and only if internal routes use one:
+
+```bash
+oc create configmap goa-ca \
+  --from-file=goa-ca.crt=<path-to-ca.crt> -n <%= ocInfraProject %>
+```
+
+Confirm the runner shows up under the repo's **Settings → Actions → Runners**
+(status *Idle*, label `playwright`).
+
+### Manual setup (equivalent of the generator)
+
+```bash
+# 1. PAT for runner registration (repo scope; admin:org for an org-wide runner).
+oc create secret generic github-runner-pat \
+  --from-literal=pat=<YOUR_PAT> -n <%= ocInfraProject %>
+
+# 2. (Only if internal endpoints use a private CA) the CA cert Node/Playwright must trust:
+oc create configmap goa-ca \
+  --from-file=goa-ca.crt=<path-to-ca.crt> -n <%= ocInfraProject %>
+
+# 3. Start the runner:
+oc apply -f .openshift/github-runner/deployment.yml
+
+# 4. Enable e2e in CI (the e2e<Env> jobs are gated on this so they never queue
+#    before a runner exists):
+gh variable set RUN_E2E --body true
+```
+
+## PAT scopes
+
+One classic PAT covers everything the pipeline needs from GitHub. It must carry
+both scopes (they serve different purposes — a token missing one still "works"
+until the corresponding step runs):
+
+| Scope | Used for | Symptom if missing |
+| --- | --- | --- |
+| `read:packages` | `ghcr-pull-secret` — OpenShift pulling/importing app images from GHCR | `oc import-image` / deploy fails with `unauthorized` or `manifest unknown` pulling `ghcr.io/...` |
+| `repo` (`admin:org` for an org-wide runner) | `github-runner-pat` — the runner self-registering with GitHub | Runner never appears under **Settings → Actions → Runners**; `e2e<Env>` jobs sit **Queued** forever (nothing with label `playwright` to pick them up) |
+
+Fine-grained PATs also work if granted the equivalent access (repo
+Administration + Actions for registration, Packages: read for pull); the classic
+scopes above are the simplest.
+
+## How e2e runs
+
+After each `deploy<Env>`, the `e2e<Env>` job (on this runner) resolves every
+affected app's live route (`oc get route`) and runs its Playwright suite against
+`https://<route>` (`BASE_URL`). It's **report-style** — results surface in the run
+but do not gate promotion (promotion is gated by the environment's approval, if
+configured). Apps without a Playwright e2e project or a Route are skipped.
+
+Prod is intentionally covered by unauthenticated smoke only; authenticated
+regression (per app, pre-prod) is set up separately.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `e2e<Env>` jobs stuck **Queued** | No runner registered with label `playwright` (pod not running, or PAT lacks `repo`/`admin:org`) | `oc get pods -n <%= ocInfraProject %> -l app=github-runner-playwright`; check logs for a registration error; recreate `github-runner-pat` with a `repo`-scoped PAT |
+| Runner pod `CrashLoopBackOff`, logs show 401/403 on registration | PAT invalid, expired, or missing `repo`/`admin:org` | Re-run `nx g @abgov/nx-oc:setup-runner --infra <%= ocInfraProject %>` with a fresh PAT (recreates the secret and restarts the runner) |
+| `e2e<Env>` jobs never appear at all | `RUN_E2E` not set | `gh variable set RUN_E2E --body true` |
+| e2e step: `oc get route` empty / app skipped | App has no Route in the env namespace yet, or no Playwright e2e project | Expected for non-web apps; otherwise confirm the deploy created a Route |
+| Playwright: `net::ERR_CERT_AUTHORITY_INVALID` / TLS errors against internal routes | Runner doesn't trust the internal CA | Create the optional `goa-ca` configmap (see Setup) and restart the runner |
+| Image build/deploy: `unauthorized` pulling `ghcr.io/...` | `ghcr-pull-secret` PAT lacks `read:packages` | Re-run `setup-secrets` with a PAT that has `read:packages` |
+
+To register an **org-wide** runner (shared across repos) instead of this
+repo-scoped one, the PAT needs `admin:org` and `GITHUB_REPOSITORY` in the
+Deployment should be dropped in favour of an org URL — see the
+[runner image repo](https://github.com/GovAlta/github-runner-images).

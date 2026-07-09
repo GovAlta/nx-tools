@@ -1,9 +1,11 @@
 import { formatFiles, generateFiles, Tree } from '@nx/devkit';
 import * as path from 'path';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
-import { deriveRegistryFromRemote, getGitRemoteUrl } from '../../utils/git-utils';
+import { deriveRegistryFromRemote, getGitHubRepo, getGitRemoteUrl } from '../../utils/git-utils';
+import { promptForGitHubPat } from '../../utils/gh-utils';
 import applyInfraGenerator from '../apply-infra/apply-infra';
 import setupSecretsGenerator from '../setup-secrets/setup-secrets';
+import setupRunnerGenerator from '../setup-runner/setup-runner';
 import { NormalizedSchema, Schema } from './schema';
 
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
@@ -50,9 +52,19 @@ async function resolveRegistry(registry?: string): Promise<string> {
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
+  const remoteUrl = getGitRemoteUrl()?.trim();
+  // owner/repo drive the self-hosted e2e runner's registration (GITHUB_OWNER /
+  // GITHUB_REPOSITORY). Empty when there's no GitHub remote — the runner manifest
+  // then ships with placeholders the operator fills in (see its README).
+  const repoSlug = getGitHubRepo(remoteUrl) ?? '';
+  const [githubOwner, githubRepo] = repoSlug.includes('/')
+    ? repoSlug.split('/')
+    : ['<your-org>', '<your-repo>'];
   const templateOptions = {
     ...options,
-    sourceRepositoryUrl: getGitRemoteUrl()?.trim(),
+    sourceRepositoryUrl: remoteUrl,
+    githubOwner,
+    githubRepo,
     envs,
     tmpl: '',
   };
@@ -96,12 +108,22 @@ export default async function (host: Tree, options: Schema) {
 
     const remoteUrl = getGitRemoteUrl()?.trim();
     if (remoteUrl) {
-      await setupSecretsGenerator(host, { infra: normalizedOptions.ocInfraProject });
+      // Prompt once and share: the pull secret needs read:packages and the e2e
+      // runner registration needs repo, so one PAT with both scopes covers
+      // setup-secrets and setup-runner without a second prompt. Each generator
+      // falls back to its own prompt when run standalone.
+      const pat = await promptForGitHubPat(
+        'Enter a GitHub PAT with read:packages + repo scope\n' +
+        '  (read:packages → OpenShift image pull; repo → e2e runner registration):'
+      );
+      await setupSecretsGenerator(host, { infra: normalizedOptions.ocInfraProject, pat });
+      await setupRunnerGenerator(host, { infra: normalizedOptions.ocInfraProject, pat });
     } else {
       console.log(
-        '\n⚠  No git remote found — skipping GitHub secrets setup.\n' +
+        '\n⚠  No git remote found — skipping GitHub secrets and e2e runner setup.\n' +
         `   Push to GitHub first then run:\n` +
-        `   npx nx g @abgov/nx-oc:setup-secrets --infra ${normalizedOptions.ocInfraProject}\n`
+        `   npx nx g @abgov/nx-oc:setup-secrets --infra ${normalizedOptions.ocInfraProject}\n` +
+        `   npx nx g @abgov/nx-oc:setup-runner --infra ${normalizedOptions.ocInfraProject}\n`
       );
     }
   }

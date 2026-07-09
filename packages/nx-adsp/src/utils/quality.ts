@@ -91,6 +91,38 @@ export function addSemgrepTarget(host: Tree, projectName: string): void {
   updateProjectConfiguration(host, projectName, config);
 }
 
+/**
+ * Makes the generated Playwright e2e config skip its local dev-server when
+ * BASE_URL is set. @nx/playwright's config already reads BASE_URL for `baseURL`
+ * (its own comment says "for CI, set BASE_URL to the deployed application"), but
+ * its `webServer` block would still start a local `nx serve` in CI. Guarding it on
+ * BASE_URL lets the same suite run locally (spins the dev server) or against a
+ * deployed URL in the pipeline (no local server) — see the pipeline's e2e jobs.
+ *
+ * This is @nx/playwright's own documented pattern for testing a hosted target
+ * (point `baseURL` at the deployment, leave `webServer` out); the common idiom is
+ * `webServer: process.env.CI ? undefined : {...}` — we key on BASE_URL instead so
+ * the server is only dropped when we actually have a deployed URL. It also avoids
+ * the serve/webServer double-start race in nx that has no clean built-in fix:
+ * https://github.com/nrwl/nx/issues/34698 (the pipeline additionally passes
+ * --exclude-task-dependencies to skip nx's cached inferred `serve` dependsOn).
+ *
+ * Idempotent and a no-op if the config lacks a webServer or is already guarded.
+ */
+export function guardPlaywrightWebServer(host: Tree, e2eProjectRoot: string): void {
+  for (const ext of ['mts', 'ts', 'cts', 'js', 'mjs']) {
+    const configPath = `${e2eProjectRoot}/playwright.config.${ext}`;
+    if (!host.exists(configPath)) continue;
+    const cfg = host.read(configPath).toString();
+    if (cfg.includes('process.env.BASE_URL') || !cfg.includes('webServer: {')) return;
+    host.write(
+      configPath,
+      cfg.replace('webServer: {', 'webServer: process.env.BASE_URL ? undefined : {')
+    );
+    return;
+  }
+}
+
 export function addVsCodeSettings(host: Tree): void {
   const settingsPath = '.vscode/settings.json';
   const settings = {
