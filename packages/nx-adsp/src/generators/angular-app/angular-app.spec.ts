@@ -47,6 +47,11 @@ describe('angular app generator', () => {
         appTree.exists('apps/test-e2e/playwright.config.mts')
     ).toBe(true);
     expect(appTree.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
+    // webServer guarded so CI can target a deployed URL (BASE_URL) instead of a local server
+    const cfg = appTree.exists('apps/test-e2e/playwright.config.mts')
+      ? 'apps/test-e2e/playwright.config.mts'
+      : 'apps/test-e2e/playwright.config.ts';
+    expect(appTree.read(cfg).toString()).toContain('process.env.BASE_URL');
   }, 120000);
 
   it('AGENTS.md points at the current design system docs', async () => {

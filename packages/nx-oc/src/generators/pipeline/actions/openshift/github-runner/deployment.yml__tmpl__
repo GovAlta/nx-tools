@@ -1,0 +1,60 @@
+# Self-hosted GitHub Actions runner for Playwright e2e (registers with label
+# "playwright"). Runs in-cluster so the pipeline's e2e<Env> jobs can reach the
+# network-private environment routes that GitHub-hosted runners can't.
+#
+# Image: the shared public runner image (ghcr.io/govalta/github-runner-playwright)
+# — public, so no pull secret is needed. See README.md for the one-time setup
+# (PAT secret + optional CA ConfigMap) before `oc apply`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-runner-playwright
+  namespace: <%= ocInfraProject %>
+  labels:
+    app: github-runner-playwright
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-runner-playwright
+  template:
+    metadata:
+      labels:
+        app: github-runner-playwright
+    spec:
+      containers:
+        - name: runner
+          image: ghcr.io/govalta/github-runner-playwright:latest
+          env:
+            - name: GITHUB_OWNER
+              value: "<%= githubOwner %>"
+            - name: GITHUB_REPOSITORY
+              value: "<%= githubRepo %>"
+            - name: RUNNER_LABELS
+              value: "playwright"
+            - name: GITHUB_PAT
+              valueFrom:
+                secretKeyRef:
+                  name: github-runner-pat
+                  key: pat
+            # Internal CA so Node/Playwright trust internal TLS — mounted at
+            # runtime, never baked into the public image. Harmless if goa-ca
+            # doesn't exist (the volume is optional).
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/ssl/goa/goa-ca.crt
+          volumeMounts:
+            - name: goa-ca
+              mountPath: /etc/ssl/goa
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: goa-ca
+          configMap:
+            name: goa-ca
+            optional: true

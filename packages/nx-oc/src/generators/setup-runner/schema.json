@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxOcSetupRunner",
+  "title": "Set up the self-hosted e2e runner",
+  "type": "object",
+  "properties": {
+    "infra": {
+      "type": "string",
+      "description": "Name of the OpenShift infra project the runner Deployment and its secret live in.",
+      "alias": "i",
+      "x-prompt": "What is the OpenShift infra project?"
+    }
+  },
+  "required": ["infra"],
+  "additionalProperties": false
+}

@@ -8,9 +8,6 @@ import generator from './setup-secrets';
 jest.mock('../../utils/oc-utils');
 jest.mock('../../utils/gh-utils');
 jest.mock('../../utils/git-utils');
-jest.mock('enquirer', () => ({
-  prompt: jest.fn().mockResolvedValue({ pat: 'test-pat' }),
-}));
 
 const ocMock = ocUtils as jest.Mocked<typeof ocUtils>;
 const ghMock = ghUtils as jest.Mocked<typeof ghUtils>;
@@ -28,6 +25,7 @@ describe('Setup Secrets Generator', () => {
     ocMock.linkSecretToServiceAccount.mockReturnValue(true);
     ghMock.checkGhCli.mockImplementation(() => undefined);
     ghMock.setGhSecret.mockReturnValue(true);
+    ghMock.promptForGitHubPat.mockResolvedValue('test-pat');
     gitMock.getGitRemoteUrl.mockReturnValue('https://github.com/GovAlta/nx-tools.git');
     gitMock.getGitHubRepo.mockReturnValue('GovAlta/nx-tools');
     gitMock.deriveRegistryFromRemote.mockReturnValue('ghcr.io/GovAlta');
@@ -44,6 +42,22 @@ describe('Setup Secrets Generator', () => {
     );
     expect(ocMock.linkSecretToServiceAccount).toHaveBeenCalledWith(
       'ghcr-pull-secret', 'github-actions', 'my-infra'
+    );
+  });
+
+  it('prompts for a PAT when one is not passed in', async () => {
+    const host = createTreeWithEmptyWorkspace();
+    await generator(host, options);
+    expect(ghMock.promptForGitHubPat).toHaveBeenCalled();
+  });
+
+  it('reuses a PAT passed in by the caller without prompting', async () => {
+    const host = createTreeWithEmptyWorkspace();
+    await generator(host, { ...options, pat: 'passed-in-pat' });
+
+    expect(ghMock.promptForGitHubPat).not.toHaveBeenCalled();
+    expect(ocMock.createDockerRegistrySecret).toHaveBeenCalledWith(
+      'ghcr-pull-secret', 'ghcr.io', 'GovAlta', 'passed-in-pat', 'my-infra'
     );
   });
 
