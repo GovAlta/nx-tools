@@ -72,6 +72,31 @@ describe('Vue App Generator', () => {
     expect(agents).not.toContain('ui-components.alberta.ca');
   }, 30000);
 
+  it('provisions the shared GoA wrapper library and points the app at it', async () => {
+    await generator(host, options);
+
+    // Wrappers live in a shared workspace lib, not copied into the app.
+    const base = 'libs/vue-components/src/lib';
+    for (const name of [
+      'GoabInput', 'GoabTextarea', 'GoabDropdown', 'GoabCheckbox',
+      'GoabRadioGroup', 'GoabButton', 'GoabModal',
+    ]) {
+      expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
+    }
+    expect(host.exists('apps/test/src/components/goa')).toBeFalsy();
+
+    // Real v-model wiring: bind :value and read the new value off the GoA event.
+    const input = host.read(`${base}/GoabInput.vue`).toString();
+    expect(input).toContain('defineModel');
+    expect(input).toContain('.detail.value');
+
+    // App resolves the lib alias (vite path plugin) and AGENTS.md points at it.
+    const vite = host.read('apps/test/vite.config.ts').toString();
+    expect(vite).toContain('nxViteTsPaths');
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('/vue-components');
+  }, 30000);
+
   it('inits Keycloak with no hidden iframes so init never hangs', async () => {
     await generator(host, options);
     // Strip // comments — they legitimately reference the disabled iframe options

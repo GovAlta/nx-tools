@@ -1,0 +1,12 @@
+// GoA Design System Vue wrappers — INTERIM shared library.
+// These add v-model / idiomatic events over the framework-agnostic goa-* custom
+// elements. Remove this library and import from @abgov/vue-components once GoA DS
+// publishes it (see the repo's UX view-patterns spec, foundational gap #2) — the
+// component names/props are intended to match, so it should be a scope swap.
+export { default as GoabInput } from './lib/GoabInput.vue';
+export { default as GoabTextarea } from './lib/GoabTextarea.vue';
+export { default as GoabDropdown } from './lib/GoabDropdown.vue';
+export { default as GoabCheckbox } from './lib/GoabCheckbox.vue';
+export { default as GoabRadioGroup } from './lib/GoabRadioGroup.vue';
+export { default as GoabButton } from './lib/GoabButton.vue';
+export { default as GoabModal } from './lib/GoabModal.vue';

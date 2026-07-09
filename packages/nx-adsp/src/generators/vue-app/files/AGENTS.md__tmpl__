@@ -119,6 +119,41 @@ clashing with native browser events); bind them with Vue's `@` syntax:
 ```
 
 Use `@_click` for buttons and `@_change` for inputs, dropdowns, and checkboxes.
+Note `goa-*` elements do **not** support Vue's `v-model` — you must wire
+`:value` + `@_change` by hand (the event carries the new value on
+`$event.detail.value`, or `.detail.checked` for a checkbox).
+
+### Prefer the `Goab*` wrappers for form controls
+
+To avoid that friction (and the temptation to reach for a raw `<input>`, which
+breaks the design system), the workspace has a shared **`<%= goaImportPath %>`**
+library of thin wrappers that add real `v-model` support: `GoabInput`,
+`GoabTextarea`, `GoabDropdown`, `GoabCheckbox`, `GoabRadioGroup`, `GoabButton`,
+`GoabModal`.
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { GoabInput, GoabButton } from '<%= goaImportPath %>';
+const email = ref('');
+</script>
+
+<template>
+  <GoabInput v-model="email" name="email" type="email" placeholder="you@alberta.ca" />
+  <GoabButton type="primary" @click="save">Save</GoabButton>
+</template>
+```
+
+Extra props/events fall through to the underlying `goa-*` element, so anything
+the design system supports still works. For components without a wrapper, use the
+`goa-*` element directly with the manual wiring above. The library is shared
+across every Vue app in this workspace — fix or extend a wrapper once in
+`libs/vue-components` (or run `nx g @abgov/nx-adsp:vue-components` to restore it).
+
+> **Interim:** these wrappers are a stopgap until GoA DS ships an official
+> `@abgov/vue-components`. When it lands, delete the `vue-components` lib and
+> repoint imports at that package — the names/props are intended to match, so
+> it's a scope swap.
 
 ## Adding a view
 

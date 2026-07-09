@@ -1,0 +1,22 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components; then
+// import from there instead. See the repo's UX view-patterns spec (foundational
+// gap #2). goa-* custom elements don't support Vue's v-model (they emit a
+// non-standard `_change` event, not `input`), so a plain `<goa-input>` needs
+// manual :value + @_change wiring every time. This wrapper adds real v-model.
+//
+// Usage: <GoabInput v-model="email" name="email" type="email" placeholder="…" />
+// Any extra attrs (name, type, error, disabled, width, …) fall through to
+// <goa-input>; extra events (@_blur, @_focus) fall through too.
+const model = defineModel<string>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ value: string }>).detail.value;
+}
+</script>
+
+<template>
+  <goa-input :value="model" @_change="onChange">
+    <slot />
+  </goa-input>
+</template>

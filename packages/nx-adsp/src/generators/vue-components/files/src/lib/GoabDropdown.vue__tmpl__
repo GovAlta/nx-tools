@@ -1,0 +1,21 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds v-model to <goa-dropdown>.
+//
+// Usage:
+//   <GoabDropdown v-model="province" name="province">
+//     <goa-dropdown-item value="ab" label="Alberta" />
+//     <goa-dropdown-item value="bc" label="British Columbia" />
+//   </GoabDropdown>
+const model = defineModel<string>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ value: string }>).detail.value;
+}
+</script>
+
+<template>
+  <goa-dropdown :value="model" @_change="onChange">
+    <slot />
+  </goa-dropdown>
+</template>

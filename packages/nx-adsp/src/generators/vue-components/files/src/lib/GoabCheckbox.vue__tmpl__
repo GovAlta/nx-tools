@@ -1,0 +1,19 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds v-model to <goa-checkbox>. Note the
+// model is the boolean `checked` state (from the event's `detail.checked`), not
+// the checkbox's `value` attribute.
+//
+// Usage: <GoabCheckbox v-model="agreed" name="agreed" text="I agree" />
+const model = defineModel<boolean>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ checked: boolean }>).detail.checked;
+}
+</script>
+
+<template>
+  <goa-checkbox :checked="model" @_change="onChange">
+    <slot />
+  </goa-checkbox>
+</template>

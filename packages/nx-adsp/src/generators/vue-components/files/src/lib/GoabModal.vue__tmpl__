@@ -1,0 +1,32 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds `v-model:open` to <goa-modal> and
+// re-exposes its `_close` (X / backdrop) by clearing that model. Other attrs
+// (heading, …) fall through. Put footer buttons in the `actions` slot.
+//
+// Usage:
+//   <GoabModal v-model:open="showConfirm" heading="Delete?">
+//     <p>This cannot be undone.</p>
+//     <template #actions>
+//       <GoabButton type="tertiary" @click="showConfirm = false">Cancel</GoabButton>
+//       <GoabButton type="primary" @click="confirm">Delete</GoabButton>
+//     </template>
+//   </GoabModal>
+import { useSlots } from 'vue';
+
+const open = defineModel<boolean>('open');
+const slots = useSlots();
+
+function onClose() {
+  open.value = false;
+}
+</script>
+
+<template>
+  <goa-modal :open="open" @_close="onClose">
+    <slot />
+    <div v-if="slots.actions" slot="actions">
+      <slot name="actions" />
+    </div>
+  </goa-modal>
+</template>
