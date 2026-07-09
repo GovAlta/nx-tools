@@ -3,8 +3,40 @@ import {
   getWorkspaceLayout,
   readProjectConfiguration,
   Tree,
+  updateJson,
 } from '@nx/devkit';
 import * as path from 'path';
+
+interface EslintRc {
+  overrides?: { files?: string[]; rules?: Record<string, string> }[];
+}
+
+// Turns off vue/no-deprecated-slot-attribute for the lib. GoabModal projects into
+// goa-modal's native web-component slot via `slot="actions"` — legitimate custom-
+// element usage, not the deprecated Vue 2 component-slot syntax the rule targets.
+// The whole lib wraps web components, so it's scoped to the lib (consuming apps,
+// which use `<template #actions>`, are unaffected).
+function disableSlotAttributeRule(host: Tree, libRoot: string): void {
+  const eslintrc = `${libRoot}/.eslintrc.json`;
+  if (!host.exists(eslintrc)) {
+    console.warn(
+      `\n⚠  ${eslintrc} not found — could not disable vue/no-deprecated-slot-attribute.\n` +
+      `   GoabModal uses goa-modal's native \`slot\` attribute; if lint flags it, turn\n` +
+      `   that rule off for this library.\n`
+    );
+    return;
+  }
+  updateJson<EslintRc, EslintRc>(host, eslintrc, (json) => {
+    const overrides = (json.overrides ??= []);
+    let vueOverride = overrides.find((o) => o.files?.some((f) => f.includes('vue')));
+    if (!vueOverride) {
+      vueOverride = { files: ['*.vue'], rules: {} };
+      overrides.push(vueOverride);
+    }
+    (vueOverride.rules ??= {})['vue/no-deprecated-slot-attribute'] = 'off';
+    return json;
+  });
+}
 
 export const LIB_NAME = 'vue-components';
 
@@ -56,6 +88,7 @@ export default async function (host: Tree) {
       importPath: vueComponentsImportPath(host),
       skipFormat: true,
     });
+    disableSlotAttributeRule(host, libRoot);
   }
 
   generateFiles(host, path.join(__dirname, 'files'), libRoot, { tmpl: '' });
