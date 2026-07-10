@@ -246,6 +246,38 @@ describe('nx-adsp e2e', () => {
       const result = await runNxCommandAsync(`build ${plugin}`);
       expect(result.stdout).toContain('Successfully ran target');
     }, 240000);
+
+    // vue-app co-generates the shared vue-components wrapper lib. Guard the real
+    // out-of-the-box breakages tree-content unit tests can't see.
+    // Not exercised here (both need a different workspace flavour than this legacy
+    // path-alias preset): TS-solution package.json `exports` resolution, and
+    // `nx lint` on the lib (gated on the workspace's @vue/eslint-config-typescript
+    // version — it's config-invalid on some, unrelated to our rules).
+    it('co-generates a vue-components lib whose test target passes', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      );
+      checkFilesExist(
+        'vue-components/src/index.ts',
+        'vue-components/src/lib/GoabModal.vue',
+        'vue-components/src/vue-components.spec.ts',
+      );
+
+      // Guards the "no test files found" regression — the lib ships a spec, so
+      // its vitest target passes instead of exiting non-zero.
+      const test = await runNxCommandAsync(`test vue-components`);
+      expect(test.stdout).toContain('Successfully ran target');
+
+      // Guards GoabModal's native goa-modal `slot` against vue/no-deprecated-slot-
+      // attribute (whose --fix rewrites it into a build-crashing form). Asserted on
+      // the generated eslint config rather than by running lint (see above).
+      const eslintrc = readFileSync(
+        join(tmpProjPath(), 'vue-components/.eslintrc.json'),
+        'utf-8'
+      );
+      expect(eslintrc).toContain('"vue/no-deprecated-slot-attribute": "off"');
+    }, 300000);
   });
 
   it('should generate angular app and build', async () => {
