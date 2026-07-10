@@ -11,6 +11,29 @@ interface EslintRc {
   overrides?: { files?: string[]; rules?: Record<string, string> }[];
 }
 
+// Backfills package.json module-resolution fields for the library. In a TS-solution
+// workspace @nx/vue's library resolves via package.json `exports`, but its
+// programmatic default (useProjectJson skips writing them here) leaves them off, so
+// the import path fails to resolve and the build breaks. Point them at the source
+// entry (the lib is non-buildable — consumers compile it). A no-op in legacy
+// path-alias workspaces (no lib package.json — resolution is via tsconfig paths),
+// and idempotent (never clobbers fields @nx/vue did write).
+export function ensurePackageExports(host: Tree, libRoot: string): void {
+  const pkgPath = `${libRoot}/package.json`;
+  if (!host.exists(pkgPath)) return;
+  const SRC = './src/index.ts';
+  updateJson<Record<string, unknown>, Record<string, unknown>>(host, pkgPath, (pkg) => {
+    pkg.main ??= SRC;
+    pkg.module ??= SRC;
+    pkg.types ??= SRC;
+    pkg.exports ??= {
+      './package.json': './package.json',
+      '.': { types: SRC, import: SRC, default: SRC },
+    };
+    return pkg;
+  });
+}
+
 // Turns off vue/no-deprecated-slot-attribute for the lib. GoabModal projects into
 // goa-modal's native web-component slot via `slot="actions"` — legitimate custom-
 // element usage, not the deprecated Vue 2 component-slot syntax the rule targets.
@@ -89,6 +112,7 @@ export default async function (host: Tree) {
       skipFormat: true,
     });
     disableSlotAttributeRule(host, libRoot);
+    ensurePackageExports(host, libRoot);
   }
 
   generateFiles(host, path.join(__dirname, 'files'), libRoot, { tmpl: '' });

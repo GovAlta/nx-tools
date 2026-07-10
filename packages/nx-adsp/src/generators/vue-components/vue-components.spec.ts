@@ -1,6 +1,6 @@
 import { readProjectConfiguration, Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import generator, { vueComponentsImportPath } from './vue-components';
+import generator, { ensurePackageExports, vueComponentsImportPath } from './vue-components';
 
 jest.mock('@nx/devkit', () => ({
   ...jest.requireActual('@nx/devkit'),
@@ -58,5 +58,33 @@ describe('Vue Components Generator', () => {
 
   it('derives the import path from the workspace scope', () => {
     expect(vueComponentsImportPath(host)).toMatch(/\/vue-components$/);
+  });
+
+  describe('ensurePackageExports (TS-solution resolution fix)', () => {
+    it('backfills exports/main/types when a lib package.json exists', () => {
+      host.write('libs/vue-components/package.json', JSON.stringify({ name: '@proj/vue-components' }));
+      ensurePackageExports(host, 'libs/vue-components');
+
+      const pkg = JSON.parse(host.read('libs/vue-components/package.json').toString());
+      expect(pkg.main).toBe('./src/index.ts');
+      expect(pkg.types).toBe('./src/index.ts');
+      expect(pkg.exports['.'].import).toBe('./src/index.ts');
+    });
+
+    it('does not clobber exports @nx/vue already wrote', () => {
+      host.write(
+        'libs/vue-components/package.json',
+        JSON.stringify({ name: '@proj/vue-components', exports: { '.': './dist/index.js' } })
+      );
+      ensurePackageExports(host, 'libs/vue-components');
+
+      const pkg = JSON.parse(host.read('libs/vue-components/package.json').toString());
+      expect(pkg.exports['.']).toBe('./dist/index.js');
+    });
+
+    it('is a no-op for a legacy lib with no package.json', () => {
+      ensurePackageExports(host, 'libs/vue-components');
+      expect(host.exists('libs/vue-components/package.json')).toBeFalsy();
+    });
   });
 });
