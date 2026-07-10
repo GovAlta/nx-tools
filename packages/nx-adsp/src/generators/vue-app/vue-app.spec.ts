@@ -72,6 +72,24 @@ describe('Vue App Generator', () => {
     expect(agents).not.toContain('ui-components.alberta.ca');
   }, 30000);
 
+  it('wraps views in a shared AppLayout gutter (not a bare tag selector)', async () => {
+    await generator(host, options);
+
+    // Shared layout component provides the content gutter for every view.
+    expect(host.exists('apps/test/src/components/AppLayout.vue')).toBeTruthy();
+    const layout = host.read('apps/test/src/components/AppLayout.vue').toString();
+    // Three named width variants, token-driven padding.
+    expect(layout).toContain('form-content');
+    expect(layout).toContain('wide-content');
+    expect(layout).toContain('--goa-space');
+
+    // App.vue uses AppLayout and no longer relies on the `main > section` gutter
+    // (which silently failed when a view's top-level tag wasn't <section>).
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('AppLayout');
+    expect(app).not.toContain('main > section');
+  });
+
   it('provisions the shared GoA wrapper library and points the app at it', async () => {
     await generator(host, options);
 

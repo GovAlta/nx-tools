@@ -31,7 +31,8 @@ executors read options from `project.json` and do not prompt.
 | File | Purpose |
 |------|---------|
 | `src/main.ts` | Entry — registers Pinia, Router, and Keycloak plugin |
-| `src/App.vue` | Shell — nav header with sign-in/out, hero banner, `<RouterView>` |
+| `src/App.vue` | Shell — nav header with sign-in/out, hero banner, `<RouterView>` wrapped in `AppLayout` |
+| `src/components/AppLayout.vue` | Shared content gutter (centered, max-width, token padding). Every view lands inside it — no per-view spacing to add. Width via route meta `layout` |
 | `src/router/index.ts` | Routes — `/protected` guarded with `requiresAuth` meta |
 | `src/views/HomeView.vue` | Public page — calls public and private APIs |
 | `src/views/ProtectedView.vue` | Authenticated page — shows user info from token |
@@ -157,12 +158,17 @@ across every Vue app in this workspace — fix or extend a wrapper once in
 
 ## Adding a view
 
-1. Create `src/views/MyFeatureView.vue` as a `<script setup>` SFC
+1. Create `src/views/MyFeatureView.vue` as a `<script setup>` SFC. **Don't add your
+   own page margins/centering** — every view renders inside `AppLayout`'s gutter, so
+   any top-level tag (`<div>`, `<section>`, …) is already centered and padded.
 2. Add the route to `src/router/index.ts`:
    ```typescript
    { path: '/my-feature', component: () => import('../views/MyFeatureView.vue') }
    // For an authenticated route:
    { path: '/my-feature', component: () => import('../views/MyFeatureView.vue'), meta: { requiresAuth: true } }
+   // For a wider (data table) or narrower (form) view, set the layout width:
+   { path: '/queue', component: () => import('../views/QueueView.vue'), meta: { layout: 'wide' } }
+   { path: '/apply', component: () => import('../views/ApplyView.vue'), meta: { layout: 'form' } }
    ```
 3. Add a nav link to `src/App.vue` if needed
 

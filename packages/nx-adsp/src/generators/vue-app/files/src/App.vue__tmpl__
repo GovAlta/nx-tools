@@ -1,12 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
-import { RouterView } from 'vue-router';
+import { RouterView, useRoute } from 'vue-router';
+import AppLayout from './components/AppLayout.vue';
 
 // Keep the reactive instance — do NOT destructure. useKeycloak() returns a
 // readonly(reactive()); destructuring snapshots each field at setup time, so
 // `keycloak` would be frozen at its initial `undefined` (login() a no-op) and
 // `authenticated` would never flip. Access fields on `kc` to stay reactive.
 const kc = useKeycloak();
+
+// Content width per view, from route meta (default 'page'). Views opt into a
+// different width with `meta: { layout: 'wide' | 'form' }` in the router.
+const route = useRoute();
+const layout = computed(
+  () => (route.meta.layout as 'page' | 'wide' | 'form' | undefined) ?? 'page'
+);
 
 function login() { kc.keycloak?.login(); }
 function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin }); }
@@ -29,20 +38,11 @@ function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin })
     </goa-button-group>
   </goa-app-header>
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
-  <main>
+  <AppLayout :variant="layout">
     <RouterView />
-  </main>
+  </AppLayout>
 </template>
 
 <style>
 body { margin: 0; }
-main {
-  display: grid;
-  grid-template-columns: repeat(6, auto);
-}
-main > section {
-  grid-column: 2 / span 2;
-  margin-top: 40px;
-  margin-bottom: 40px;
-}
 </style>
