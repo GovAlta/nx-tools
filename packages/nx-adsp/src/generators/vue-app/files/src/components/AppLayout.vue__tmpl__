@@ -1,0 +1,45 @@
+<script setup lang="ts">
+// Shared page layout. App.vue wraps <RouterView> in this, so EVERY routed view
+// gets the standard content gutter (centered, max-width, token-driven padding)
+// regardless of its own top-level tag — there's no "wrap your view in <section>"
+// convention to remember, and a plain <div> works fine.
+//
+// Width variant is chosen per-view via route meta `layout` (App.vue reads it):
+//   meta: { layout: 'form' }   // single-column forms      → 640px
+//   (default)                  // general content          → 1000px
+//   meta: { layout: 'wide' }   // data-heavy pages / tables → 1200px
+withDefaults(defineProps<{ variant?: 'page' | 'wide' | 'form' }>(), {
+  variant: 'page',
+});
+</script>
+
+<template>
+  <main id="main-content">
+    <div :class="`${variant}-content`">
+      <slot />
+    </div>
+  </main>
+</template>
+
+<style scoped>
+.page-content,
+.wide-content,
+.form-content {
+  margin-inline: auto;
+  box-sizing: border-box;
+  /* Design-token gutter; fallbacks apply only if tokens aren't loaded. */
+  padding: var(--goa-space-xl, 2.5rem) var(--goa-space-l, 1.5rem);
+}
+
+.form-content { max-width: 640px; }
+.page-content { max-width: 1000px; }
+.wide-content { max-width: 1200px; }
+
+@media (max-width: 623.98px) {
+  .page-content,
+  .wide-content,
+  .form-content {
+    padding: var(--goa-space-m, 1rem);
+  }
+}
+</style>
