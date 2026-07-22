@@ -107,4 +107,99 @@ describe('nx-agent init generator', () => {
     expect(agentsMd).toContain('Some existing stack-specific guidance.')
     expect(agentsMd).toContain('<!-- nx-agent:managed:check-hook -->')
   })
+
+  it('exits the check-hook block on failure even once another block follows it', async () => {
+    await generator(host, {})
+
+    const preCommit = host.read('.husky/pre-commit').toString()
+    expect(preCommit).toContain(
+      'git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test,build --stdin || exit 1'
+    )
+  })
+
+  it('adds secretlint, its config, the secret-scan hook block, and the AGENTS.md section from scratch', async () => {
+    await generator(host, {})
+
+    const pkg = readJson(host, 'package.json')
+    expect(pkg.devDependencies.secretlint).toBeDefined()
+    expect(pkg.devDependencies['@secretlint/secretlint-rule-preset-recommend']).toBeDefined()
+
+    const config = readJson(host, '.secretlintrc.json')
+    expect(config.rules).toEqual([{ id: '@secretlint/secretlint-rule-preset-recommend' }])
+
+    const preCommit = host.read('.husky/pre-commit').toString()
+    expect(preCommit).toContain('git diff --cached --name-only --diff-filter=ACMR')
+    expect(preCommit).toContain('xargs npx secretlint || exit 1')
+
+    const agentsMd = host.read('AGENTS.md').toString()
+    expect(agentsMd).toContain('<!-- nx-agent:managed:secret-scan -->')
+    expect(agentsMd).toContain('gh auth token')
+  })
+
+  it('does not overwrite an existing .secretlintrc.json', async () => {
+    host.write('.secretlintrc.json', JSON.stringify({ rules: [{ id: 'custom-rule' }] }))
+
+    await generator(host, {})
+
+    const config = readJson(host, '.secretlintrc.json')
+    expect(config.rules).toEqual([{ id: 'custom-rule' }])
+  })
+
+  it('keeps both hook blocks and both AGENTS.md sections independent and non-duplicated on a second run', async () => {
+    await generator(host, {})
+    await generator(host, {})
+
+    const preCommit = host.read('.husky/pre-commit').toString()
+    expect(preCommit.split('npx nx affected').length - 1).toBe(1)
+    expect(preCommit.split('npx secretlint').length - 1).toBe(1)
+
+    const agentsMd = host.read('AGENTS.md').toString()
+    expect(agentsMd.split('<!-- nx-agent:managed:check-hook -->').length - 1).toBe(1)
+    expect(agentsMd.split('<!-- nx-agent:managed:secret-scan -->').length - 1).toBe(1)
+  })
+
+  it('preserves an unrelated pre-commit line alongside both generated blocks', async () => {
+    host.write('.husky/pre-commit', 'npx lint-staged\n')
+
+    await generator(host, {})
+
+    const preCommit = host.read('.husky/pre-commit').toString()
+    expect(preCommit).toContain('npx lint-staged')
+    expect(preCommit).toContain('npx nx affected')
+    expect(preCommit).toContain('npx secretlint')
+  })
+
+  it('creates .gitignore with the baseline credential patterns when missing', async () => {
+    await generator(host, {})
+
+    const gitignore = host.read('.gitignore').toString()
+    expect(gitignore).toContain('.env.local')
+    expect(gitignore).toContain('*.pem')
+    expect(gitignore).toContain('id_rsa')
+    expect(gitignore).toContain('credentials.json')
+    // deliberately not a false positive on a bare .env, which is dual-purpose
+    expect(gitignore).not.toMatch(/^\.env$/m)
+  })
+
+  it('appends only the missing patterns to an existing .gitignore, preserving its content', async () => {
+    host.write('.gitignore', '/dist\n/node_modules\n*.pem\n')
+
+    await generator(host, {})
+
+    const gitignore = host.read('.gitignore').toString()
+    expect(gitignore).toContain('/dist')
+    expect(gitignore).toContain('/node_modules')
+    expect(gitignore.split('*.pem').length - 1).toBe(1)
+    expect(gitignore).toContain('.env.local')
+    expect(gitignore).toContain('id_rsa')
+  })
+
+  it('does not duplicate gitignore entries on a second run', async () => {
+    await generator(host, {})
+    await generator(host, {})
+
+    const gitignore = host.read('.gitignore').toString()
+    expect(gitignore.split('.env.local').length - 1).toBe(1)
+    expect(gitignore.split('id_rsa').length - 1).toBe(1)
+  })
 })
