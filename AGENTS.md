@@ -7,9 +7,10 @@ It is provider-agnostic and self-contained.
 
 ## Project Overview
 
-`nx-tools` is a monorepo of four custom Nx plugins published to NPM under the `@abgov` scope.
-They are used to scaffold and operate applications on the Alberta Digital Service Platform (ADSP)
-and to manage OpenShift CI/CD pipelines for Alberta government services.
+`nx-tools` is a monorepo of five custom Nx plugins published to NPM under the `@abgov` scope.
+They are used to scaffold and operate applications on the Alberta Digital Service Platform (ADSP),
+manage OpenShift CI/CD pipelines for Alberta government services, and set up AI-agent development
+tooling for consuming workspaces.
 
 ---
 
@@ -19,6 +20,7 @@ and to manage OpenShift CI/CD pipelines for Alberta government services.
 nx-tools/
 ├── packages/           # publishable Nx plugin libraries (libsDir)
 │   ├── nx-adsp/        # Angular/React/Dotnet app scaffolding for ADSP
+│   ├── nx-agent/       # AI-agent development tooling (pre-commit affected-check hook, AGENTS.md guidance)
 │   ├── nx-oc/          # OpenShift pipeline generators + oc CLI executors
 │   ├── nx-release/     # semantic-release generator + monorepo commit-filter plugin
 │   └── semantic-release-nuget/  # NuGet push plugin for semantic-release
@@ -43,6 +45,7 @@ Always import from these aliases — never use relative paths across package bou
 | Alias | Resolves to |
 |---|---|
 | `@abgov/nx-adsp` | `packages/nx-adsp/src/index.ts` |
+| `@abgov/nx-agent` | `packages/nx-agent/src/index.ts` |
 | `@abgov/nx-oc` | `packages/nx-oc/src/index.ts` |
 | `@abgov/nx-release` | `packages/nx-release/src/index.ts` |
 | `@abgov/semantic-release-nuget` | `packages/semantic-release-nuget/src/index.ts` |

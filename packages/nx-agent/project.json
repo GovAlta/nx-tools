@@ -1,0 +1,61 @@
+{
+  "name": "nx-agent",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/nx-agent/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/nx-agent/**/*.ts",
+          "packages/nx-agent/package.json"
+        ]
+      },
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/packages/nx-agent"],
+      "options": {
+        "jestConfig": "packages/nx-agent/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/nx-agent",
+        "tsConfig": "packages/nx-agent/tsconfig.lib.json",
+        "packageJson": "packages/nx-agent/package.json",
+        "main": "packages/nx-agent/src/index.ts",
+        "assets": [
+          "packages/nx-agent/*.md",
+          {
+            "input": "./packages/nx-agent/src",
+            "glob": "**/*.!(ts)",
+            "output": "./src"
+          },
+          {
+            "input": "./packages/nx-agent/src",
+            "glob": "**/.*",
+            "output": "./src"
+          },
+          {
+            "input": "./packages/nx-agent",
+            "glob": "generators.json",
+            "output": "."
+          }
+        ]
+      }
+    },
+    "release": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx semantic-release -e ./packages/nx-agent/.releaserc.json"
+      }
+    }
+  }
+}
