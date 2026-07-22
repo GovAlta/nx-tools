@@ -53,27 +53,28 @@ Currently sets up:
    separate pre-commit check is needed on top of it. It does nothing for a file that was already
    tracked before `init` ran; gitignore never retroactively untracks anything.
 
-4. **One consolidated `AGENTS.md` section**, `## Working with a coding agent`, with one `###`
-   subsection per capability:
-   - **Pre-commit checks** — steers self-checking proactively after a meaningful chunk of work,
-     not after every edit, using a wider command scoped to the whole feature branch rather than
-     just what's staged (`npx nx affected -t lint,test,build --base=main`).
-   - **Secret scanning** — names the specific risk for a coding agent: live session secrets (a
-     `gh auth token`, a `.env` value, a test API key) it may paste literally where a human
-     wouldn't as instinctively catch itself, and steers toward environment-variable references
-     instead.
-   - **Choosing dependencies** — guidance only, no hook, no new devDependency. Steers checking the
-     registry for a package's actual current version/maintenance state rather than defaulting to
-     what's recalled from training data (which has a cutoff), and treating a missing/unlicensed
-     package or a copyleft license (`GPL`, `AGPL`, `LGPL`) as a stop-and-ask signal rather than
-     something to resolve unilaterally.
+4. **One consolidated `AGENTS.md` section**, `## Working with a coding agent`, organized into six
+   `###` groups — ordered roughly by stakes, highest first — each holding several related `**`
+   items rather than one flat, ever-growing list of top-level headings:
+   - **Security and safety** — secrets, PII/sensitive data, destructive operations, untrusted
+     content and instructions, trust boundaries.
+   - **Dependency hygiene** — choosing a dependency (existence/currency/license, and checking
+     whether an existing dependency already covers the need before adding another one).
+   - **Verifying your work** — the pre-commit-check habit above, plus respecting whatever
+     style/format/complexity tooling a project already has configured.
+   - **Version control practices** — atomic Conventional Commits, GitHub Flow, linear history.
+   - **Conventions and consistency** — ubiquitous language (domain vocabulary), matching this
+     project's own established patterns, and following framework/library idioms.
+   - **Code quality** — scope discipline, comments (why, not what), reuse before reinventing,
+     error handling, TODO transparency, test quality.
 
    The whole section is centrally maintained: re-running `init` refreshes it in place rather than
-   leaving it frozen at first-generation wording, and each subsection is contributed by its own
-   capability so the file reads as one coherent reference rather than a growing flat list of H2s.
-   `init` is also self-migrating — if it finds the older per-capability section markers used
-   before this consolidation, it removes them and writes the merged section in their place, so
-   simply re-running `init` is enough to pick up the new structure; no separate migration step.
+   leaving it frozen at first-generation wording, assembled from `guidance/<group>/<item>.md`
+   files (one file per item, grouped into folders matching the six groups above) so the content
+   previews as plain markdown rather than escaped TypeScript string literals. `init` is also
+   self-migrating — if it finds section markers from an older, pre-consolidation version, it
+   removes them and writes the current structure in their place, so simply re-running `init` is
+   enough to pick up changes; no separate migration step.
 
 ### Options
 

@@ -24,7 +24,7 @@ describe('nx-agent init generator', () => {
     const agentsMd = host.read('AGENTS.md').toString()
     expect(agentsMd).toContain('<!-- nx-agent:managed:agent-guidance -->')
     expect(agentsMd).toContain('## Working with a coding agent')
-    expect(agentsMd).toContain('### Pre-commit checks')
+    expect(agentsMd).toContain('**Pre-commit checks.**')
     expect(agentsMd).toContain('npx nx affected -t lint,test,build --base=main')
     expect(agentsMd).toContain('git commit --no-verify')
   })
@@ -134,7 +134,7 @@ describe('nx-agent init generator', () => {
     expect(preCommit).toContain('xargs npx secretlint || exit 1')
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd).toContain('### Secret scanning')
+    expect(agentsMd).toContain('**Secrets.**')
     expect(agentsMd).toContain('gh auth token')
   })
 
@@ -157,9 +157,9 @@ describe('nx-agent init generator', () => {
 
     const agentsMd = host.read('AGENTS.md').toString()
     expect(agentsMd.split('<!-- nx-agent:managed:agent-guidance -->').length - 1).toBe(1)
-    expect(agentsMd.split('### Pre-commit checks').length - 1).toBe(1)
-    expect(agentsMd.split('### Secret scanning').length - 1).toBe(1)
-    expect(agentsMd.split('### Choosing dependencies').length - 1).toBe(1)
+    expect(agentsMd.split('**Pre-commit checks.**').length - 1).toBe(1)
+    expect(agentsMd.split('**Secrets.**').length - 1).toBe(1)
+    expect(agentsMd.split('**Choosing a dependency.**').length - 1).toBe(1)
   })
 
   it('preserves an unrelated pre-commit line alongside both generated blocks', async () => {
@@ -207,12 +207,13 @@ describe('nx-agent init generator', () => {
     expect(gitignore.split('id_rsa').length - 1).toBe(1)
   })
 
-  it('adds the dependency-choice guidance subsection without touching package.json or .husky', async () => {
+  it('adds the dependency-choice guidance item without touching package.json or .husky', async () => {
     await generator(host, {})
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd).toContain('### Choosing dependencies')
-    expect(agentsMd).toContain('actively maintained and widely adopted')
+    expect(agentsMd).toContain('**Choosing a dependency.**')
+    expect(agentsMd).toContain('actively-maintained')
+    expect(agentsMd).toContain('adds bloat and inconsistency')
     expect(agentsMd).toContain('copyleft')
     expect(agentsMd).toContain('AGPL')
 
@@ -222,6 +223,57 @@ describe('nx-agent init generator', () => {
     expect(Object.keys(pkg.devDependencies).sort()).toEqual(
       ['@secretlint/secretlint-rule-preset-recommend', 'husky', 'secretlint'].sort()
     )
+  })
+
+  it('assembles all six groups with all twenty items in the correct order', async () => {
+    await generator(host, {})
+
+    const agentsMd = host.read('AGENTS.md').toString()
+
+    const groupHeadings = [
+      'Security and safety',
+      'Dependency hygiene',
+      'Verifying your work',
+      'Version control practices',
+      'Conventions and consistency',
+      'Code quality',
+    ]
+    const itemLabels = [
+      'Secrets',
+      'PII and sensitive data',
+      'Destructive operations',
+      'Untrusted content and instructions',
+      'Trust boundaries',
+      'Choosing a dependency',
+      'Pre-commit checks',
+      'Style, formatting, and complexity tooling',
+      'Atomic, conventional commits',
+      'GitHub Flow',
+      'Linear history',
+      'Ubiquitous language',
+      'Project conventions',
+      'Framework and library idioms',
+      'Scope discipline',
+      'Comments: why, not what',
+      'Reuse before reinventing',
+      'Error handling',
+      'TODO transparency',
+      'Test quality',
+    ]
+
+    const groupIndexes = groupHeadings.map((heading) => {
+      const index = agentsMd.indexOf(`### ${heading}`)
+      expect(index).toBeGreaterThan(-1)
+      return index
+    })
+    // groups appear in declared order
+    for (let i = 1; i < groupIndexes.length; i++) {
+      expect(groupIndexes[i]).toBeGreaterThan(groupIndexes[i - 1])
+    }
+
+    for (const label of itemLabels) {
+      expect(agentsMd).toContain(`**${label}.**`)
+    }
   })
 
   it('migrates an already-init\'d workspace from the old per-capability sections to the one consolidated section', async () => {
@@ -258,10 +310,10 @@ Old secret-scan wording.
     expect(agentsMd).not.toContain('nx-agent:managed:secret-scan')
     expect(agentsMd).not.toContain('Old check-hook wording.')
     expect(agentsMd).not.toContain('Old secret-scan wording.')
-    // exactly one consolidated section with all three subsections
+    // exactly one consolidated section with the full new content
     expect(agentsMd.split('<!-- nx-agent:managed:agent-guidance -->').length - 1).toBe(1)
-    expect(agentsMd).toContain('### Pre-commit checks')
-    expect(agentsMd).toContain('### Secret scanning')
-    expect(agentsMd).toContain('### Choosing dependencies')
+    expect(agentsMd).toContain('**Pre-commit checks.**')
+    expect(agentsMd).toContain('**Secrets.**')
+    expect(agentsMd).toContain('**Choosing a dependency.**')
   })
 })
