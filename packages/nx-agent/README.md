@@ -41,6 +41,34 @@ Currently sets up:
    This section is centrally maintained: re-running `init` refreshes its wording in place rather
    than leaving it frozen at first-generation content.
 
+3. **A secret-scanning hook block**, appended to the same `.husky/pre-commit`, scanning staged
+   files for committed credentials with [secretlint](https://github.com/secretlint/secretlint):
+
+   ```sh
+   secretlint_files=$(git diff --cached --name-only --diff-filter=ACMR)
+   if [ -n "$secretlint_files" ]; then
+     echo "$secretlint_files" | xargs npx secretlint || exit 1
+   fi
+   ```
+
+   Adds `secretlint` and `@secretlint/secretlint-rule-preset-recommend` as devDependencies, and a
+   `.secretlintrc.json` if one doesn't already exist (never overwritten once created — rules are
+   the kind of thing a team tunes, unlike the AGENTS.md guidance above).
+
+4. **Baseline `.gitignore` entries** for common local-credential filenames — `.env.local`,
+   `.env.*.local`, `*.pem`, `*.key`, `id_rsa`, `id_ed25519`, `credentials.json` — added only if
+   missing, appended alongside whatever's already there. Deliberately excludes bare `.env`: it's
+   dual-purpose (plain workspace config as well as secrets), so a blanket rule would be a false
+   positive on legitimate use. This is preventive rather than detective — once a pattern is in
+   `.gitignore`, git itself refuses to stage a matching file via `git add .`/`git add -A`, so no
+   separate pre-commit check is needed on top of it. It does nothing for a file that was already
+   tracked before `init` ran; gitignore never retroactively untracks anything.
+
+5. **A second `AGENTS.md` guidance section** naming the specific risk this addresses for a coding
+   agent — live session secrets (a `gh auth token`, a `.env` value, a test API key) that an agent
+   may paste literally where a human wouldn't as instinctively catch themselves — and steering it
+   toward environment-variable references instead.
+
 ### Options
 
 | Option | Default | Description |
