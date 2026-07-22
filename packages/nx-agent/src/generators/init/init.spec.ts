@@ -9,7 +9,7 @@ describe('nx-agent init generator', () => {
     host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' })
   })
 
-  it('adds husky, the prepare script, the pre-commit hook, and the AGENTS.md section from scratch', async () => {
+  it('adds husky, the prepare script, the pre-commit hook, and the guidance section from scratch', async () => {
     await generator(host, {})
 
     const pkg = readJson(host, 'package.json')
@@ -22,7 +22,9 @@ describe('nx-agent init generator', () => {
     )
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd).toContain('<!-- nx-agent:managed:check-hook -->')
+    expect(agentsMd).toContain('<!-- nx-agent:managed:agent-guidance -->')
+    expect(agentsMd).toContain('## Working with a coding agent')
+    expect(agentsMd).toContain('### Pre-commit checks')
     expect(agentsMd).toContain('npx nx affected -t lint,test,build --base=main')
     expect(agentsMd).toContain('git commit --no-verify')
   })
@@ -59,7 +61,7 @@ describe('nx-agent init generator', () => {
     expect(Object.keys(pkg.devDependencies).filter((k) => k === 'husky')).toHaveLength(1)
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd.split('<!-- nx-agent:managed:check-hook -->').length - 1).toBe(1)
+    expect(agentsMd.split('<!-- nx-agent:managed:agent-guidance -->').length - 1).toBe(1)
   })
 
   it('warns and leaves an unrelated prepare script untouched', async () => {
@@ -105,7 +107,7 @@ describe('nx-agent init generator', () => {
     const agentsMd = host.read('AGENTS.md').toString()
     expect(agentsMd).toContain('# My Project')
     expect(agentsMd).toContain('Some existing stack-specific guidance.')
-    expect(agentsMd).toContain('<!-- nx-agent:managed:check-hook -->')
+    expect(agentsMd).toContain('<!-- nx-agent:managed:agent-guidance -->')
   })
 
   it('exits the check-hook block on failure even once another block follows it', async () => {
@@ -117,7 +119,7 @@ describe('nx-agent init generator', () => {
     )
   })
 
-  it('adds secretlint, its config, the secret-scan hook block, and the AGENTS.md section from scratch', async () => {
+  it('adds secretlint, its config, and the secret-scan hook block from scratch', async () => {
     await generator(host, {})
 
     const pkg = readJson(host, 'package.json')
@@ -132,7 +134,7 @@ describe('nx-agent init generator', () => {
     expect(preCommit).toContain('xargs npx secretlint || exit 1')
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd).toContain('<!-- nx-agent:managed:secret-scan -->')
+    expect(agentsMd).toContain('### Secret scanning')
     expect(agentsMd).toContain('gh auth token')
   })
 
@@ -145,7 +147,7 @@ describe('nx-agent init generator', () => {
     expect(config.rules).toEqual([{ id: 'custom-rule' }])
   })
 
-  it('keeps both hook blocks and both AGENTS.md sections independent and non-duplicated on a second run', async () => {
+  it('keeps both hook blocks and the one consolidated AGENTS.md section non-duplicated on a second run', async () => {
     await generator(host, {})
     await generator(host, {})
 
@@ -154,8 +156,10 @@ describe('nx-agent init generator', () => {
     expect(preCommit.split('npx secretlint').length - 1).toBe(1)
 
     const agentsMd = host.read('AGENTS.md').toString()
-    expect(agentsMd.split('<!-- nx-agent:managed:check-hook -->').length - 1).toBe(1)
-    expect(agentsMd.split('<!-- nx-agent:managed:secret-scan -->').length - 1).toBe(1)
+    expect(agentsMd.split('<!-- nx-agent:managed:agent-guidance -->').length - 1).toBe(1)
+    expect(agentsMd.split('### Pre-commit checks').length - 1).toBe(1)
+    expect(agentsMd.split('### Secret scanning').length - 1).toBe(1)
+    expect(agentsMd.split('### Choosing dependencies').length - 1).toBe(1)
   })
 
   it('preserves an unrelated pre-commit line alongside both generated blocks', async () => {
@@ -201,5 +205,63 @@ describe('nx-agent init generator', () => {
     const gitignore = host.read('.gitignore').toString()
     expect(gitignore.split('.env.local').length - 1).toBe(1)
     expect(gitignore.split('id_rsa').length - 1).toBe(1)
+  })
+
+  it('adds the dependency-choice guidance subsection without touching package.json or .husky', async () => {
+    await generator(host, {})
+
+    const agentsMd = host.read('AGENTS.md').toString()
+    expect(agentsMd).toContain('### Choosing dependencies')
+    expect(agentsMd).toContain('actively maintained and widely adopted')
+    expect(agentsMd).toContain('copyleft')
+    expect(agentsMd).toContain('AGPL')
+
+    // guidance-only: no new devDependency, no new hook block, beyond what
+    // the check-hook/secret-scan steps already add
+    const pkg = readJson(host, 'package.json')
+    expect(Object.keys(pkg.devDependencies).sort()).toEqual(
+      ['@secretlint/secretlint-rule-preset-recommend', 'husky', 'secretlint'].sort()
+    )
+  })
+
+  it('migrates an already-init\'d workspace from the old per-capability sections to the one consolidated section', async () => {
+    // Simulates AGENTS.md as left by the versions of `init` published before
+    // consolidation (check-hook and secret-scan already merged separately).
+    host.write(
+      'AGENTS.md',
+      `# My Project
+
+Some existing stack-specific guidance.
+
+<!-- nx-agent:managed:check-hook -->
+## Working with a coding agent — pre-commit checks
+
+Old check-hook wording.
+<!-- /nx-agent:managed:check-hook -->
+
+<!-- nx-agent:managed:secret-scan -->
+## Working with a coding agent — secret scanning
+
+Old secret-scan wording.
+<!-- /nx-agent:managed:secret-scan -->
+`
+    )
+
+    await generator(host, {})
+
+    const agentsMd = host.read('AGENTS.md').toString()
+    // team's own content survives
+    expect(agentsMd).toContain('# My Project')
+    expect(agentsMd).toContain('Some existing stack-specific guidance.')
+    // old markers and wording are gone, not just superseded alongside
+    expect(agentsMd).not.toContain('nx-agent:managed:check-hook')
+    expect(agentsMd).not.toContain('nx-agent:managed:secret-scan')
+    expect(agentsMd).not.toContain('Old check-hook wording.')
+    expect(agentsMd).not.toContain('Old secret-scan wording.')
+    // exactly one consolidated section with all three subsections
+    expect(agentsMd.split('<!-- nx-agent:managed:agent-guidance -->').length - 1).toBe(1)
+    expect(agentsMd).toContain('### Pre-commit checks')
+    expect(agentsMd).toContain('### Secret scanning')
+    expect(agentsMd).toContain('### Choosing dependencies')
   })
 })

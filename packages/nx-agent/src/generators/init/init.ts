@@ -7,7 +7,9 @@ import {
   updateJson,
   writeJson,
 } from '@nx/devkit'
-import { mergeManagedSection } from '../../utils/agents-md'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { mergeManagedSection, removeManagedSection } from '../../utils/agents-md'
 import { NormalizedSchema, Schema } from './schema'
 
 const DEFAULT_TARGETS = ['lint', 'test', 'build']
@@ -31,6 +33,28 @@ const CREDENTIAL_GITIGNORE_PATTERNS = [
   'id_ed25519',
   'credentials.json',
 ]
+
+const AGENT_GUIDANCE_SECTION_ID = 'agent-guidance'
+// One shared section replaced these — kept here only so a re-run against an
+// already-init'd workspace cleans them up. Self-migrating: no nx-migrate
+// needed, since re-running `init` is already the documented way to pick up
+// changes, and this content was already centrally-refreshed, not team-owned.
+const LEGACY_GUIDANCE_SECTION_IDS = ['check-hook', 'secret-scan', 'dependency-guidance']
+
+// Guidance content lives in guidance/*.md rather than inline template
+// literals — plain markdown previews/renders in an editor or PR diff, and
+// needs no backtick-escaping for the inline code the content is full of.
+// __dirname-relative, matching the same pattern lib.ts already uses to find
+// its own sibling template files; the asset glob in project.json already
+// copies non-.ts files under src/ into dist/, so this resolves the same way
+// whether running from source (tests) or the compiled package.
+function readGuidance(fileName: string, replacements: Record<string, string> = {}): string {
+  const raw = readFileSync(join(__dirname, 'guidance', fileName), 'utf-8').trimEnd()
+  return Object.entries(replacements).reduce(
+    (text, [token, value]) => text.split(`{{${token}}}`).join(value),
+    raw
+  )
+}
 
 function normalizeOptions(options: Schema): NormalizedSchema {
   return {
@@ -84,20 +108,8 @@ function addPreCommitHook(host: Tree, targets: string[]): void {
   appendHookBlock(host, AFFECTED_CHECK_MARKER, checkLine)
 }
 
-function addAgentsMdGuidance(host: Tree, targets: string[], base: string): void {
-  const content = `## Working with a coding agent — pre-commit checks
-
-A pre-commit hook runs \`nx affected\` lint/test/build against your staged changes before every
-commit. Don't wait for it to fail: run the same check yourself after a meaningful chunk of work
-(a completed feature/story-sized change, not after every individual edit) —
-
-    npx nx affected -t ${targets.join(',')} --base=${base}
-
-— so failures surface while you still have context, not as a batch at commit time. If the
-pre-commit hook blocks a commit, fix what it reports rather than bypassing it with
-\`git commit --no-verify\`.`
-
-  mergeManagedSection(host, 'check-hook', content)
+function checkHookGuidance(targets: string[], base: string): string {
+  return readGuidance('check-hook.md', { TARGETS: targets.join(','), BASE: base })
 }
 
 // One step today; the next nx-agent capability gets its own step function
@@ -106,7 +118,6 @@ function applyCheckHookStep(host: Tree, options: NormalizedSchema): void {
   addHuskyDependency(host)
   addPrepareScript(host)
   addPreCommitHook(host, options.targets)
-  addAgentsMdGuidance(host, options.targets, options.base)
 }
 
 function addSecretlintDependencies(host: Tree): void {
@@ -145,22 +156,8 @@ fi`
   appendHookBlock(host, SECRETLINT_MARKER, block)
 }
 
-function addSecretScanGuidance(host: Tree): void {
-  const content = `## Working with a coding agent — secret scanning
-
-A pre-commit hook scans your staged changes for committed credentials (API keys, tokens, private
-keys) before every commit. You may have real secrets on hand mid-session — a token from
-\`gh auth token\`, a value read from \`.env\`, a key provided for testing — that you might paste
-literally if asked to "add a working example," in a way a human wouldn't as instinctively catch in
-themselves. Reference an environment variable or a secrets manager instead — never a literal
-value, even in a comment or test fixture. If the hook blocks a commit, remove the value and rotate
-it if it was ever pushed anywhere; don't just delete the line and recommit.
-
-Local credential files (\`.env.local\`, \`*.pem\`, \`id_rsa\`, etc.) are gitignored by default, so
-they can't be staged accidentally — if you create a new kind of local secret file, add its pattern
-to \`.gitignore\` too rather than relying on the scan above to catch it after the fact.`
-
-  mergeManagedSection(host, 'secret-scan', content)
+function secretScanGuidance(): string {
+  return readGuidance('secret-scan.md')
 }
 
 // Preventive, not detective: once these patterns are in .gitignore, git
@@ -191,7 +188,32 @@ function applySecretScanStep(host: Tree): void {
   addSecretlintConfig(host)
   addSecretScanHook(host)
   ensureGitignoreEntries(host)
-  addSecretScanGuidance(host)
+}
+
+// Guidance only — no hook, no new dependency. Licensing has mature
+// deterministic tooling too (e.g. license-checker), but pairing a blocking
+// check with this is a separate decision from the guidance requested here.
+function dependencyGuidance(): string {
+  return readGuidance('dependency-guidance.md')
+}
+
+// Every capability contributes one subsection here instead of writing its
+// own top-level AGENTS.md section, so the growing list of practices reads as
+// one coherent "working with a coding agent" reference rather than an
+// ever-longer flat list of H2s competing with the rest of AGENTS.md.
+function applyAgentGuidance(host: Tree, options: NormalizedSchema): void {
+  for (const legacyId of LEGACY_GUIDANCE_SECTION_IDS) {
+    removeManagedSection(host, legacyId)
+  }
+
+  const subsections = [
+    checkHookGuidance(options.targets, options.base),
+    secretScanGuidance(),
+    dependencyGuidance(),
+  ]
+
+  const content = `## Working with a coding agent\n\n${subsections.join('\n\n')}`
+  mergeManagedSection(host, AGENT_GUIDANCE_SECTION_ID, content)
 }
 
 export default async function (host: Tree, rawOptions: Schema) {
@@ -199,6 +221,7 @@ export default async function (host: Tree, rawOptions: Schema) {
 
   applyCheckHookStep(host, options)
   applySecretScanStep(host)
+  applyAgentGuidance(host, options)
 
   await formatFiles(host)
 
