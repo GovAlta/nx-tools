@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "nx-agent",
+  "version": "0.0.1",
+  "generators": {
+    "init": {
+      "factory": "./src/generators/init/init",
+      "schema": "./src/generators/init/schema.json",
+      "description": "Sets up recommended AI-agent development tooling for this workspace (currently: a pre-commit affected-check hook and AGENTS.md guidance)."
+    }
+  }
+}

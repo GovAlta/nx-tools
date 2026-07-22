@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentInit",
+  "title": "Set up AI-agent development tooling",
+  "type": "object",
+  "properties": {
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Targets run by the pre-commit hook and the AGENTS.md guidance's self-check command.",
+      "default": ["lint", "test", "build"]
+    },
+    "base": {
+      "type": "string",
+      "description": "Base branch used by the AGENTS.md guidance's self-check command (not the pre-commit hook, which always diffs staged changes).",
+      "default": "main"
+    }
+  },
+  "additionalProperties": false
+}
