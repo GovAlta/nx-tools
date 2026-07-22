@@ -48,12 +48,83 @@ const LEGACY_GUIDANCE_SECTION_IDS = ['check-hook', 'secret-scan', 'dependency-gu
 // its own sibling template files; the asset glob in project.json already
 // copies non-.ts files under src/ into dist/, so this resolves the same way
 // whether running from source (tests) or the compiled package.
-function readGuidance(fileName: string, replacements: Record<string, string> = {}): string {
-  const raw = readFileSync(join(__dirname, 'guidance', fileName), 'utf-8').trimEnd()
-  return Object.entries(replacements).reduce(
-    (text, [token, value]) => text.split(`{{${token}}}`).join(value),
-    raw
-  )
+const GUIDANCE_DIR = join(__dirname, 'guidance')
+
+interface GuidanceGroup {
+  title: string
+  folder: string
+  items: string[]
+}
+
+// One entry per group heading; items are read in this order. Grouped by the
+// kind of thing each practice defers to (risk, an external decision, a
+// verification step, how history is packaged, an established convention, or
+// the shape of the code itself) rather than a flat, ever-growing list.
+const GUIDANCE_GROUPS: GuidanceGroup[] = [
+  {
+    title: 'Security and safety',
+    folder: 'security-and-safety',
+    items: [
+      'secrets',
+      'pii-and-sensitive-data',
+      'destructive-operations',
+      'untrusted-content-and-instructions',
+      'trust-boundaries',
+    ],
+  },
+  {
+    title: 'Dependency hygiene',
+    folder: 'dependency-hygiene',
+    items: ['choosing-a-dependency'],
+  },
+  {
+    title: 'Verifying your work',
+    folder: 'verifying-your-work',
+    items: ['pre-commit-checks', 'style-formatting-and-complexity-tooling'],
+  },
+  {
+    title: 'Version control practices',
+    folder: 'version-control-practices',
+    items: ['atomic-conventional-commits', 'github-flow', 'linear-history'],
+  },
+  {
+    title: 'Conventions and consistency',
+    folder: 'conventions-and-consistency',
+    items: ['ubiquitous-language', 'project-conventions', 'framework-and-library-idioms'],
+  },
+  {
+    title: 'Code quality',
+    folder: 'code-quality',
+    items: [
+      'scope-discipline',
+      'comments-why-not-what',
+      'reuse-before-reinventing',
+      'error-handling',
+      'todo-transparency',
+      'test-quality',
+    ],
+  },
+]
+
+function readGuidanceFile(...pathSegments: string[]): string {
+  return readFileSync(join(GUIDANCE_DIR, ...pathSegments), 'utf-8').trim()
+}
+
+// {{TARGETS}}/{{BASE}} appear only inside pre-commit-checks.md, so a single
+// substitution pass over the fully-assembled text is equivalent to (and
+// simpler than) templating each file individually.
+function buildAgentGuidance(options: NormalizedSchema): string {
+  const intro = readGuidanceFile('intro.md')
+  const groups = GUIDANCE_GROUPS.map((group) => {
+    const items = group.items.map((item) => readGuidanceFile(group.folder, `${item}.md`))
+    return `### ${group.title}\n\n${items.join('\n\n')}`
+  })
+
+  return `## Working with a coding agent\n\n${intro}\n\n${groups.join('\n\n')}`
+    .split('{{TARGETS}}')
+    .join(options.targets.join(','))
+    .split('{{BASE}}')
+    .join(options.base)
 }
 
 function normalizeOptions(options: Schema): NormalizedSchema {
@@ -108,10 +179,6 @@ function addPreCommitHook(host: Tree, targets: string[]): void {
   appendHookBlock(host, AFFECTED_CHECK_MARKER, checkLine)
 }
 
-function checkHookGuidance(targets: string[], base: string): string {
-  return readGuidance('check-hook.md', { TARGETS: targets.join(','), BASE: base })
-}
-
 // One step today; the next nx-agent capability gets its own step function
 // called from here, rather than reshaping an already-flat generator.
 function applyCheckHookStep(host: Tree, options: NormalizedSchema): void {
@@ -156,10 +223,6 @@ fi`
   appendHookBlock(host, SECRETLINT_MARKER, block)
 }
 
-function secretScanGuidance(): string {
-  return readGuidance('secret-scan.md')
-}
-
 // Preventive, not detective: once these patterns are in .gitignore, git
 // itself refuses to stage a matching file via `git add .`/`git add -A` (a
 // deliberate `git add -f` would be needed to override it) — so there's no
@@ -190,30 +253,16 @@ function applySecretScanStep(host: Tree): void {
   ensureGitignoreEntries(host)
 }
 
-// Guidance only — no hook, no new dependency. Licensing has mature
-// deterministic tooling too (e.g. license-checker), but pairing a blocking
-// check with this is a separate decision from the guidance requested here.
-function dependencyGuidance(): string {
-  return readGuidance('dependency-guidance.md')
-}
-
-// Every capability contributes one subsection here instead of writing its
-// own top-level AGENTS.md section, so the growing list of practices reads as
-// one coherent "working with a coding agent" reference rather than an
-// ever-longer flat list of H2s competing with the rest of AGENTS.md.
+// Every capability contributes to one shared section, grouped by kind,
+// instead of writing its own top-level AGENTS.md heading — keeps the
+// growing list of practices reading as one coherent reference rather than
+// an ever-longer flat list of H2s competing with the rest of AGENTS.md.
 function applyAgentGuidance(host: Tree, options: NormalizedSchema): void {
   for (const legacyId of LEGACY_GUIDANCE_SECTION_IDS) {
     removeManagedSection(host, legacyId)
   }
 
-  const subsections = [
-    checkHookGuidance(options.targets, options.base),
-    secretScanGuidance(),
-    dependencyGuidance(),
-  ]
-
-  const content = `## Working with a coding agent\n\n${subsections.join('\n\n')}`
-  mergeManagedSection(host, AGENT_GUIDANCE_SECTION_ID, content)
+  mergeManagedSection(host, AGENT_GUIDANCE_SECTION_ID, buildAgentGuidance(options))
 }
 
 export default async function (host: Tree, rawOptions: Schema) {
