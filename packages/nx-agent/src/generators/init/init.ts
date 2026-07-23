@@ -306,6 +306,31 @@ function applyDenyRulesStep(host: Tree): void {
   writeJson(host, CLAUDE_SETTINGS_PATH, { permissions: { deny: CLAUDE_DENY_PATTERNS } })
 }
 
+const CLAUDE_MD_PATH = 'CLAUDE.md'
+const AGENTS_MD_IMPORT = '@AGENTS.md'
+
+// Claude Code reads CLAUDE.md natively, not AGENTS.md directly — without this
+// import, everything applyAgentGuidance writes never reaches a Claude Code
+// session. Matches the `@AGENTS.md`-only CLAUDE.md__tmpl__ already used by
+// nx-adsp's express-service/vue-app/react-app/angular-app generators; unlike
+// those (scaffolding into an empty directory), this runs against a workspace
+// that may already have its own CLAUDE.md, so it merges rather than
+// overwrites — same idiom as ensureGitignoreEntries/appendHookBlock.
+function ensureClaudeMdImportsAgentsMd(host: Tree): void {
+  if (!host.exists(CLAUDE_MD_PATH)) {
+    host.write(CLAUDE_MD_PATH, `${AGENTS_MD_IMPORT}\n`)
+    return
+  }
+
+  const existing = host.read(CLAUDE_MD_PATH).toString()
+  if (existing.includes(AGENTS_MD_IMPORT)) {
+    return
+  }
+
+  const trimmed = existing.replace(/\n+$/, '')
+  host.write(CLAUDE_MD_PATH, `${trimmed}\n\n${AGENTS_MD_IMPORT}\n`)
+}
+
 // Every capability contributes to one shared section, grouped by kind,
 // instead of writing its own top-level AGENTS.md heading — keeps the
 // growing list of practices reading as one coherent reference rather than
@@ -316,6 +341,7 @@ function applyAgentGuidance(host: Tree, options: NormalizedSchema): void {
   }
 
   mergeManagedSection(host, AGENT_GUIDANCE_SECTION_ID, buildAgentGuidance(options))
+  ensureClaudeMdImportsAgentsMd(host)
 }
 
 export default async function (host: Tree, rawOptions: Schema) {
