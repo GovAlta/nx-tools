@@ -12,3 +12,5 @@ This is a monorepo of the Government of Alberta's custom plugins for [Nx](https:
 [Nx ADSP Plugin](./packages/nx-adsp/README.md) - includes generators for application, service, and fullstack solution quick starts.
 
 [Semantic Release Nuget](./packages/semantic-release-nuget/README.md) - [semantic-release](https://github.com/semantic-release/semantic-release) plugin for publishing nuget packages.
+
+[Nx Agent Plugin](./packages/nx-agent/README.md) - AI-agent development tooling: pre-commit checks, secret scanning, a Claude Code deny-list, AGENTS.md guidance, and a domain-vocabulary generator.
