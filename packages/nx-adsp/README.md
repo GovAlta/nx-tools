@@ -55,8 +55,9 @@ authenticated as an account with **`write:packages`** on your registry org.
 > option (name, `--env`, `--sandboxProject`, etc.) supplied — otherwise Nx prompts
 > and your session hangs waiting for input. Setting `CI=true` in the env has the
 > same effect and also skips the Nx Cloud prompt. (`nx run <target>` executors
-> don't prompt — this only applies to `nx g` generators.) The commands below
-> already follow this.
+> don't prompt — this only applies to `nx g` generators.) Also pass `--skipAgent`
+> — see [Agent consultation](#agent-consultation) for why you want to, not just
+> how. The commands below already follow this.
 
 ```bash
 # 1. Empty folder → Nx workspace (the plugins require Nx 23)
@@ -71,7 +72,7 @@ npm i -D @abgov/nx-oc @abgov/nx-adsp "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node
 npx @abgov/adsp-cli login --env test --tenant "<Your Tenant>" --scope adsp-cli-admin
 
 # 4. Scaffold a Postgres + Express + Vue + Node solution
-npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant --no-interactive
+npx nx g @abgov/nx-adsp:pevn acme --env=dev --tenant=my-tenant --no-interactive --skipAgent
 
 # 5. Add sandbox targets (registry derives from the git remote, or pass --registry=ghcr.io/<org>;
 #    the database is auto-detected from the service — no --database needed)
@@ -224,6 +225,28 @@ Generator flags that steer which tenant/token is used:
 | `--accessToken <token>` | Supply a pre-obtained token directly (CI/CD), bypassing the CLI |
 
 With none of these, the generator lets `adsp login`'s interactive picker resolve the tenant.
+
+## Agent consultation
+
+`express-service`, `react-app`, `angular-app`, `vue-app`, and the fullstack composites connect to
+ADSP's own `agent-service` after base scaffolding and hold an interactive, multi-turn conversation
+with an ADSP-aware agent that can read and modify key integration files (`main.ts`,
+`environment.ts`, `events.ts`, `database.ts`) based on a description you provide. The socket
+connection and file upload start immediately, in parallel with prompting for that description.
+
+This needs the same tenant/token as [Authentication](#authentication) above, plus a reachable
+`agent-service` — it falls back silently to base scaffolding if either is missing, or if the run
+is non-interactive (`--no-interactive`, no TTY, or `CI=true`). Skip it explicitly with
+`--skipAgent`, regardless of interactivity.
+
+> **Note for coding agents:** skip this. It exists to let a *human* describe what they want built
+> to a separate, remote agent working from nothing but that description. You already have the
+> actual requirements and the surrounding codebase context that conversation exists to gather —
+> make any needed customizations directly, after scaffolding, rather than through an indirect
+> round-trip to a second, less-informed agent. Pass `--skipAgent` explicitly rather than relying
+> on `--no-interactive` alone: `--skipAgent` is a plain option check at the generator level, while
+> `--no-interactive`'s detection is built on argv inspection this plugin's own code notes could go
+> stale on an Nx upgrade — belt and suspenders, not a real behavior difference today.
 
 ## nx-oc integration
 

@@ -344,6 +344,28 @@ Most generators call ADSP APIs during generation to retrieve tenant-specific con
 
 If none are provided, the generator will prompt interactively.
 
+## Agent consultation
+
+`express-service`, `react-app`, `angular-app`, `vue-app`, and the fullstack composites connect to
+ADSP's own `agent-service` after base scaffolding and hold an interactive, multi-turn conversation
+with an ADSP-aware agent that can read and modify key integration files (`main.ts`,
+`environment.ts`, `events.ts`, `database.ts`) based on a description you provide. The socket
+connection and file upload start immediately, in parallel with prompting for that description.
+
+This needs the same tenant/token as [Authentication](#authentication) above, plus a reachable
+`agent-service` — it falls back silently to base scaffolding if either is missing, or if the run
+is non-interactive (`--no-interactive`, no TTY, or `CI=true`). Skip it explicitly with
+`--skipAgent`, regardless of interactivity.
+
+> **Note for coding agents:** skip this. It exists to let a *human* describe what they want built
+> to a separate, remote agent working from nothing but that description. You already have the
+> actual requirements and the surrounding codebase context that conversation exists to gather —
+> make any needed customizations directly, after scaffolding, rather than through an indirect
+> round-trip to a second, less-informed agent. Pass `--skipAgent` explicitly rather than relying
+> on `--no-interactive` alone: `--skipAgent` is a plain option check at the generator level, while
+> `--no-interactive`'s detection is built on argv inspection this plugin's own code notes could go
+> stale on an Nx upgrade — belt and suspenders, not a real behavior difference today.
+
 ## nx-oc integration
 
 If `@abgov/nx-oc` is installed in the workspace, the quickstart generators (`express-service`, `react-app`, `angular-app`, `dotnet-service`, `react-dotnet`) automatically include OpenShift deployment YAML in their output. See the [NX OpenShift plugin](../nx-oc/nx-oc) for details.
