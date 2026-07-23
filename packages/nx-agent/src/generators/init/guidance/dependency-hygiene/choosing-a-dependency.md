@@ -5,4 +5,7 @@ confirm the package exists and check its current version — training data has a
 plausible-sounding name isn't a guarantee it's real. An actively-maintained library also likely
 has capabilities and fixes a stale one doesn't. Check the license too: prefer permissive ones
 (`MIT`, `Apache-2.0`, `BSD`, `ISC`); treat a missing license or a copyleft one (`GPL`, `AGPL`,
-`LGPL`) as a stop-and-ask signal — these carry legal obligations, not engineering ones.
+`LGPL`) as a stop-and-ask signal — these carry legal obligations, not engineering ones. Don't
+scroll past what `npm install` reports, either — it audits by default, and a high-severity or
+unfixable finding is the same stop-and-ask signal (only for what's being added now, not drift in
+dependencies already installed).
