@@ -159,12 +159,15 @@ export default async function runExecutor(
     }
 
     // ---- service client secret (node services authenticate to ADSP) ----
-    // Upserted from the current .env so re-runs pick up a rotated secret.
+    // Upserted from the current .env.local so re-runs pick up a rotated secret.
+    // CLIENT_SECRET lives in .env.local, not .env (@abgov/nx-adsp's
+    // express-service writes it there — it's a generated, local-only value,
+    // the same tier `nx dev-db` uses for DATABASE_URL/MONGODB_URI).
     if (appType === 'node') {
       run(
         'Upsert CLIENT_SECRET',
         `oc create secret generic ${projectName}-secrets ` +
-          `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${projectRoot}/.env 2>/dev/null | cut -d= -f2-)" ` +
+          `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${projectRoot}/.env.local 2>/dev/null | cut -d= -f2-)" ` +
           `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
         cwd
       );
