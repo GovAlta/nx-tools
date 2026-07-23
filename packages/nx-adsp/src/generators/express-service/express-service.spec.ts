@@ -3,6 +3,7 @@ import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
 import { environments } from '@abgov/nx-oc';
+import * as keycloakAdmin from '../../utils/keycloak-admin';
 import { Schema } from './schema';
 import generator from './express-service';
 
@@ -16,6 +17,9 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 });
 utilsMock.deploymentGenerator.mockResolvedValue(undefined);
 utilsMock.ensureAdspToken.mockResolvedValue('test-token');
+
+jest.mock('../../utils/keycloak-admin');
+const keycloakAdminMock = keycloakAdmin as jest.Mocked<typeof keycloakAdmin>;
 
 describe('Express Service Generator', () => {
   const options: Schema = {
@@ -167,5 +171,59 @@ describe('Express Service Generator', () => {
     expect((config.tags ?? []).some((t) => t.startsWith('adsp:database:'))).toBe(
       false
     );
+  }, 60000);
+
+  it('writes a provisioned CLIENT_SECRET to .env.local, not .env', async () => {
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('super-secret');
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, { ...options, accessToken: 'test-token' });
+
+    expect(host.read('apps/test/.env.local').toString()).toContain('CLIENT_SECRET=super-secret');
+    expect(host.exists('apps/test/.env')).toBeFalsy();
+  }, 60000);
+
+  it('does not modify .gitignore for the provisioned secret', async () => {
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('super-secret');
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    const gitignoreBefore = host.read('.gitignore')?.toString() ?? '';
+    await generator(host, { ...options, accessToken: 'test-token' });
+
+    expect(host.read('.gitignore')?.toString() ?? '').toBe(gitignoreBefore);
+  }, 60000);
+
+  it('does not overwrite or duplicate an existing CLIENT_SECRET in .env.local', async () => {
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('freshly-provisioned-secret');
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    // express-service is a one-shot scaffolder (re-running it against an
+    // existing project throws in @nx/express), so this exercises the guard
+    // directly rather than by calling the generator twice: a CLIENT_SECRET
+    // already present in .env.local (e.g. set by hand) must survive untouched.
+    host.write('apps/test/.env.local', 'CLIENT_SECRET=already-there\n');
+    await generator(host, { ...options, accessToken: 'test-token' });
+
+    const envLocal = host.read('apps/test/.env.local').toString();
+    expect(envLocal).toContain('CLIENT_SECRET=already-there');
+    expect(envLocal).not.toContain('freshly-provisioned-secret');
+    expect(envLocal.split('CLIENT_SECRET=').length - 1).toBe(1);
+  }, 60000);
+
+  it('preserves an existing .env.local value (e.g. a prior dev-db run) alongside CLIENT_SECRET', async () => {
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('super-secret');
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    host.write('apps/test/.env.local', 'DATABASE_URL=postgresql://test:test@localhost:5432/test_dev\n');
+    await generator(host, { ...options, accessToken: 'test-token' });
+
+    const envLocal = host.read('apps/test/.env.local').toString();
+    expect(envLocal).toContain('DATABASE_URL=postgresql://test:test@localhost:5432/test_dev');
+    expect(envLocal).toContain('CLIENT_SECRET=super-secret');
+  }, 60000);
+
+  it('writes nothing when no secret is provisioned', async () => {
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce(null);
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, { ...options, accessToken: 'test-token' });
+
+    expect(host.exists('apps/test/.env.local')).toBeFalsy();
+    expect(host.exists('apps/test/.env')).toBeFalsy();
   }, 60000);
 });

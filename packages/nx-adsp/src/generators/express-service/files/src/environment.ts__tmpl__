@@ -5,13 +5,13 @@ import { resolve } from 'path';
 config({
   path: resolve(process.cwd(), '<%= projectRoot %>/.env'),
 });
-<% if (database !== 'none') { %>
-// .env.local is written by 'nx dev-db' with the local database connection string.
+// .env.local holds generated, local-only values: CLIENT_SECRET (written once by
+// this generator after Keycloak provisioning) and, when a database is
+// configured, the connection string written by 'nx dev-db'.
 config({
   path: resolve(process.cwd(), '<%= projectRoot %>/.env.local'),
   override: true,
 });
-<% } %>
 
 export const environment = cleanEnv(process.env, {
   KEYCLOAK_ROOT_URL: str({ default: '<%= accessServiceUrl %>' }),
