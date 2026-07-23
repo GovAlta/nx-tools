@@ -170,8 +170,8 @@ oc create secret generic my-app-service-database \
 
 **ADSP client secret** — the service authenticates with the access service using
 its confidential Keycloak client secret. Scaffolding writes it to the service's
-`.env` (`CLIENT_SECRET=...`) for the generator's tenant; each environment runs
-against its own tenant, so create the Secret per environment with that
+`.env.local` (`CLIENT_SECRET=...`) for the generator's tenant; each environment
+runs against its own tenant, so create the Secret per environment with that
 environment's client secret:
 
 ```bash
@@ -182,12 +182,12 @@ oc create secret generic my-app-service-secrets \
 # Repeat for test and prod (each has its own client secret)
 ```
 
-> The `dev` value is in `apps/my-app-service/.env` after scaffolding. For
+> The `dev` value is in `apps/my-app-service/.env.local` after scaffolding. For
 > test/prod, get the client secret from that environment's ADSP tenant admin
 > (Keycloak) for client `urn:ads:<tenant>:my-app-service`.
 
 The sandbox deploy (`nx run my-app-service:sandbox`) creates this Secret
-automatically from the service's `.env` — the manual step is only for the
+automatically from the service's `.env.local` — the manual step is only for the
 GitHub Actions / `apply-envs` environments.
 
 ### 7. Apply environment resources to OpenShift

@@ -74,11 +74,16 @@ describe('sandbox executor', () => {
     expect(idx('oc import-image')).toBeLessThan(idx('oc rollout restart'));
   });
 
-  it('mirrors CLIENT_SECRET for a node service only', async () => {
+  it('mirrors CLIENT_SECRET for a node service only, read from .env.local', async () => {
     await runExecutor(baseOptions, context());
     expect(
       commands().some(
-        (c) => c.includes('oc create secret generic test-secrets') && c.includes('CLIENT_SECRET')
+        (c) =>
+          c.includes('oc create secret generic test-secrets') &&
+          c.includes('CLIENT_SECRET') &&
+          // CLIENT_SECRET lives in .env.local, not .env - @abgov/nx-adsp's
+          // express-service writes it there, not to .env.
+          c.includes('.env.local')
       )
     ).toBe(true);
 
