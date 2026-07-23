@@ -15,6 +15,7 @@ Government of Alberta's Nx Tools are a set of [Nx](https://nx.dev) plugins for b
 | [@abgov/nx-oc](nx-oc/nx-oc) | Generators and executor for OpenShift CI/CD pipelines and deployments |
 | [@abgov/nx-release](nx-release/nx-release) | Semantic-release configuration generator for Nx monorepos |
 | [semantic-release-nuget](nx-release/semantic-release-nuget) | Semantic-release plugin for publishing NuGet packages |
+| [@abgov/nx-agent](nx-agent/nx-agent) | AI-agent development tooling — pre-commit checks, secret scanning, a Claude Code deny-list, AGENTS.md guidance, and a domain-vocabulary generator |
 
 ## Version compatibility
 

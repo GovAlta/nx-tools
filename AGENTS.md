@@ -20,7 +20,7 @@ tooling for consuming workspaces.
 nx-tools/
 ├── packages/           # publishable Nx plugin libraries (libsDir)
 │   ├── nx-adsp/        # Angular/React/Dotnet app scaffolding for ADSP
-│   ├── nx-agent/       # AI-agent development tooling (pre-commit affected-check hook, AGENTS.md guidance)
+│   ├── nx-agent/       # AI-agent dev tooling (pre-commit checks, secret scanning, Claude Code deny-list, AGENTS.md guidance, domain-term generator)
 │   ├── nx-oc/          # OpenShift pipeline generators + oc CLI executors
 │   ├── nx-release/     # semantic-release generator + monorepo commit-filter plugin
 │   └── semantic-release-nuget/  # NuGet push plugin for semantic-release
