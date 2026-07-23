@@ -32,7 +32,12 @@ until podman exec "${CONTAINER}" mongosh --quiet --eval "quit()" &>/dev/null; do
 done
 echo "MongoDB is ready."
 
-# Write MONGODB_URI to .env.local so the app picks it up without manual .env editing.
-# Overridden by the Secret in OpenShift at runtime.
-echo "MONGODB_URI=mongodb://localhost:${PORT}/${DB_NAME}" > .env.local
+# Merge MONGODB_URI into .env.local rather than overwriting it wholesale —
+# CLIENT_SECRET (written once by the generator after Keycloak provisioning) may
+# already be there. Overridden by the Secret in OpenShift at runtime.
+if [ -f .env.local ]; then
+  grep -v '^MONGODB_URI=' .env.local > .env.local.tmp || true
+  mv .env.local.tmp .env.local
+fi
+echo "MONGODB_URI=mongodb://localhost:${PORT}/${DB_NAME}" >> .env.local
 echo "MONGODB_URI written to .env.local"

@@ -246,17 +246,17 @@ export default async function (host: Tree, options: Schema) {
       accessToken
     );
     if (clientSecret) {
-      const envPath = `${normalizedOptions.projectRoot}/.env`;
-      const existing = host.exists(envPath) ? host.read(envPath).toString() : '';
+      // .env.local, not .env: CLIENT_SECRET is a generated, local-only value — the
+      // same tier `nx dev-db` already uses for DATABASE_URL/MONGODB_URI — and
+      // already unconditionally gitignored by create-nx-workspace's default
+      // .gitignore (.env.local, .env.*.local), so no gitignore management is
+      // needed here at all. .env itself is left alone: it holds non-secret,
+      // developer-owned config too (KEYCLOAK_ROOT_URL, DIRECTORY_URL, etc.) and
+      // shouldn't be blanket-gitignored.
+      const envLocalPath = `${normalizedOptions.projectRoot}/.env.local`;
+      const existing = host.exists(envLocalPath) ? host.read(envLocalPath).toString() : '';
       if (!existing.includes('CLIENT_SECRET=')) {
-        host.write(envPath, `${existing ? existing.trimEnd() + '\n' : ''}CLIENT_SECRET=${clientSecret}\n`);
-      }
-      const gitignorePath = '.gitignore';
-      if (host.exists(gitignorePath)) {
-        const gitignoreContent = host.read(gitignorePath).toString();
-        if (!gitignoreContent.includes('.env')) {
-          host.write(gitignorePath, `${gitignoreContent.trimEnd()}\n${normalizedOptions.projectRoot}/.env\n`);
-        }
+        host.write(envLocalPath, `${existing ? existing.trimEnd() + '\n' : ''}CLIENT_SECRET=${clientSecret}\n`);
       }
     }
   }

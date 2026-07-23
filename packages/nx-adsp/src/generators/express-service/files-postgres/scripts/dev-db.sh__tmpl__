@@ -37,7 +37,12 @@ until podman exec "${CONTAINER}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/d
 done
 echo "Postgres is ready."
 
-# Write DATABASE_URL to .env.local so Drizzle and the app pick it up without
-# manual .env editing. Overridden by the SECRET in OpenShift at runtime.
-echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost:${PORT}/${DB_NAME}" > .env.local
+# Merge DATABASE_URL into .env.local rather than overwriting it wholesale —
+# CLIENT_SECRET (written once by the generator after Keycloak provisioning) may
+# already be there. Overridden by the SECRET in OpenShift at runtime.
+if [ -f .env.local ]; then
+  grep -v '^DATABASE_URL=' .env.local > .env.local.tmp || true
+  mv .env.local.tmp .env.local
+fi
+echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost:${PORT}/${DB_NAME}" >> .env.local
 echo "DATABASE_URL written to .env.local"
