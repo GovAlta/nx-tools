@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentDomainTerm",
+  "title": "Add a domain term",
+  "description": "Creates one file for a domain term under project-docs/domain-terms/, with structured frontmatter (aliases, disambiguation) and a free-text definition body. Bootstraps the domain-terms/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "term": {
+      "type": "string",
+      "description": "The canonical domain term, as domain experts use it (e.g. \"Case\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What is the domain term?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this term to a specific project's project-docs/domain-terms/ instead of the workspace root — use when a bounded context spans a domain library and its consuming apps."
+    }
+  },
+  "required": ["term"],
+  "additionalProperties": false
+}

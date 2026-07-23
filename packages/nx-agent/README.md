@@ -86,3 +86,52 @@ Currently sets up:
 ```bash
 npx nx g @abgov/nx-agent:init --targets=lint,test --base=develop
 ```
+
+## `domain-term`
+
+Adds one domain term — the ubiquitous language `init`'s guidance asks the agent to use, but gives
+it nowhere to check or record. Unlike `init`, this is repeatable — run it once per term, whenever
+one needs adding, not once per workspace:
+
+```bash
+npx nx g @abgov/nx-agent:domain-term Case
+```
+
+Creates `project-docs/domain-terms/case.md`:
+
+```markdown
+---
+term: Case
+aliases: []
+not_confused_with: []
+---
+
+<!-- Definition: describe this term in the domain's own language. -->
+```
+
+- `term` — the canonical name, matching the filename.
+- `aliases` — other words that mean the same thing.
+- `not_confused_with` — similar-sounding terms this one is deliberately distinct from, and why.
+
+One file per term rather than a single flat glossary, so frontmatter (a per-file construct in
+every tool that uses the term) is meaningful, and so listing the folder — cheap, just filenames —
+is enough to check the existing vocabulary before coining a new name.
+
+Also bootstraps `project-docs/domain-terms/README.md` on first use, explaining the convention to
+whoever (human or agent) opens the folder next. That file has no value on its own — it exists only
+to explain the convention for the term about to be added — so there's no separate "set up the
+glossary" generator; `domain-term` composes it as an internal step.
+
+### Options
+
+| Option | Default | Description |
+|---|---|---|
+| `term` | — (required, positional) | The canonical domain term, as domain experts use it |
+| `project` | workspace root | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
+
+```bash
+npx nx g @abgov/nx-agent:domain-term Case --project=domain-lib
+```
+
+Re-adding a term that already exists throws rather than silently overwriting or duplicating it —
+edit the file directly instead.
