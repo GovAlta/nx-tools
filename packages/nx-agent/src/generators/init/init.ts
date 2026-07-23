@@ -253,6 +253,59 @@ function applySecretScanStep(host: Tree): void {
   ensureGitignoreEntries(host)
 }
 
+const CLAUDE_SETTINGS_PATH = '.claude/settings.json'
+// Absolute per Claude Code's own docs — deny beats ask/allow, holds even under
+// --dangerously-skip-permissions. Deliberately narrow: patterns with no legitimate
+// use case at all, not a general destructive-op guard (see the guidance note on why
+// git push --force is excluded — deny rules can't carry exceptions).
+const CLAUDE_DENY_PATTERNS = [
+  'Bash(rm -rf /*)',
+  'Bash(rm -rf ~*)',
+  'Bash(rm -rf $HOME*)',
+  'Bash(sudo:*)',
+  'Bash(mkfs:*)',
+  'Bash(chmod -R 777 /*)',
+  'Bash(shutdown:*)',
+  'Bash(reboot:*)',
+  'Bash(halt:*)',
+  'Bash(poweroff:*)',
+  // History-rewriting / reflog-destroying — no legitimate autonomous-agent use case, and the
+  // reflog one specifically destroys the exact recovery mechanism "Destructive operations"
+  // guidance relies on for a bad `reset --hard`.
+  'Bash(git filter-branch:*)',
+  'Bash(git filter-repo:*)',
+  'Bash(git reflog expire:*)',
+  'Bash(git gc *--prune=now*)', // scoped to the immediate-prune flag; plain `git gc` is routine
+  // Whole-namespace/project deletion — ecosystem-specific (nx-oc targets OpenShift). No conflict
+  // with nx-oc's own `teardown` generator, which is scoped to one app's resources within an
+  // environment, not the whole project/namespace.
+  'Bash(oc delete project:*)',
+  'Bash(oc delete namespace:*)',
+  'Bash(kubectl delete namespace:*)',
+]
+// npm publish/unpublish considered and excluded — real for nx-tools itself (a publishing
+// monorepo), but not a generally relevant default for the broader population of nx-agent
+// consumers, most of whom are deploying applications via nx-oc rather than publishing packages.
+
+function applyDenyRulesStep(host: Tree): void {
+  if (host.exists(CLAUDE_SETTINGS_PATH)) {
+    updateJson(host, CLAUDE_SETTINGS_PATH, (settings) => {
+      const permissions = settings.permissions ?? {}
+      const deny = permissions.deny ?? []
+      for (const pattern of CLAUDE_DENY_PATTERNS) {
+        if (!deny.includes(pattern)) {
+          deny.push(pattern)
+        }
+      }
+      permissions.deny = deny
+      settings.permissions = permissions
+      return settings
+    })
+    return
+  }
+  writeJson(host, CLAUDE_SETTINGS_PATH, { permissions: { deny: CLAUDE_DENY_PATTERNS } })
+}
+
 // Every capability contributes to one shared section, grouped by kind,
 // instead of writing its own top-level AGENTS.md heading — keeps the
 // growing list of practices reading as one coherent reference rather than
@@ -270,6 +323,7 @@ export default async function (host: Tree, rawOptions: Schema) {
 
   applyCheckHookStep(host, options)
   applySecretScanStep(host)
+  applyDenyRulesStep(host)
   applyAgentGuidance(host, options)
 
   await formatFiles(host)

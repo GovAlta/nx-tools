@@ -76,6 +76,15 @@ Currently sets up:
    removes them and writes the current structure in their place, so simply re-running `init` is
    enough to pick up changes; no separate migration step.
 
+5. **A Claude Code deny-list** (`.claude/settings.json`), hard-blocking shell patterns with no
+   legitimate agent-initiated use case — `rm -rf` rooted at `/`/`~`/`$HOME`, `sudo`, `mkfs`,
+   `chmod -R 777 /`, system shutdown/reboot, history-rewriting/reflog-destroying git commands,
+   and whole-namespace OpenShift/Kubernetes deletion — absolute per Claude Code's own permission
+   model, holding even under `--dangerously-skip-permissions`. Merges into an existing file
+   rather than overwriting it. No equivalent exists yet for other tools (checked GitHub Copilot
+   CLI specifically — its absolute deny mechanism is CLI-flag-only, with no repo-committed file
+   to seed).
+
 ### Options
 
 | Option | Default | Description |

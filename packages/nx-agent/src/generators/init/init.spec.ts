@@ -316,4 +316,62 @@ Old secret-scan wording.
     expect(agentsMd).toContain('**Secrets.**')
     expect(agentsMd).toContain('**Choosing a dependency.**')
   })
+
+  it('creates .claude/settings.json with the default deny patterns from scratch', async () => {
+    await generator(host, {})
+
+    const settings = readJson(host, '.claude/settings.json')
+    expect(settings.permissions.deny).toEqual(
+      expect.arrayContaining([
+        'Bash(rm -rf /*)',
+        'Bash(rm -rf ~*)',
+        'Bash(rm -rf $HOME*)',
+        'Bash(sudo:*)',
+        'Bash(mkfs:*)',
+        'Bash(chmod -R 777 /*)',
+        'Bash(shutdown:*)',
+        'Bash(reboot:*)',
+        'Bash(halt:*)',
+        'Bash(poweroff:*)',
+        'Bash(git filter-branch:*)',
+        'Bash(git filter-repo:*)',
+        'Bash(git reflog expire:*)',
+        'Bash(git gc *--prune=now*)',
+        'Bash(oc delete project:*)',
+        'Bash(oc delete namespace:*)',
+        'Bash(kubectl delete namespace:*)',
+      ])
+    )
+    expect(settings.permissions.deny).toHaveLength(17)
+  })
+
+  it('merges into an existing .claude/settings.json without clobbering other settings', async () => {
+    host.write(
+      '.claude/settings.json',
+      JSON.stringify({
+        permissions: {
+          allow: ['Bash(npm run test:*)'],
+          deny: ['Bash(my-custom-deny:*)'],
+        },
+        model: 'opus',
+      })
+    )
+
+    await generator(host, {})
+
+    const settings = readJson(host, '.claude/settings.json')
+    expect(settings.model).toBe('opus')
+    expect(settings.permissions.allow).toEqual(['Bash(npm run test:*)'])
+    expect(settings.permissions.deny).toContain('Bash(my-custom-deny:*)')
+    expect(settings.permissions.deny).toContain('Bash(rm -rf /*)')
+  })
+
+  it('does not duplicate deny entries on a second run', async () => {
+    await generator(host, {})
+    await generator(host, {})
+
+    const settings = readJson(host, '.claude/settings.json')
+    expect(settings.permissions.deny).toHaveLength(17)
+    expect(settings.permissions.deny.filter((p: string) => p === 'Bash(sudo:*)')).toHaveLength(1)
+  })
 })
