@@ -7,6 +7,11 @@
       "factory": "./src/generators/init/init",
       "schema": "./src/generators/init/schema.json",
       "description": "Sets up recommended AI-agent development tooling for this workspace (currently: a pre-commit affected-check hook and AGENTS.md guidance)."
+    },
+    "domain-term": {
+      "factory": "./src/generators/domain-term/domain-term",
+      "schema": "./src/generators/domain-term/schema.json",
+      "description": "Adds one domain term under project-docs/domain-terms/, with structured frontmatter and a free-text definition."
     }
   }
 }
