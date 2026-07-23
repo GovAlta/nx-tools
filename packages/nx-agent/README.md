@@ -76,6 +76,10 @@ Currently sets up:
    removes them and writes the current structure in their place, so simply re-running `init` is
    enough to pick up changes; no separate migration step.
 
+   Also ensures `CLAUDE.md` imports it (`@AGENTS.md`, appended if missing) — Claude Code reads
+   `CLAUDE.md` natively, not `AGENTS.md` directly, so without this the guidance above never
+   reaches a Claude Code session. Same one-line convention nx-adsp's own generators already use.
+
 5. **A Claude Code deny-list** (`.claude/settings.json`), hard-blocking shell patterns with no
    legitimate agent-initiated use case — `rm -rf` rooted at `/`/`~`/`$HOME`, `sudo`, `mkfs`,
    `chmod -R 777 /`, system shutdown/reboot, history-rewriting/reflog-destroying git commands,

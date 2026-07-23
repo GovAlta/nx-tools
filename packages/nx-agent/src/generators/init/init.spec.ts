@@ -374,4 +374,29 @@ Old secret-scan wording.
     expect(settings.permissions.deny).toHaveLength(17)
     expect(settings.permissions.deny.filter((p: string) => p === 'Bash(sudo:*)')).toHaveLength(1)
   })
+
+  it('creates CLAUDE.md importing AGENTS.md from scratch', async () => {
+    await generator(host, {})
+
+    expect(host.read('CLAUDE.md').toString()).toBe('@AGENTS.md\n')
+  })
+
+  it('appends the @AGENTS.md import to an existing CLAUDE.md without disturbing its content', async () => {
+    host.write('CLAUDE.md', '# Team notes\n\nSome existing hand-authored content.\n')
+
+    await generator(host, {})
+
+    const claudeMd = host.read('CLAUDE.md').toString()
+    expect(claudeMd).toContain('# Team notes')
+    expect(claudeMd).toContain('Some existing hand-authored content.')
+    expect(claudeMd).toContain('@AGENTS.md')
+  })
+
+  it('does not duplicate the @AGENTS.md import on a second run', async () => {
+    await generator(host, {})
+    await generator(host, {})
+
+    const claudeMd = host.read('CLAUDE.md').toString()
+    expect(claudeMd.split('@AGENTS.md').length - 1).toBe(1)
+  })
 })
