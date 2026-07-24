@@ -342,7 +342,10 @@ Most generators call ADSP APIs during generation to retrieve tenant-specific con
 | `--tenantRealm <uuid>` | Use when you already know the realm UUID; can be combined with `--tenant` to override the auto-resolved realm |
 | `--accessToken <token>` | Use in CI or scripts to skip interactive login entirely |
 
-If none are provided, the generator will prompt interactively.
+If none are provided, the generator will prompt interactively. Don't have a tenant yet? That prompt
+also offers a **+ Create a new tenant** choice, in `dev`/`test` (never `prod`), for eligible
+accounts — see the [package README](https://github.com/GovAlta/nx-tools/blob/main/packages/nx-adsp/README.md#authentication)
+for the exact eligibility rules.
 
 ## Agent consultation
 

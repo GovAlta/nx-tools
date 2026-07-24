@@ -63,7 +63,11 @@ Repeat for every environment project.
 
 ### ADSP tenant
 
-An existing ADSP tenant is required. The `pevn` generator provisions Keycloak clients and environment config against it. Have the tenant name ready.
+The `pevn` generator provisions Keycloak clients and environment config against an ADSP tenant.
+Have the tenant name ready if you already have one. If you don't, run `pevn` without `--tenant` and
+its interactive login flow offers **+ Create a new tenant** — available in `dev`/`test` (never
+`prod`) for eligible accounts; see [nx-adsp's Authentication section](https://github.com/GovAlta/nx-tools/blob/main/packages/nx-adsp/README.md#authentication)
+for the exact rules.
 
 > The generated public client allows local development (`http://localhost:4200/*`) out of the box. For **deployed** environments you must register each environment's Route URL with the client — see [Configure sign-in redirect URIs per environment](#configure-sign-in-redirect-uris-per-environment).
 

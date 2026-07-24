@@ -224,7 +224,13 @@ Generator flags that steer which tenant/token is used:
 | `--tenantRealm <uuid>` | Use the realm UUID directly; combine with `--tenant` to override the resolved realm |
 | `--accessToken <token>` | Supply a pre-obtained token directly (CI/CD), bypassing the CLI |
 
-With none of these, the generator lets `adsp login`'s interactive picker resolve the tenant.
+With none of these, the generator lets `adsp login`'s interactive picker resolve the tenant. Don't
+have a tenant yet? That picker also offers a **+ Create a new tenant** choice — available in
+`dev`/`test` (never `prod`), for an account whose core-realm roles include `beta-tester` or
+`tenant-service-admin`, and (unless `tenant-service-admin`) that doesn't already own a tenant (one
+per admin email). Picking it prompts for a name and waits for the new realm to finish provisioning
+before continuing the login as that tenant. Requires `@abgov/adsp-cli` ^1.4.0+ (this plugin pins
+^1.5.2 or later).
 
 ## Agent consultation
 
