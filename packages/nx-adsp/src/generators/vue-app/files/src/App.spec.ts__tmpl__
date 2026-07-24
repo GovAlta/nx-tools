@@ -16,11 +16,26 @@ vi.mock('@dsb-norge/vue-keycloak-js', async () => {
 });
 
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import App from './App.vue';
+
+// App.vue reads useRoute() for the layout-width feature (route.meta.layout,
+// default 'page') — that needs a real router installed via `global.plugins`,
+// not just a RouterView stub. Stubbing RouterView only replaces what it
+// renders; it doesn't provide the injection context useRoute() reads from, so
+// route.meta would throw on undefined without this. Installing the router is
+// enough on its own — its route ref is already a real object (Vue Router's
+// START_LOCATION_NORMALIZED, meta: {}) before any navigation resolves, so no
+// router.isReady()/await is needed, and calling it here would hang: with no
+// app mounted yet, no navigation has been triggered for it to wait on.
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: '/', component: { template: '<div />' } }],
+});
 
 describe('App shell header', () => {
   it('shows Sign in when unauthenticated', () => {
-    const wrapper = mount(App, { global: { stubs: { RouterView: true } } });
+    const wrapper = mount(App, { global: { plugins: [router], stubs: { RouterView: true } } });
     const group = wrapper.find('goa-button-group');
     expect(group.exists()).toBe(true);
     expect(group.html()).toContain('Sign in');
@@ -30,7 +45,7 @@ describe('App shell header', () => {
     // The bug: destructuring useKeycloak() froze `keycloak` at undefined, so
     // login() was a permanent no-op. Reactive access must reach the instance.
     const kc = useKeycloak();
-    const wrapper = mount(App, { global: { stubs: { RouterView: true } } });
+    const wrapper = mount(App, { global: { plugins: [router], stubs: { RouterView: true } } });
     const btn = wrapper.findAll('goa-button').find((b) => b.text().includes('Sign in'));
     await btn?.trigger('_click');
     expect(kc.keycloak?.login).toHaveBeenCalled();
