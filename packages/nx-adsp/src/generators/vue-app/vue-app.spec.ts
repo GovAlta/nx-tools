@@ -23,6 +23,11 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
   accessServiceUrl: environments.test.accessServiceUrl,
   directoryServiceUrl: environments.test.directoryServiceUrl,
 });
+// jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
+// (pure, no I/O) implementation so tag-writing behavior is actually exercised.
+utilsMock.adspProjectTags.mockImplementation(
+  jest.requireActual('@abgov/nx-oc').adspProjectTags
+);
 
 describe('Vue App Generator', () => {
   let host: Tree;
@@ -47,6 +52,13 @@ describe('Vue App Generator', () => {
     expect(host.exists('apps/test/vite.config.mts')).toBeFalsy();
     // build output mirrors the workspace layout under the root dist/.
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
+  }, 30000);
+
+  it('records the resolved env/tenant as project tags for the sandbox generator', async () => {
+    await generator(host, options);
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.tags).toContain('adsp:scaffold-env:dev');
+    expect(config.tags).toContain('adsp:scaffold-tenant:test');
   }, 30000);
 
   it('scaffolds a Playwright e2e project (consistent across frontends)', async () => {

@@ -1,4 +1,4 @@
-import { deploymentGenerator, environments, getAdspConfiguration, getServiceUrls, ensureAdspToken, ADSP_ADMIN_SCOPE } from '@abgov/nx-oc';
+import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -25,48 +25,7 @@ async function normalizeOptions(
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
 
-  let adsp: import('@abgov/nx-oc').AdspConfiguration;
-
-  if (options.tenant) {
-    // Resolve realm from tenant name via the public tenant service API (no auth required),
-    // then obtain a token for that realm via @abgov/adsp-cli.
-    const env = environments[options.env ?? 'prod'];
-    const tenantServiceUrl = (await getServiceUrls(env.directoryServiceUrl))['urn:ads:platform:tenant-service'];
-
-    const { default: axios } = await import('axios');
-    const { data } = await axios.get<{ results: { name: string; realm: string }[] }>(
-      new URL('/api/tenant/v2/tenants', tenantServiceUrl).href,
-      { params: { name: options.tenant } }
-    );
-
-    const tenantInfo = data?.results?.[0];
-    if (!tenantInfo) {
-      throw new Error(`Tenant "${options.tenant}" not found in ${env.directoryServiceUrl}.`);
-    }
-
-    const tenantRealm = options.tenantRealm ?? tenantInfo.realm;
-
-    if (!options.accessToken) {
-      options = {
-        ...options,
-        accessToken: await ensureAdspToken({
-          env: options.env ?? 'prod',
-          realm: tenantRealm,
-          tenant: options.tenant,
-          scopes: [ADSP_ADMIN_SCOPE],
-        }).catch(() => undefined),
-      };
-    }
-
-    adsp = {
-      tenant: tenantInfo.name,
-      tenantRealm,
-      accessServiceUrl: env.accessServiceUrl,
-      directoryServiceUrl: env.directoryServiceUrl,
-    };
-  } else {
-    adsp = await getAdspConfiguration(host, options);
-  }
+  const adsp = await getAdspConfiguration(host, options);
 
   return {
     ...options,
@@ -224,11 +183,11 @@ export default async function (host: Tree, options: Schema) {
   // Record the database as a project tag so the nx-oc sandbox generator can
   // wire DATABASE_URL + the migrate init container without a --database flag.
   const dbTag = `adsp:database:${normalizedOptions.database}`;
-  const tags =
-    normalizedOptions.database !== 'none' &&
-    !(projectConfig.tags ?? []).includes(dbTag)
-      ? [...(projectConfig.tags ?? []), dbTag]
-      : projectConfig.tags;
+  const newTags = [
+    ...(normalizedOptions.database !== 'none' ? [dbTag] : []),
+    ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant),
+  ].filter((tag) => !(projectConfig.tags ?? []).includes(tag));
+  const tags = [...(projectConfig.tags ?? []), ...newTags];
 
   updateProjectConfiguration(host, normalizedOptions.projectName, {
     ...projectConfig,

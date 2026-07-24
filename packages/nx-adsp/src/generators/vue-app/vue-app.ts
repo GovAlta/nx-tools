@@ -1,4 +1,4 @@
-import { deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
 import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
@@ -183,6 +183,13 @@ export default async function (host: Tree, options: Schema) {
       `adsp:proxy-service:${pairedService}:${port}`,
     ];
   }
+
+  config.tags = [
+    ...(config.tags ?? []),
+    ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant).filter(
+      (tag) => !(config.tags ?? []).includes(tag)
+    ),
+  ];
 
   updateProjectConfiguration(host, options.name, config);
 

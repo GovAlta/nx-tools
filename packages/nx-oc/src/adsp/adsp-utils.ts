@@ -31,6 +31,41 @@ export function hasDependency(host: Tree, dependency: string): boolean {
 // everyone else, so requesting it is always safe.
 export const ADSP_ADMIN_SCOPE = 'adsp-cli-admin';
 
+const ADSP_ENV_TAG_PREFIX = 'adsp:scaffold-env:';
+const ADSP_TENANT_TAG_PREFIX = 'adsp:scaffold-tenant:';
+
+// App generators (express-service, vue-app, react-app, angular-app) record the
+// *single* env/tenant they were scaffolded against as project tags, mirroring
+// the existing adsp:database:*/adsp:proxy-service:* convention. This is only
+// meaningful for a generator with the same single-target shape — nx-oc:sandbox
+// reads it back via detectAdspEnv/detectAdspTenant so a personal sandbox
+// targets the same ADSP environment the app was actually scaffolded against,
+// instead of silently falling back to its own schema default.
+//
+// Deliberately NOT read by nx-oc:deployment/pipeline: a real deployment spans
+// multiple ADSP environments over its lifecycle (e.g. ADSP test for pre-prod,
+// ADSP prod for prod) that have nothing to do with which single env the
+// project happened to be generated against — deployment's own --env is
+// required per invocation for exactly this reason. Don't wire this tag into
+// that path; there's no single "the" env to default to.
+export function adspProjectTags(
+  env: EnvironmentName,
+  tenant: string | undefined
+): string[] {
+  const tags = [`${ADSP_ENV_TAG_PREFIX}${env}`];
+  if (tenant) tags.push(`${ADSP_TENANT_TAG_PREFIX}${tenant}`);
+  return tags;
+}
+
+export function detectAdspEnv(tags: string[] | undefined): EnvironmentName | undefined {
+  const tag = (tags ?? []).find((t) => t.startsWith(ADSP_ENV_TAG_PREFIX));
+  return tag ? (tag.slice(ADSP_ENV_TAG_PREFIX.length) as EnvironmentName) : undefined;
+}
+
+export function detectAdspTenant(tags: string[] | undefined): string | undefined {
+  const tag = (tags ?? []).find((t) => t.startsWith(ADSP_TENANT_TAG_PREFIX));
+  return tag ? tag.slice(ADSP_TENANT_TAG_PREFIX.length) : undefined;
+}
 
 /** Resolve the `adsp` binary shipped by the @abgov/adsp-cli dependency. */
 function adspCliBinPath(): string {

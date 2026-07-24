@@ -313,6 +313,65 @@ describe('Sandbox Generator', () => {
     });
   });
 
+  describe('env/tenant auto-detection (no --env/--tenant flag)', () => {
+    function addServiceProject(host, extra: Record<string, unknown> = {}) {
+      addProjectConfiguration(host, 'test', {
+        root: 'apps/test',
+        projectType: 'application',
+        targets: {
+          build: {
+            executor: '@nx/webpack:webpack',
+            options: { compiler: 'tsc', target: 'node' },
+          },
+        },
+        ...extra,
+      });
+    }
+
+    // A sandbox targeting a different ADSP environment than the app itself
+    // would resolve a mismatched tenant/token — defaulting to the app's own
+    // recorded env/tenant (not the generator's own schema default) avoids that.
+    it("defaults env/tenant to the target project's adsp:scaffold-env/adsp:scaffold-tenant tags", async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, { tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'] });
+      utilsMock.detectAdspEnv.mockReturnValueOnce('dev');
+      utilsMock.detectAdspTenant.mockReturnValueOnce('autotest');
+
+      await generator(host, options); // options has no env/tenant
+
+      expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
+        host,
+        expect.objectContaining({ env: 'dev', tenant: 'autotest' })
+      );
+    });
+
+    it('falls back to test/undefined when no adsp:scaffold-env/adsp:scaffold-tenant tag is present', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host);
+
+      await generator(host, options);
+
+      expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
+        host,
+        expect.objectContaining({ env: 'test', tenant: undefined })
+      );
+    });
+
+    it('an explicit --env/--tenant overrides the recorded tags', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addServiceProject(host, { tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'] });
+      utilsMock.detectAdspEnv.mockReturnValueOnce('dev');
+      utilsMock.detectAdspTenant.mockReturnValueOnce('autotest');
+
+      await generator(host, { ...options, env: 'prod', tenant: 'other-tenant' });
+
+      expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
+        host,
+        expect.objectContaining({ env: 'prod', tenant: 'other-tenant' })
+      );
+    });
+  });
+
   it('registers the deployment Route redirect URI for a frontend client', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addFrontendProject(host);
