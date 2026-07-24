@@ -66,13 +66,16 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  const normalizedOptions = await normalizeOptions(host, options);
-
+  // Checked before normalizeOptions, which resolves ADSP auth and can trigger
+  // an interactive login — a missing peer shouldn't surface only after that.
   const { applicationGenerator: initVue } = await import('@nx/vue').catch(() => {
     throw new Error(
       "The 'vue-app' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue"
     );
   });
+
+  const normalizedOptions = await normalizeOptions(host, options);
+
   await initVue(host, {
     name: options.name,
     style: 'css',
