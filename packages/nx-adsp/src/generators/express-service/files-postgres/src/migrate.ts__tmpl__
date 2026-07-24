@@ -4,6 +4,13 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 
 const MIGRATIONS_FOLDER = 'drizzle';
+// Arbitrary, stable key — advisory locks are scoped per-database, not shared
+// across a Postgres instance (confirmed via the pg_locks documentation: "the
+// same advisory lock key can be held simultaneously in different databases
+// ... they don't conflict across DB boundaries"), so this only needs to be
+// unique within this app's own database, not across every app sharing a
+// sandbox Postgres instance.
+const MIGRATION_LOCK_KEY = 8812345;
 
 // Standalone migration runner — the deployment runs this as an init container
 // (`node migrate.js`) before the app starts. It uses only drizzle-orm + pg,
@@ -25,11 +32,24 @@ async function main() {
   }
 
   const pool = new Pool({ connectionString });
+  // drizzle-orm's migrate() has no protection against concurrent execution
+  // (github.com/drizzle-team/drizzle-orm/issues/874, open, acknowledged by
+  // its maintainers) — it reads the last-applied migration with a plain
+  // SELECT before opening a transaction, so two replicas starting at once can
+  // both see "nothing applied yet" and both try to run the same migration.
+  // A session-scoped advisory lock on a dedicated connection serializes
+  // concurrent runs of this script: whichever loses blocks here until the
+  // winner releases the lock, then proceeds against an already-migrated
+  // database — a safe no-op, since __drizzle_migrations already records it.
+  const lockClient = await pool.connect();
   try {
+    await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
     await migrate(drizzle(pool), { migrationsFolder: MIGRATIONS_FOLDER });
     // eslint-disable-next-line no-console
     console.log('Migrations applied.');
   } finally {
+    await lockClient.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+    lockClient.release();
     await pool.end();
   }
 }
