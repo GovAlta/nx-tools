@@ -86,6 +86,7 @@ export default async function (host: Tree, options: Schema) {
     host,
     {
       '@abgov/adsp-service-sdk': '^2.23.0',
+      '@asteasolutions/zod-to-openapi': '^7.3.4',
       compression: '^1.8.1',
       cors: '^2.8.5',
       dotenv: '^16.4.7',
