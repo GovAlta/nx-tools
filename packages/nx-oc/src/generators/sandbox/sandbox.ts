@@ -10,7 +10,7 @@ import {
   updateProjectConfiguration,
 } from '@nx/devkit';
 import * as path from 'path';
-import { getAdspConfiguration, addClientRedirectUris } from '../../adsp';
+import { getAdspConfiguration, addClientRedirectUris, detectAdspEnv, detectAdspTenant } from '../../adsp';
 import {
   getGitRemoteUrl,
   deriveRegistryFromRemote,
@@ -106,9 +106,17 @@ async function normalizeOptions(
   const config = readProjectConfiguration(host, projectName);
   const appType = options.appType ?? detectApplicationType(config);
 
+  // Default to whatever env/tenant the target project was actually scaffolded
+  // against (recorded as a tag by express-service/vue-app/react-app/angular-app)
+  // rather than silently assuming 'test' — a sandbox targeting a different ADSP
+  // environment than the app itself would resolve a mismatched tenant/token.
+  const env = (options.env as 'dev' | 'test' | 'prod' | undefined) ?? detectAdspEnv(config.tags) ?? 'test';
+  const tenant = options.tenant ?? detectAdspTenant(config.tags);
+
   const adsp = await getAdspConfiguration(host, {
     ...options,
-    env: (options.env as 'dev' | 'test' | 'prod') ?? 'dev',
+    env,
+    tenant,
   });
 
   const remoteUrl = getGitRemoteUrl();

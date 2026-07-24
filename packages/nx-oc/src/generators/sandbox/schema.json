@@ -31,8 +31,7 @@
     },
     "env": {
       "type": "string",
-      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to test.",
-      "default": "test",
+      "description": "ADSP environment / access service to target: test = access-uat.alberta.ca (UAT — use for dev and pre-prod), prod = access.alberta.ca, dev = ADSP platform dev (restricted). Defaults to whatever env the target project was scaffolded against (recorded as an adsp:scaffold-env:* tag), then 'test' if that can't be determined.",
       "enum": ["test", "prod", "dev"]
     },
     "accessToken": {
@@ -42,7 +41,7 @@
     },
     "tenant": {
       "type": "string",
-      "description": "ADSP tenant name. Looks up the realm and does a single login, skipping the interactive tenant picker."
+      "description": "ADSP tenant name. Looks up the realm and does a single login, skipping the interactive tenant picker. Defaults to whatever tenant the target project was scaffolded against (recorded as an adsp:scaffold-tenant:* tag) when omitted."
     },
     "tenantRealm": {
       "type": "string",
