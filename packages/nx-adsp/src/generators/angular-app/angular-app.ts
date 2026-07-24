@@ -98,11 +98,18 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
 
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
-  const normalizedOptions = await normalizeOptions(host, options);
-
+  // Checked before normalizeOptions, which resolves ADSP auth and can trigger
+  // an interactive login — a missing peer shouldn't surface only after that.
   const { applicationGenerator: initAngular } = await import(
     '@nx/angular/generators'
-  );
+  ).catch(() => {
+    throw new Error(
+      "The 'angular-app' generator requires the '@nx/angular' plugin. Install it and re-run:\n  npm i -D @nx/angular"
+    );
+  });
+
+  const normalizedOptions = await normalizeOptions(host, options);
+
   await initAngular(host, {
     name: options.name,
     prefix: normalizedOptions.projectName,
