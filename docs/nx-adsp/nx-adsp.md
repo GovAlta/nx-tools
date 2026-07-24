@@ -67,6 +67,8 @@ When `--database postgres` is selected the generator scaffolds a Drizzle setup �
 
 The generated `src/main.ts` includes `authorize`, `createValidationHandler`, and `createErrorHandler` from `@abgov/adsp-service-sdk`, and an example `POST /v1/example` route that shows the full pattern: role check → input validation (Zod schema) → domain event publish → error forwarding to `createErrorHandler`. Replace or remove the example route once you have real business logic.
 
+OpenAPI docs are generated from the same Zod schemas already used for request validation (`@asteasolutions/zod-to-openapi` — see `src/openapi.ts`) and served at `/swagger/docs/v1`, with a matching `docs` link on the root `/` endpoint. This is what ADSP's directory service polls to aggregate the service's API docs into `https://api.adsp.alberta.ca/{tenant}`, once the service has a directory entry (a one-time setup step, outside this generator).
+
 ```typescript
 // Pattern used in the generated example route — adapt for your routes:
 app.post(

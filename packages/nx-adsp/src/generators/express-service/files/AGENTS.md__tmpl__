@@ -156,8 +156,28 @@ import { Router } from 'express';
 import { authorize, createValidationHandler } from '@abgov/adsp-service-sdk';
 import { z } from 'zod';
 import * as items from '../services/items';
+import { registry } from '../openapi';
 
 const CreateItem = z.object({ name: z.string().trim().min(1) });
+const BASE = '/<%= projectName %>/v1/items';
+
+// Reuses CreateItem — the same schema passed to createValidationHandler below
+// — so the served OpenAPI doc can't drift from what's actually validated. See
+// "Why this matters for ADSP" below.
+registry.registerPath({
+  method: 'get',
+  path: BASE,
+  summary: 'List items.',
+  security: [], // anonymous is allowed on the /v1 prefix — see the router below
+  responses: { 200: { description: 'The items.', content: { 'application/json': { schema: z.array(CreateItem) } } } },
+});
+registry.registerPath({
+  method: 'post',
+  path: BASE,
+  summary: 'Create an item.',
+  request: { body: { content: { 'application/json': { schema: CreateItem } } } },
+  responses: { 201: { description: 'The created item.', content: { 'application/json': { schema: CreateItem } } } },
+});
 
 export function itemsRouter(): Router {
   const router = Router();
@@ -211,6 +231,17 @@ app.use('/<%= projectName %>/v1/items', itemsRouter());
 `req.body` directly in the handler and assert its type (`req.body as
 z.infer<typeof Schema>`) — that's the raw, unparsed body, not the validated
 one; parse it again with the same schema instead, as above.
+
+### Why this matters for ADSP
+
+`main.ts`'s root `/` handler returns a `docs` link pointing at `/swagger/docs/v1`, which serves an
+OpenAPI document built at startup from every `registry.registerPath()` call across all mounted
+routers (see `src/openapi.ts`). ADSP's directory service polls each registered service's root
+endpoint and, when it finds that `docs` link, aggregates the spec into
+`https://api.adsp.alberta.ca/{tenant}` — so every route added here (following the pattern above)
+becomes part of the platform's aggregated API docs automatically, with no separate file to update.
+This requires the service to already have a directory entry — a one-time setup step outside this
+generator, done via the Tenant Management Webapp's directory admin UI.
 
 ## Recipe: add a resource end to end
 

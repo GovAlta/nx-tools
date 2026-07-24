@@ -44,6 +44,40 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
   }, 60000);
 
+  it('serves generated OpenAPI docs, discoverable via the root _links convention', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    // Shared registry module: extends Zod once, exports the registry every
+    // router registers its paths into.
+    expect(host.exists('apps/test/src/openapi.ts')).toBeTruthy();
+    const openapiTs = host.read('apps/test/src/openapi.ts').toString();
+    expect(openapiTs).toContain('extendZodWithOpenApi');
+    expect(openapiTs).toContain('export const registry');
+
+    // main.ts builds the doc from the registry once at startup and serves it
+    // at the conventional path; the root endpoint's _links gains a docs entry
+    // pointing at it — this is what ADSP's directory service polls for.
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).toContain('OpenApiGeneratorV3');
+    expect(mainTs).toContain('/swagger/docs/v1');
+    expect(mainTs).toContain("docs: { href: new URL('/swagger/docs/v1', rootUrl).href }");
+    // Document-level default security — without it, routes with no explicit
+    // `security` override (e.g. /private) would inherit nothing at all,
+    // rather than the accessToken requirement they actually enforce.
+    expect(mainTs).toContain('security: [{ accessToken: [] }]');
+
+    // The shipped example router documents its own routes, reusing the same
+    // schema already passed to createValidationHandler (no separate spec).
+    const routerTs = host.read('apps/test/src/routes/example.ts').toString();
+    expect(routerTs).toContain('registry.registerPath');
+    expect(routerTs).toContain("import { registry } from '../openapi'");
+
+    // Runtime dependency (built at app startup), not a devDependency.
+    const pkgJson = readJson(host, 'package.json');
+    expect(pkgJson.dependencies['@asteasolutions/zod-to-openapi']).toBeTruthy();
+  }, 60000);
+
   it('wires the ADSP SDK MCP server into the workspace .mcp.json', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);

@@ -1,0 +1,19 @@
+import { extendZodWithOpenApi, OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+import { z } from 'zod';
+
+// Extends Zod schemas with a .openapi() method — must run before any schema
+// calls it, which route modules importing `registry` from here already
+// guarantee (Node evaluates this module's body once, on first import).
+extendZodWithOpenApi(z);
+
+// Shared across every route module: each router registers its own paths here,
+// re-using the same Zod schemas already passed to createValidationHandler —
+// one source of truth for validation and API docs, no separate spec to
+// hand-maintain. main.ts generates the served document from this registry.
+export const registry = new OpenAPIRegistry();
+
+registry.registerComponent('securitySchemes', 'accessToken', {
+  type: 'http',
+  scheme: 'bearer',
+  bearerFormat: 'JWT',
+});

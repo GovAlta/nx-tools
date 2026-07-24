@@ -107,6 +107,12 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
 | `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
 
+OpenAPI docs are generated from the same Zod schemas already used for request validation
+(`@asteasolutions/zod-to-openapi`) and served at `/swagger/docs/v1` — no separate spec to
+hand-maintain. The root `/` endpoint's `_links.docs` points at it, which is what ADSP's directory
+service polls to aggregate the service's API docs into `https://api.adsp.alberta.ca/{tenant}` (once
+the service has a directory entry — a one-time setup step outside this generator).
+
 ---
 
 ### `react-app`
