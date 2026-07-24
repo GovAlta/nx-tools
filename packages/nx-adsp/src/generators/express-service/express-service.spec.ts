@@ -105,6 +105,11 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/db/schema.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/database.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/migrate.ts')).toBeTruthy();
+    const migrateTs = host.read('apps/test/src/migrate.ts').toString();
+    // Guards against concurrent replicas racing drizzle-orm's migrate(), which has
+    // no built-in protection (drizzle-team/drizzle-orm#874).
+    expect(migrateTs).toContain('pg_advisory_lock');
+    expect(migrateTs).toContain('pg_advisory_unlock');
     expect(host.exists('apps/test/drizzle.config.ts')).toBeTruthy();
     expect(host.exists('apps/test/scripts/dev-db.sh')).toBeTruthy();
     expect(host.exists('apps/test/.env.example')).toBeTruthy();
