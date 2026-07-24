@@ -5,11 +5,9 @@ import {
   Tree,
   updateJson,
 } from '@nx/devkit';
+import { addOverrideToLintConfig, isEslintConfigSupported, lintConfigHasOverride } from '@nx/eslint/internal';
+import type { Linter } from 'eslint';
 import * as path from 'path';
-
-interface EslintRc {
-  overrides?: { files?: string[]; rules?: Record<string, string> }[];
-}
 
 // Backfills package.json module-resolution fields for the library. In a TS-solution
 // workspace @nx/vue's library resolves via package.json `exports`, but its
@@ -39,25 +37,42 @@ export function ensurePackageExports(host: Tree, libRoot: string): void {
 // element usage, not the deprecated Vue 2 component-slot syntax the rule targets.
 // The whole lib wraps web components, so it's scoped to the lib (consuming apps,
 // which use `<template #actions>`, are unaffected).
+//
+// Uses @nx/eslint's own override helpers rather than hand-editing a specific
+// file format: create-nx-workspace's current default is flat config
+// (eslint.config.mjs), which is a JS module exporting an array, not JSON — an
+// earlier version of this function only handled legacy .eslintrc.json, so it
+// silently no-op'd (just a console warning) on flat-config workspaces, and
+// `nx lint vue-components` failed for real on unmodified generator output.
+// addOverrideToLintConfig/lintConfigHasOverride detect flat vs legacy
+// internally (via @nx/eslint's own useFlatConfig check) and edit whichever is
+// actually in effect — AST-aware for flat config, not string splicing.
 function disableSlotAttributeRule(host: Tree, libRoot: string): void {
-  const eslintrc = `${libRoot}/.eslintrc.json`;
-  if (!host.exists(eslintrc)) {
+  if (!isEslintConfigSupported(host, libRoot)) {
     console.warn(
-      `\n⚠  ${eslintrc} not found — could not disable vue/no-deprecated-slot-attribute.\n` +
+      `\n⚠  No ESLint config found for ${libRoot} — could not disable vue/no-deprecated-slot-attribute.\n` +
       `   GoabModal uses goa-modal's native \`slot\` attribute; if lint flags it, turn\n` +
       `   that rule off for this library.\n`
     );
     return;
   }
-  updateJson<EslintRc, EslintRc>(host, eslintrc, (json) => {
-    const overrides = (json.overrides ??= []);
-    let vueOverride = overrides.find((o) => o.files?.some((f) => f.includes('vue')));
-    if (!vueOverride) {
-      vueOverride = { files: ['*.vue'], rules: {} };
-      overrides.push(vueOverride);
-    }
-    (vueOverride.rules ??= {})['vue/no-deprecated-slot-attribute'] = 'off';
-    return json;
+
+  // `files` is `string | string[]` per the Linter type — normalize before checking.
+  const isVueOverride = (o: Linter.ConfigOverride<Linter.RulesRecord>) =>
+    (Array.isArray(o.files) ? o.files : o.files ? [o.files] : []).some((f) => f.includes('vue'));
+
+  const alreadyDisabled = lintConfigHasOverride(
+    host,
+    libRoot,
+    (o) => isVueOverride(o) && o.rules?.['vue/no-deprecated-slot-attribute'] === 'off'
+  );
+  if (alreadyDisabled) {
+    return;
+  }
+
+  addOverrideToLintConfig(host, libRoot, {
+    files: ['*.vue'],
+    rules: { 'vue/no-deprecated-slot-attribute': 'off' },
   });
 }
 

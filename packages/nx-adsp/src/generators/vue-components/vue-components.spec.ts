@@ -50,10 +50,32 @@ describe('Vue Components Generator', () => {
     expect(agents).toContain('defineModel<boolean>');
   }, 30000);
 
+  it('disables vue/no-deprecated-slot-attribute in flat config too, not just .eslintrc.json', async () => {
+    // useFlatConfig() (from @nx/eslint) treats a root flat-config file's
+    // presence as authoritative, regardless of the installed ESLint version —
+    // this is what create-nx-workspace's current default actually looks like.
+    host.write('eslint.config.mjs', 'export default [];\n');
+    await generator(host);
+
+    expect(host.exists('libs/vue-components/eslint.config.mjs')).toBeTruthy();
+    expect(host.exists('libs/vue-components/.eslintrc.json')).toBeFalsy();
+    const flatConfig = host.read('libs/vue-components/eslint.config.mjs').toString();
+    expect(flatConfig).toContain('"vue/no-deprecated-slot-attribute": "off"');
+  }, 30000);
+
   it('is idempotent — a second run does not throw and keeps the wrappers', async () => {
     await generator(host);
     await expect(generator(host)).resolves.not.toThrow();
     expect(host.exists('libs/vue-components/src/lib/GoabInput.vue')).toBeTruthy();
+  }, 30000);
+
+  it('does not duplicate the ESLint override on a second run (legacy or flat)', async () => {
+    host.write('eslint.config.mjs', 'export default [];\n');
+    await generator(host);
+    await generator(host);
+
+    const flatConfig = host.read('libs/vue-components/eslint.config.mjs').toString();
+    expect(flatConfig.split('vue/no-deprecated-slot-attribute').length - 1).toBe(1);
   }, 30000);
 
   it('derives the import path from the workspace scope', () => {
