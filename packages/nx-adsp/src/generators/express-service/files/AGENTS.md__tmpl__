@@ -157,7 +157,7 @@ import { authorize, createValidationHandler } from '@abgov/adsp-service-sdk';
 import { z } from 'zod';
 import * as items from '../services/items';
 
-const CreateItem = z.object({ name: z.string().min(1) });
+const CreateItem = z.object({ name: z.string().trim().min(1) });
 
 export function itemsRouter(): Router {
   const router = Router();
@@ -178,7 +178,13 @@ export function itemsRouter(): Router {
     createValidationHandler(CreateItem),
     async (req, res, next) => {
       try {
-        const { name } = req.body as z.infer<typeof CreateItem>;
+        // createValidationHandler validates req.body against the schema but
+        // doesn't replace it with the parsed result — req.body is still the
+        // raw body afterward. Invisible for a plain string, but any
+        // transform (.trim() here) or coercion (z.coerce.date(), a default)
+        // is silently lost if you read req.body directly instead of
+        // re-parsing. Parse again, here, to get the actual parsed value.
+        const { name } = CreateItem.parse(req.body);
         res.status(201).json(await items.create(name));
       } catch (err) {
         next(err);
@@ -201,7 +207,10 @@ app.use('/<%= projectName %>/v1/items', itemsRouter());
 
 `authorize(role)` → 403 if the user lacks the role; `createValidationHandler(schema)`
 → 400 on a bad body. Both forward errors to `next()`, which `createErrorHandler`
-(mounted last in `main.ts`) turns into structured HTTP responses.
+(mounted last in `main.ts`) turns into structured HTTP responses. Don't read
+`req.body` directly in the handler and assert its type (`req.body as
+z.infer<typeof Schema>`) — that's the raw, unparsed body, not the validated
+one; parse it again with the same schema instead, as above.
 
 ## Recipe: add a resource end to end
 
