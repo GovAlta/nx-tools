@@ -101,8 +101,8 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 }
 
 export default async function (host: Tree, options: Schema) {
-  const normalizedOptions = await normalizeOptions(host, options);
-
+  // Checked before normalizeOptions, which resolves ADSP auth and can trigger
+  // an interactive login — a missing peer shouldn't surface only after that.
   const { applicationGenerator: initExpress } = await import('@nx/express').catch(
     () => {
       throw new Error(
@@ -110,6 +110,9 @@ export default async function (host: Tree, options: Schema) {
       );
     }
   );
+
+  const normalizedOptions = await normalizeOptions(host, options);
+
   await initExpress(host, {
     ...options,
     skipFormat: true,
