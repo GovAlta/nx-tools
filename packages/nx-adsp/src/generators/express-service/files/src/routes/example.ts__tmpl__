@@ -46,7 +46,11 @@ export function exampleRouter(eventService: EventService): Router {
     createValidationHandler(ExampleRequestSchema),
     async (req, res, next) => {
       try {
-        const { id } = req.body as z.infer<typeof ExampleRequestSchema>;
+        // createValidationHandler validates req.body but doesn't replace it
+        // with the parsed result — parse again here rather than asserting
+        // req.body's type, so any transform/coercion your schema adds later
+        // actually takes effect (see AGENTS.md's "Adding routes").
+        const { id } = ExampleRequestSchema.parse(req.body);
         eventService.send(createExampleEvent(id));
         res.json({ id });
       } catch (err) {
