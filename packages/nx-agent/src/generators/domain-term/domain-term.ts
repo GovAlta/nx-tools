@@ -7,6 +7,7 @@ import {
 } from '@nx/devkit';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { resolveRefFromPath } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const DOMAIN_TERMS_SUBDIR = 'project-docs/domain-terms';
@@ -55,6 +56,13 @@ export default async function (host: Tree, options: Schema) {
     );
   }
 
+  // Resolved (and, in doing so, validated) before any write — a path that
+  // doesn't resolve to an existing project-docs/ artifact throws here, same
+  // as the duplicate check above, so a failing run still has no side effects.
+  const projectDocsAncestors = (options.projectDocsAncestors ?? []).map(
+    (path) => resolveRefFromPath(host, path),
+  );
+
   ensureContainerReadme(host, containerDir, !!options.project);
 
   const content = [
@@ -62,6 +70,7 @@ export default async function (host: Tree, options: Schema) {
     `term: ${options.term}`,
     'aliases: []',
     'not_confused_with: []',
+    `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,
     '---',
     '',
     "<!-- Definition: describe this term in the domain's own language. -->",

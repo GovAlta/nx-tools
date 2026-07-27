@@ -117,6 +117,7 @@ Creates `project-docs/domain-terms/case.md`:
 term: Case
 aliases: []
 not_confused_with: []
+project-docs-ancestors: []
 ---
 
 <!-- Definition: describe this term in the domain's own language. -->
@@ -125,6 +126,8 @@ not_confused_with: []
 - `term` — the canonical name, matching the filename.
 - `aliases` — other words that mean the same thing.
 - `not_confused_with` — similar-sounding terms this one is deliberately distinct from, and why.
+- `project-docs-ancestors` — other `project-docs/` artifacts this term derives from (see
+  `project-docs-lineage` below) — set via `--project-docs-ancestors`, never by hand.
 
 One file per term rather than a single flat glossary, so frontmatter (a per-file construct in
 every tool that uses the term) is meaningful, and so listing the folder — cheap, just filenames —
@@ -137,14 +140,85 @@ glossary" generator; `domain-term` composes it as an internal step.
 
 ### Options
 
-| Option    | Default                  | Description                                                                                                                                            |
-| --------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `term`    | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                    |
-| `project` | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
+| Option            | Default                  | Description                                                                                                                                            |
+| ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `term`            | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                    |
+| `project`         | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this term derives from — repeatable; resolved into `project-docs-ancestors` (see below)                         |
 
 ```bash
 npx nx g @abgov/nx-agent:domain-term Case --project=domain-lib
+npx nx g @abgov/nx-agent:domain-term "Collision Report" --project-docs-ancestors=project-docs/bounded-contexts/collision-reporting.md
 ```
 
 Re-adding a term that already exists throws rather than silently overwriting or duplicating it —
-edit the file directly instead.
+edit the file directly instead. A `--project-docs-ancestors` path that doesn't resolve to an existing
+artifact throws the same way, before anything is written.
+
+## `project-docs-lineage`
+
+Scans the whole workspace for `project-docs/` artifacts and `project-docs-ancestors` references —
+across both doc frontmatter and code comments — and writes the resulting graph to
+`.nx-agent/lineage.json` (gitignored automatically; it's fully derived from other files, so
+committing it would just create a second, driftable source of truth). Throws if it finds a
+reference that doesn't resolve to anything; reports an artifact nothing references yet (an orphan)
+without failing, since that's a normal, temporary state, not a mistake.
+
+```bash
+npx nx g @abgov/nx-agent:project-docs-lineage
+npx nx g @abgov/nx-agent:project-docs-lineage --dry-run   # compute and report, write nothing
+```
+
+The `project-docs-ancestors` convention itself: a directive used identically in frontmatter (a YAML
+list) and code comments (comma-separated on one line), shaped `<type>[:<id>][#fragment]`. `type` is
+the literal `project-docs/` subfolder name — no singular/plural guessing, so a new artifact kind
+works immediately with no schema to update. `id` is the filename minus extension, present only for
+a collection artifact (many instances, one file each, inside a type-named folder); a singular
+artifact (exactly one file directly under `project-docs/`, no subfolder) is referenced by its bare
+type, no id — e.g. `domain-terms:case` for a term, `architecture-overview` alone for a one-off doc.
+An optional project qualifier (`<project>/type:id`) scopes the reference to that project's own
+`project-docs/` instead of the workspace root's — never implicit, even from within that same
+project, so a reference's meaning never depends on where it's found.
+
+Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself (or `--dry-run`
+it in your own CI) after adding or changing a reference.
+
+### Programmatic access
+
+`@abgov/nx-agent` also exports two read functions — its first public, importable API; everything
+else in the package is consumed only via `nx g @abgov/nx-agent:x`. Meant for a caller that needs a
+stable contract (an ESLint rule, an agent resolving context for a file it's about to touch), not
+one that wants to parse `.nx-agent/lineage.json` directly — that file's exact shape stays an
+internal implementation detail, free to change as long as these signatures don't.
+
+```typescript
+import { getAncestors, getDescendants } from '@abgov/nx-agent';
+
+getAncestors(tree, 'apps/my-service/src/routes/collision-reports.ts');
+// => [{ type: 'domain-terms', id: 'collision-report' }]
+
+getDescendants(tree, 'domain-terms:collision-report');
+// => [{ file: 'apps/my-service/src/routes/collision-reports.ts' }]
+```
+
+The two directions have genuinely different costs, which the API makes explicit rather than
+hiding: `getAncestors` reads just the one file you ask about (the reference is embedded in it), so
+it's always cheap. `getDescendants` has no such shortcut — nothing an artifact stores on itself
+says who points at it, since references are backward-only by design — so answering it means
+checking every file in the workspace. It rebuilds fresh on every call rather than trusting a
+persisted cache that could go stale the moment something changes without `project-docs-lineage`
+re-running (measured on this ~14k-file workspace: about 50ms end to end, which is why that's an
+acceptable default rather than something worth caching).
+
+Both take an optional `depth` (default `1`, direct parents/children only — pass `Infinity` for the
+full ancestry/descendancy). `depth` doesn't change the cost model above, it just decides whether to
+pay it: at `depth` 1, `getAncestors` still touches only the one file and `getDescendants` still
+does its one full-workspace scan. Beyond that, each function builds the graph once — not once per
+hop — and walks it in memory, so asking for `depth: 5` costs the same one-time build as `depth: 2`.
+A cycle in the references (two artifacts deriving from each other) terminates correctly rather than
+looping forever.
+
+```typescript
+getAncestors(tree, 'apps/my-service/src/routes/collision-reports.ts', Infinity);
+// everything this file derives from, transitively
+```

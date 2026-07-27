@@ -13,6 +13,7 @@ import {
   mergeManagedSection,
   removeManagedSection,
 } from '../../utils/agents-md';
+import { ensureGitignoreEntries } from '../../utils/gitignore';
 import { NormalizedSchema, Schema } from './schema';
 
 const DEFAULT_TARGETS = ['lint', 'test', 'build'];
@@ -23,7 +24,6 @@ const PRE_COMMIT_PATH = '.husky/pre-commit';
 const SECRETLINT_CONFIG_PATH = '.secretlintrc.json';
 const AFFECTED_CHECK_MARKER = 'npx nx affected';
 const SECRETLINT_MARKER = 'npx secretlint';
-const GITIGNORE_PATH = '.gitignore';
 // Deliberately excludes bare `.env` — it's dual-purpose (plain workspace
 // config as well as secrets; nx-tools' own root .env is a real example of
 // the former), so a blanket rule would be a false positive on legitimate use.
@@ -100,6 +100,7 @@ const GUIDANCE_GROUPS: GuidanceGroup[] = [
     items: [
       'ubiquitous-language',
       'project-conventions',
+      'project-docs-lineage',
       'framework-and-library-idioms',
     ],
   },
@@ -242,38 +243,17 @@ fi`;
   appendHookBlock(host, SECRETLINT_MARKER, block);
 }
 
-// Preventive, not detective: once these patterns are in .gitignore, git
-// itself refuses to stage a matching file via `git add .`/`git add -A` (a
-// deliberate `git add -f` would be needed to override it) — so there's no
-// separate pre-commit check needed on top of this for files that match.
-// Doesn't help a file that was already tracked before this ran; gitignore
-// never retroactively untracks anything.
-function ensureGitignoreEntries(host: Tree): void {
-  if (!host.exists(GITIGNORE_PATH)) {
-    host.write(GITIGNORE_PATH, `${CREDENTIAL_GITIGNORE_PATTERNS.join('\n')}\n`);
-    return;
-  }
-
-  const existing = host.read(GITIGNORE_PATH).toString();
-  const existingLines = new Set(
-    existing.split('\n').map((line) => line.trim()),
-  );
-  const missing = CREDENTIAL_GITIGNORE_PATTERNS.filter(
-    (pattern) => !existingLines.has(pattern),
-  );
-  if (missing.length === 0) {
-    return;
-  }
-
-  const trimmed = existing.replace(/\n+$/, '');
-  host.write(GITIGNORE_PATH, `${trimmed}\n\n${missing.join('\n')}\n`);
-}
-
 function applySecretScanStep(host: Tree): void {
   addSecretlintDependencies(host);
   addSecretlintConfig(host);
   addSecretScanHook(host);
-  ensureGitignoreEntries(host);
+  // Preventive, not detective: once these patterns are in .gitignore, git
+  // itself refuses to stage a matching file via `git add .`/`git add -A` (a
+  // deliberate `git add -f` would be needed to override it) — so there's no
+  // separate pre-commit check needed on top of this for files that match.
+  // Doesn't help a file that was already tracked before this ran; gitignore
+  // never retroactively untracks anything.
+  ensureGitignoreEntries(host, CREDENTIAL_GITIGNORE_PATTERNS);
 }
 
 const CLAUDE_SETTINGS_PATH = '.claude/settings.json';
