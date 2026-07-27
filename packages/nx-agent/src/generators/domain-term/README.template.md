@@ -15,6 +15,7 @@ frontmatter shape stays consistent. Each file:
     not_confused_with:
       - term: File
         reason: File is the underlying record storage; Case is the workflow around it.
+    project-docs-ancestors: []
     ---
 
     A single citizen-facing request being tracked from intake through resolution.
@@ -24,6 +25,9 @@ frontmatter shape stays consistent. Each file:
   drifting into use unchecked elsewhere.
 - `not_confused_with` — similar-sounding terms this one is deliberately distinct from, and why.
   Leave it empty if there's no real ambiguity to guard against.
+- `project-docs-ancestors` — other `project-docs/` artifacts this term derives from (e.g. a bounded
+  context it belongs to). Set with `--project-docs-ancestors <path>` at creation time, not by hand —
+  see `nx g @abgov/nx-agent:project-docs-lineage`'s own guidance for the full reference convention.
 
 The body is free text — the actual definition, in domain language, with as much nuance as the
 term needs. Keep it current: when a term gets clarified (with a domain expert, in a requirements

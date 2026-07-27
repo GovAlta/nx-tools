@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentProjectDocsLineage",
+  "title": "Build the project-docs lineage graph",
+  "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references across code and docs, and writes the resulting graph to .nx-agent/lineage.json (gitignored). Throws if any reference is broken. Run with --dry-run to check without writing.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

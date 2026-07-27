@@ -16,6 +16,40 @@ describe('nx-agent domain-term generator', () => {
     expect(content).toContain('term: Case');
     expect(content).toContain('aliases: []');
     expect(content).toContain('not_confused_with: []');
+    expect(content).toContain('project-docs-ancestors: []');
+  });
+
+  it('resolves --project-docs-ancestors paths into the canonical reference and writes them', async () => {
+    host.write(
+      'project-docs/bounded-contexts/collision-reporting.md',
+      ['---', 'name: Collision Reporting', '---'].join('\n'),
+    );
+
+    await generator(host, {
+      term: 'Collision Report',
+      projectDocsAncestors: ['project-docs/bounded-contexts/collision-reporting.md'],
+    });
+
+    const content = host
+      .read('project-docs/domain-terms/collision-report.md')
+      .toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [bounded-contexts:collision-reporting]',
+    );
+  });
+
+  it('throws and makes no changes when a --project-docs-ancestors path does not resolve', async () => {
+    await expect(
+      generator(host, {
+        term: 'Collision Report',
+        projectDocsAncestors: ['project-docs/bounded-contexts/nope.md'],
+      }),
+    ).rejects.toThrow(/not found/);
+
+    expect(host.exists('project-docs/domain-terms/collision-report.md')).toBe(
+      false,
+    );
+    expect(host.exists('project-docs/domain-terms/README.md')).toBe(false);
   });
 
   it('derives the filename slug from a multi-word term', async () => {

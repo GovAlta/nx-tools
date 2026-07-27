@@ -14,6 +14,11 @@
     "project": {
       "type": "string",
       "description": "Scope this term to a specific project's project-docs/domain-terms/ instead of the workspace root — use when a bounded context spans a domain library and its consuming apps."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this term derives from (e.g. project-docs/bounded-contexts/collision-reporting.md) — resolved into the project-docs-ancestors frontmatter convention. Each path must already exist; a backward reference only makes sense pointing at something already established."
     }
   },
   "required": ["term"],

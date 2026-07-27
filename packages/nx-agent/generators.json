@@ -12,6 +12,11 @@
       "factory": "./src/generators/domain-term/domain-term",
       "schema": "./src/generators/domain-term/schema.json",
       "description": "Adds one domain term under project-docs/domain-terms/, with structured frontmatter and a free-text definition."
+    },
+    "project-docs-lineage": {
+      "factory": "./src/generators/project-docs-lineage/project-docs-lineage",
+      "schema": "./src/generators/project-docs-lineage/schema.json",
+      "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references, and writes the resulting graph to .nx-agent/lineage.json. Throws on a broken reference. Run with --dry-run to check without writing."
     }
   }
 }
