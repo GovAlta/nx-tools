@@ -8,7 +8,7 @@ import { ApplicationType } from '../generators/deployment/schema';
  * Nx build executors appear (e.g. Vite/Rspack for frontends).
  */
 export function detectApplicationType(
-  config: ProjectConfiguration
+  config: ProjectConfiguration,
 ): ApplicationType | undefined {
   const build = config.targets?.build;
   switch (build?.executor) {

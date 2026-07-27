@@ -54,16 +54,22 @@ describe('sandbox executor', () => {
     expect(has('nx build test --configuration production')).toBe(true);
     expect(
       has(
-        `podman build --platform=linux/amd64 -f .openshift/test/Dockerfile -t ${IMAGE_REF} .`
-      )
+        `podman build --platform=linux/amd64 -f .openshift/test/Dockerfile -t ${IMAGE_REF} .`,
+      ),
     ).toBe(true);
     expect(has(`podman push ${IMAGE_REF}`)).toBe(true);
     expect(
-      has(`oc tag ${IMAGE_REF} test:sandbox --reference-policy=local -n test-sandbox`)
+      has(
+        `oc tag ${IMAGE_REF} test:sandbox --reference-policy=local -n test-sandbox`,
+      ),
     ).toBe(true);
-    expect(has('oc import-image test:sandbox --confirm -n test-sandbox')).toBe(true);
+    expect(has('oc import-image test:sandbox --confirm -n test-sandbox')).toBe(
+      true,
+    );
     expect(has('oc create secret docker-registry ghcr-pull')).toBe(true);
-    expect(has('oc rollout restart deployment/test -n test-sandbox')).toBe(true);
+    expect(has('oc rollout restart deployment/test -n test-sandbox')).toBe(
+      true,
+    );
     expect(has('oc rollout status deployment/test -n test-sandbox')).toBe(true);
 
     // ordering: build precedes push precedes tag precedes import precedes rollout
@@ -83,8 +89,8 @@ describe('sandbox executor', () => {
           c.includes('CLIENT_SECRET') &&
           // CLIENT_SECRET lives in .env.local, not .env - @abgov/nx-adsp's
           // express-service writes it there, not to .env.
-          c.includes('.env.local')
-      )
+          c.includes('.env.local'),
+      ),
     ).toBe(true);
 
     execSync.mockClear();
@@ -130,7 +136,8 @@ describe('sandbox executor', () => {
     execSync.mockImplementation((cmd: string) => {
       if (cmd.includes('oc import-image')) {
         importAttempts++;
-        if (importAttempts < 3) throw new Error('409 the object has been modified');
+        if (importAttempts < 3)
+          throw new Error('409 the object has been modified');
       }
       return Buffer.from('');
     });
@@ -144,14 +151,20 @@ describe('sandbox executor', () => {
       if (cmd.includes('oc import-image')) throw new Error('409');
       return Buffer.from('');
     });
-    const result = await runExecutor({ ...baseOptions, importRetries: 2 }, context());
+    const result = await runExecutor(
+      { ...baseOptions, importRetries: 2 },
+      context(),
+    );
     expect(result.success).toBe(false);
     const importCalls = commands().filter((c) => c.includes('oc import-image'));
     expect(importCalls.length).toBe(2);
   });
 
   it('skipBuild/skipPush reuse the existing image', async () => {
-    await runExecutor({ ...baseOptions, skipBuild: true, skipPush: true }, context());
+    await runExecutor(
+      { ...baseOptions, skipBuild: true, skipPush: true },
+      context(),
+    );
     const cmds = commands();
     expect(cmds.some((c) => c.includes('podman build'))).toBe(false);
     expect(cmds.some((c) => c.includes('nx build test'))).toBe(false);
@@ -166,9 +179,13 @@ describe('sandbox executor', () => {
     const cmds = commands();
     expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(true);
     expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBe(true);
-    expect(cmds.some((c) => c.includes('createdb -U postgres test_sandbox'))).toBe(true);
+    expect(
+      cmds.some((c) => c.includes('createdb -U postgres test_sandbox')),
+    ).toBe(true);
     const createDbIdx = cmds.findIndex((c) => c.includes('createdb'));
-    const rolloutIdx = cmds.findIndex((c) => c.includes('rollout status deployment/test'));
+    const rolloutIdx = cmds.findIndex((c) =>
+      c.includes('rollout status deployment/test'),
+    );
     expect(createDbIdx).toBeGreaterThanOrEqual(0);
     expect(createDbIdx).toBeLessThan(rolloutIdx);
   });
@@ -176,12 +193,16 @@ describe('sandbox executor', () => {
   it('ensures paired backend Services from proxy-service tags (idempotent)', async () => {
     await runExecutor(
       { ...baseOptions, appType: 'frontend' },
-      context(['adsp:proxy-service:test-service:3333'])
+      context(['adsp:proxy-service:test-service:3333']),
     );
-    const guard = commands().find((c) => c.includes('oc get service test-service'));
+    const guard = commands().find((c) =>
+      c.includes('oc get service test-service'),
+    );
     expect(guard).toBeTruthy();
     expect(guard).toContain('||');
-    expect(guard).toContain('oc create service clusterip test-service --tcp=3333:3333');
+    expect(guard).toContain(
+      'oc create service clusterip test-service --tcp=3333:3333',
+    );
   });
 
   it('adds no paired-service guard without proxy-service tags', async () => {
@@ -194,22 +215,26 @@ describe('sandbox executor', () => {
     // default mock returns '' for `oc get endpoints` → no endpoints
     await runExecutor(
       { ...baseOptions, appType: 'frontend' },
-      context(['adsp:proxy-service:test-service:3333'])
+      context(['adsp:proxy-service:test-service:3333']),
     );
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('test-service'));
     // warn only — does not deploy the backend
-    expect(commands().some((c) => c.includes('nx run test-service:sandbox'))).toBe(false);
+    expect(
+      commands().some((c) => c.includes('nx run test-service:sandbox')),
+    ).toBe(false);
     warn.mockRestore();
   });
 
   it('does not warn when the paired backend has endpoints', async () => {
     const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
     execSync.mockImplementation((cmd: string) =>
-      Buffer.from(cmd.includes('oc get endpoints test-service') ? '10.1.2.3' : '')
+      Buffer.from(
+        cmd.includes('oc get endpoints test-service') ? '10.1.2.3' : '',
+      ),
     );
     await runExecutor(
       { ...baseOptions, appType: 'frontend' },
-      context(['adsp:proxy-service:test-service:3333'])
+      context(['adsp:proxy-service:test-service:3333']),
     );
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
@@ -219,9 +244,11 @@ describe('sandbox executor', () => {
     const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
     await runExecutor(
       { ...baseOptions, appType: 'frontend', deployBackend: true },
-      context(['adsp:proxy-service:test-service:3333'])
+      context(['adsp:proxy-service:test-service:3333']),
     );
-    expect(commands().some((c) => c.includes('npx nx run test-service:sandbox'))).toBe(true);
+    expect(
+      commands().some((c) => c.includes('npx nx run test-service:sandbox')),
+    ).toBe(true);
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
   });

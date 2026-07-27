@@ -5,7 +5,7 @@ declare namespace SemanticRelease {
 
   type PluginFunction<T extends BaseContext> = (
     pluginConfig: PluginConfig,
-    context: T
+    context: T,
   ) => Promise<ReleaseType>;
 }
 

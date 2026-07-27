@@ -33,7 +33,7 @@ describe('Pipeline Generator', () => {
     it('can fail for duplicate env project', async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await expect(
-        generator(host, { ...options, envs: 'test-dev test-dev' })
+        generator(host, { ...options, envs: 'test-dev test-dev' }),
       ).rejects.toThrow('Each environment must be a unique project.');
     });
   });
@@ -82,8 +82,12 @@ describe('Pipeline Generator', () => {
 
       // Runner provisioning ships as in-repo manifests referencing the shared
       // public image (no per-repo build, no pull secret).
-      expect(host.exists('.openshift/github-runner/deployment.yml')).toBeTruthy();
-      const dep = host.read('.openshift/github-runner/deployment.yml').toString();
+      expect(
+        host.exists('.openshift/github-runner/deployment.yml'),
+      ).toBeTruthy();
+      const dep = host
+        .read('.openshift/github-runner/deployment.yml')
+        .toString();
       expect(dep).toContain('ghcr.io/govalta/github-runner-playwright');
       expect(dep).toContain('RUNNER_LABELS');
       expect(dep).toContain('test-infra'); // namespace = the infra project
@@ -103,7 +107,7 @@ describe('Pipeline Generator', () => {
     it('can fail for duplicate env project', async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       await expect(
-        generator(host, { ...options, envs: 'test-dev test-dev' })
+        generator(host, { ...options, envs: 'test-dev test-dev' }),
       ).rejects.toThrow('Each environment must be a unique project.');
     });
   });

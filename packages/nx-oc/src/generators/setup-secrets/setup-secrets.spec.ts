@@ -26,7 +26,9 @@ describe('Setup Secrets Generator', () => {
     ghMock.checkGhCli.mockImplementation(() => undefined);
     ghMock.setGhSecret.mockReturnValue(true);
     ghMock.promptForGitHubPat.mockResolvedValue('test-pat');
-    gitMock.getGitRemoteUrl.mockReturnValue('https://github.com/GovAlta/nx-tools.git');
+    gitMock.getGitRemoteUrl.mockReturnValue(
+      'https://github.com/GovAlta/nx-tools.git',
+    );
     gitMock.getGitHubRepo.mockReturnValue('GovAlta/nx-tools');
     gitMock.deriveRegistryFromRemote.mockReturnValue('ghcr.io/GovAlta');
   });
@@ -35,13 +37,27 @@ describe('Setup Secrets Generator', () => {
     const host = createTreeWithEmptyWorkspace();
     await generator(host, options);
 
-    expect(ghMock.setGhSecret).toHaveBeenCalledWith('OPENSHIFT_SERVER', 'https://api.example.com:6443', 'GovAlta/nx-tools');
-    expect(ghMock.setGhSecret).toHaveBeenCalledWith('OPENSHIFT_TOKEN', 'test-sa-token', 'GovAlta/nx-tools');
+    expect(ghMock.setGhSecret).toHaveBeenCalledWith(
+      'OPENSHIFT_SERVER',
+      'https://api.example.com:6443',
+      'GovAlta/nx-tools',
+    );
+    expect(ghMock.setGhSecret).toHaveBeenCalledWith(
+      'OPENSHIFT_TOKEN',
+      'test-sa-token',
+      'GovAlta/nx-tools',
+    );
     expect(ocMock.createDockerRegistrySecret).toHaveBeenCalledWith(
-      'ghcr-pull-secret', 'ghcr.io', 'GovAlta', 'test-pat', 'my-infra'
+      'ghcr-pull-secret',
+      'ghcr.io',
+      'GovAlta',
+      'test-pat',
+      'my-infra',
     );
     expect(ocMock.linkSecretToServiceAccount).toHaveBeenCalledWith(
-      'ghcr-pull-secret', 'github-actions', 'my-infra'
+      'ghcr-pull-secret',
+      'github-actions',
+      'my-infra',
     );
   });
 
@@ -57,7 +73,11 @@ describe('Setup Secrets Generator', () => {
 
     expect(ghMock.promptForGitHubPat).not.toHaveBeenCalled();
     expect(ocMock.createDockerRegistrySecret).toHaveBeenCalledWith(
-      'ghcr-pull-secret', 'ghcr.io', 'GovAlta', 'passed-in-pat', 'my-infra'
+      'ghcr-pull-secret',
+      'ghcr.io',
+      'GovAlta',
+      'passed-in-pat',
+      'my-infra',
     );
   });
 
@@ -73,7 +93,9 @@ describe('Setup Secrets Generator', () => {
   });
 
   it('skips secrets when gh CLI is not available', async () => {
-    ghMock.checkGhCli.mockImplementation(() => { throw new Error('gh: not found'); });
+    ghMock.checkGhCli.mockImplementation(() => {
+      throw new Error('gh: not found');
+    });
 
     const host = createTreeWithEmptyWorkspace();
     await generator(host, options);

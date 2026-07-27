@@ -17,7 +17,10 @@ describe('verifyConditions', () => {
 
   it('resolves when project is an array', async () => {
     await expect(
-      verifyConditions({ project: ['Lib1.csproj', 'Lib2.csproj'] }, makeContext()),
+      verifyConditions(
+        { project: ['Lib1.csproj', 'Lib2.csproj'] },
+        makeContext(),
+      ),
     ).resolves.toBeUndefined();
   });
 
@@ -32,16 +35,22 @@ describe('verifyConditions', () => {
   });
 
   it('throws when project is not set', async () => {
-    await expect(verifyConditions({} as never, makeContext())).rejects.toThrow('"project"');
+    await expect(verifyConditions({} as never, makeContext())).rejects.toThrow(
+      '"project"',
+    );
   });
 
   it('throws when project array is empty', async () => {
-    await expect(verifyConditions({ project: [] }, makeContext())).rejects.toThrow('"project"');
+    await expect(
+      verifyConditions({ project: [] }, makeContext()),
+    ).rejects.toThrow('"project"');
   });
 
   it('logs a confirmation message on success', async () => {
     const context = makeContext();
     await verifyConditions({ project: 'MyLib.csproj' }, context);
-    expect((context as never as { logger: { log: jest.Mock } }).logger.log).toHaveBeenCalled();
+    expect(
+      (context as never as { logger: { log: jest.Mock } }).logger.log,
+    ).toHaveBeenCalled();
   });
 });

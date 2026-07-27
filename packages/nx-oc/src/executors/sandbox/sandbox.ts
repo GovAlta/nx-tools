@@ -12,9 +12,7 @@ function requireTool(tool: string, hint: string): void {
   try {
     execSync(`command -v ${tool}`, { stdio: 'ignore', shell: '/bin/bash' });
   } catch {
-    throw new Error(
-      `'${tool}' is required but was not found on PATH. ${hint}`
-    );
+    throw new Error(`'${tool}' is required but was not found on PATH. ${hint}`);
   }
 }
 
@@ -27,7 +25,7 @@ function requireGhAuth(): void {
     execSync('gh auth status', { stdio: 'ignore', shell: '/bin/bash' });
   } catch {
     throw new Error(
-      'gh is installed but not authenticated. Run `gh auth login` as an account with write:packages on the registry org (check/switch with `gh auth status` / `gh auth switch`).'
+      'gh is installed but not authenticated. Run `gh auth login` as an account with write:packages on the registry org (check/switch with `gh auth status` / `gh auth switch`).',
     );
   }
 }
@@ -35,15 +33,12 @@ function requireGhAuth(): void {
 // podman must be installed and its machine reachable. `podman info` fails when
 // the machine is stopped, so it catches that before the build.
 function requirePodman(): void {
-  requireTool(
-    'podman',
-    "Install it (macOS: 'brew install podman')."
-  );
+  requireTool('podman', "Install it (macOS: 'brew install podman').");
   try {
     execSync('podman info', { stdio: 'ignore', shell: '/bin/bash' });
   } catch {
     throw new Error(
-      "podman is installed but not responding — start the machine (macOS: 'podman machine start')."
+      "podman is installed but not responding — start the machine (macOS: 'podman machine start').",
     );
   }
 }
@@ -59,7 +54,11 @@ function run(label: string, cmd: string, cwd: string): void {
 // Run a command and capture stdout; returns '' on any failure.
 function capture(cmd: string, cwd: string): string {
   try {
-    return execSync(cmd, { cwd, shell: '/bin/bash', stdio: ['ignore', 'pipe', 'ignore'] })
+    return execSync(cmd, {
+      cwd,
+      shell: '/bin/bash',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
       .toString()
       .trim();
   } catch {
@@ -73,14 +72,14 @@ function importWithRetry(
   imageStreamTag: string,
   namespace: string,
   cwd: string,
-  retries: number
+  retries: number,
 ): void {
   for (let attempt = 1; ; attempt++) {
     try {
       run(
         `Import image (attempt ${attempt}/${retries})`,
         `oc import-image ${imageStreamTag} --confirm -n ${namespace}`,
-        cwd
+        cwd,
       );
       return;
     } catch (err) {
@@ -88,11 +87,11 @@ function importWithRetry(
         throw new Error(
           `oc import-image failed after ${retries} attempts: ${
             (err as Error).message
-          }`
+          }`,
         );
       }
       logger.warn(
-        `  import-image failed (likely the oc tag reconcile race); retrying in 3s`
+        `  import-image failed (likely the oc tag reconcile race); retrying in 3s`,
       );
       execSync('sleep 3', { stdio: 'ignore' });
     }
@@ -101,7 +100,7 @@ function importWithRetry(
 
 export default async function runExecutor(
   options: SandboxExecutorSchema,
-  context: ExecutorContext
+  context: ExecutorContext,
 ): Promise<{ success: boolean }> {
   const projectName = context.projectName;
   const project =
@@ -133,7 +132,7 @@ export default async function runExecutor(
   const appType = options.appType ?? detectApplicationType(project);
   if (!appType) {
     logger.error(
-      `[nx-oc:sandbox] Could not determine the application type for ${projectName}.`
+      `[nx-oc:sandbox] Could not determine the application type for ${projectName}.`,
     );
     return { success: false };
   }
@@ -169,7 +168,7 @@ export default async function runExecutor(
         `oc create secret generic ${projectName}-secrets ` +
           `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${projectRoot}/.env.local 2>/dev/null | cut -d= -f2-)" ` +
           `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
-        cwd
+        cwd,
       );
     }
 
@@ -181,12 +180,12 @@ export default async function runExecutor(
           `oc create secret generic sandbox-postgres-creds ` +
           `--from-literal=POSTGRESQL_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
           `-n ${sandboxProject}`,
-        cwd
+        cwd,
       );
       run(
         'Deploy shared Postgres',
         `oc apply -f .openshift/sandbox/sandbox-postgres.yml -n ${sandboxProject}`,
-        cwd
+        cwd,
       );
       // The shared Postgres only creates the admin database; each app needs its
       // own <app>_sandbox database created before its migrate init container
@@ -198,7 +197,7 @@ export default async function runExecutor(
           `oc exec -n ${sandboxProject} deployment/sandbox-postgres -- ` +
           `bash -lc "psql -U postgres -tc \\"SELECT 1 FROM pg_database WHERE datname='${dbName}'\\" ` +
           `| grep -q 1 || createdb -U postgres ${dbName}"`,
-        cwd
+        cwd,
       );
     } else if (database === 'mongo') {
       run(
@@ -207,12 +206,12 @@ export default async function runExecutor(
           `oc create secret generic sandbox-mongodb-creds ` +
           `--from-literal=MONGODB_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
           `-n ${sandboxProject}`,
-        cwd
+        cwd,
       );
       run(
         'Deploy shared MongoDB',
         `oc apply -f .openshift/sandbox/sandbox-mongodb.yml -n ${sandboxProject}`,
-        cwd
+        cwd,
       );
     }
 
@@ -223,14 +222,17 @@ export default async function runExecutor(
       .map((tag) => {
         const value = tag.slice(PROXY_TAG_PREFIX.length);
         const lastColon = value.lastIndexOf(':');
-        return { name: value.slice(0, lastColon), port: value.slice(lastColon + 1) };
+        return {
+          name: value.slice(0, lastColon),
+          port: value.slice(lastColon + 1),
+        };
       });
     for (const { name, port } of proxyServices) {
       run(
         `Ensure paired Service ${name}`,
         `oc get service ${name} -n ${sandboxProject} >/dev/null 2>&1 || ` +
           `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}`,
-        cwd
+        cwd,
       );
     }
 
@@ -240,24 +242,28 @@ export default async function runExecutor(
     for (const { name } of proxyServices) {
       if (deployBackend) {
         try {
-          run(`Deploy paired backend ${name}`, `npx nx run ${name}:sandbox`, cwd);
+          run(
+            `Deploy paired backend ${name}`,
+            `npx nx run ${name}:sandbox`,
+            cwd,
+          );
         } catch {
           throw new Error(
             `--deployBackend: could not deploy paired backend "${name}". Ensure it has a sandbox target ` +
-              `(nx g @abgov/nx-oc:sandbox ${name} --sandboxProject ${sandboxProject}).`
+              `(nx g @abgov/nx-oc:sandbox ${name} --sandboxProject ${sandboxProject}).`,
           );
         }
       } else {
         const endpoints = capture(
           `oc get endpoints ${name} -n ${sandboxProject} -o jsonpath='{.subsets[*].addresses[*].ip}'`,
-          cwd
+          cwd,
         );
         if (!endpoints) {
           logger.warn(
             `\n⚠ Paired backend "${name}" has no running pods in ${sandboxProject}. ` +
               `The frontend will deploy, but requests proxied to ${name} will 502 until it is deployed:\n` +
               `    nx run ${name}:sandbox\n` +
-              `  (or re-run this target with --deployBackend to deploy it first).`
+              `  (or re-run this target with --deployBackend to deploy it first).`,
           );
         }
       }
@@ -268,12 +274,12 @@ export default async function runExecutor(
       run(
         'Build',
         `npx nx build ${projectName} --configuration production`,
-        cwd
+        cwd,
       );
       run(
         'Podman build',
         `podman build --platform=linux/amd64 -f .openshift/${projectName}/Dockerfile -t ${imageRef} .`,
-        cwd
+        cwd,
       );
     }
     if (!skipPush) {
@@ -282,7 +288,7 @@ export default async function runExecutor(
       run(
         'Registry login',
         `gh auth token | podman login ${registryHost} -u "$(gh api user -q .login)" --password-stdin`,
-        cwd
+        cwd,
       );
       run('Push image', `podman push ${imageRef}`, cwd);
     }
@@ -294,36 +300,36 @@ export default async function runExecutor(
       `oc create secret docker-registry ghcr-pull ` +
         `--docker-server=${registryHost} --docker-username="$(gh api user -q .login)" --docker-password="$(gh auth token)" ` +
         `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
-      cwd
+      cwd,
     );
     // oc tag sets/repoints the imagestream tag with reference-policy=local so
     // pods pull in-cluster; import --confirm then pulls the current manifest.
     run(
       'Tag imagestream',
       `oc tag ${imageRef} ${projectName}:${imageTag} --reference-policy=local -n ${sandboxProject}`,
-      cwd
+      cwd,
     );
     importWithRetry(
       `${projectName}:${imageTag}`,
       sandboxProject,
       cwd,
-      importRetries
+      importRetries,
     );
 
     run(
       'Apply manifest',
       `oc process -f .openshift/${projectName}/${projectName}.yml -p PROJECT=${sandboxProject} | oc apply -f -`,
-      cwd
+      cwd,
     );
     run(
       'Restart rollout',
       `oc rollout restart deployment/${projectName} -n ${sandboxProject}`,
-      cwd
+      cwd,
     );
     run(
       'Wait for rollout',
       `oc rollout status deployment/${projectName} -n ${sandboxProject} --timeout=180s`,
-      cwd
+      cwd,
     );
 
     logger.info(`\n✓ Sandbox deploy complete for ${projectName}.`);

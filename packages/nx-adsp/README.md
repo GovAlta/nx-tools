@@ -10,17 +10,17 @@ Install only the framework peers for the generators you use — they are declare
 as **optional** peer dependencies, so a workspace that only builds Vue apps
 doesn't need `@nx/react`, `@nx/angular`, etc.
 
-| Generator | Required peer dependency |
-|-----------|--------------------------|
-| `react-app` | `@nx/react` |
-| `angular-app` | `@nx/angular` |
-| `vue-app` | `@nx/vue` |
-| `dotnet-service` | `@nx-dotnet/core` |
-| `react-dotnet` | `@nx/react`, `@nx-dotnet/core` |
-| `express-service` | `@nx/express` |
-| `pevn`, `mevn` (full-stack) | `@nx/express`, `@nx/vue` |
-| `pern`, `pean` (full-stack) | `@nx/express`, `@nx/react`/`@nx/angular` |
-| `react-form`, `react-task-list` | existing React project in the workspace |
+| Generator                       | Required peer dependency                 |
+| ------------------------------- | ---------------------------------------- |
+| `react-app`                     | `@nx/react`                              |
+| `angular-app`                   | `@nx/angular`                            |
+| `vue-app`                       | `@nx/vue`                                |
+| `dotnet-service`                | `@nx-dotnet/core`                        |
+| `react-dotnet`                  | `@nx/react`, `@nx-dotnet/core`           |
+| `express-service`               | `@nx/express`                            |
+| `pevn`, `mevn` (full-stack)     | `@nx/express`, `@nx/vue`                 |
+| `pern`, `pean` (full-stack)     | `@nx/express`, `@nx/react`/`@nx/angular` |
+| `react-form`, `react-task-list` | existing React project in the workspace  |
 
 ## Installation
 
@@ -99,13 +99,13 @@ Creates a Node/Express backend service configured for ADSP.
 npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the service |
-| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
-| `tenant` | `-t` | No | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication) |
-| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                                                                                                                                        |
+| ------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | —     | Yes      | Name of the service                                                                                                                                                                |
+| `env`         | `-e`  | No       | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
+| `tenant`      | `-t`  | No       | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication)                                                                   |
+| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                                                                                                                  |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                   |
 
 OpenAPI docs are generated from the same Zod schemas already used for request validation
 (`@asteasolutions/zod-to-openapi`) and served at `/swagger/docs/v1` — no separate spec to
@@ -123,14 +123,14 @@ Creates a React/Redux frontend application configured for ADSP. Requires `@nx/re
 npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the application |
-| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
-| `tenant` | `-t` | No | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication) |
-| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
-| `proxy` | — | No | Nginx proxy rule(s) as `{ location, proxyPass }` or an array of such objects |
+| Option        | Alias | Required | Description                                                                                                                                                                        |
+| ------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | —     | Yes      | Name of the application                                                                                                                                                            |
+| `env`         | `-e`  | No       | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
+| `tenant`      | `-t`  | No       | ADSP tenant name; resolves the Keycloak realm by name (sign in once with `@abgov/adsp-cli` — see Authentication)                                                                   |
+| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                                                                                                                  |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                   |
+| `proxy`       | —     | No       | Nginx proxy rule(s) as `{ location, proxyPass }` or an array of such objects                                                                                                       |
 
 ---
 
@@ -154,11 +154,11 @@ Creates an ASP.NET Core backend service configured for ADSP. Requires `@nx-dotne
 npx nx g @abgov/nx-adsp:dotnet-service my-service --env dev --accessToken $TOKEN
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the service |
-| `env` | `-e` | No | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                                                                                                                                        |
+| ------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | —     | Yes      | Name of the service                                                                                                                                                                |
+| `env`         | `-e`  | No       | ADSP environment / access service. Defaults to `test` = access-uat.alberta.ca (UAT — use for dev and pre-prod); `prod` = access.alberta.ca; `dev` = ADSP platform dev (restricted) |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                   |
 
 ---
 
@@ -182,11 +182,11 @@ Adds a React component generated from an existing [ADSP Form Definition](https:/
 npx nx g @abgov/nx-adsp:react-form my-app --env test
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project to add the form component to |
-| `env` | `-e` | No | ADSP environment to fetch form definitions from. Defaults to `test` (UAT / access-uat.alberta.ca) |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                                                       |
+| ------------- | ----- | -------- | ------------------------------------------------------------------------------------------------- |
+| `project`     | —     | Yes      | Name of the existing Nx project to add the form component to                                      |
+| `env`         | `-e`  | No       | ADSP environment to fetch form definitions from. Defaults to `test` (UAT / access-uat.alberta.ca) |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                  |
 
 ---
 
@@ -224,11 +224,11 @@ When you run a generator:
 
 Generator flags that steer which tenant/token is used:
 
-| Flag | Effect |
-|------|--------|
-| `--tenant <name>` | Resolves the Keycloak realm by tenant name (anonymous lookup) and targets it |
-| `--tenantRealm <uuid>` | Use the realm UUID directly; combine with `--tenant` to override the resolved realm |
-| `--accessToken <token>` | Supply a pre-obtained token directly (CI/CD), bypassing the CLI |
+| Flag                    | Effect                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `--tenant <name>`       | Resolves the Keycloak realm by tenant name (anonymous lookup) and targets it        |
+| `--tenantRealm <uuid>`  | Use the realm UUID directly; combine with `--tenant` to override the resolved realm |
+| `--accessToken <token>` | Supply a pre-obtained token directly (CI/CD), bypassing the CLI                     |
 
 With none of these, the generator lets `adsp login`'s interactive picker resolve the tenant. Don't
 have a tenant yet? That picker also offers a **+ Create a new tenant** choice — available in
@@ -251,7 +251,7 @@ This needs the same tenant/token as [Authentication](#authentication) above, plu
 is non-interactive (`--no-interactive`, no TTY, or `CI=true`). Skip it explicitly with
 `--skipAgent`, regardless of interactivity.
 
-> **Note for coding agents:** skip this. It exists to let a *human* describe what they want built
+> **Note for coding agents:** skip this. It exists to let a _human_ describe what they want built
 > to a separate, remote agent working from nothing but that description. You already have the
 > actual requirements and the surrounding codebase context that conversation exists to gather —
 > make any needed customizations directly, after scaffolding, rather than through an indirect

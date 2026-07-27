@@ -12,7 +12,7 @@ export async function getPathCommitHashes(
   project: string,
   paths: string[],
   from: string,
-  to = 'HEAD'
+  to = 'HEAD',
 ) {
   if (!projectCommits[project]) {
     // --full-history to avoid history simplification ignoring commits on some merged branches.
@@ -26,20 +26,27 @@ export async function getPathCommitHashes(
         '--',
         ...paths,
       ],
-      { cwd }
+      { cwd },
     );
 
     let stderr = '';
     child.stderr.on('data', (d) => (stderr += d.toString()));
 
     const commits: string[] = [];
-    for await (const line of createInterface({ input: child.stdout, crlfDelay: Infinity })) {
+    for await (const line of createInterface({
+      input: child.stdout,
+      crlfDelay: Infinity,
+    })) {
       if (line) commits.push(line);
     }
 
-    const exitCode = await new Promise<number>((resolve) => child.on('close', resolve));
+    const exitCode = await new Promise<number>((resolve) =>
+      child.on('close', resolve),
+    );
     if (exitCode !== 0) {
-      throw new Error(`git log failed with exit code ${exitCode}: ${stderr.trim()}`);
+      throw new Error(
+        `git log failed with exit code ${exitCode}: ${stderr.trim()}`,
+      );
     }
 
     projectCommits[project] = commits;

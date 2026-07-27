@@ -5,14 +5,14 @@ function applyOcResources(host: Tree) {
   const { success: pipelineApplied, stdout: pipelineOut } = runOcCommand(
     'apply',
     [],
-    host.read('.openshift/environment.infra.yml')
+    host.read('.openshift/environment.infra.yml'),
   );
   console.log(pipelineOut?.toString());
 
   const { success: envApplied, stdout: envOut } = runOcCommand(
     'apply',
     [],
-    host.read('.openshift/environments.yml')
+    host.read('.openshift/environments.yml'),
   );
   console.log(envOut?.toString());
 

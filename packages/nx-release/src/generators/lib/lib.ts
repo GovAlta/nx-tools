@@ -24,7 +24,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
       host,
       path.join(__dirname, 'root-files'),
       '.',
-      templateOptions
+      templateOptions,
     );
   }
 
@@ -32,7 +32,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     options.projectRoot,
-    templateOptions
+    templateOptions,
   );
 }
 
@@ -40,7 +40,9 @@ export default async function (host: Tree, options: Schema) {
   const config = readProjectConfiguration(host, options.project);
   const { build } = config.targets;
   if (config.projectType !== 'library' || !build) {
-    throw new Error('This generator can only be run against buildable libraries.');
+    throw new Error(
+      'This generator can only be run against buildable libraries.',
+    );
   }
 
   addDependenciesToPackageJson(
@@ -48,7 +50,7 @@ export default async function (host: Tree, options: Schema) {
     {},
     {
       'semantic-release': '^24.0.0',
-    }
+    },
   );
 
   config.targets.release = {

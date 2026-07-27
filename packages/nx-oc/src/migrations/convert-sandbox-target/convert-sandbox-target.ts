@@ -23,13 +23,14 @@ export default async function convertSandboxTarget(tree: Tree): Promise<void> {
       : [];
     const joined = commands.join('\n');
     // Only touch the sandbox target this plugin generated (podman build + import).
-    if (!/podman build/.test(joined) || !/oc import-image/.test(joined)) continue;
+    if (!/podman build/.test(joined) || !/oc import-image/.test(joined))
+      continue;
 
     const namespace = joined.match(/-n\s+(\S+)/)?.[1];
     const imageRef = joined.match(/podman build[^\n]*?-t\s+(\S+)/)?.[1];
     if (!namespace || !imageRef) {
       logger.warn(
-        `[nx-oc] Could not parse the sandbox target for "${name}"; leaving it as run-commands. Re-run the sandbox generator to migrate it.`
+        `[nx-oc] Could not parse the sandbox target for "${name}"; leaving it as run-commands. Re-run the sandbox generator to migrate it.`,
       );
       continue;
     }
@@ -40,8 +41,8 @@ export default async function convertSandboxTarget(tree: Tree): Promise<void> {
     const database = /sandbox-postgres/.test(joined)
       ? 'postgres'
       : /sandbox-mongodb/.test(joined)
-      ? 'mongo'
-      : undefined;
+        ? 'mongo'
+        : undefined;
 
     project.targets['sandbox'] = {
       executor: '@abgov/nx-oc:sandbox',
@@ -57,7 +58,7 @@ export default async function convertSandboxTarget(tree: Tree): Promise<void> {
 
   if (converted > 0) {
     logger.info(
-      `[nx-oc] Converted ${converted} sandbox target(s) to the @abgov/nx-oc:sandbox executor.`
+      `[nx-oc] Converted ${converted} sandbox target(s) to the @abgov/nx-oc:sandbox executor.`,
     );
   }
 }

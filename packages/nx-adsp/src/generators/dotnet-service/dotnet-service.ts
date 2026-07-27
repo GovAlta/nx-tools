@@ -17,7 +17,7 @@ import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
@@ -42,7 +42,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     options.projectRoot,
-    templateOptions
+    templateOptions,
   );
 }
 

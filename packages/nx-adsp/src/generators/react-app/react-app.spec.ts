@@ -17,7 +17,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 // jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
 // (pure, no I/O) implementation so tag-writing behavior is actually exercised.
 utilsMock.adspProjectTags.mockImplementation(
-  jest.requireActual('@abgov/nx-oc').adspProjectTags
+  jest.requireActual('@abgov/nx-oc').adspProjectTags,
 );
 
 describe('React App Generator', () => {
@@ -42,7 +42,7 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test-e2e/project.json')).toBeTruthy();
     expect(
       host.exists('apps/test-e2e/playwright.config.ts') ||
-        host.exists('apps/test-e2e/playwright.config.mts')
+        host.exists('apps/test-e2e/playwright.config.mts'),
     ).toBe(true);
     expect(host.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
     // webServer guarded so CI can target a deployed URL (BASE_URL) instead of a local server
@@ -76,7 +76,7 @@ describe('React App Generator', () => {
 
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
     expect(host.read('apps/test/nginx.conf').toString()).toContain(
-      'http://test-service:3333/'
+      'http://test-service:3333/',
     );
   });
 
@@ -121,7 +121,7 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test/proxy.conf.json')).toBeTruthy();
 
     const proxyConf = JSON.parse(
-      host.read('apps/test/proxy.conf.json').toString()
+      host.read('apps/test/proxy.conf.json').toString(),
     );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');

@@ -45,14 +45,14 @@ npx nx g @abgov/nx-oc:pipeline my-pipeline \
   --envs "my-dev my-test my-prod"
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `pipeline` | — | Yes | Name of the OpenShift pipeline |
-| `infra` | `-i` | Yes | OpenShift project name used for build infrastructure |
-| `envs` | `-e` | Yes | Space-separated names of the OpenShift environment projects (e.g. `"my-dev my-test my-prod"`) |
-| `registry` | `-r` | No | Container registry to publish images to (e.g. `ghcr.io/my-org`). Derived automatically from the git remote when not provided. |
-| `type` | `-t` | No | Pipeline type: `actions` (default) or `jenkins` |
-| `apply` | `-a` | No | Apply the generated manifests to OpenShift and run automated secrets setup |
+| Option     | Alias | Required | Description                                                                                                                   |
+| ---------- | ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `pipeline` | —     | Yes      | Name of the OpenShift pipeline                                                                                                |
+| `infra`    | `-i`  | Yes      | OpenShift project name used for build infrastructure                                                                          |
+| `envs`     | `-e`  | Yes      | Space-separated names of the OpenShift environment projects (e.g. `"my-dev my-test my-prod"`)                                 |
+| `registry` | `-r`  | No       | Container registry to publish images to (e.g. `ghcr.io/my-org`). Derived automatically from the git remote when not provided. |
+| `type`     | `-t`  | No       | Pipeline type: `actions` (default) or `jenkins`                                                                               |
+| `apply`    | `-a`  | No       | Apply the generated manifests to OpenShift and run automated secrets setup                                                    |
 
 The generator creates the following files:
 
@@ -65,6 +65,7 @@ The generator creates the following files:
 ```
 
 When `--apply` is set, the generator also:
+
 - Applies the infrastructure manifests to OpenShift
 - Sets `OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` as GitHub Actions secrets automatically
 - Prompts once for a GitHub classic PAT with `read:packages` scope, creates the GHCR pull secret in the infra project, and links it to the `github-actions` service account
@@ -91,9 +92,9 @@ Sets GitHub Actions secrets (`OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`) and creates 
 npx nx g @abgov/nx-oc:setup-secrets --infra my-infra-project
 ```
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `infra` | Yes | OpenShift project name used for build infrastructure |
+| Option  | Required | Description                                          |
+| ------- | -------- | ---------------------------------------------------- |
+| `infra` | Yes      | OpenShift project name used for build infrastructure |
 
 Requires `oc` to be logged in and `gh` CLI to be authenticated.
 
@@ -107,13 +108,13 @@ Adds OpenShift deployment manifests (Deployment, Service, Route, ImageStream) to
 npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project to add deployment manifests to |
-| `appType` | `-t` | Yes | Application type: `frontend`, `dotnet`, or `node` |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `database` | — | No | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a migration init container (node migrate.js) for `postgres`. |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                                                                                                                                                                                            |
+| ------------- | ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`     | —     | Yes      | Name of the existing Nx project to add deployment manifests to                                                                                                                                                                         |
+| `appType`     | `-t`  | Yes      | Application type: `frontend`, `dotnet`, or `node`                                                                                                                                                                                      |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                                                                                                                                                                             |
+| `database`    | —     | No       | Database type used by the service: `postgres`, `mongo`, or `none` (default). When set, the manifest includes the appropriate `secretKeyRef` for the connection string and a migration init container (node migrate.js) for `postgres`. |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                                                                       |
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
 
@@ -144,14 +145,14 @@ npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject my-sandbox-ns
 npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --database postgres
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project |
-| `sandboxProject` | `-s` | Yes | OpenShift namespace to deploy the sandbox into (expected to be per-user) |
-| `appType` | `-t` | No | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided. |
-| `database` | — | No | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace. |
-| `env` | — | No | ADSP environment to target for configuration: `dev` (default), `test`, or `prod` |
-| `registry` | `-r` | No | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided. |
+| Option           | Alias | Required | Description                                                                                                                                                 |
+| ---------------- | ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`        | —     | Yes      | Name of the existing Nx project                                                                                                                             |
+| `sandboxProject` | `-s`  | Yes      | OpenShift namespace to deploy the sandbox into (expected to be per-user)                                                                                    |
+| `appType`        | `-t`  | No       | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided.                                              |
+| `database`       | —     | No       | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace.                              |
+| `env`            | —     | No       | ADSP environment to target for configuration: `dev` (default), `test`, or `prod`                                                                            |
+| `registry`       | `-r`  | No       | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided. |
 
 **Prerequisites** (local build, one-time):
 
@@ -205,10 +206,10 @@ npx nx g @abgov/nx-oc:teardown my-app --env dev
 npx nx g @abgov/nx-oc:teardown my-app --env prod
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project |
-| `env` | `-e` | Yes | Environment to target: `dev`, `test`, or `prod` |
+| Option    | Alias | Required | Description                                     |
+| --------- | ----- | -------- | ----------------------------------------------- |
+| `project` | —     | Yes      | Name of the existing Nx project                 |
+| `env`     | `-e`  | Yes      | Environment to target: `dev`, `test`, or `prod` |
 
 Running `nx run my-app:teardown-dev` runs `oc delete all,configmap -l app=<name>` against the environment's OpenShift project. The label selector matches every resource the deployment template created — if new resource types are added to the template in future, they are cleaned up automatically. `--ignore-not-found` makes it safe to run even if resources are partially absent.
 
@@ -247,9 +248,9 @@ npx nx run my-app:deploy
 
 ### Executor options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `ocProject` | Yes | OpenShift project(s) to apply manifests to |
+| Option      | Required | Description                                |
+| ----------- | -------- | ------------------------------------------ |
+| `ocProject` | Yes      | OpenShift project(s) to apply manifests to |
 
 `ocProject` accepts three forms:
 

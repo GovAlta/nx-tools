@@ -5,8 +5,18 @@ import { NugetPluginConfig } from './config';
 
 const execFile = promisify(execFileCb);
 
-export async function prepare(config: NugetPluginConfig, context: PrepareContext): Promise<void> {
-  const { project, configuration, noBuild, includeSymbols, includeSource, serviceable } = config;
+export async function prepare(
+  config: NugetPluginConfig,
+  context: PrepareContext,
+): Promise<void> {
+  const {
+    project,
+    configuration,
+    noBuild,
+    includeSymbols,
+    includeSource,
+    serviceable,
+  } = config;
   const {
     cwd,
     env,
@@ -14,7 +24,9 @@ export async function prepare(config: NugetPluginConfig, context: PrepareContext
     nextRelease: { version },
   } = context;
 
-  const projects = Array.isArray(project) ? project : [project].filter(Boolean) as string[];
+  const projects = Array.isArray(project)
+    ? project
+    : ([project].filter(Boolean) as string[]);
 
   for (const proj of projects) {
     logger.log('Packing %s at version %s', proj, version);

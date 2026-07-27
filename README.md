@@ -1,4 +1,5 @@
 # About the project
+
 This is a monorepo of the Government of Alberta's custom plugins for [Nx](https://nx.dev)
 
 [NX Tools Guide](https://govalta.github.io/nx-tools/getting-started.html)

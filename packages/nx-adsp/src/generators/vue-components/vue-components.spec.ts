@@ -1,6 +1,9 @@
 import { readProjectConfiguration, Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import generator, { ensurePackageExports, vueComponentsImportPath } from './vue-components';
+import generator, {
+  ensurePackageExports,
+  vueComponentsImportPath,
+} from './vue-components';
 
 jest.mock('@nx/devkit', () => ({
   ...jest.requireActual('@nx/devkit'),
@@ -22,18 +25,25 @@ describe('Vue Components Generator', () => {
 
     const base = 'libs/vue-components/src/lib';
     for (const name of [
-      'GoabInput', 'GoabTextarea', 'GoabDropdown', 'GoabCheckbox',
-      'GoabRadioGroup', 'GoabButton', 'GoabModal',
+      'GoabInput',
+      'GoabTextarea',
+      'GoabDropdown',
+      'GoabCheckbox',
+      'GoabRadioGroup',
+      'GoabButton',
+      'GoabModal',
     ]) {
       expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
     }
     const index = host.read('libs/vue-components/src/index.ts').toString();
-    expect(index).toContain("export { default as GoabInput }");
+    expect(index).toContain('export { default as GoabInput }');
     expect(index).toContain('@abgov/vue-components'); // interim marker
 
     // Ships a spec so the vitest test target isn't empty (vitest exits non-zero
     // on "no test files found").
-    expect(host.exists('libs/vue-components/src/vue-components.spec.ts')).toBeTruthy();
+    expect(
+      host.exists('libs/vue-components/src/vue-components.spec.ts'),
+    ).toBeTruthy();
 
     // GoabModal uses goa-modal's native `slot` attribute (web component, not the
     // deprecated Vue 2 slot syntax) — the rule is turned off for this lib.
@@ -59,14 +69,18 @@ describe('Vue Components Generator', () => {
 
     expect(host.exists('libs/vue-components/eslint.config.mjs')).toBeTruthy();
     expect(host.exists('libs/vue-components/.eslintrc.json')).toBeFalsy();
-    const flatConfig = host.read('libs/vue-components/eslint.config.mjs').toString();
+    const flatConfig = host
+      .read('libs/vue-components/eslint.config.mjs')
+      .toString();
     expect(flatConfig).toContain('"vue/no-deprecated-slot-attribute": "off"');
   }, 30000);
 
   it('is idempotent — a second run does not throw and keeps the wrappers', async () => {
     await generator(host);
     await expect(generator(host)).resolves.not.toThrow();
-    expect(host.exists('libs/vue-components/src/lib/GoabInput.vue')).toBeTruthy();
+    expect(
+      host.exists('libs/vue-components/src/lib/GoabInput.vue'),
+    ).toBeTruthy();
   }, 30000);
 
   it('does not duplicate the ESLint override on a second run (legacy or flat)', async () => {
@@ -74,8 +88,12 @@ describe('Vue Components Generator', () => {
     await generator(host);
     await generator(host);
 
-    const flatConfig = host.read('libs/vue-components/eslint.config.mjs').toString();
-    expect(flatConfig.split('vue/no-deprecated-slot-attribute').length - 1).toBe(1);
+    const flatConfig = host
+      .read('libs/vue-components/eslint.config.mjs')
+      .toString();
+    expect(
+      flatConfig.split('vue/no-deprecated-slot-attribute').length - 1,
+    ).toBe(1);
   }, 30000);
 
   it('derives the import path from the workspace scope', () => {
@@ -84,10 +102,15 @@ describe('Vue Components Generator', () => {
 
   describe('ensurePackageExports (TS-solution resolution fix)', () => {
     it('backfills exports/main/types when a lib package.json exists', () => {
-      host.write('libs/vue-components/package.json', JSON.stringify({ name: '@proj/vue-components' }));
+      host.write(
+        'libs/vue-components/package.json',
+        JSON.stringify({ name: '@proj/vue-components' }),
+      );
       ensurePackageExports(host, 'libs/vue-components');
 
-      const pkg = JSON.parse(host.read('libs/vue-components/package.json').toString());
+      const pkg = JSON.parse(
+        host.read('libs/vue-components/package.json').toString(),
+      );
       expect(pkg.main).toBe('./src/index.ts');
       expect(pkg.types).toBe('./src/index.ts');
       expect(pkg.exports['.'].import).toBe('./src/index.ts');
@@ -96,11 +119,16 @@ describe('Vue Components Generator', () => {
     it('does not clobber exports @nx/vue already wrote', () => {
       host.write(
         'libs/vue-components/package.json',
-        JSON.stringify({ name: '@proj/vue-components', exports: { '.': './dist/index.js' } })
+        JSON.stringify({
+          name: '@proj/vue-components',
+          exports: { '.': './dist/index.js' },
+        }),
       );
       ensurePackageExports(host, 'libs/vue-components');
 
-      const pkg = JSON.parse(host.read('libs/vue-components/package.json').toString());
+      const pkg = JSON.parse(
+        host.read('libs/vue-components/package.json').toString(),
+      );
       expect(pkg.exports['.']).toBe('./dist/index.js');
     });
 

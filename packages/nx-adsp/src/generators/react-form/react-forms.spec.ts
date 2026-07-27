@@ -94,13 +94,13 @@ describe('React Form Generator', () => {
 
     await generator(host, options);
     expect(
-      host.exists('apps/test/src/app/some-intake/some-intake.tsx')
+      host.exists('apps/test/src/app/some-intake/some-intake.tsx'),
     ).toBeTruthy();
     expect(
-      host.exists('apps/test/src/app/some-intake/some-intake.slice.ts')
+      host.exists('apps/test/src/app/some-intake/some-intake.slice.ts'),
     ).toBeTruthy();
     expect(
-      host.exists('apps/test/src/app/some-intake/some-intake.module.css')
+      host.exists('apps/test/src/app/some-intake/some-intake.module.css'),
     ).toBeTruthy();
   }, 30000);
 });

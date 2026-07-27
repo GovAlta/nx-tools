@@ -53,14 +53,14 @@ npx nx g @abgov/nx-oc:pipeline my-pipeline \
   --type actions
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `pipeline` | — | Yes | Name of the OpenShift pipeline |
-| `infra` | `-i` | Yes | OpenShift project name used for build infrastructure |
-| `envs` | `-e` | Yes | Space-separated names of the OpenShift environment projects (e.g., `"my-dev my-test my-prod"`) |
-| `registry` | `-r` | Yes | Container registry to publish images to (e.g., `ghcr.io/my-org`) |
-| `type` | `-t` | No | Pipeline type: `actions` (default) or `jenkins` |
-| `apply` | `-a` | No | Apply the generated manifests to OpenShift immediately after generation |
+| Option     | Alias | Required | Description                                                                                    |
+| ---------- | ----- | -------- | ---------------------------------------------------------------------------------------------- |
+| `pipeline` | —     | Yes      | Name of the OpenShift pipeline                                                                 |
+| `infra`    | `-i`  | Yes      | OpenShift project name used for build infrastructure                                           |
+| `envs`     | `-e`  | Yes      | Space-separated names of the OpenShift environment projects (e.g., `"my-dev my-test my-prod"`) |
+| `registry` | `-r`  | Yes      | Container registry to publish images to (e.g., `ghcr.io/my-org`)                               |
+| `type`     | `-t`  | No       | Pipeline type: `actions` (default) or `jenkins`                                                |
+| `apply`    | `-a`  | No       | Apply the generated manifests to OpenShift immediately after generation                        |
 
 ---
 
@@ -84,12 +84,12 @@ Adds OpenShift deployment manifests (Deployment, Service, Route, etc.) to an exi
 npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project to add deployment manifests to |
-| `appType` | `-t` | Yes | Application type: `frontend`, `dotnet`, or `node` |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                      |
+| ------------- | ----- | -------- | ---------------------------------------------------------------- |
+| `project`     | —     | Yes      | Name of the existing Nx project to add deployment manifests to   |
+| `appType`     | `-t`  | Yes      | Application type: `frontend`, `dotnet`, or `node`                |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                       |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration |
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
 
@@ -120,9 +120,9 @@ npx nx run my-app:deploy
 
 ### Options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `ocProject` | Yes | OpenShift project(s) to apply manifests to |
+| Option      | Required | Description                                |
+| ----------- | -------- | ------------------------------------------ |
+| `ocProject` | Yes      | OpenShift project(s) to apply manifests to |
 
 `ocProject` accepts three forms:
 

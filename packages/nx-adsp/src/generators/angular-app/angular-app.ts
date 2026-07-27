@@ -1,8 +1,21 @@
-import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import {
+  adspProjectTags,
+  deploymentGenerator,
+  getAdspConfiguration,
+} from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
-import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
+import {
+  ensureAudienceMapper,
+  ensureClientRoleScope,
+  ensurePublicClient,
+} from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings, guardPlaywrightWebServer } from '../../utils/quality';
+import {
+  addJestCoverageConfig,
+  addSemgrepTarget,
+  addVsCodeSettings,
+  guardPlaywrightWebServer,
+} from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -21,7 +34,7 @@ import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 async function normalizeOptions(
   host: Tree,
-  options: AngularAppGeneratorSchema
+  options: AngularAppGeneratorSchema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
@@ -32,8 +45,8 @@ async function normalizeOptions(
   const nginxProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
-    ? [options.proxy]
-    : [];
+      ? [options.proxy]
+      : [];
 
   return {
     ...options,
@@ -58,7 +71,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     options.projectRoot,
-    templateOptions
+    templateOptions,
   );
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
@@ -89,24 +102,22 @@ function addFiles(host: Tree, options: NormalizedSchema) {
           [nginxProxy.location]: proxy,
         };
       },
-      {}
+      {},
     );
     writeJson(host, `${options.projectRoot}/proxy.conf.json`, devProxyConf);
   }
   return addProxyConf;
 }
 
-
 export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   // Checked before normalizeOptions, which resolves ADSP auth and can trigger
   // an interactive login — a missing peer shouldn't surface only after that.
-  const { applicationGenerator: initAngular } = await import(
-    '@nx/angular/generators'
-  ).catch(() => {
-    throw new Error(
-      "The 'angular-app' generator requires the '@nx/angular' plugin. Install it and re-run:\n  npm i -D @nx/angular"
-    );
-  });
+  const { applicationGenerator: initAngular } =
+    await import('@nx/angular/generators').catch(() => {
+      throw new Error(
+        "The 'angular-app' generator requires the '@nx/angular' plugin. Install it and re-run:\n  npm i -D @nx/angular",
+      );
+    });
 
   const normalizedOptions = await normalizeOptions(host, options);
 
@@ -138,7 +149,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       'keycloak-js': '^23.0.7',
       'zone.js': '~0.15.0',
     },
-    {}
+    {},
   );
 
   const addedProxy = addFiles(host, normalizedOptions);
@@ -148,7 +159,13 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   // @nx/angular generates app.ts/html/css/spec.ts (new naming) and nx-welcome.ts;
   // our templates use app.component.* and don't use nx-welcome.
-  for (const file of ['app.ts', 'app.html', 'app.css', 'app.spec.ts', 'nx-welcome.ts']) {
+  for (const file of [
+    'app.ts',
+    'app.html',
+    'app.css',
+    'app.spec.ts',
+    'nx-welcome.ts',
+  ]) {
     host.delete(`${normalizedOptions.projectRoot}/src/app/${file}`);
   }
 
@@ -164,7 +181,11 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   if (config.targets.build.configurations?.production) {
     config.targets.build.configurations.production.budgets = [
       { type: 'initial', maximumWarning: '2mb', maximumError: '4mb' },
-      { type: 'anyComponentStyle', maximumWarning: '6kb', maximumError: '10kb' },
+      {
+        type: 'anyComponentStyle',
+        maximumWarning: '6kb',
+        maximumError: '10kb',
+      },
     ];
   }
 
@@ -192,9 +213,10 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
 
   config.tags = [
     ...(config.tags ?? []),
-    ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant).filter(
-      (tag) => !(config.tags ?? []).includes(tag)
-    ),
+    ...adspProjectTags(
+      normalizedOptions.env,
+      normalizedOptions.adsp.tenant,
+    ).filter((tag) => !(config.tags ?? []).includes(tag)),
   ];
 
   updateProjectConfiguration(host, options.name, config);
@@ -203,13 +225,14 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
     const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
     await ensurePublicClient(
       normalizedOptions.adsp.accessServiceUrl,
       normalizedOptions.adsp.tenantRealm,
       clientId,
-      accessToken
+      accessToken,
     );
     if (options.serviceClientId) {
       await ensureAudienceMapper(
@@ -217,7 +240,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
         normalizedOptions.adsp.tenantRealm,
         clientId,
         options.serviceClientId,
-        accessToken
+        accessToken,
       );
       await ensureClientRoleScope(
         normalizedOptions.adsp.accessServiceUrl,
@@ -225,37 +248,57 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
         clientId,
         options.serviceClientId,
         'example-role',
-        accessToken
+        accessToken,
       );
     }
   }
 
   if (normalizedOptions.adsp && !options.skipAgent) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
-    const appComponentTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.component.ts`)?.toString() ?? '';
-    const appComponentHtml = host.read(`${normalizedOptions.projectRoot}/src/app/app.component.html`)?.toString() ?? '';
-    const appConfigTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.config.ts`)?.toString() ?? '';
-    const appRoutesTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.routes.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
-    await confirmAfterAgentInterrupt(await consultAgent(
-      normalizedOptions.adsp.directoryServiceUrl,
-      accessToken,
-      {
-        projectName: normalizedOptions.projectName,
-        projectType: 'angular-app',
-        tenant: normalizedOptions.adsp.tenant,
-        pluginVersion: PLUGIN_VERSION,
-        existingFiles: {
-          'src/app/app.component.ts': appComponentTs,
-          'src/app/app.component.html': appComponentHtml,
-          'src/app/app.config.ts': appConfigTs,
-          'src/app/app.routes.ts': appRoutesTs,
-          'src/environments/environment.ts': environmentTs,
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const appComponentTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/app.component.ts`)
+        ?.toString() ?? '';
+    const appComponentHtml =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/app.component.html`)
+        ?.toString() ?? '';
+    const appConfigTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/app.config.ts`)
+        ?.toString() ?? '';
+    const appRoutesTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/app.routes.ts`)
+        ?.toString() ?? '';
+    const environmentTs =
+      host
+        .read(
+          `${normalizedOptions.projectRoot}/src/environments/environment.ts`,
+        )
+        ?.toString() ?? '';
+    await confirmAfterAgentInterrupt(
+      await consultAgent(
+        normalizedOptions.adsp.directoryServiceUrl,
+        accessToken,
+        {
+          projectName: normalizedOptions.projectName,
+          projectType: 'angular-app',
+          tenant: normalizedOptions.adsp.tenant,
+          pluginVersion: PLUGIN_VERSION,
+          existingFiles: {
+            'src/app/app.component.ts': appComponentTs,
+            'src/app/app.component.html': appComponentHtml,
+            'src/app/app.config.ts': appConfigTs,
+            'src/app/app.routes.ts': appRoutesTs,
+            'src/environments/environment.ts': environmentTs,
+          },
         },
-      },
-      host,
-      normalizedOptions.projectRoot
-    ));
+        host,
+        normalizedOptions.projectRoot,
+      ),
+    );
   }
 
   await deploymentGenerator(host, {

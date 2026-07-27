@@ -23,10 +23,11 @@ async function listClients(
   accessServiceUrl: string,
   realm: string,
   clientId: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<KeycloakClientRepresentation[]> {
   const { default: axios } = await import('axios');
-  const url = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl).href;
+  const url = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl)
+    .href;
   const { data } = await axios.get<KeycloakClientRepresentation[]>(url, {
     params: { clientId },
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -38,10 +39,11 @@ async function createClient(
   accessServiceUrl: string,
   realm: string,
   representation: Record<string, unknown>,
-  accessToken: string
+  accessToken: string,
 ): Promise<string> {
   const { default: axios } = await import('axios');
-  const url = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl).href;
+  const url = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl)
+    .href;
   const response = await axios.post<void>(url, representation, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -55,10 +57,13 @@ async function ensureClientRole(
   clientUuid: string,
   roleName: string,
   description: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<void> {
   const { default: axios } = await import('axios');
-  const baseUrl = new URL(`/auth/admin/realms/${realm}/clients/${clientUuid}/roles`, accessServiceUrl).href;
+  const baseUrl = new URL(
+    `/auth/admin/realms/${realm}/clients/${clientUuid}/roles`,
+    accessServiceUrl,
+  ).href;
   try {
     await axios.get(`${baseUrl}/${encodeURIComponent(roleName)}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -68,9 +73,13 @@ async function ensureClientRole(
     // must not abort provisioning or cause the client secret to be dropped.
     if ((err as { response?: { status?: number } })?.response?.status === 404) {
       try {
-        await axios.post(baseUrl, { name: roleName, description }, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        await axios.post(
+          baseUrl,
+          { name: roleName, description },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          },
+        );
       } catch (createErr) {
         logAdminError(clientUuid, createErr);
       }
@@ -86,34 +95,47 @@ async function assignRoleToServiceAccount(
   userId: string,
   platformClientId: string,
   roleName: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<void> {
   const { default: axios } = await import('axios');
 
-  const platformClients = await listClients(accessServiceUrl, realm, platformClientId, accessToken);
-  const platformClient = platformClients.find((c) => c.clientId === platformClientId);
+  const platformClients = await listClients(
+    accessServiceUrl,
+    realm,
+    platformClientId,
+    accessToken,
+  );
+  const platformClient = platformClients.find(
+    (c) => c.clientId === platformClientId,
+  );
   if (!platformClient) {
     process.stdout.write(
-      `[nx-adsp] Platform client '${platformClientId}' not found in realm — skipping role assignment.\n`
+      `[nx-adsp] Platform client '${platformClientId}' not found in realm — skipping role assignment.\n`,
     );
     return;
   }
 
   const roleUrl = new URL(
     `/auth/admin/realms/${realm}/clients/${platformClient.id}/roles/${encodeURIComponent(roleName)}`,
-    accessServiceUrl
+    accessServiceUrl,
   ).href;
-  const { data: role } = await axios.get<{ id: string; name: string }>(roleUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const { data: role } = await axios.get<{ id: string; name: string }>(
+    roleUrl,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
 
   const mappingsUrl = new URL(
     `/auth/admin/realms/${realm}/users/${userId}/role-mappings/clients/${platformClient.id}`,
-    accessServiceUrl
+    accessServiceUrl,
   ).href;
-  const { data: existing } = await axios.get<{ id: string; name: string }[]>(mappingsUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const { data: existing } = await axios.get<{ id: string; name: string }[]>(
+    mappingsUrl,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
 
   if (existing.some((r) => r.name === roleName)) {
     return;
@@ -124,7 +146,7 @@ async function assignRoleToServiceAccount(
   });
 
   process.stdout.write(
-    `[nx-adsp] Assigned '${platformClientId}:${roleName}' to service account.\n`
+    `[nx-adsp] Assigned '${platformClientId}:${roleName}' to service account.\n`,
   );
 }
 
@@ -134,7 +156,7 @@ async function ensureServiceAccountRoles(
   serviceClientUuid: string,
   serviceClientId: string,
   roles: Array<{ platformClientId: string; roleName: string }>,
-  accessToken: string
+  accessToken: string,
 ): Promise<void> {
   const { default: axios } = await import('axios');
   const allRoles = roles.map((r) => `${r.platformClientId}:${r.roleName}`);
@@ -148,7 +170,7 @@ async function ensureServiceAccountRoles(
   try {
     const userUrl = new URL(
       `/auth/admin/realms/${realm}/clients/${serviceClientUuid}/service-account-user`,
-      accessServiceUrl
+      accessServiceUrl,
     ).href;
     const { data } = await axios.get<{ id: string }>(userUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -161,14 +183,26 @@ async function ensureServiceAccountRoles(
 
   const results = await Promise.allSettled(
     roles.map(({ platformClientId, roleName }) =>
-      assignRoleToServiceAccount(accessServiceUrl, realm, userId, platformClientId, roleName, accessToken)
-    )
+      assignRoleToServiceAccount(
+        accessServiceUrl,
+        realm,
+        userId,
+        platformClientId,
+        roleName,
+        accessToken,
+      ),
+    ),
   );
   const failed = results.flatMap((r, i) =>
-    r.status === 'rejected' ? [{ role: allRoles[i], reason: r.reason }] : []
+    r.status === 'rejected' ? [{ role: allRoles[i], reason: r.reason }] : [],
   );
   if (failed.length > 0) {
-    logRoleProvisioningFailure(serviceClientId, realm, failed.map((f) => f.role), failed[0].reason);
+    logRoleProvisioningFailure(
+      serviceClientId,
+      realm,
+      failed.map((f) => f.role),
+      failed[0].reason,
+    );
   }
 }
 
@@ -176,12 +210,12 @@ async function getClientSecret(
   accessServiceUrl: string,
   realm: string,
   clientUuid: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<string> {
   const { default: axios } = await import('axios');
   const url = new URL(
     `/auth/admin/realms/${realm}/clients/${clientUuid}/client-secret`,
-    accessServiceUrl
+    accessServiceUrl,
   ).href;
   const { data } = await axios.get<ClientSecretRepresentation>(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -194,11 +228,11 @@ function logAdminError(clientId: string, err: unknown): void {
   if (status === 401 || status === 403) {
     process.stdout.write(
       `[nx-adsp] Cannot manage client '${clientId}' — insufficient permissions.\n` +
-        `         Create it manually in the ADSP admin portal.\n`
+        `         Create it manually in the ADSP admin portal.\n`,
     );
   } else {
     process.stdout.write(
-      `[nx-adsp] Failed to provision client '${clientId}': ${(err as Error)?.message ?? err}\n`
+      `[nx-adsp] Failed to provision client '${clientId}': ${(err as Error)?.message ?? err}\n`,
     );
   }
 }
@@ -213,7 +247,7 @@ function logRoleProvisioningFailure(
   serviceClientId: string,
   realm: string,
   failedRoles: string[],
-  err: unknown
+  err: unknown,
 ): void {
   const status = (err as { response?: { status?: number } })?.response?.status;
   const serviceName = serviceClientId.split(':').pop() ?? serviceClientId;
@@ -230,7 +264,7 @@ function logRoleProvisioningFailure(
       `            1) sign in with the admin scope and re-run this generator:\n` +
       `                 npx @abgov/adsp-cli login --scope adsp-cli-admin\n` +
       `            2) or add these client roles to the '${serviceName}' service-account user\n` +
-      `               in the ADSP admin portal (realm ${realm}).\n\n`
+      `               in the ADSP admin portal (realm ${realm}).\n\n`,
   );
 }
 
@@ -243,16 +277,30 @@ export async function ensureServiceClient(
   accessServiceUrl: string,
   realm: string,
   clientId: string,
-  accessToken: string | undefined
+  accessToken: string | undefined,
 ): Promise<string | null> {
   if (!accessToken) return null;
 
   try {
-    const existing = await listClients(accessServiceUrl, realm, clientId, accessToken);
+    const existing = await listClients(
+      accessServiceUrl,
+      realm,
+      clientId,
+      accessToken,
+    );
     const platformRoles = [
-      { platformClientId: 'urn:ads:platform:tenant-service', roleName: 'platform-service' },
-      { platformClientId: 'urn:ads:platform:event-service', roleName: 'event-sender' },
-      { platformClientId: 'urn:ads:platform:configuration-service', roleName: 'configured-service' },
+      {
+        platformClientId: 'urn:ads:platform:tenant-service',
+        roleName: 'platform-service',
+      },
+      {
+        platformClientId: 'urn:ads:platform:event-service',
+        roleName: 'event-sender',
+      },
+      {
+        platformClientId: 'urn:ads:platform:configuration-service',
+        roleName: 'configured-service',
+      },
     ];
 
     const existingClient = existing.find((c) => c.clientId === clientId);
@@ -264,13 +312,31 @@ export async function ensureServiceClient(
         existingClient.id,
         'example-role',
         'Example RBAC role — replace with roles relevant to your service.',
-        accessToken
+        accessToken,
       );
       await Promise.all([
-        ensureServiceAccountRoles(accessServiceUrl, realm, existingClient.id, clientId, platformRoles, accessToken),
-        ensureAudienceMapper(accessServiceUrl, realm, clientId, 'urn:ads:platform:push-service', accessToken),
+        ensureServiceAccountRoles(
+          accessServiceUrl,
+          realm,
+          existingClient.id,
+          clientId,
+          platformRoles,
+          accessToken,
+        ),
+        ensureAudienceMapper(
+          accessServiceUrl,
+          realm,
+          clientId,
+          'urn:ads:platform:push-service',
+          accessToken,
+        ),
       ]);
-      return getClientSecret(accessServiceUrl, realm, existingClient.id, accessToken);
+      return getClientSecret(
+        accessServiceUrl,
+        realm,
+        existingClient.id,
+        accessToken,
+      );
     }
 
     const uuid = await createClient(
@@ -285,21 +351,39 @@ export async function ensureServiceClient(
         directAccessGrantsEnabled: false,
         standardFlowEnabled: false,
       },
-      accessToken
+      accessToken,
     );
 
-    const secret = await getClientSecret(accessServiceUrl, realm, uuid, accessToken);
+    const secret = await getClientSecret(
+      accessServiceUrl,
+      realm,
+      uuid,
+      accessToken,
+    );
     await ensureClientRole(
       accessServiceUrl,
       realm,
       uuid,
       'example-role',
       'Example RBAC role — replace with roles relevant to your service.',
-      accessToken
+      accessToken,
     );
     await Promise.all([
-      ensureServiceAccountRoles(accessServiceUrl, realm, uuid, clientId, platformRoles, accessToken),
-      ensureAudienceMapper(accessServiceUrl, realm, clientId, 'urn:ads:platform:push-service', accessToken),
+      ensureServiceAccountRoles(
+        accessServiceUrl,
+        realm,
+        uuid,
+        clientId,
+        platformRoles,
+        accessToken,
+      ),
+      ensureAudienceMapper(
+        accessServiceUrl,
+        realm,
+        clientId,
+        'urn:ads:platform:push-service',
+        accessToken,
+      ),
     ]);
     process.stdout.write(`[nx-adsp] Created service client '${clientId}'.\n`);
     return secret;
@@ -319,12 +403,17 @@ export async function ensurePublicClient(
   accessServiceUrl: string,
   realm: string,
   clientId: string,
-  accessToken: string | undefined
+  accessToken: string | undefined,
 ): Promise<void> {
   if (!accessToken) return;
 
   try {
-    const existing = await listClients(accessServiceUrl, realm, clientId, accessToken);
+    const existing = await listClients(
+      accessServiceUrl,
+      realm,
+      clientId,
+      accessToken,
+    );
     if (existing.some((c) => c.clientId === clientId)) {
       process.stdout.write(`[nx-adsp] Client '${clientId}' already exists.\n`);
       return;
@@ -348,7 +437,7 @@ export async function ensurePublicClient(
           'post.logout.redirect.uris': 'http://localhost:4200/*',
         },
       },
-      accessToken
+      accessToken,
     );
 
     process.stdout.write(`[nx-adsp] Created public client '${clientId}'.\n`);
@@ -367,16 +456,21 @@ export async function ensureAudienceMapper(
   realm: string,
   frontendClientId: string,
   backendClientId: string,
-  accessToken: string | undefined
+  accessToken: string | undefined,
 ): Promise<void> {
   if (!accessToken) return;
 
   try {
-    const existing = await listClients(accessServiceUrl, realm, frontendClientId, accessToken);
+    const existing = await listClients(
+      accessServiceUrl,
+      realm,
+      frontendClientId,
+      accessToken,
+    );
     const client = existing.find((c) => c.clientId === frontendClientId);
     if (!client) {
       process.stdout.write(
-        `[nx-adsp] Client '${frontendClientId}' not found — skipping audience mapper.\n`
+        `[nx-adsp] Client '${frontendClientId}' not found — skipping audience mapper.\n`,
       );
       return;
     }
@@ -384,19 +478,22 @@ export async function ensureAudienceMapper(
     const { default: axios } = await import('axios');
     const mappersUrl = new URL(
       `/auth/admin/realms/${realm}/clients/${client.id}/protocol-mappers/models`,
-      accessServiceUrl
+      accessServiceUrl,
     ).href;
 
-    const { data: mappers } = await axios.get<ProtocolMapperRepresentation[]>(mappersUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const { data: mappers } = await axios.get<ProtocolMapperRepresentation[]>(
+      mappersUrl,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     const alreadyMapped = mappers.some(
-      (m) => m.config?.['included.client.audience'] === backendClientId
+      (m) => m.config?.['included.client.audience'] === backendClientId,
     );
     if (alreadyMapped) {
       process.stdout.write(
-        `[nx-adsp] Audience mapper for '${backendClientId}' already present on '${frontendClientId}'.\n`
+        `[nx-adsp] Audience mapper for '${backendClientId}' already present on '${frontendClientId}'.\n`,
       );
       return;
     }
@@ -414,11 +511,11 @@ export async function ensureAudienceMapper(
           'access.token.claim': 'true',
         },
       },
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: `Bearer ${accessToken}` } },
     );
 
     process.stdout.write(
-      `[nx-adsp] Added audience mapper '${backendClientId}' → '${frontendClientId}'.\n`
+      `[nx-adsp] Added audience mapper '${backendClientId}' → '${frontendClientId}'.\n`,
     );
   } catch (err) {
     logAdminError(frontendClientId, err);
@@ -438,7 +535,7 @@ export async function ensureClientRoleScope(
   frontendClientId: string,
   backendClientId: string,
   roleName: string,
-  accessToken: string | undefined
+  accessToken: string | undefined,
 ): Promise<void> {
   if (!accessToken) return;
 
@@ -450,33 +547,44 @@ export async function ensureClientRoleScope(
       listClients(accessServiceUrl, realm, backendClientId, accessToken),
     ]);
 
-    const frontendClient = frontendClients.find((c) => c.clientId === frontendClientId);
-    const backendClient = backendClients.find((c) => c.clientId === backendClientId);
+    const frontendClient = frontendClients.find(
+      (c) => c.clientId === frontendClientId,
+    );
+    const backendClient = backendClients.find(
+      (c) => c.clientId === backendClientId,
+    );
 
     if (!frontendClient || !backendClient) {
-      process.stdout.write(`[nx-adsp] Could not find clients for role scope mapping — skipping.\n`);
+      process.stdout.write(
+        `[nx-adsp] Could not find clients for role scope mapping — skipping.\n`,
+      );
       return;
     }
 
     const roleUrl = new URL(
       `/auth/admin/realms/${realm}/clients/${backendClient.id}/roles/${encodeURIComponent(roleName)}`,
-      accessServiceUrl
+      accessServiceUrl,
     ).href;
-    const { data: role } = await axios.get<{ id: string; name: string }>(roleUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const { data: role } = await axios.get<{ id: string; name: string }>(
+      roleUrl,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     const scopeUrl = new URL(
       `/auth/admin/realms/${realm}/clients/${frontendClient.id}/scope-mappings/clients/${backendClient.id}`,
-      accessServiceUrl
+      accessServiceUrl,
     ).href;
-    const { data: existingMappings } = await axios.get<{ id: string; name: string }[]>(scopeUrl, {
+    const { data: existingMappings } = await axios.get<
+      { id: string; name: string }[]
+    >(scopeUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (existingMappings.some((r) => r.name === roleName)) {
       process.stdout.write(
-        `[nx-adsp] Scope mapping '${backendClientId}:${roleName}' already present on '${frontendClientId}'.\n`
+        `[nx-adsp] Scope mapping '${backendClientId}:${roleName}' already present on '${frontendClientId}'.\n`,
       );
       return;
     }
@@ -486,7 +594,7 @@ export async function ensureClientRoleScope(
     });
 
     process.stdout.write(
-      `[nx-adsp] Added scope mapping '${backendClientId}:${roleName}' to '${frontendClientId}'.\n`
+      `[nx-adsp] Added scope mapping '${backendClientId}:${roleName}' to '${frontendClientId}'.\n`,
     );
   } catch (err) {
     logAdminError(frontendClientId, err);

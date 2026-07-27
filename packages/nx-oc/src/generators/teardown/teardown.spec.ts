@@ -1,7 +1,4 @@
-import {
-  addProjectConfiguration,
-  readProjectConfiguration,
-} from '@nx/devkit';
+import { addProjectConfiguration, readProjectConfiguration } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import pipeline from '../pipeline/pipeline';
 import generator from './teardown';
@@ -25,7 +22,10 @@ describe('Teardown Generator', () => {
       root: 'apps/test',
       projectType: 'application',
       targets: {
-        build: { executor: '@nx/webpack:webpack', options: { compiler: 'tsc', target: 'node' } },
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
       },
     });
   }
@@ -76,7 +76,10 @@ describe('Teardown Generator', () => {
       root: 'apps/test',
       projectType: 'application',
       targets: {
-        build: { executor: '@nx/webpack:webpack', options: { compiler: 'tsc', target: 'node' } },
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
       },
     });
 

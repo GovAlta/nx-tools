@@ -1,8 +1,21 @@
-import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import {
+  adspProjectTags,
+  deploymentGenerator,
+  getAdspConfiguration,
+} from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
-import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
+import {
+  ensureAudienceMapper,
+  ensureClientRoleScope,
+  ensurePublicClient,
+} from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings, guardPlaywrightWebServer } from '../../utils/quality';
+import {
+  addJestCoverageConfig,
+  addSemgrepTarget,
+  addVsCodeSettings,
+  guardPlaywrightWebServer,
+} from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -17,10 +30,15 @@ import {
   writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
-import vueComponentsGenerator, { vueComponentsImportPath } from '../vue-components/vue-components';
+import vueComponentsGenerator, {
+  vueComponentsImportPath,
+} from '../vue-components/vue-components';
 import { NormalizedSchema, Schema } from './schema';
 
-async function normalizeOptions(host: Tree, options: Schema): Promise<NormalizedSchema> {
+async function normalizeOptions(
+  host: Tree,
+  options: Schema,
+): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   const openshiftDirectory = `.openshift/${projectName}`;
@@ -28,9 +46,16 @@ async function normalizeOptions(host: Tree, options: Schema): Promise<Normalized
   const nginxProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
-    ? [options.proxy]
-    : [];
-  return { ...options, projectName, projectRoot, openshiftDirectory, adsp, nginxProxies };
+      ? [options.proxy]
+      : [];
+  return {
+    ...options,
+    projectName,
+    projectRoot,
+    openshiftDirectory,
+    adsp,
+    nginxProxies,
+  };
 }
 
 function addFiles(host: Tree, options: NormalizedSchema) {
@@ -43,23 +68,33 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     goaImportPath: vueComponentsImportPath(host),
     tmpl: '',
   };
-  generateFiles(host, path.join(__dirname, 'files'), options.projectRoot, templateOptions);
+  generateFiles(
+    host,
+    path.join(__dirname, 'files'),
+    options.projectRoot,
+    templateOptions,
+  );
 
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
-    const devProxyConf = options.nginxProxies.reduce((proxyConf, nginxProxy) => {
-      const upstreamUrl = new URL(nginxProxy.proxyPass);
-      const proxy = {
-        target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
-        secure: upstreamUrl.protocol === 'https:',
-        changeOrigin: false,
-        pathRewrite: {},
-      };
-      if (upstreamUrl.pathname.length > 1) {
-        proxy.pathRewrite = { [`^${nginxProxy.location}`]: upstreamUrl.pathname };
-      }
-      return { ...proxyConf, [nginxProxy.location]: proxy };
-    }, {});
+    const devProxyConf = options.nginxProxies.reduce(
+      (proxyConf, nginxProxy) => {
+        const upstreamUrl = new URL(nginxProxy.proxyPass);
+        const proxy = {
+          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
+          secure: upstreamUrl.protocol === 'https:',
+          changeOrigin: false,
+          pathRewrite: {},
+        };
+        if (upstreamUrl.pathname.length > 1) {
+          proxy.pathRewrite = {
+            [`^${nginxProxy.location}`]: upstreamUrl.pathname,
+          };
+        }
+        return { ...proxyConf, [nginxProxy.location]: proxy };
+      },
+      {},
+    );
     writeJson(host, `${options.projectRoot}/vite.proxy.json`, devProxyConf);
   }
   return addProxyConf;
@@ -68,11 +103,13 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   // Checked before normalizeOptions, which resolves ADSP auth and can trigger
   // an interactive login — a missing peer shouldn't surface only after that.
-  const { applicationGenerator: initVue } = await import('@nx/vue').catch(() => {
-    throw new Error(
-      "The 'vue-app' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue"
-    );
-  });
+  const { applicationGenerator: initVue } = await import('@nx/vue').catch(
+    () => {
+      throw new Error(
+        "The 'vue-app' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue",
+      );
+    },
+  );
 
   const normalizedOptions = await normalizeOptions(host, options);
 
@@ -104,13 +141,13 @@ export default async function (host: Tree, options: Schema) {
       // keycloak-js is a transitive dependency of @dsb-norge/vue-keycloak-js;
       // don't pin it directly or the versions diverge into two copies.
       '@dsb-norge/vue-keycloak-js': '^3.0.0',
-      'pinia': '^2.0.0',
+      pinia: '^2.0.0',
       'vue-router': '^4.0.0',
     },
     {
       'eslint-plugin-security': '^3.0.0',
       'eslint-plugin-no-secrets': '^2.0.0',
-    }
+    },
   );
 
   // Remove Nx scaffold files replaced by our templates. @nx/vue (Nx 23) scaffolds
@@ -186,9 +223,10 @@ export default async function (host: Tree, options: Schema) {
 
   config.tags = [
     ...(config.tags ?? []),
-    ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant).filter(
-      (tag) => !(config.tags ?? []).includes(tag)
-    ),
+    ...adspProjectTags(
+      normalizedOptions.env,
+      normalizedOptions.adsp.tenant,
+    ).filter((tag) => !(config.tags ?? []).includes(tag)),
   ];
 
   updateProjectConfiguration(host, options.name, config);
@@ -197,13 +235,14 @@ export default async function (host: Tree, options: Schema) {
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
     const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
     await ensurePublicClient(
       normalizedOptions.adsp.accessServiceUrl,
       normalizedOptions.adsp.tenantRealm,
       clientId,
-      accessToken
+      accessToken,
     );
     if (options.serviceClientId) {
       await ensureAudienceMapper(
@@ -211,7 +250,7 @@ export default async function (host: Tree, options: Schema) {
         normalizedOptions.adsp.tenantRealm,
         clientId,
         options.serviceClientId,
-        accessToken
+        accessToken,
       );
       await ensureClientRoleScope(
         normalizedOptions.adsp.accessServiceUrl,
@@ -219,35 +258,50 @@ export default async function (host: Tree, options: Schema) {
         clientId,
         options.serviceClientId,
         'example-role',
-        accessToken
+        accessToken,
       );
     }
   }
 
   if (normalizedOptions.adsp && !options.skipAgent) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
-    const appVue = host.read(`${normalizedOptions.projectRoot}/src/App.vue`)?.toString() ?? '';
-    const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
-    const routerTs = host.read(`${normalizedOptions.projectRoot}/src/router/index.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
-    await confirmAfterAgentInterrupt(await consultAgent(
-      normalizedOptions.adsp.directoryServiceUrl,
-      accessToken,
-      {
-        projectName: normalizedOptions.projectName,
-        projectType: 'vue-app',
-        tenant: normalizedOptions.adsp.tenant,
-        pluginVersion: PLUGIN_VERSION,
-        existingFiles: {
-          'src/App.vue': appVue,
-          'src/main.ts': mainTs,
-          'src/router/index.ts': routerTs,
-          'src/environments/environment.ts': environmentTs,
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const appVue =
+      host.read(`${normalizedOptions.projectRoot}/src/App.vue`)?.toString() ??
+      '';
+    const mainTs =
+      host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ??
+      '';
+    const routerTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/router/index.ts`)
+        ?.toString() ?? '';
+    const environmentTs =
+      host
+        .read(
+          `${normalizedOptions.projectRoot}/src/environments/environment.ts`,
+        )
+        ?.toString() ?? '';
+    await confirmAfterAgentInterrupt(
+      await consultAgent(
+        normalizedOptions.adsp.directoryServiceUrl,
+        accessToken,
+        {
+          projectName: normalizedOptions.projectName,
+          projectType: 'vue-app',
+          tenant: normalizedOptions.adsp.tenant,
+          pluginVersion: PLUGIN_VERSION,
+          existingFiles: {
+            'src/App.vue': appVue,
+            'src/main.ts': mainTs,
+            'src/router/index.ts': routerTs,
+            'src/environments/environment.ts': environmentTs,
+          },
         },
-      },
-      host,
-      normalizedOptions.projectRoot
-    ));
+        host,
+        normalizedOptions.projectRoot,
+      ),
+    );
   }
 
   await deploymentGenerator(host, {

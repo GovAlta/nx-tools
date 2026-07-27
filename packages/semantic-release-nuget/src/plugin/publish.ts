@@ -7,7 +7,10 @@ import { NugetPluginConfig } from './config';
 
 const execFile = promisify(execFileCb);
 
-export async function publish(config: NugetPluginConfig, context: PublishContext): Promise<void> {
+export async function publish(
+  config: NugetPluginConfig,
+  context: PublishContext,
+): Promise<void> {
   const { nupkgRoot, source, symbolSource, skipDuplicate, timeout } = config;
   const { cwd, env, logger } = context;
 

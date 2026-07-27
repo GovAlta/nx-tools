@@ -32,7 +32,7 @@ describe('Apply Executor', () => {
 
     const { success } = await executor(
       { ...options, ocProject: ['test-dev', 'test-qa'] },
-      { projectName: 'test' } as ExecutorContext
+      { projectName: 'test' } as ExecutorContext,
     );
 
     expect(success).toBe(true);

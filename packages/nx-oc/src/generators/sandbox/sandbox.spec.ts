@@ -76,11 +76,16 @@ describe('Sandbox Generator', () => {
     // Jest has no TTY, so isNonInteractive() is true. With no --registry, nothing
     // persisted in nx.json, and no git remote to derive from, the generator must
     // throw an actionable error rather than hang on the enquirer prompt.
-    const spy = jest.spyOn(gitUtils, 'getGitRemoteUrl').mockReturnValue(undefined);
+    const spy = jest
+      .spyOn(gitUtils, 'getGitRemoteUrl')
+      .mockReturnValue(undefined);
     try {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       addNodeProject(host);
-      const noRegistry: Schema = { project: 'test', sandboxProject: 'test-sandbox' };
+      const noRegistry: Schema = {
+        project: 'test',
+        sandboxProject: 'test-sandbox',
+      };
       await expect(generator(host, noRegistry)).rejects.toThrow(/--registry/);
     } finally {
       spy.mockRestore();
@@ -178,7 +183,7 @@ describe('Sandbox Generator', () => {
     expect(
       (nxJson.generators as Record<string, { registry?: string }>)[
         '@abgov/nx-oc:sandbox'
-      ].registry
+      ].registry,
     ).toBe('ghcr.io/test-org');
   });
 
@@ -198,9 +203,7 @@ describe('Sandbox Generator', () => {
     expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
     // Teardown also removes the sandbox package (best-effort).
     expect(
-      cmds.some((c) =>
-        c.includes('packages/container/test-sandbox-test')
-      )
+      cmds.some((c) => c.includes('packages/container/test-sandbox-test')),
     ).toBeTruthy();
   });
 
@@ -212,7 +215,9 @@ describe('Sandbox Generator', () => {
 
     expect(host.exists('.openshift/sandbox/sandbox-postgres.yml')).toBeTruthy();
 
-    const dbManifest = host.read('.openshift/sandbox/sandbox-postgres.yml').toString();
+    const dbManifest = host
+      .read('.openshift/sandbox/sandbox-postgres.yml')
+      .toString();
     expect(dbManifest).toContain('sandbox-postgres-creds');
 
     const appManifest = host.read('.openshift/test/test.yml').toString();
@@ -233,7 +238,9 @@ describe('Sandbox Generator', () => {
 
     expect(host.exists('.openshift/sandbox/sandbox-mongodb.yml')).toBeTruthy();
 
-    const dbManifest = host.read('.openshift/sandbox/sandbox-mongodb.yml').toString();
+    const dbManifest = host
+      .read('.openshift/sandbox/sandbox-mongodb.yml')
+      .toString();
     expect(dbManifest).toContain('sandbox-mongodb-creds');
 
     const appManifest = host.read('.openshift/test/test.yml').toString();
@@ -264,7 +271,8 @@ describe('Sandbox Generator', () => {
       addServiceProject(host, { tags: ['adsp:database:postgres'] });
       await generator(host, options); // options has no database
       expect(
-        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+        readProjectConfiguration(host, 'test').targets['sandbox'].options
+          .database,
       ).toBe('postgres');
     });
 
@@ -273,7 +281,8 @@ describe('Sandbox Generator', () => {
       addServiceProject(host, { tags: ['adsp:database:mongo'] });
       await generator(host, options);
       expect(
-        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+        readProjectConfiguration(host, 'test').targets['sandbox'].options
+          .database,
       ).toBe('mongo');
     });
 
@@ -290,7 +299,8 @@ describe('Sandbox Generator', () => {
       });
       await generator(host, options);
       expect(
-        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+        readProjectConfiguration(host, 'test').targets['sandbox'].options
+          .database,
       ).toBe('postgres');
     });
 
@@ -299,7 +309,8 @@ describe('Sandbox Generator', () => {
       addServiceProject(host, { tags: ['adsp:database:postgres'] });
       await generator(host, { ...options, database: 'none' });
       expect(
-        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+        readProjectConfiguration(host, 'test').targets['sandbox'].options
+          .database,
       ).toBeUndefined(); // explicit none → no database key
     });
 
@@ -308,7 +319,8 @@ describe('Sandbox Generator', () => {
       addServiceProject(host);
       await generator(host, options);
       expect(
-        readProjectConfiguration(host, 'test').targets['sandbox'].options.database
+        readProjectConfiguration(host, 'test').targets['sandbox'].options
+          .database,
       ).toBeUndefined();
     });
   });
@@ -333,7 +345,9 @@ describe('Sandbox Generator', () => {
     // recorded env/tenant (not the generator's own schema default) avoids that.
     it("defaults env/tenant to the target project's adsp:scaffold-env/adsp:scaffold-tenant tags", async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-      addServiceProject(host, { tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'] });
+      addServiceProject(host, {
+        tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'],
+      });
       utilsMock.detectAdspEnv.mockReturnValueOnce('dev');
       utilsMock.detectAdspTenant.mockReturnValueOnce('autotest');
 
@@ -341,7 +355,7 @@ describe('Sandbox Generator', () => {
 
       expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
         host,
-        expect.objectContaining({ env: 'dev', tenant: 'autotest' })
+        expect.objectContaining({ env: 'dev', tenant: 'autotest' }),
       );
     });
 
@@ -353,21 +367,27 @@ describe('Sandbox Generator', () => {
 
       expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
         host,
-        expect.objectContaining({ env: 'test', tenant: undefined })
+        expect.objectContaining({ env: 'test', tenant: undefined }),
       );
     });
 
     it('an explicit --env/--tenant overrides the recorded tags', async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-      addServiceProject(host, { tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'] });
+      addServiceProject(host, {
+        tags: ['adsp:scaffold-env:dev', 'adsp:scaffold-tenant:autotest'],
+      });
       utilsMock.detectAdspEnv.mockReturnValueOnce('dev');
       utilsMock.detectAdspTenant.mockReturnValueOnce('autotest');
 
-      await generator(host, { ...options, env: 'prod', tenant: 'other-tenant' });
+      await generator(host, {
+        ...options,
+        env: 'prod',
+        tenant: 'other-tenant',
+      });
 
       expect(utilsMock.getAdspConfiguration).toHaveBeenCalledWith(
         host,
-        expect.objectContaining({ env: 'prod', tenant: 'other-tenant' })
+        expect.objectContaining({ env: 'prod', tenant: 'other-tenant' }),
       );
     });
   });
@@ -386,7 +406,7 @@ describe('Sandbox Generator', () => {
       'test',
       'urn:ads:test:test',
       ['https://test-test-sandbox.apps.test.example.com/*'],
-      'mock-token'
+      'mock-token',
     );
   });
 

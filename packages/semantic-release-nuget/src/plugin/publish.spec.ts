@@ -13,7 +13,9 @@ jest.mock('fs', () => ({
 }));
 
 const mockedExecFile = execFileCb as jest.MockedFunction<typeof execFileCb>;
-const mockedReaddirSync = readdirSync as jest.MockedFunction<typeof readdirSync>;
+const mockedReaddirSync = readdirSync as jest.MockedFunction<
+  typeof readdirSync
+>;
 
 function makeContext(overrides: Record<string, unknown> = {}) {
   return {
@@ -27,7 +29,10 @@ function makeContext(overrides: Record<string, unknown> = {}) {
 describe('publish', () => {
   beforeEach(() => {
     mockedExecFile.mockReset();
-    (mockedExecFile as unknown as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' });
+    (mockedExecFile as unknown as jest.Mock).mockResolvedValue({
+      stdout: '',
+      stderr: '',
+    });
     (mockedReaddirSync as jest.Mock).mockReturnValue(['MyLib.1.2.3.nupkg']);
   });
 
@@ -43,12 +48,16 @@ describe('publish', () => {
   });
 
   it('pushes each .nupkg file in a separate execFile call', async () => {
-    (mockedReaddirSync as jest.Mock).mockReturnValue(['Foo.1.0.0.nupkg', 'Bar.2.0.0.nupkg']);
+    (mockedReaddirSync as jest.Mock).mockReturnValue([
+      'Foo.1.0.0.nupkg',
+      'Bar.2.0.0.nupkg',
+    ]);
     await publish({}, makeContext());
 
     expect(mockedExecFile).toHaveBeenCalledTimes(2);
     const firstArgs = (mockedExecFile as unknown as jest.Mock).mock.calls[0][1];
-    const secondArgs = (mockedExecFile as unknown as jest.Mock).mock.calls[1][1];
+    const secondArgs = (mockedExecFile as unknown as jest.Mock).mock
+      .calls[1][1];
     expect(firstArgs).toContain('Foo.1.0.0.nupkg');
     expect(secondArgs).toContain('Bar.2.0.0.nupkg');
   });
@@ -75,7 +84,9 @@ describe('publish', () => {
 
   it('throws when no .nupkg files are found', async () => {
     (mockedReaddirSync as jest.Mock).mockReturnValue([]);
-    await expect(publish({}, makeContext())).rejects.toThrow('No .nupkg files found');
+    await expect(publish({}, makeContext())).rejects.toThrow(
+      'No .nupkg files found',
+    );
   });
 
   it('passes --api-key as a discrete arg when NUGET_API_KEY is set', async () => {
@@ -105,7 +116,10 @@ describe('publish', () => {
   });
 
   it('passes --source as a discrete arg', async () => {
-    await publish({ source: 'https://nuget.example.com/v3/index.json' }, makeContext());
+    await publish(
+      { source: 'https://nuget.example.com/v3/index.json' },
+      makeContext(),
+    );
 
     const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     const srcIdx = args.indexOf('--source');
@@ -114,7 +128,10 @@ describe('publish', () => {
   });
 
   it('passes --symbol-source as a discrete arg', async () => {
-    await publish({ symbolSource: 'https://symbols.example.com' }, makeContext());
+    await publish(
+      { symbolSource: 'https://symbols.example.com' },
+      makeContext(),
+    );
 
     const [, args] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
     const symIdx = args.indexOf('--symbol-source');
@@ -141,14 +158,16 @@ describe('publish', () => {
   it('resolves nupkgRoot relative to cwd', async () => {
     await publish({ nupkgRoot: 'artifacts' }, makeContext({ cwd: '/project' }));
 
-    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock
+      .calls[0];
     expect(options.cwd).toBe('/project/artifacts');
   });
 
   it('uses cwd directly when nupkgRoot is not set', async () => {
     await publish({}, makeContext({ cwd: '/project' }));
 
-    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock.calls[0];
+    const [, , options] = (mockedExecFile as unknown as jest.Mock).mock
+      .calls[0];
     expect(options.cwd).toBe('/project');
   });
 });

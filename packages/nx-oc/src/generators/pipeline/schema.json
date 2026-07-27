@@ -47,11 +47,6 @@
       "x-prompt": "Apply the pipeline to OpenShift?"
     }
   },
-  "required": [
-    "pipeline",
-    "infra",
-    "type",
-    "envs"
-  ],
+  "required": ["pipeline", "infra", "type", "envs"],
   "additionalProperties": false
 }

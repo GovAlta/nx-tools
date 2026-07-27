@@ -5,7 +5,7 @@ import { NormalizedSchema, PipelineEnvironment, Schema } from './schema';
 
 function mapOcProject(
   project: string | PipelineEnvironment,
-  i: number
+  i: number,
 ): PipelineEnvironment {
   if (typeof project === 'string') {
     return { project, tag: envs[i].toLowerCase() };
@@ -24,7 +24,7 @@ function normalizeSchema(options: Schema): NormalizedSchema {
 
 export default async function runExecutor(
   options: Schema,
-  { projectName }: ExecutorContext
+  { projectName }: ExecutorContext,
 ): Promise<{ success: boolean }> {
   console.log(`Running oc apply for ${projectName}...`);
 
@@ -33,9 +33,12 @@ export default async function runExecutor(
   const failed = ocProjects
     .map(({ project, tag }) => {
       const processResult = runOcCommand('process', [
-        '-f', `.openshift/${projectName}/${projectName}.yml`,
-        '-p', `PROJECT=${project}`,
-        '-p', `DEPLOY_TAG=${tag}`,
+        '-f',
+        `.openshift/${projectName}/${projectName}.yml`,
+        '-p',
+        `PROJECT=${project}`,
+        '-p',
+        `DEPLOY_TAG=${tag}`,
       ]);
 
       if (!processResult.success) {
@@ -44,7 +47,7 @@ export default async function runExecutor(
         const { success, stdout } = runOcCommand(
           'apply',
           [],
-          processResult.stdout
+          processResult.stdout,
         );
         console.log(stdout?.toString());
 

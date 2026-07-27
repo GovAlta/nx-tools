@@ -47,7 +47,7 @@ describe('nx-release generator', () => {
     });
 
     await expect(generator(appTree, { project: 'my-app' })).rejects.toThrow(
-      'This generator can only be run against buildable libraries.'
+      'This generator can only be run against buildable libraries.',
     );
   });
 
@@ -59,7 +59,7 @@ describe('nx-release generator', () => {
     });
 
     await expect(generator(appTree, { project: 'no-build' })).rejects.toThrow(
-      'This generator can only be run against buildable libraries.'
+      'This generator can only be run against buildable libraries.',
     );
   });
 

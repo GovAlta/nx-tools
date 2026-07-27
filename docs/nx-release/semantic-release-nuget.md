@@ -33,9 +33,12 @@ Add the plugin to your `.releaserc.json`:
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
-    ["semantic-release-nuget", {
-      "nupkgRoot": "./src/MyProject/bin/Release"
-    }]
+    [
+      "semantic-release-nuget",
+      {
+        "nupkgRoot": "./src/MyProject/bin/Release"
+      }
+    ]
   ]
 }
 ```
@@ -68,15 +71,15 @@ The command runs from the directory specified by `nupkgRoot`.
 
 ## Options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `nupkgRoot` | No | Directory containing the `.nupkg` files produced by `prepare`. Defaults to the project root. |
+| Option      | Required | Description                                                                                  |
+| ----------- | -------- | -------------------------------------------------------------------------------------------- |
+| `nupkgRoot` | No       | Directory containing the `.nupkg` files produced by `prepare`. Defaults to the project root. |
 
 ## Environment variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NUGET_API_KEY` | Yes | API key for authenticating with the NuGet source |
+| Variable        | Required | Description                                      |
+| --------------- | -------- | ------------------------------------------------ |
+| `NUGET_API_KEY` | Yes      | API key for authenticating with the NuGet source |
 
 ## Full example
 
@@ -87,12 +90,18 @@ The command runs from the directory specified by `nupkgRoot`.
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
-    ["semantic-release-nuget", {
-      "nupkgRoot": "./src/MyProject/bin/Release"
-    }],
-    ["@semantic-release/git", {
-      "assets": ["CHANGELOG.md"]
-    }]
+    [
+      "semantic-release-nuget",
+      {
+        "nupkgRoot": "./src/MyProject/bin/Release"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md"]
+      }
+    ]
   ]
 }
 ```
