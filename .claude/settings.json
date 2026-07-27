@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(sudo:*)",
+      "Bash(mkfs:*)",
+      "Bash(chmod -R 777 /*)",
+      "Bash(shutdown:*)",
+      "Bash(reboot:*)",
+      "Bash(halt:*)",
+      "Bash(poweroff:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git filter-repo:*)",
+      "Bash(git reflog expire:*)",
+      "Bash(git gc *--prune=now*)",
+      "Bash(oc delete project:*)",
+      "Bash(oc delete namespace:*)",
+      "Bash(kubectl delete namespace:*)"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test,build --stdin || exit 1
+
+secretlint_files=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -n "$secretlint_files" ]; then
+  echo "$secretlint_files" | xargs npx secretlint || exit 1
+fi
