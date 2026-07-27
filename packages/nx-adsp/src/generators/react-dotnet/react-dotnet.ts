@@ -11,7 +11,7 @@ import { NormalizedSchema, Schema } from './schema';
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const name = names(options.name).fileName;
   const projectDirectory = name;

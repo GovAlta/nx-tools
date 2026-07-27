@@ -61,10 +61,10 @@ describe('React Task List Generator', () => {
     await generator(host, options);
     expect(host.exists('apps/test/src/app/run-test/run-test.tsx')).toBeTruthy();
     expect(
-      host.exists('apps/test/src/app/run-test/run-test.slice.ts')
+      host.exists('apps/test/src/app/run-test/run-test.slice.ts'),
     ).toBeTruthy();
     expect(
-      host.exists('apps/test/src/app/run-test/run-test.module.css')
+      host.exists('apps/test/src/app/run-test/run-test.module.css'),
     ).toBeTruthy();
   }, 30000);
 });

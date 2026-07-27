@@ -30,17 +30,17 @@ npm i -D @abgov/nx-adsp
 
 Some generators require additional peer dependencies:
 
-| Generator | Required peer dependency |
-|-----------|--------------------------|
-| `react-app` | `@nx/react` |
-| `angular-app` | `@nx/angular` |
-| `vue-app` | `@nx/vue` |
-| `dotnet-service` | `@nx-dotnet/core` |
-| `react-dotnet` | `@nx/react`, `@nx-dotnet/core` |
-| `express-service` | `@nx/node` |
-| `mern`, `pern` | `@nx/react`, `@nx/node` |
-| `mean`, `pean` | `@nx/angular`, `@nx/node` |
-| `mevn`, `pevn` | `@nx/vue`, `@nx/node` |
+| Generator                       | Required peer dependency                |
+| ------------------------------- | --------------------------------------- |
+| `react-app`                     | `@nx/react`                             |
+| `angular-app`                   | `@nx/angular`                           |
+| `vue-app`                       | `@nx/vue`                               |
+| `dotnet-service`                | `@nx-dotnet/core`                       |
+| `react-dotnet`                  | `@nx/react`, `@nx-dotnet/core`          |
+| `express-service`               | `@nx/node`                              |
+| `mern`, `pern`                  | `@nx/react`, `@nx/node`                 |
+| `mean`, `pean`                  | `@nx/angular`, `@nx/node`               |
+| `mevn`, `pevn`                  | `@nx/vue`, `@nx/node`                   |
 | `react-form`, `react-task-list` | existing React project in the workspace |
 
 ## Generators
@@ -53,15 +53,15 @@ Creates a Node/Express backend service configured for ADSP.
 npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the service |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
-| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
-| `database` | — | No | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
-| `skipAgent` | — | No | Skip the consultAgent interaction and generate base scaffolding only |
+| Option        | Alias | Required | Description                                                                         |
+| ------------- | ----- | -------- | ----------------------------------------------------------------------------------- |
+| `name`        | —     | Yes      | Name of the service                                                                 |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                          |
+| `tenant`      | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login      |
+| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                   |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                    |
+| `database`    | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
+| `skipAgent`   | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                |
 
 When `--database postgres` is selected the generator scaffolds a Drizzle setup — `src/db/schema.ts`, a `db` instance (`src/database.ts`), a standalone migration runner (`src/migrate.ts`, bundled to `migrate.js` for the deploy init container), `drizzle.config.ts`, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). Drizzle is pure TypeScript with a `node-postgres` driver — no native engine, so it runs cleanly under OpenShift's arbitrary UID. When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
 
@@ -74,16 +74,16 @@ OpenAPI docs are generated from the same Zod schemas already used for request va
 app.post(
   '/my-service/v1/resource',
   authorize('my-role'),
-  createValidationHandler(MySchema),      // validates req.body; 400 on failure
+  createValidationHandler(MySchema), // validates req.body; 400 on failure
   async (req, res, next) => {
     try {
       const { id } = req.body as z.infer<typeof MySchema>;
       eventService.send(createMyEvent(id));
       res.json({ id });
     } catch (err) {
-      next(err);                          // createErrorHandler maps to 500
+      next(err); // createErrorHandler maps to 500
     }
-  }
+  },
 );
 ```
 
@@ -99,14 +99,14 @@ npx nx g @abgov/nx-adsp:mern my-app --env dev --tenant my-tenant
 
 Generates `my-app-service` (Express + Mongoose) and `my-app-app` (React), with a dev proxy and nginx production proxy wired between them.
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Base name; suffixed with `-service` and `-app` for each project |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `tenant` | `-t` | No | ADSP tenant name |
-| `tenantRealm` | `-tr` | No | Keycloak realm UUID |
-| `accessToken` | `-at` | No | Access token for non-interactive use |
-| `skipAgent` | — | No | Skip the consultAgent interaction and generate base scaffolding only |
+| Option        | Alias | Required | Description                                                          |
+| ------------- | ----- | -------- | -------------------------------------------------------------------- |
+| `name`        | —     | Yes      | Base name; suffixed with `-service` and `-app` for each project      |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                           |
+| `tenant`      | `-t`  | No       | ADSP tenant name                                                     |
+| `tenantRealm` | `-tr` | No       | Keycloak realm UUID                                                  |
+| `accessToken` | `-at` | No       | Access token for non-interactive use                                 |
+| `skipAgent`   | —     | No       | Skip the consultAgent interaction and generate base scaffolding only |
 
 ---
 
@@ -188,14 +188,14 @@ Creates a React/Redux frontend application configured for ADSP. Requires `@nx/re
 npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the application |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `tenant` | `-t` | No | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
-| `tenantRealm` | `-tr` | No | Keycloak realm UUID; overrides the realm resolved from `--tenant` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
-| `proxy` | — | No | Nginx proxy rule(s): `{ location, proxyPass }` or an array of such objects |
+| Option        | Alias | Required | Description                                                                    |
+| ------------- | ----- | -------- | ------------------------------------------------------------------------------ |
+| `name`        | —     | Yes      | Name of the application                                                        |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                     |
+| `tenant`      | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
+| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`              |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration               |
+| `proxy`       | —     | No       | Nginx proxy rule(s): `{ location, proxyPass }` or an array of such objects     |
 
 ---
 
@@ -231,11 +231,11 @@ Creates an ASP.NET Core backend service configured for ADSP. Requires `@nx-dotne
 npx nx g @abgov/nx-adsp:dotnet-service my-service --env dev --accessToken $TOKEN
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `name` | — | Yes | Name of the service |
-| `env` | `-e` | Yes | ADSP environment: `dev`, `test`, or `prod` |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                      |
+| ------------- | ----- | -------- | ---------------------------------------------------------------- |
+| `name`        | —     | Yes      | Name of the service                                              |
+| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                       |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration |
 
 ---
 
@@ -259,11 +259,11 @@ Adds a React component generated from an existing [ADSP Form Definition](https:/
 npx nx g @abgov/nx-adsp:react-form my-app --env test
 ```
 
-| Option | Alias | Required | Description |
-|--------|-------|----------|-------------|
-| `project` | — | Yes | Name of the existing Nx project to add the form component to |
-| `env` | `-e` | Yes | ADSP environment to fetch form definitions from (typically `test`) |
-| `accessToken` | `-at` | No | Access token for non-interactive retrieval of ADSP configuration |
+| Option        | Alias | Required | Description                                                        |
+| ------------- | ----- | -------- | ------------------------------------------------------------------ |
+| `project`     | —     | Yes      | Name of the existing Nx project to add the form component to       |
+| `env`         | `-e`  | Yes      | ADSP environment to fetch form definitions from (typically `test`) |
+| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration   |
 
 ---
 
@@ -302,13 +302,13 @@ podman machine start
 
 ### PostgreSQL targets
 
-| Target | Description |
-|--------|-------------|
-| `nx dev-db <service>` | Start local Postgres container (Podman) |
-| `nx db:generate <service>` | Generate a SQL migration from `src/db/schema.ts` changes (`drizzle-kit generate`) |
-| `nx db:migrate <service>` | Apply pending migrations to the dev DB (`drizzle-kit migrate`) |
-| `nx db:migrate:deploy <service>` | Apply pending migrations in a dev/CI shell (`drizzle-kit migrate`) |
-| `nx db:studio <service>` | Open Drizzle Studio to browse data |
+| Target                           | Description                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------- |
+| `nx dev-db <service>`            | Start local Postgres container (Podman)                                           |
+| `nx db:generate <service>`       | Generate a SQL migration from `src/db/schema.ts` changes (`drizzle-kit generate`) |
+| `nx db:migrate <service>`        | Apply pending migrations to the dev DB (`drizzle-kit migrate`)                    |
+| `nx db:migrate:deploy <service>` | Apply pending migrations in a dev/CI shell (`drizzle-kit migrate`)                |
+| `nx db:studio <service>`         | Open Drizzle Studio to browse data                                                |
 
 Drizzle has no client codegen step, so the `build` target has no `db:generate` prerequisite. The generated SQL in `drizzle/` is shipped into the build output as an asset so the deploy init container can apply it.
 
@@ -317,6 +317,7 @@ Drizzle has no client codegen step, so the `build` target has no `db:generate` p
 The database connection string is injected via an OpenShift Secret — it is never stored in source control. Create the Secret in each namespace before first deploy:
 
 **PostgreSQL:**
+
 ```bash
 oc create secret generic <app-name>-database \
   --from-literal=DATABASE_URL=postgresql://user:password@host:5432/dbname \
@@ -324,6 +325,7 @@ oc create secret generic <app-name>-database \
 ```
 
 **MongoDB:**
+
 ```bash
 oc create secret generic <app-name>-database \
   --from-literal=MONGODB_URI=mongodb://user:password@host:27017/dbname \
@@ -338,11 +340,11 @@ For PostgreSQL services, the deployment manifest includes an init container that
 
 Most generators call ADSP APIs during generation to retrieve tenant-specific configuration. Three authentication methods are supported:
 
-| Method | When to use |
-|--------|-------------|
-| `--tenant <name>` | Preferred for interactive use; looks up the Keycloak realm by name and opens a single browser login |
-| `--tenantRealm <uuid>` | Use when you already know the realm UUID; can be combined with `--tenant` to override the auto-resolved realm |
-| `--accessToken <token>` | Use in CI or scripts to skip interactive login entirely |
+| Method                  | When to use                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--tenant <name>`       | Preferred for interactive use; looks up the Keycloak realm by name and opens a single browser login           |
+| `--tenantRealm <uuid>`  | Use when you already know the realm UUID; can be combined with `--tenant` to override the auto-resolved realm |
+| `--accessToken <token>` | Use in CI or scripts to skip interactive login entirely                                                       |
 
 If none are provided, the generator will prompt interactively. Don't have a tenant yet? That prompt
 also offers a **+ Create a new tenant** choice, in `dev`/`test` (never `prod`), for eligible
@@ -362,7 +364,7 @@ This needs the same tenant/token as [Authentication](#authentication) above, plu
 is non-interactive (`--no-interactive`, no TTY, or `CI=true`). Skip it explicitly with
 `--skipAgent`, regardless of interactivity.
 
-> **Note for coding agents:** skip this. It exists to let a *human* describe what they want built
+> **Note for coding agents:** skip this. It exists to let a _human_ describe what they want built
 > to a separate, remote agent working from nothing but that description. You already have the
 > actual requirements and the surrounding codebase context that conversation exists to gather —
 > make any needed customizations directly, after scaffolding, rather than through an indirect

@@ -13,7 +13,14 @@ jest.mock('child_process');
 const mockedExecFileSync = mocked(execFileSync);
 const mockedSpawnSync = mocked(spawnSync);
 
-const SPAWN_OK = { status: 0, pid: 1, output: [], stdout: Buffer.from(''), stderr: Buffer.from(''), signal: null };
+const SPAWN_OK = {
+  status: 0,
+  pid: 1,
+  output: [],
+  stdout: Buffer.from(''),
+  stderr: Buffer.from(''),
+  signal: null,
+};
 const SPAWN_FAIL = { ...SPAWN_OK, status: 1 };
 
 describe('runOcCommand', () => {
@@ -37,7 +44,7 @@ describe('runOcCommand', () => {
     expect(mockedExecFileSync).toHaveBeenCalledWith(
       'oc',
       ['process', '-f', '.openshift/app.yml', '-p', 'ENV=dev'],
-      expect.objectContaining({ stdio: 'pipe' })
+      expect.objectContaining({ stdio: 'pipe' }),
     );
   });
 
@@ -49,7 +56,7 @@ describe('runOcCommand', () => {
     expect(mockedExecFileSync).toHaveBeenCalledWith(
       'oc',
       ['apply', '-f', '-'],
-      expect.objectContaining({ stdio: 'pipe' })
+      expect.objectContaining({ stdio: 'pipe' }),
     );
   });
 
@@ -80,8 +87,10 @@ describe('ensureOcLogin', () => {
   });
 
   it('returns without spawning login when already logged in', () => {
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('Client Version: 4.14.0')); // oc version --client
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('developer'));               // oc whoami
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockReturnValueOnce(Buffer.from('developer')); // oc whoami
 
     ensureOcLogin();
 
@@ -97,9 +106,15 @@ describe('ensureOcLogin', () => {
   });
 
   it('spawns oc login with server and --web when kubeconfig has a current context', () => {
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('Client Version: 4.14.0'));                  // oc version --client
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('not logged in'); });         // oc whoami
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('https://api.example.openshift.com:6443')); // oc config view
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('not logged in');
+    }); // oc whoami
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('https://api.example.openshift.com:6443'),
+    ); // oc config view
     mockedSpawnSync.mockReturnValue(SPAWN_OK);
 
     ensureOcLogin();
@@ -107,30 +122,46 @@ describe('ensureOcLogin', () => {
     expect(mockedSpawnSync).toHaveBeenCalledWith(
       'oc',
       ['login', 'https://api.example.openshift.com:6443', '--web'],
-      { stdio: 'inherit' }
+      { stdio: 'inherit' },
     );
   });
 
   it('spawns oc login with only --web when no kubeconfig exists', () => {
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('Client Version: 4.14.0'));          // oc version --client
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('not logged in'); }); // oc whoami
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('no config'); });     // oc config view
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('not logged in');
+    }); // oc whoami
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('no config');
+    }); // oc config view
 
     mockedSpawnSync.mockReturnValue(SPAWN_OK);
 
     ensureOcLogin();
 
-    expect(mockedSpawnSync).toHaveBeenCalledWith('oc', ['login', '--web'], { stdio: 'inherit' });
+    expect(mockedSpawnSync).toHaveBeenCalledWith('oc', ['login', '--web'], {
+      stdio: 'inherit',
+    });
   });
 
   it('throws when login is cancelled or fails', () => {
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('Client Version: 4.14.0'));          // oc version --client
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('not logged in'); }); // oc whoami
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('no config'); });     // oc config view
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('not logged in');
+    }); // oc whoami
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('no config');
+    }); // oc config view
 
     mockedSpawnSync.mockReturnValue(SPAWN_FAIL);
 
-    expect(() => ensureOcLogin()).toThrow('OpenShift login failed or was cancelled');
+    expect(() => ensureOcLogin()).toThrow(
+      'OpenShift login failed or was cancelled',
+    );
   });
 });
 
@@ -138,12 +169,16 @@ describe('getOcServerUrl', () => {
   beforeEach(() => mockedExecFileSync.mockReset());
 
   it('returns the server URL from kubeconfig', () => {
-    mockedExecFileSync.mockReturnValue(Buffer.from('https://api.example.com:6443'));
+    mockedExecFileSync.mockReturnValue(
+      Buffer.from('https://api.example.com:6443'),
+    );
     expect(getOcServerUrl()).toBe('https://api.example.com:6443');
   });
 
   it('returns undefined when oc command fails', () => {
-    mockedExecFileSync.mockImplementation(() => { throw new Error('no config'); });
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('no config');
+    });
     expect(getOcServerUrl()).toBeUndefined();
   });
 });
@@ -155,19 +190,31 @@ describe('getSaToken', () => {
     mockedExecFileSync.mockReturnValue(Buffer.from('eyJhbGciOi...'));
     expect(getSaToken('github-actions', 'my-infra')).toBe('eyJhbGciOi...');
     expect(mockedExecFileSync).toHaveBeenCalledWith(
-      'oc', ['create', 'token', 'github-actions', '-n', 'my-infra', '--duration=8760h'],
-      expect.objectContaining({ stdio: 'pipe' })
+      'oc',
+      [
+        'create',
+        'token',
+        'github-actions',
+        '-n',
+        'my-infra',
+        '--duration=8760h',
+      ],
+      expect.objectContaining({ stdio: 'pipe' }),
     );
   });
 
   it('falls back to oc sa get-token when create token fails', () => {
-    mockedExecFileSync.mockImplementationOnce(() => { throw new Error('unsupported'); }); // oc create token
-    mockedExecFileSync.mockReturnValueOnce(Buffer.from('legacy-token'));                  // oc sa get-token
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('unsupported');
+    }); // oc create token
+    mockedExecFileSync.mockReturnValueOnce(Buffer.from('legacy-token')); // oc sa get-token
     expect(getSaToken('github-actions', 'my-infra')).toBe('legacy-token');
   });
 
   it('returns undefined when both commands fail', () => {
-    mockedExecFileSync.mockImplementation(() => { throw new Error('not found'); });
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('not found');
+    });
     expect(getSaToken('github-actions', 'my-infra')).toBeUndefined();
   });
 });
@@ -176,20 +223,48 @@ describe('createDockerRegistrySecret', () => {
   beforeEach(() => mockedExecFileSync.mockReset());
 
   it('returns true on success', () => {
-    mockedExecFileSync.mockReturnValue(Buffer.from('secret/ghcr-pull-secret created'));
-    expect(createDockerRegistrySecret('ghcr-pull-secret', 'ghcr.io', 'org', 'pat', 'my-infra')).toBe(true);
+    mockedExecFileSync.mockReturnValue(
+      Buffer.from('secret/ghcr-pull-secret created'),
+    );
+    expect(
+      createDockerRegistrySecret(
+        'ghcr-pull-secret',
+        'ghcr.io',
+        'org',
+        'pat',
+        'my-infra',
+      ),
+    ).toBe(true);
     expect(mockedExecFileSync).toHaveBeenCalledWith(
       'oc',
-      ['create', 'secret', 'docker-registry', 'ghcr-pull-secret',
-       '--docker-server=ghcr.io', '--docker-username=org', '--docker-password=pat',
-       '-n', 'my-infra'],
-      expect.objectContaining({ stdio: 'pipe' })
+      [
+        'create',
+        'secret',
+        'docker-registry',
+        'ghcr-pull-secret',
+        '--docker-server=ghcr.io',
+        '--docker-username=org',
+        '--docker-password=pat',
+        '-n',
+        'my-infra',
+      ],
+      expect.objectContaining({ stdio: 'pipe' }),
     );
   });
 
   it('returns false when oc command fails', () => {
-    mockedExecFileSync.mockImplementation(() => { throw new Error('already exists'); });
-    expect(createDockerRegistrySecret('ghcr-pull-secret', 'ghcr.io', 'org', 'pat', 'my-infra')).toBe(false);
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('already exists');
+    });
+    expect(
+      createDockerRegistrySecret(
+        'ghcr-pull-secret',
+        'ghcr.io',
+        'org',
+        'pat',
+        'my-infra',
+      ),
+    ).toBe(false);
   });
 });
 
@@ -198,16 +273,38 @@ describe('linkSecretToServiceAccount', () => {
 
   it('returns true on success', () => {
     mockedExecFileSync.mockReturnValue(Buffer.from(''));
-    expect(linkSecretToServiceAccount('ghcr-pull-secret', 'github-actions', 'my-infra')).toBe(true);
+    expect(
+      linkSecretToServiceAccount(
+        'ghcr-pull-secret',
+        'github-actions',
+        'my-infra',
+      ),
+    ).toBe(true);
     expect(mockedExecFileSync).toHaveBeenCalledWith(
       'oc',
-      ['secrets', 'link', 'github-actions', 'ghcr-pull-secret', '--for=pull', '-n', 'my-infra'],
-      expect.objectContaining({ stdio: 'pipe' })
+      [
+        'secrets',
+        'link',
+        'github-actions',
+        'ghcr-pull-secret',
+        '--for=pull',
+        '-n',
+        'my-infra',
+      ],
+      expect.objectContaining({ stdio: 'pipe' }),
     );
   });
 
   it('returns false when oc command fails', () => {
-    mockedExecFileSync.mockImplementation(() => { throw new Error('not found'); });
-    expect(linkSecretToServiceAccount('ghcr-pull-secret', 'github-actions', 'my-infra')).toBe(false);
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('not found');
+    });
+    expect(
+      linkSecretToServiceAccount(
+        'ghcr-pull-secret',
+        'github-actions',
+        'my-infra',
+      ),
+    ).toBe(false);
   });
 });

@@ -57,7 +57,7 @@ describe('Deployment Generator', () => {
     expect(config.targets['apply-envs'].options.ocProject).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ project: 'test-dev', tag: 'dev' }),
-      ])
+      ]),
     );
   });
 
@@ -217,7 +217,11 @@ describe('Deployment Generator', () => {
       },
     });
 
-    await generator(host, { ...options, appType: 'node', database: 'postgres' });
+    await generator(host, {
+      ...options,
+      appType: 'node',
+      database: 'postgres',
+    });
 
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('DATABASE_URL');
@@ -275,7 +279,7 @@ describe('Deployment Generator', () => {
 
     // Unrecognized build executor + no --appType → detection fails → actionable throw.
     await expect(
-      generator(host, { ...options, appType: null })
+      generator(host, { ...options, appType: null }),
     ).rejects.toThrow(/--appType/);
     expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
     const config = readProjectConfiguration(host, 'test');

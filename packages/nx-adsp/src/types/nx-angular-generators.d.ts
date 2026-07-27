@@ -9,6 +9,6 @@ declare module '@nx/angular/generators' {
 
   export function applicationGenerator(
     tree: Tree,
-    options: Record<string, unknown>
+    options: Record<string, unknown>,
   ): Promise<void>;
 }

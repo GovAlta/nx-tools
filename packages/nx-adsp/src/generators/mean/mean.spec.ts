@@ -5,7 +5,10 @@ import { environments } from '@abgov/nx-oc';
 import { Schema } from './schema';
 import generator from './mean';
 
-jest.mock('@nx/devkit', () => ({ ...jest.requireActual('@nx/devkit'), formatFiles: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@nx/devkit', () => ({
+  ...jest.requireActual('@nx/devkit'),
+  formatFiles: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@abgov/nx-oc');
 jest.mock('../../utils/agent', () => ({
   consultAgent: jest.fn().mockResolvedValue(null),
@@ -21,7 +24,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 // jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
 // (pure, no I/O) implementation so tag-writing behavior is actually exercised.
 utilsMock.adspProjectTags.mockImplementation(
-  jest.requireActual('@abgov/nx-oc').adspProjectTags
+  jest.requireActual('@abgov/nx-oc').adspProjectTags,
 );
 utilsMock.deploymentGenerator.mockResolvedValue(undefined);
 utilsMock.ensureAdspToken.mockResolvedValue('test-token');

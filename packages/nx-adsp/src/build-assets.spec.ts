@@ -33,7 +33,7 @@ describe('build assets packaging', () => {
 
   it('matches every non-TypeScript src file with an asset glob', () => {
     const project = JSON.parse(
-      fs.readFileSync(path.join(projectRoot, 'project.json'), 'utf-8')
+      fs.readFileSync(path.join(projectRoot, 'project.json'), 'utf-8'),
     );
     const assets: unknown[] = project.targets.build.options.assets ?? [];
 
@@ -44,7 +44,7 @@ describe('build assets packaging', () => {
           typeof a === 'object' &&
           a !== null &&
           'input' in a &&
-          path.resolve(repoRoot, (a as { input: string }).input) === srcRoot
+          path.resolve(repoRoot, (a as { input: string }).input) === srcRoot,
       )
       .map((a) => a.glob);
 
@@ -54,7 +54,7 @@ describe('build assets packaging', () => {
       .map((f) => path.relative(srcRoot, f));
 
     const unmatched = mustShip.filter(
-      (rel) => !srcGlobs.some((glob) => minimatch(rel, glob, { dot: true }))
+      (rel) => !srcGlobs.some((glob) => minimatch(rel, glob, { dot: true })),
     );
 
     expect(unmatched).toEqual([]);

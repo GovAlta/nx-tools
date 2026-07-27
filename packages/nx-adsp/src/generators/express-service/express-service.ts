@@ -1,4 +1,8 @@
-import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import {
+  adspProjectTags,
+  deploymentGenerator,
+  getAdspConfiguration,
+} from '@abgov/nx-oc';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -15,12 +19,18 @@ import * as path from 'path';
 import { consultAgent } from '../../utils/agent';
 import { ensureServiceClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addAdspMcpServer, addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings } from '../../utils/quality';
+import {
+  addAdspMcpServer,
+  addEslintQualityRules,
+  addJestCoverageConfig,
+  addSemgrepTarget,
+  addVsCodeSettings,
+} from '../../utils/quality';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
@@ -47,14 +57,14 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     options.projectRoot,
-    templateOptions
+    templateOptions,
   );
   if (options.database === 'postgres' || options.database === 'mongo') {
     generateFiles(
       host,
       path.join(__dirname, `files-${options.database}`),
       options.projectRoot,
-      templateOptions
+      templateOptions,
     );
   }
 }
@@ -62,13 +72,12 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 export default async function (host: Tree, options: Schema) {
   // Checked before normalizeOptions, which resolves ADSP auth and can trigger
   // an interactive login — a missing peer shouldn't surface only after that.
-  const { applicationGenerator: initExpress } = await import('@nx/express').catch(
-    () => {
+  const { applicationGenerator: initExpress } =
+    await import('@nx/express').catch(() => {
       throw new Error(
-        "The 'express-service' generator requires the '@nx/express' plugin. Install it and re-run:\n  npm i -D @nx/express"
+        "The 'express-service' generator requires the '@nx/express' plugin. Install it and re-run:\n  npm i -D @nx/express",
       );
-    }
-  );
+    });
 
   const normalizedOptions = await normalizeOptions(host, options);
 
@@ -95,7 +104,9 @@ export default async function (host: Tree, options: Schema) {
       passport: '^0.7.0',
       'passport-anonymous': '^1.0.1',
       zod: '^3.0.0',
-      ...(normalizedOptions.database === 'postgres' ? { 'drizzle-orm': '^0.44.0', pg: '^8.11.0' } : {}),
+      ...(normalizedOptions.database === 'postgres'
+        ? { 'drizzle-orm': '^0.44.0', pg: '^8.11.0' }
+        : {}),
       ...(normalizedOptions.database === 'mongo' ? { mongoose: '^8.0.0' } : {}),
     },
     {
@@ -105,26 +116,33 @@ export default async function (host: Tree, options: Schema) {
       '@types/passport-anonymous': '^1.0.3',
       supertest: '^7.0.0',
       '@types/supertest': '^6.0.0',
-      ...(normalizedOptions.database === 'postgres' ? { 'drizzle-kit': '^0.31.0', '@types/pg': '^8.11.0' } : {}),
+      ...(normalizedOptions.database === 'postgres'
+        ? { 'drizzle-kit': '^0.31.0', '@types/pg': '^8.11.0' }
+        : {}),
       'eslint-plugin-security': '^3.0.0',
       'eslint-plugin-no-secrets': '^2.0.0',
       'eslint-plugin-jest': '^28.0.0',
-    }
+    },
   );
 
   addFiles(host, normalizedOptions);
 
-  addEslintQualityRules(host, normalizedOptions.projectRoot, ['**/*.spec.ts', '**/*.test.ts']);
+  addEslintQualityRules(host, normalizedOptions.projectRoot, [
+    '**/*.spec.ts',
+    '**/*.test.ts',
+  ]);
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
   addVsCodeSettings(host);
   // Equip coding agents with grounded ADSP docs + Node SDK reference lookup.
   addAdspMcpServer(host);
 
-  const projectConfig = readProjectConfiguration(host, normalizedOptions.projectName);
+  const projectConfig = readProjectConfiguration(
+    host,
+    normalizedOptions.projectName,
+  );
   const targets = { ...projectConfig.targets };
 
   if (normalizedOptions.database !== 'none') {
-
     targets['dev-db'] = {
       executor: 'nx:run-commands',
       options: {
@@ -178,7 +196,6 @@ export default async function (host: Tree, options: Schema) {
         };
       }
     }
-
   }
 
   // Record the database as a project tag so the nx-oc sandbox generator can
@@ -201,12 +218,13 @@ export default async function (host: Tree, options: Schema) {
 
   if (normalizedOptions.adsp) {
     const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
-    const accessToken = normalizedOptions.accessToken ?? normalizedOptions.adsp.accessToken;
+    const accessToken =
+      normalizedOptions.accessToken ?? normalizedOptions.adsp.accessToken;
     const clientSecret = await ensureServiceClient(
       normalizedOptions.adsp.accessServiceUrl,
       normalizedOptions.adsp.tenantRealm,
       clientId,
-      accessToken
+      accessToken,
     );
     if (clientSecret) {
       // .env.local, not .env: CLIENT_SECRET is a generated, local-only value — the
@@ -217,9 +235,14 @@ export default async function (host: Tree, options: Schema) {
       // developer-owned config too (KEYCLOAK_ROOT_URL, DIRECTORY_URL, etc.) and
       // shouldn't be blanket-gitignored.
       const envLocalPath = `${normalizedOptions.projectRoot}/.env.local`;
-      const existing = host.exists(envLocalPath) ? host.read(envLocalPath).toString() : '';
+      const existing = host.exists(envLocalPath)
+        ? host.read(envLocalPath).toString()
+        : '';
       if (!existing.includes('CLIENT_SECRET=')) {
-        host.write(envLocalPath, `${existing ? existing.trimEnd() + '\n' : ''}CLIENT_SECRET=${clientSecret}\n`);
+        host.write(
+          envLocalPath,
+          `${existing ? existing.trimEnd() + '\n' : ''}CLIENT_SECRET=${clientSecret}\n`,
+        );
       }
     }
   }
@@ -235,12 +258,21 @@ export default async function (host: Tree, options: Schema) {
     const accessToken =
       normalizedOptions.accessToken ?? normalizedOptions.adsp.accessToken;
 
-    const mainTs = host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environment.ts`)?.toString() ?? '';
-    const eventsTs = host.read(`${normalizedOptions.projectRoot}/src/events.ts`)?.toString() ?? '';
+    const mainTs =
+      host.read(`${normalizedOptions.projectRoot}/src/main.ts`)?.toString() ??
+      '';
+    const environmentTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/environment.ts`)
+        ?.toString() ?? '';
+    const eventsTs =
+      host.read(`${normalizedOptions.projectRoot}/src/events.ts`)?.toString() ??
+      '';
     const databaseTs =
       normalizedOptions.database !== 'none'
-        ? host.read(`${normalizedOptions.projectRoot}/src/database.ts`)?.toString() ?? ''
+        ? (host
+            .read(`${normalizedOptions.projectRoot}/src/database.ts`)
+            ?.toString() ?? '')
         : undefined;
 
     const agentResult = await consultAgent(
@@ -259,7 +291,7 @@ export default async function (host: Tree, options: Schema) {
         },
       },
       host,
-      normalizedOptions.projectRoot
+      normalizedOptions.projectRoot,
     );
 
     // When the agent interaction ended without generating files — whether the
@@ -270,7 +302,8 @@ export default async function (host: Tree, options: Schema) {
       const { proceed } = await prompt<{ proceed: boolean }>({
         type: 'confirm',
         name: 'proceed',
-        message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
+        message:
+          'Agent interaction ended without generating files. Continue with base scaffolding?',
         initial: !agentResult.interrupted,
       });
       if (!proceed) {

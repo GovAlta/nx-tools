@@ -2,7 +2,9 @@ import { consultAgent, isNonInteractive } from './agent';
 
 jest.mock('readline', () => ({
   createInterface: jest.fn(() => ({
-    question: jest.fn((_prompt: string, cb: (answer: string) => void) => cb('')),
+    question: jest.fn((_prompt: string, cb: (answer: string) => void) =>
+      cb(''),
+    ),
     close: jest.fn(),
     on: jest.fn(),
   })),
@@ -35,7 +37,10 @@ const PROJECT_CONTEXT = {
   },
 };
 
-const mockHost = { write: jest.fn(), read: jest.fn() } as unknown as import('@nx/devkit').Tree;
+const mockHost = {
+  write: jest.fn(),
+  read: jest.fn(),
+} as unknown as import('@nx/devkit').Tree;
 
 function makeMockSocket() {
   const handlers: Record<string, (...args: unknown[]) => void> = {};
@@ -58,7 +63,7 @@ function makeMockSocket() {
 // Flush the microtask queue so async operations inside consultAgent settle.
 // One tick is enough: the dynamic import and the enquirer mock both resolve
 // as microtasks, so after this all handlers are registered and descriptionReady=true.
-const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('consultAgent', () => {
   const ORIGINAL_ARGV = process.argv;
@@ -70,19 +75,31 @@ describe('consultAgent', () => {
     // consultAgent short-circuits when non-interactive; force an interactive
     // TTY (no flag, no CI) so these tests exercise the interactive flow.
     process.argv = ['node', 'nx'];
-    Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: true,
+      configurable: true,
+    });
     delete process.env.CI;
   });
   afterAll(() => {
     process.argv = ORIGINAL_ARGV;
-    Object.defineProperty(process.stdout, 'isTTY', { value: ORIGINAL_TTY, configurable: true });
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: ORIGINAL_TTY,
+      configurable: true,
+    });
     if (ORIGINAL_CI === undefined) delete process.env.CI;
     else process.env.CI = ORIGINAL_CI;
   });
 
   it('returns null when agent-service is not in directory', async () => {
     mockedGetServiceUrls.mockResolvedValue({});
-    const result = await consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
+    const result = await consultAgent(
+      'https://directory.example.com',
+      'token',
+      PROJECT_CONTEXT,
+      mockHost,
+      'apps/test-service',
+    );
     expect(result).toBeNull();
   });
 
@@ -91,7 +108,13 @@ describe('consultAgent', () => {
       'urn:ads:platform:agent-service:v1': 'https://agent.example.com',
     });
     const socket = makeMockSocket();
-    const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
+    const resultPromise = consultAgent(
+      'https://directory.example.com',
+      'token',
+      PROJECT_CONTEXT,
+      mockHost,
+      'apps/test-service',
+    );
     // After one tick: enquirer mock resolves, descriptionReady=true, conversationPromise returned.
     await flushPromises();
     socket._handlers['connect_error']?.();
@@ -103,7 +126,13 @@ describe('consultAgent', () => {
       'urn:ads:platform:agent-service:v1': 'https://agent.example.com',
     });
     const socket = makeMockSocket();
-    const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
+    const resultPromise = consultAgent(
+      'https://directory.example.com',
+      'token',
+      PROJECT_CONTEXT,
+      mockHost,
+      'apps/test-service',
+    );
     await flushPromises();
 
     // descriptionReady=true at this point; workspace-updated fires last → triggers sendInitialMessage.
@@ -112,7 +141,10 @@ describe('consultAgent', () => {
     socket._handlers['message']?.('Connected as user...');
     socket._handlers['workspace-updated']?.();
     // Simulate agent responding with text (sets agentHasResponded = true)
-    socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'I will add events.' } }, done: false });
+    socket._handlers['stream']?.({
+      chunk: { type: 'text-delta', payload: { text: 'I will add events.' } },
+      done: false,
+    });
     socket._handlers['stream']?.({ chunk: null, done: true });
     socket._handlers['workspace-state']?.({
       files: [
@@ -122,9 +154,19 @@ describe('consultAgent', () => {
     });
 
     const result = await resultPromise;
-    expect(result).toEqual({ filesWritten: 2, userInteracted: true, interrupted: false });
-    expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/roles.ts', 'export enum ServiceRoles {}');
-    expect(mockHost.write).toHaveBeenCalledWith('apps/test-service/src/main.ts', 'updated main.ts');
+    expect(result).toEqual({
+      filesWritten: 2,
+      userInteracted: true,
+      interrupted: false,
+    });
+    expect(mockHost.write).toHaveBeenCalledWith(
+      'apps/test-service/src/roles.ts',
+      'export enum ServiceRoles {}',
+    );
+    expect(mockHost.write).toHaveBeenCalledWith(
+      'apps/test-service/src/main.ts',
+      'updated main.ts',
+    );
   });
 
   it('uploads existing files to workspace before sending the initial message', async () => {
@@ -132,14 +174,26 @@ describe('consultAgent', () => {
       'urn:ads:platform:agent-service:v1': 'https://agent.example.com',
     });
     const socket = makeMockSocket();
-    const resultPromise = consultAgent('https://directory.example.com', 'token', PROJECT_CONTEXT, mockHost, 'apps/test-service');
+    const resultPromise = consultAgent(
+      'https://directory.example.com',
+      'token',
+      PROJECT_CONTEXT,
+      mockHost,
+      'apps/test-service',
+    );
     await flushPromises();
 
     // connect → server sends 'message' readiness signal → workspace-update emitted → workspace-updated → initial message sent
     socket._handlers['connect']?.();
     socket._handlers['message']?.('Connected as user...');
     socket._handlers['workspace-updated']?.();
-    socket._handlers['stream']?.({ chunk: { type: 'text-delta', payload: { text: 'What does this service do?' } }, done: false });
+    socket._handlers['stream']?.({
+      chunk: {
+        type: 'text-delta',
+        payload: { text: 'What does this service do?' },
+      },
+      done: false,
+    });
     socket._handlers['stream']?.({ chunk: null, done: true });
     socket._handlers['workspace-state']?.({ files: [] });
     await resultPromise;
@@ -151,14 +205,14 @@ describe('consultAgent', () => {
         writes: expect.arrayContaining([
           expect.objectContaining({ path: 'src/main.ts' }),
         ]),
-      })
+      }),
     );
     expect(socket.emit).toHaveBeenCalledWith(
       'message',
       expect.objectContaining({
         agent: 'nxAdspAgent',
         content: expect.stringContaining('src/main.ts'),
-      })
+      }),
     );
   });
 });
@@ -168,7 +222,10 @@ describe('isNonInteractive', () => {
   const ORIGINAL_TTY = process.stdout.isTTY;
   const ORIGINAL_CI = process.env.CI;
   const setTTY = (v: boolean | undefined) =>
-    Object.defineProperty(process.stdout, 'isTTY', { value: v, configurable: true });
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: v,
+      configurable: true,
+    });
 
   afterEach(() => {
     process.argv = ORIGINAL_ARGV;

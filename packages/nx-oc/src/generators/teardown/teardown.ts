@@ -23,7 +23,9 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     ?.filter((s) => s.kind === 'Group' && s.name.startsWith(SA_PREFIX))
     .map((s) => s.name.replace(SA_PREFIX, ''));
 
-  const envIndex = envs.map((e) => e.toLowerCase()).indexOf(options.env.toLowerCase());
+  const envIndex = envs
+    .map((e) => e.toLowerCase())
+    .indexOf(options.env.toLowerCase());
   const envProject = ocEnvProjects?.[envIndex] || '';
 
   return {
@@ -36,7 +38,9 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
 
 export default async function (host: Tree, options: Schema) {
   if (!host.exists(infraManifestFile)) {
-    console.log(`Cannot generate teardown; run 'nx g @abgov/nx-oc:pipeline' first.`);
+    console.log(
+      `Cannot generate teardown; run 'nx g @abgov/nx-oc:pipeline' first.`,
+    );
     return;
   }
 

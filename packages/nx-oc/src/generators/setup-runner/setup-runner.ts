@@ -5,7 +5,11 @@ import {
   rolloutRestartDeployment,
   runOcCommand,
 } from '../../utils/oc-utils';
-import { checkGhCli, promptForGitHubPat, setGhVariable } from '../../utils/gh-utils';
+import {
+  checkGhCli,
+  promptForGitHubPat,
+  setGhVariable,
+} from '../../utils/gh-utils';
 import { getGitHubRepo, getGitRemoteUrl } from '../../utils/git-utils';
 import { Schema } from './schema';
 
@@ -20,7 +24,7 @@ export default async function (host: Tree, options: Schema) {
   if (!host.exists(RUNNER_MANIFEST)) {
     console.log(
       `\n⚠  No runner manifest at ${RUNNER_MANIFEST} — generate the pipeline first:\n` +
-      '   npx nx g @abgov/nx-oc:pipeline\n'
+        '   npx nx g @abgov/nx-oc:pipeline\n',
     );
     return;
   }
@@ -36,7 +40,7 @@ export default async function (host: Tree, options: Schema) {
   if (!repo) {
     console.log(
       '\n⚠  No GitHub remote found — skipping e2e runner setup.\n' +
-      '   Push to GitHub first then re-run this generator.'
+        '   Push to GitHub first then re-run this generator.',
     );
     return;
   }
@@ -51,19 +55,33 @@ export default async function (host: Tree, options: Schema) {
   // repo scope (admin:org for an org-wide runner) lets the runner self-register.
   // The pipeline generator prompts once and passes the PAT in; a standalone run
   // prompts here.
-  const pat = options.pat ?? await promptForGitHubPat(
-    'Enter a GitHub PAT with repo scope (admin:org for an org-wide runner) to register the e2e runner:'
-  );
+  const pat =
+    options.pat ??
+    (await promptForGitHubPat(
+      'Enter a GitHub PAT with repo scope (admin:org for an org-wide runner) to register the e2e runner:',
+    ));
   if (!pat) return;
 
   console.log('\nProvisioning the self-hosted e2e runner...');
 
-  const patSecret = createGenericSecret('github-runner-pat', { pat }, options.infra);
-  console.log(patSecret ? '✓ github-runner-pat secret created' : '✗ Failed to create github-runner-pat secret');
+  const patSecret = createGenericSecret(
+    'github-runner-pat',
+    { pat },
+    options.infra,
+  );
+  console.log(
+    patSecret
+      ? '✓ github-runner-pat secret created'
+      : '✗ Failed to create github-runner-pat secret',
+  );
   if (!patSecret) return;
 
   const { success } = runOcCommand('apply', [], host.read(RUNNER_MANIFEST));
-  console.log(success ? '✓ e2e runner Deployment applied' : '✗ Failed to apply e2e runner Deployment');
+  console.log(
+    success
+      ? '✓ e2e runner Deployment applied'
+      : '✗ Failed to apply e2e runner Deployment',
+  );
   if (!success) return;
 
   // Restart so a re-run with a new PAT is picked up — the pod reads the secret
@@ -74,11 +92,11 @@ export default async function (host: Tree, options: Schema) {
   console.log(
     varSet
       ? '✓ RUN_E2E enabled — e2e jobs will run on the runner'
-      : '✗ Failed to set RUN_E2E — enable it manually: gh variable set RUN_E2E --body true'
+      : '✗ Failed to set RUN_E2E — enable it manually: gh variable set RUN_E2E --body true',
   );
   console.log(
-    '\n  The runner is registering under the repo\'s Settings → Actions → Runners\n' +
-    '  (label "playwright"). If internal routes use a private CA, also create the\n' +
-    '  optional goa-ca configmap — see .openshift/github-runner/README.md.\n'
+    "\n  The runner is registering under the repo's Settings → Actions → Runners\n" +
+      '  (label "playwright"). If internal routes use a private CA, also create the\n' +
+      '  optional goa-ca configmap — see .openshift/github-runner/README.md.\n',
   );
 }

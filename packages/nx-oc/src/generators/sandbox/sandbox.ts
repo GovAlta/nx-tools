@@ -10,14 +10,22 @@ import {
   updateProjectConfiguration,
 } from '@nx/devkit';
 import * as path from 'path';
-import { getAdspConfiguration, addClientRedirectUris, detectAdspEnv, detectAdspTenant } from '../../adsp';
+import {
+  getAdspConfiguration,
+  addClientRedirectUris,
+  detectAdspEnv,
+  detectAdspTenant,
+} from '../../adsp';
 import {
   getGitRemoteUrl,
   deriveRegistryFromRemote,
   getGitHubRepo,
 } from '../../utils/git-utils';
 import { getClusterIngressDomain } from '../../utils/oc-utils';
-import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import {
+  detectApplicationType,
+  getBuildOutputPath,
+} from '../../utils/app-type';
 import { isNonInteractive } from '../../utils/interactive';
 import { DatabaseType } from '../deployment/schema';
 import { NormalizedSchema, Schema } from './schema';
@@ -29,8 +37,12 @@ const DATABASE_TAG_PREFIX = 'adsp:database:';
 // silently deployed without its DATABASE_URL/migrate wiring. Prefer the explicit
 // tag the express-service generator records; fall back to a drizzle db:migrate
 // target (postgres) for projects generated before the tag existed.
-function detectDatabase(config: ProjectConfiguration): DatabaseType | undefined {
-  const tag = (config.tags ?? []).find((t) => t.startsWith(DATABASE_TAG_PREFIX));
+function detectDatabase(
+  config: ProjectConfiguration,
+): DatabaseType | undefined {
+  const tag = (config.tags ?? []).find((t) =>
+    t.startsWith(DATABASE_TAG_PREFIX),
+  );
   if (tag) return tag.slice(DATABASE_TAG_PREFIX.length) as DatabaseType;
   if (config.targets?.['db:migrate']) return 'postgres';
   return undefined;
@@ -42,20 +54,21 @@ function detectDatabase(config: ProjectConfiguration): DatabaseType | undefined 
 async function resolveRegistry(
   host: Tree,
   registry: string | undefined,
-  remoteUrl: string | undefined
+  remoteUrl: string | undefined,
 ): Promise<string> {
   if (registry) return persistRegistry(host, registry);
 
   const stored = (
     readNxJson(host)?.generators as
-      | Record<string, { registry?: string }>
-      | undefined
+      Record<string, { registry?: string }> | undefined
   )?.[SANDBOX_GENERATOR]?.registry;
   if (stored) return stored;
 
   const derived = deriveRegistryFromRemote(remoteUrl);
   if (derived) {
-    console.log(`\n✓ Sandbox registry: ${derived.toLowerCase()} (derived from git remote)\n`);
+    console.log(
+      `\n✓ Sandbox registry: ${derived.toLowerCase()} (derived from git remote)\n`,
+    );
     return persistRegistry(host, derived);
   }
 
@@ -66,7 +79,7 @@ async function resolveRegistry(
     throw new Error(
       'Could not determine the sandbox container registry: no --registry flag, ' +
         'nothing persisted in nx.json, and none derivable from a git remote. ' +
-        'Re-run with --registry=<host>/<org> (e.g. --registry=ghcr.io/my-org).'
+        'Re-run with --registry=<host>/<org> (e.g. --registry=ghcr.io/my-org).',
     );
   }
 
@@ -99,7 +112,7 @@ function persistRegistry(host: Tree, registry: string): string {
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.project).fileName;
 
@@ -110,7 +123,10 @@ async function normalizeOptions(
   // against (recorded as a tag by express-service/vue-app/react-app/angular-app)
   // rather than silently assuming 'test' — a sandbox targeting a different ADSP
   // environment than the app itself would resolve a mismatched tenant/token.
-  const env = (options.env as 'dev' | 'test' | 'prod' | undefined) ?? detectAdspEnv(config.tags) ?? 'test';
+  const env =
+    (options.env as 'dev' | 'test' | 'prod' | undefined) ??
+    detectAdspEnv(config.tags) ??
+    'test';
   const tenant = options.tenant ?? detectAdspTenant(config.tags);
 
   const adsp = await getAdspConfiguration(host, {
@@ -120,7 +136,9 @@ async function normalizeOptions(
   });
 
   const remoteUrl = getGitRemoteUrl();
-  const registry = (await resolveRegistry(host, options.registry, remoteUrl)).toLowerCase();
+  const registry = (
+    await resolveRegistry(host, options.registry, remoteUrl)
+  ).toLowerCase();
   // Prefix the image with the (per-user) sandbox namespace so images from
   // different experimenters never collide on GHCR's org-global package names.
   const imageName = `${options.sandboxProject}-${projectName}`.toLowerCase();
@@ -138,7 +156,9 @@ async function normalizeOptions(
     registryOrg: registry.split('/').slice(1).join('/'),
     imageName,
     imageRef: `${registry}/${imageName}:sandbox`,
-    sourceRepositoryUrl: repoSlug ? `https://github.com/${repoSlug}` : undefined,
+    sourceRepositoryUrl: repoSlug
+      ? `https://github.com/${repoSlug}`
+      : undefined,
   };
 }
 
@@ -157,7 +177,7 @@ function addManifestFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, `../deployment/${options.appType}-files`),
     `./.openshift/${options.projectName}`,
-    templateOptions
+    templateOptions,
   );
 }
 
@@ -178,7 +198,7 @@ function addSandboxDoc(host: Tree, options: NormalizedSchema) {
       registryHost: options.registryHost,
       imageName: options.imageName,
       tmpl: '',
-    }
+    },
   );
 }
 
@@ -188,7 +208,7 @@ function addDatabaseFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'database-files'),
     './.openshift/sandbox',
-    { database: options.database, tmpl: '' }
+    { database: options.database, tmpl: '' },
   );
 }
 
@@ -251,7 +271,7 @@ async function registerSandboxRedirectUri(options: NormalizedSchema) {
   if (!ingressDomain) {
     console.log(
       '[nx-oc] Could not determine the cluster ingress domain; skipping redirect URI registration. ' +
-        'Add the deployment Route to the client manually if browser sign-in fails.'
+        'Add the deployment Route to the client manually if browser sign-in fails.',
     );
     return;
   }
@@ -263,7 +283,7 @@ async function registerSandboxRedirectUri(options: NormalizedSchema) {
     adsp.tenantRealm,
     clientId,
     [`${routeUrl}/*`],
-    adsp.accessToken
+    adsp.accessToken,
   );
 }
 
@@ -272,7 +292,7 @@ export default async function (host: Tree, options: Schema) {
   if (!normalizedOptions.appType) {
     throw new Error(
       `Could not detect the application type for "${normalizedOptions.projectName}" from its build target. ` +
-        `Pass --appType=node|frontend|dotnet to set it explicitly.`
+        `Pass --appType=node|frontend|dotnet to set it explicitly.`,
     );
   }
 

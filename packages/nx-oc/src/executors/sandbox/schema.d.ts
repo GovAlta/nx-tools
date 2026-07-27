@@ -1,4 +1,7 @@
-import { ApplicationType, DatabaseType } from '../../generators/deployment/schema';
+import {
+  ApplicationType,
+  DatabaseType,
+} from '../../generators/deployment/schema';
 
 export interface SandboxExecutorSchema {
   sandboxProject: string;

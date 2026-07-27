@@ -1,8 +1,22 @@
-import { adspProjectTags, deploymentGenerator, getAdspConfiguration } from '@abgov/nx-oc';
+import {
+  adspProjectTags,
+  deploymentGenerator,
+  getAdspConfiguration,
+} from '@abgov/nx-oc';
 import { confirmAfterAgentInterrupt, consultAgent } from '../../utils/agent';
-import { ensureAudienceMapper, ensureClientRoleScope, ensurePublicClient } from '../../utils/keycloak-admin';
+import {
+  ensureAudienceMapper,
+  ensureClientRoleScope,
+  ensurePublicClient,
+} from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
-import { addEslintQualityRules, addJestCoverageConfig, addSemgrepTarget, addVsCodeSettings, guardPlaywrightWebServer } from '../../utils/quality';
+import {
+  addEslintQualityRules,
+  addJestCoverageConfig,
+  addSemgrepTarget,
+  addVsCodeSettings,
+  guardPlaywrightWebServer,
+} from '../../utils/quality';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -21,7 +35,7 @@ import { NormalizedSchema, Schema } from './schema';
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.name).fileName;
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
@@ -32,8 +46,8 @@ async function normalizeOptions(
   const nginxProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
-    ? [options.proxy]
-    : [];
+      ? [options.proxy]
+      : [];
 
   return {
     ...options,
@@ -56,7 +70,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     options.projectRoot,
-    templateOptions
+    templateOptions,
   );
 
   const addProxyConf = options.nginxProxies.length > 0;
@@ -88,7 +102,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
           [nginxProxy.location]: proxy,
         };
       },
-      {}
+      {},
     );
 
     writeJson(host, `${options.projectRoot}/proxy.conf.json`, devProxyConf);
@@ -108,9 +122,9 @@ export default async function (host: Tree, options: Schema) {
   const { applicationGenerator: initReact } = await import('@nx/react').catch(
     () => {
       throw new Error(
-        "The 'react-app' generator requires the '@nx/react' plugin. Install it and re-run:\n  npm i -D @nx/react"
+        "The 'react-app' generator requires the '@nx/react' plugin. Install it and re-run:\n  npm i -D @nx/react",
       );
-    }
+    },
   );
 
   const normalizedOptions = await normalizeOptions(host, options);
@@ -148,14 +162,17 @@ export default async function (host: Tree, options: Schema) {
       'eslint-plugin-security': '^3.0.0',
       'eslint-plugin-no-secrets': '^2.0.0',
       'eslint-plugin-jest': '^28.0.0',
-    }
+    },
   );
 
   const addedProxy = addFiles(host, normalizedOptions);
   removeFiles(host, normalizedOptions);
 
   addEslintQualityRules(host, normalizedOptions.projectRoot, [
-    '**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx',
+    '**/*.spec.ts',
+    '**/*.spec.tsx',
+    '**/*.test.ts',
+    '**/*.test.tsx',
   ]);
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
   addVsCodeSettings(host);
@@ -191,9 +208,10 @@ export default async function (host: Tree, options: Schema) {
 
   config.tags = [
     ...(config.tags ?? []),
-    ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant).filter(
-      (tag) => !(config.tags ?? []).includes(tag)
-    ),
+    ...adspProjectTags(
+      normalizedOptions.env,
+      normalizedOptions.adsp.tenant,
+    ).filter((tag) => !(config.tags ?? []).includes(tag)),
   ];
 
   updateProjectConfiguration(host, options.name, config);
@@ -202,13 +220,14 @@ export default async function (host: Tree, options: Schema) {
   await formatFiles(host);
 
   if (normalizedOptions.adsp) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
     const clientId = `urn:ads:${normalizedOptions.adsp.tenant}:${normalizedOptions.projectName}`;
     await ensurePublicClient(
       normalizedOptions.adsp.accessServiceUrl,
       normalizedOptions.adsp.tenantRealm,
       clientId,
-      accessToken
+      accessToken,
     );
     if (options.serviceClientId) {
       await ensureAudienceMapper(
@@ -216,7 +235,7 @@ export default async function (host: Tree, options: Schema) {
         normalizedOptions.adsp.tenantRealm,
         clientId,
         options.serviceClientId,
-        accessToken
+        accessToken,
       );
       await ensureClientRoleScope(
         normalizedOptions.adsp.accessServiceUrl,
@@ -224,37 +243,56 @@ export default async function (host: Tree, options: Schema) {
         clientId,
         options.serviceClientId,
         'example-role',
-        accessToken
+        accessToken,
       );
     }
   }
 
   if (normalizedOptions.adsp && !options.skipAgent) {
-    const accessToken = normalizedOptions.adsp.accessToken ?? options.accessToken;
-    const appTs = host.read(`${normalizedOptions.projectRoot}/src/app/app.tsx`)?.toString() ?? '';
-    const storeTs = host.read(`${normalizedOptions.projectRoot}/src/store.ts`)?.toString() ?? '';
-    const environmentTs = host.read(`${normalizedOptions.projectRoot}/src/environments/environment.ts`)?.toString() ?? '';
-    const configSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/config.slice.ts`)?.toString() ?? '';
-    const intakeSliceTs = host.read(`${normalizedOptions.projectRoot}/src/app/intake.slice.ts`)?.toString() ?? '';
-    await confirmAfterAgentInterrupt(await consultAgent(
-      normalizedOptions.adsp.directoryServiceUrl,
-      accessToken,
-      {
-        projectName: normalizedOptions.projectName,
-        projectType: 'react-app',
-        tenant: normalizedOptions.adsp.tenant,
-        pluginVersion: PLUGIN_VERSION,
-        existingFiles: {
-          'src/app/app.tsx': appTs,
-          'src/store.ts': storeTs,
-          'src/environments/environment.ts': environmentTs,
-          'src/app/config.slice.ts': configSliceTs,
-          'src/app/intake.slice.ts': intakeSliceTs,
+    const accessToken =
+      normalizedOptions.adsp.accessToken ?? options.accessToken;
+    const appTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/app.tsx`)
+        ?.toString() ?? '';
+    const storeTs =
+      host.read(`${normalizedOptions.projectRoot}/src/store.ts`)?.toString() ??
+      '';
+    const environmentTs =
+      host
+        .read(
+          `${normalizedOptions.projectRoot}/src/environments/environment.ts`,
+        )
+        ?.toString() ?? '';
+    const configSliceTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/config.slice.ts`)
+        ?.toString() ?? '';
+    const intakeSliceTs =
+      host
+        .read(`${normalizedOptions.projectRoot}/src/app/intake.slice.ts`)
+        ?.toString() ?? '';
+    await confirmAfterAgentInterrupt(
+      await consultAgent(
+        normalizedOptions.adsp.directoryServiceUrl,
+        accessToken,
+        {
+          projectName: normalizedOptions.projectName,
+          projectType: 'react-app',
+          tenant: normalizedOptions.adsp.tenant,
+          pluginVersion: PLUGIN_VERSION,
+          existingFiles: {
+            'src/app/app.tsx': appTs,
+            'src/store.ts': storeTs,
+            'src/environments/environment.ts': environmentTs,
+            'src/app/config.slice.ts': configSliceTs,
+            'src/app/intake.slice.ts': intakeSliceTs,
+          },
         },
-      },
-      host,
-      normalizedOptions.projectRoot
-    ));
+        host,
+        normalizedOptions.projectRoot,
+      ),
+    );
   }
 
   await deploymentGenerator(host, {

@@ -134,7 +134,7 @@ more stacks.
    the core weakness.
    → Ship Nx migrations + an idempotent `nx g @abgov/nx-adsp:update` that
    re-applies the current golden path to an existing app with diff/preview.
-   This turns nx-tools from a scaffolder into a *living* platform tool and is
+   This turns nx-tools from a scaffolder into a _living_ platform tool and is
    what makes a "golden path" claim true over time. Unlocks the most value.
 
 ## P2 — Make the golden path worth keeping current
@@ -145,8 +145,8 @@ more stacks.
    conversational only — not repeatable, not CI-friendly, opaque about what's
    available. Common services (file, PDF, notification, calendar, comment,
    directory / value-metrics) lack a deterministic on-ramp.
-   → Add `nx g @abgov/nx-adsp:add-capability <name>` for *known* needs; keep the
-   AI for *discovery*. Repeatable + scriptable + CI-friendly.
+   → Add `nx g @abgov/nx-adsp:add-capability <name>` for _known_ needs; keep the
+   AI for _discovery_. Repeatable + scriptable + CI-friendly.
 
 3. **Production-readiness by default.**
    Deploy manifests recently gained liveness/readiness probes — good direction.

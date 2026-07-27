@@ -1,4 +1,10 @@
-import { readProjectConfiguration, Tree, updateJson, updateProjectConfiguration, writeJson } from '@nx/devkit';
+import {
+  readProjectConfiguration,
+  Tree,
+  updateJson,
+  updateProjectConfiguration,
+  writeJson,
+} from '@nx/devkit';
 
 /**
  * Rewrites the project-level eslint.config.mjs to add:
@@ -8,12 +14,18 @@ import { readProjectConfiguration, Tree, updateJson, updateProjectConfiguration,
  *
  * All three packages must be added as dev dependencies by the calling generator.
  */
-export function addEslintQualityRules(host: Tree, projectRoot: string, testFileGlobs: string[]): void {
+export function addEslintQualityRules(
+  host: Tree,
+  projectRoot: string,
+  testFileGlobs: string[],
+): void {
   const eslintPath = `${projectRoot}/eslint.config.mjs`;
   if (!host.exists(eslintPath)) return;
 
   const existing = host.read(eslintPath).toString();
-  const baseConfigMatch = existing.match(/from ['"](.+eslint\.config\.[cm]?[jt]s)['"]/);
+  const baseConfigMatch = existing.match(
+    /from ['"](.+eslint\.config\.[cm]?[jt]s)['"]/,
+  );
   const baseConfigPath = baseConfigMatch?.[1] ?? '../../eslint.config.mjs';
   const fileGlobList = testFileGlobs.map((g) => `'${g}'`).join(', ');
 
@@ -42,7 +54,7 @@ export default [
     },
   },
 ];
-`
+`,
   );
 }
 
@@ -62,7 +74,7 @@ export function addJestCoverageConfig(host: Tree, projectRoot: string): void {
   // properties after it verbatim would produce an invalid object literal.
   const modified = existing.replace(
     /([ \t]*coverageDirectory:[^\n]*?),?\n/,
-    `$1,\n  collectCoverage: true,\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`
+    `$1,\n  collectCoverage: true,\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`,
   );
   if (modified !== existing) {
     host.write(jestPath, modified);
@@ -109,15 +121,22 @@ export function addSemgrepTarget(host: Tree, projectName: string): void {
  *
  * Idempotent and a no-op if the config lacks a webServer or is already guarded.
  */
-export function guardPlaywrightWebServer(host: Tree, e2eProjectRoot: string): void {
+export function guardPlaywrightWebServer(
+  host: Tree,
+  e2eProjectRoot: string,
+): void {
   for (const ext of ['mts', 'ts', 'cts', 'js', 'mjs']) {
     const configPath = `${e2eProjectRoot}/playwright.config.${ext}`;
     if (!host.exists(configPath)) continue;
     const cfg = host.read(configPath).toString();
-    if (cfg.includes('process.env.BASE_URL') || !cfg.includes('webServer: {')) return;
+    if (cfg.includes('process.env.BASE_URL') || !cfg.includes('webServer: {'))
+      return;
     host.write(
       configPath,
-      cfg.replace('webServer: {', 'webServer: process.env.BASE_URL ? undefined : {')
+      cfg.replace(
+        'webServer: {',
+        'webServer: process.env.BASE_URL ? undefined : {',
+      ),
     );
     return;
   }
@@ -134,7 +153,10 @@ export function addVsCodeSettings(host: Tree): void {
   };
 
   if (host.exists(settingsPath)) {
-    updateJson(host, settingsPath, (existing) => ({ ...existing, ...settings }));
+    updateJson(host, settingsPath, (existing) => ({
+      ...existing,
+      ...settings,
+    }));
   } else {
     writeJson(host, settingsPath, settings);
   }

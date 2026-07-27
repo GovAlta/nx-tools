@@ -33,9 +33,9 @@ npm i -D @abgov/nx-release semantic-release
 npx nx g @abgov/nx-release:lib my-lib
 ```
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `project` | Yes | Name of the publishable Nx library to configure |
+| Option    | Required | Description                                     |
+| --------- | -------- | ----------------------------------------------- |
+| `project` | Yes      | Name of the publishable Nx library to configure |
 
 The generator writes a `.releaserc.json` into the project directory with monorepo-safe configuration: per-project tag formats, commit filtering scoped to the project via Nx graph traversal, and coordinated multi-package release notes. Run it once per publishable library.
 
@@ -62,6 +62,7 @@ There are multiple challenges with using semantic-release in a monorepo:
 5. Channel (next-major, next, latest) information is stored in a git note on a semantic-release ref and does not distinguish between tags (and consequently projects).
 
 For (1), (2), and (3) in part this project uses the approach from [semantic-release-monorepo](https://github.com/pmowrer/semantic-release-monorepo) along with Nx capabilities:
+
 - Each project uses a distinct `tagFormat`;
 - A custom plugin wraps default plugins for `analyzeCommits` and `generateNotes` and filters for only relevant commits;
 - Nx `graph` is used to determine dependency paths that should also be included.
@@ -81,9 +82,11 @@ Semantic-release v24.2.7 introduced a performance optimisation ([#3732](https://
 A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic-release/semantic-release/pull/4074). Until that merges and is released there are two workarounds:
 
 **Option 1 — Pin semantic-release to the last unaffected version:**
+
 ```json
 "semantic-release": "24.2.6"
 ```
+
 v24.2.6 (released 2025-06-29) is the last version before the regression. v24.2.7 introduced it.
 
 **Option 2 — Ensure no two project tags share a commit on `next`:**

@@ -17,7 +17,7 @@ interface Package {
 export function hasDependency(host: Tree, dependency: string): boolean {
   const { dependencies, devDependencies }: Package = readJson(
     host,
-    'package.json'
+    'package.json',
   );
 
   return !!dependencies?.[dependency] || !!devDependencies?.[dependency];
@@ -50,19 +50,25 @@ const ADSP_TENANT_TAG_PREFIX = 'adsp:scaffold-tenant:';
 // that path; there's no single "the" env to default to.
 export function adspProjectTags(
   env: EnvironmentName,
-  tenant: string | undefined
+  tenant: string | undefined,
 ): string[] {
   const tags = [`${ADSP_ENV_TAG_PREFIX}${env}`];
   if (tenant) tags.push(`${ADSP_TENANT_TAG_PREFIX}${tenant}`);
   return tags;
 }
 
-export function detectAdspEnv(tags: string[] | undefined): EnvironmentName | undefined {
+export function detectAdspEnv(
+  tags: string[] | undefined,
+): EnvironmentName | undefined {
   const tag = (tags ?? []).find((t) => t.startsWith(ADSP_ENV_TAG_PREFIX));
-  return tag ? (tag.slice(ADSP_ENV_TAG_PREFIX.length) as EnvironmentName) : undefined;
+  return tag
+    ? (tag.slice(ADSP_ENV_TAG_PREFIX.length) as EnvironmentName)
+    : undefined;
 }
 
-export function detectAdspTenant(tags: string[] | undefined): string | undefined {
+export function detectAdspTenant(
+  tags: string[] | undefined,
+): string | undefined {
   const tag = (tags ?? []).find((t) => t.startsWith(ADSP_TENANT_TAG_PREFIX));
   return tag ? tag.slice(ADSP_TENANT_TAG_PREFIX.length) : undefined;
 }
@@ -71,7 +77,8 @@ export function detectAdspTenant(tags: string[] | undefined): string | undefined
 function adspCliBinPath(): string {
   const require = createRequire(__filename);
   const pkgJsonPath = require.resolve('@abgov/adsp-cli/package.json');
-  const binRel = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')).bin?.adsp ?? 'src/main.js';
+  const binRel =
+    JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')).bin?.adsp ?? 'src/main.js';
   return path.join(path.dirname(pkgJsonPath), binRel);
 }
 
@@ -89,7 +96,9 @@ function runAdspLogin(options: {
   if (options.realm) args.push('--realm', options.realm);
   else if (options.tenant) args.push('--tenant', options.tenant);
   for (const scope of options.scopes) args.push('--scope', scope);
-  spawnSync(process.execPath, [adspCliBinPath(), ...args], { stdio: 'inherit' });
+  spawnSync(process.execPath, [adspCliBinPath(), ...args], {
+    stdio: 'inherit',
+  });
 }
 
 /**
@@ -135,7 +144,7 @@ export async function ensureAdspToken(options: {
       .filter(Boolean)
       .join(' ');
     throw new Error(
-      `Not signed in to ADSP (non-interactive run). Sign in first with:\n  ${loginCmd}`
+      `Not signed in to ADSP (non-interactive run). Sign in first with:\n  ${loginCmd}`,
     );
   }
 
@@ -155,12 +164,12 @@ export async function ensureAdspToken(options: {
 export async function getServiceUrls(directoryUrl: string) {
   const { data: entries } = await axios.get<{ urn: string; url: string }[]>(
     new URL('/directory/v2/namespaces/platform/entries', directoryUrl).href,
-    { decompress: true, responseEncoding: 'utf8', responseType: 'json' }
+    { decompress: true, responseEncoding: 'utf8', responseType: 'json' },
   );
 
   const urls: Record<string, string> = entries.reduce(
     (values, item) => ({ ...values, [item.urn]: item.url }),
-    {}
+    {},
   );
 
   return urls;
@@ -168,7 +177,12 @@ export async function getServiceUrls(directoryUrl: string) {
 
 export async function getAdspConfiguration(
   _host: Tree,
-  options: { env: EnvironmentName; accessToken?: string; tenant?: string; tenantRealm?: string }
+  options: {
+    env: EnvironmentName;
+    accessToken?: string;
+    tenant?: string;
+    tenantRealm?: string;
+  },
 ): Promise<AdspConfiguration> {
   const { env, accessToken } = options;
   const environment = environments[env || 'test'];
@@ -185,10 +199,11 @@ export async function getAdspConfiguration(
     // Keycloak client provisioning.
     const urls = await getServiceUrls(environment.directoryServiceUrl);
     const tenantServiceUrl = urls['urn:ads:platform:tenant-service:v2'];
-    const { data } = await axios.get<{ results: { name: string; realm: string }[] }>(
-      new URL('v2/tenants', tenantServiceUrl).href,
-      { params: { name: options.tenant } }
-    );
+    const { data } = await axios.get<{
+      results: { name: string; realm: string }[];
+    }>(new URL('v2/tenants', tenantServiceUrl).href, {
+      params: { name: options.tenant },
+    });
     const found = data.results[0];
     if (!found) {
       throw new Error(`Tenant '${options.tenant}' not found.`);
@@ -197,7 +212,12 @@ export async function getAdspConfiguration(
     const realm = options.tenantRealm ?? found.realm;
     const token =
       accessToken ??
-      (await ensureAdspToken({ env, realm, tenant: options.tenant, scopes: [ADSP_ADMIN_SCOPE] }));
+      (await ensureAdspToken({
+        env,
+        realm,
+        tenant: options.tenant,
+        scopes: [ADSP_ADMIN_SCOPE],
+      }));
     return {
       tenant: names(found.name).fileName,
       tenantRealm: realm,
@@ -211,11 +231,12 @@ export async function getAdspConfiguration(
   // tenants and prompts), then read the resolved realm + tenant name back from
   // its persisted context via getStatus() — no token-passing, no config-file
   // spelunking.
-  const token = accessToken ?? (await ensureAdspToken({ env, scopes: [ADSP_ADMIN_SCOPE] }));
+  const token =
+    accessToken ?? (await ensureAdspToken({ env, scopes: [ADSP_ADMIN_SCOPE] }));
   const status = getStatus();
   if (!status.realm) {
     throw new Error(
-      'Could not determine the ADSP tenant. Run `npx @abgov/adsp-cli login` and retry.'
+      'Could not determine the ADSP tenant. Run `npx @abgov/adsp-cli login` and retry.',
     );
   }
   return {
@@ -245,7 +266,7 @@ export async function addClientRedirectUris(
   realm: string,
   clientId: string,
   redirectUris: string[],
-  accessToken: string | undefined
+  accessToken: string | undefined,
 ): Promise<void> {
   if (!accessToken || redirectUris.length === 0) return;
 
@@ -263,7 +284,7 @@ export async function addClientRedirectUris(
     const client = clients?.[0];
     if (!client) {
       console.log(
-        `[nx-oc] Public client '${clientId}' not found in realm '${realm}' — skipping redirect URI update.`
+        `[nx-oc] Public client '${clientId}' not found in realm '${realm}' — skipping redirect URI update.`,
       );
       return;
     }
@@ -279,10 +300,11 @@ export async function addClientRedirectUris(
 
     if (
       nextRedirects.length === (client.redirectUris?.length ?? 0) &&
-      nextPostLogout === (client.attributes?.['post.logout.redirect.uris'] ?? '')
+      nextPostLogout ===
+        (client.attributes?.['post.logout.redirect.uris'] ?? '')
     ) {
       console.log(
-        `[nx-oc] Client '${clientId}' already allows ${redirectUris.join(', ')}.`
+        `[nx-oc] Client '${clientId}' already allows ${redirectUris.join(', ')}.`,
       );
       return;
     }
@@ -297,12 +319,12 @@ export async function addClientRedirectUris(
           'post.logout.redirect.uris': nextPostLogout,
         },
       },
-      { headers: authHeader }
+      { headers: authHeader },
     );
     console.log(
       `[nx-oc] Registered redirect URI(s) on client '${clientId}': ${redirectUris.join(
-        ', '
-      )}`
+        ', ',
+      )}`,
     );
   } catch (err) {
     const detail =
@@ -311,7 +333,7 @@ export async function addClientRedirectUris(
       (err as { message?: string })?.message ??
       err;
     console.log(
-      `[nx-oc] Could not update redirect URIs for '${clientId}': ${detail}`
+      `[nx-oc] Could not update redirect URIs for '${clientId}': ${detail}`,
     );
   }
 }

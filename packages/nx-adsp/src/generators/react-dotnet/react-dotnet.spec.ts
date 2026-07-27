@@ -18,7 +18,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 // jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
 // (pure, no I/O) implementation so tag-writing behavior is actually exercised.
 utilsMock.adspProjectTags.mockImplementation(
-  jest.requireActual('@abgov/nx-oc').adspProjectTags
+  jest.requireActual('@abgov/nx-oc').adspProjectTags,
 );
 
 jest.mock('../dotnet-service/dotnet-service');

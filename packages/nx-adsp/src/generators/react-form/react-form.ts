@@ -1,8 +1,4 @@
-import {
-  environments,
-  getServiceUrls,
-  ensureAdspToken,
-} from '@abgov/nx-oc';
+import { environments, getServiceUrls, ensureAdspToken } from '@abgov/nx-oc';
 import {
   Tree,
   formatFiles,
@@ -18,16 +14,16 @@ import { FormDefinition, generateFormInterface } from '../../utils/form';
 
 async function getFormDefinition(
   configurationServiceUrl: string,
-  token: string
+  token: string,
 ): Promise<FormDefinition> {
   const { data } = await axios.get<Record<string, FormDefinition>>(
     new URL(
       'configuration/v2/configuration/platform/form-service/latest',
-      configurationServiceUrl
+      configurationServiceUrl,
     ).href,
     {
       headers: { Authorization: `Bearer ${token}` },
-    }
+    },
   );
 
   const definitions = Object.values(data);
@@ -64,7 +60,7 @@ async function getFormDefinition(
       } else {
         value.className = names(property).className;
       }
-    }
+    },
   );
 
   if (addGeneral) {
@@ -86,7 +82,7 @@ async function getFormDefinition(
     await axios.patch<Record<string, FormDefinition>>(
       new URL(
         'configuration/v2/configuration/platform/file-service',
-        configurationServiceUrl
+        configurationServiceUrl,
       ).href,
       {
         operation: 'UPDATE',
@@ -102,7 +98,7 @@ async function getFormDefinition(
       },
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
   }
 
@@ -111,7 +107,7 @@ async function getFormDefinition(
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const { env, accessToken } = options;
 
@@ -135,7 +131,7 @@ async function normalizeOptions(
 
   const formDefinition = await getFormDefinition(
     configurationServiceUrl,
-    tenantToken
+    tenantToken,
   );
 
   return {
@@ -148,7 +144,7 @@ async function normalizeOptions(
 async function addFiles(host: Tree, options: NormalizedSchema) {
   const formNames = names(options.formDefinition.name);
   const interfaceDefinition = await generateFormInterface(
-    options.formDefinition
+    options.formDefinition,
   );
 
   const templateOptions = {
@@ -163,7 +159,7 @@ async function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     `${options.projectRoot}/src/app`,
-    templateOptions
+    templateOptions,
   );
 }
 

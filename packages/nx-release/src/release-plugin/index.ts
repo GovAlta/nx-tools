@@ -1,4 +1,7 @@
-import type { AnalyzeCommitsContext, GenerateNotesContext } from 'semantic-release';
+import type {
+  AnalyzeCommitsContext,
+  GenerateNotesContext,
+} from 'semantic-release';
 import { analyzeCommits as baseAnalyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes as baseGenerateNotes } from '@semantic-release/release-notes-generator';
 import { wrapPlugin } from './wrap-plugin';

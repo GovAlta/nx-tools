@@ -30,7 +30,7 @@ describe('addJestCoverageConfig', () => {
     // The @nx/jest (Nx 23) template leaves coverageDirectory without a trailing comma.
     tree.write(
       'apps/svc/jest.config.cts',
-      makeConfig("coverageDirectory: 'test-output/jest/coverage'")
+      makeConfig("coverageDirectory: 'test-output/jest/coverage'"),
     );
 
     addJestCoverageConfig(tree, 'apps/svc');
@@ -43,13 +43,15 @@ describe('addJestCoverageConfig', () => {
     // The result must be a valid object literal.
     const cfg = evalConfigObject(out);
     expect(cfg.collectCoverage).toBe(true);
-    expect((cfg.coverageThreshold as { global: { lines: number } }).global.lines).toBe(60);
+    expect(
+      (cfg.coverageThreshold as { global: { lines: number } }).global.lines,
+    ).toBe(60);
   });
 
   it('does not double the comma when coverageDirectory already has one', () => {
     tree.write(
       'apps/svc/jest.config.cts',
-      makeConfig("coverageDirectory: '../../coverage/svc',")
+      makeConfig("coverageDirectory: '../../coverage/svc',"),
     );
 
     addJestCoverageConfig(tree, 'apps/svc');

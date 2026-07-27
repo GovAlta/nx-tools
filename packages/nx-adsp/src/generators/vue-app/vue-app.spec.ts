@@ -26,7 +26,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 // jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
 // (pure, no I/O) implementation so tag-writing behavior is actually exercised.
 utilsMock.adspProjectTags.mockImplementation(
-  jest.requireActual('@abgov/nx-oc').adspProjectTags
+  jest.requireActual('@abgov/nx-oc').adspProjectTags,
 );
 
 describe('Vue App Generator', () => {
@@ -46,7 +46,9 @@ describe('Vue App Generator', () => {
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/App.vue')).toBeTruthy();
     expect(host.exists('apps/test/src/router/index.ts')).toBeTruthy();
-    expect(host.exists('apps/test/src/environments/environment.ts')).toBeTruthy();
+    expect(
+      host.exists('apps/test/src/environments/environment.ts'),
+    ).toBeTruthy();
     expect(host.exists('apps/test/vite.config.ts')).toBeTruthy();
     // The duplicate @nx/vue-generated config is removed.
     expect(host.exists('apps/test/vite.config.mts')).toBeFalsy();
@@ -66,7 +68,7 @@ describe('Vue App Generator', () => {
     expect(host.exists('apps/test-e2e/project.json')).toBeTruthy();
     expect(
       host.exists('apps/test-e2e/playwright.config.ts') ||
-        host.exists('apps/test-e2e/playwright.config.mts')
+        host.exists('apps/test-e2e/playwright.config.mts'),
     ).toBe(true);
     expect(host.exists('apps/test-e2e/cypress.config.ts')).toBeFalsy();
     // webServer guarded so CI can target a deployed URL (BASE_URL) instead of a local server
@@ -89,7 +91,9 @@ describe('Vue App Generator', () => {
 
     // Shared layout component provides the content gutter for every view.
     expect(host.exists('apps/test/src/components/AppLayout.vue')).toBeTruthy();
-    const layout = host.read('apps/test/src/components/AppLayout.vue').toString();
+    const layout = host
+      .read('apps/test/src/components/AppLayout.vue')
+      .toString();
     // Three named width variants, token-driven padding.
     expect(layout).toContain('form-content');
     expect(layout).toContain('wide-content');
@@ -108,8 +112,13 @@ describe('Vue App Generator', () => {
     // Wrappers live in a shared workspace lib, not copied into the app.
     const base = 'libs/vue-components/src/lib';
     for (const name of [
-      'GoabInput', 'GoabTextarea', 'GoabDropdown', 'GoabCheckbox',
-      'GoabRadioGroup', 'GoabButton', 'GoabModal',
+      'GoabInput',
+      'GoabTextarea',
+      'GoabDropdown',
+      'GoabCheckbox',
+      'GoabRadioGroup',
+      'GoabButton',
+      'GoabModal',
     ]) {
       expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
     }
@@ -199,7 +208,9 @@ describe('Vue App Generator', () => {
   it('vite.config.ts marks goa-* elements as custom elements', async () => {
     await generator(host, options);
     const viteConfig = host.read('apps/test/vite.config.ts').toString();
-    expect(viteConfig).toContain("isCustomElement: (tag) => tag.startsWith('goa-')");
+    expect(viteConfig).toContain(
+      "isCustomElement: (tag) => tag.startsWith('goa-')",
+    );
   }, 30000);
 
   it('shows the Sign in button without gating on Keycloak readiness', async () => {
@@ -225,7 +236,9 @@ describe('Vue App Generator', () => {
 
   it('environment.ts is pre-populated with tenant config', async () => {
     await generator(host, options);
-    const env = host.read('apps/test/src/environments/environment.ts').toString();
+    const env = host
+      .read('apps/test/src/environments/environment.ts')
+      .toString();
     expect(env).toContain(environments.test.accessServiceUrl);
     expect(env).toContain(environments.test.directoryServiceUrl);
     expect(env).toContain('urn:ads:test:test');
@@ -259,7 +272,9 @@ describe('Vue App Generator', () => {
       proxy: { location: '/test/', proxyPass: 'http://test-service:3333/api/' },
     });
     expect(host.exists('apps/test/vite.proxy.json')).toBeTruthy();
-    const proxyConf = JSON.parse(host.read('apps/test/vite.proxy.json').toString());
+    const proxyConf = JSON.parse(
+      host.read('apps/test/vite.proxy.json').toString(),
+    );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
   });

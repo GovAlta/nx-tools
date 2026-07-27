@@ -63,14 +63,15 @@ export interface AgentResult {
  * scaffolding. Throws if the user declines, which aborts the Nx Tree commit.
  */
 export async function confirmAfterAgentInterrupt(
-  result: AgentResult | null
+  result: AgentResult | null,
 ): Promise<void> {
   if (result?.interrupted && result.filesWritten === 0) {
     const { prompt } = await import('enquirer');
     const { proceed } = await prompt<{ proceed: boolean }>({
       type: 'confirm',
       name: 'proceed',
-      message: 'Agent interaction ended without generating files. Continue with base scaffolding?',
+      message:
+        'Agent interaction ended without generating files. Continue with base scaffolding?',
       initial: false,
     });
     if (!proceed) {
@@ -98,7 +99,17 @@ export async function consultAgent(
   accessToken: string,
   projectContext: {
     projectName: string;
-    projectType: 'express-service' | 'react-app' | 'angular-app' | 'vue-app' | 'mern' | 'mean' | 'pern' | 'pean' | 'pevn' | 'mevn';
+    projectType:
+      | 'express-service'
+      | 'react-app'
+      | 'angular-app'
+      | 'vue-app'
+      | 'mern'
+      | 'mean'
+      | 'pern'
+      | 'pean'
+      | 'pevn'
+      | 'mevn';
     tenant: string;
     pluginVersion: string;
     /** Content of key integration files for the agent to read and potentially modify. */
@@ -121,29 +132,35 @@ export async function consultAgent(
      * workspace file beginning with 'app/' to that root (with the prefix stripped).
      */
     additionalRoots?: Record<string, string>;
-  }
+  },
 ): Promise<AgentResult | null> {
   if (isNonInteractive()) {
     process.stdout.write(
-      '\n[nx-adsp] Non-interactive run (--no-interactive / no TTY / CI) — skipping the agent consultation; base scaffolding only.\n'
+      '\n[nx-adsp] Non-interactive run (--no-interactive / no TTY / CI) — skipping the agent consultation; base scaffolding only.\n',
     );
     return null;
   }
   if (!accessToken) {
-    process.stdout.write('\n[nx-adsp] No access token — skipping agent interaction.\n');
+    process.stdout.write(
+      '\n[nx-adsp] No access token — skipping agent interaction.\n',
+    );
     return null;
   }
 
   const agentServiceUrl = await resolveAgentServiceUrl(directoryServiceUrl);
   if (!agentServiceUrl) {
-    process.stdout.write('\n[nx-adsp] Agent-service not found in directory — skipping agent interaction.\n');
+    process.stdout.write(
+      '\n[nx-adsp] Agent-service not found in directory — skipping agent interaction.\n',
+    );
     return null;
   }
 
   const isContinuation = options?.isContinuation ?? false;
   const threadId = options?.threadId ?? crypto.randomUUID();
 
-  process.stdout.write(`\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`);
+  process.stdout.write(
+    `\n[nx-adsp] Connecting to agent at ${agentServiceUrl}...\n`,
+  );
 
   // Start socket connection immediately so file upload overlaps with the description prompt.
   const socket = io(agentServiceUrl, {
@@ -181,7 +198,7 @@ export async function consultAgent(
   });
 
   // ANSI helpers — no-op when stdout is not a TTY (e.g. CI, piped output).
-  const DIM   = process.stdout.isTTY ? '\x1b[2m' : '';
+  const DIM = process.stdout.isTTY ? '\x1b[2m' : '';
   const RESET = process.stdout.isTTY ? '\x1b[0m' : '';
 
   const startThinking = () => {
@@ -212,21 +229,23 @@ export async function consultAgent(
     resolveConversation(
       agentHasResponded || interrupted
         ? { filesWritten, userInteracted: agentHasResponded, interrupted }
-        : null
+        : null,
     );
   };
 
   const buildInitialMessage = () => {
     const { projectType, projectName, tenant, pluginVersion } = projectContext;
-    const descriptionLine = description ? `It is described as: "${description}". ` : '';
+    const descriptionLine = description
+      ? `It is described as: "${description}". `
+      : '';
 
     if (isContinuation) {
       const stackDetail =
         projectType === 'react-app'
           ? 'It uses Redux Toolkit slices for state (store.ts, config.slice.ts, intake.slice.ts) and keycloak-js for authentication. '
           : projectType === 'angular-app'
-          ? 'It uses Angular standalone components, HttpClient with includeBearerTokenInterceptor for authenticated requests, and keycloak-angular for authentication. '
-          : '';
+            ? 'It uses Angular standalone components, HttpClient with includeBearerTokenInterceptor for authenticated requests, and keycloak-angular for authentication. '
+            : '';
       const fileNames = Object.keys(projectContext.existingFiles).join(', ');
       return (
         `I've also scaffolded a ${projectType} called "${projectName}" for the same tenant. ` +
@@ -236,13 +255,20 @@ export async function consultAgent(
       );
     }
 
-    if (projectType === 'mern' || projectType === 'mean' || projectType === 'pern' || projectType === 'pean' || projectType === 'pevn' || projectType === 'mevn') {
+    if (
+      projectType === 'mern' ||
+      projectType === 'mean' ||
+      projectType === 'pern' ||
+      projectType === 'pean' ||
+      projectType === 'pevn' ||
+      projectType === 'mevn'
+    ) {
       const frontendStack =
         projectType === 'mern' || projectType === 'pern'
           ? 'React frontend using Redux Toolkit slices and keycloak-js'
           : projectType === 'mean' || projectType === 'pean'
-          ? 'Angular frontend using standalone components and keycloak-angular'
-          : 'Vue 3 frontend using Pinia and @dsb-norge/vue-keycloak-js';
+            ? 'Angular frontend using standalone components and keycloak-angular'
+            : 'Vue 3 frontend using Pinia and @dsb-norge/vue-keycloak-js';
       const serviceFiles = Object.keys(projectContext.existingFiles)
         .filter((f) => f.startsWith('service/'))
         .join(', ');
@@ -273,7 +299,9 @@ export async function consultAgent(
   const sendInitialMessage = () => {
     if (conversationStarted) return;
     conversationStarted = true;
-    process.stdout.write('[nx-adsp] Type your replies at the > prompt. Press Ctrl+D or leave blank to apply generated files.\n\n');
+    process.stdout.write(
+      '[nx-adsp] Type your replies at the > prompt. Press Ctrl+D or leave blank to apply generated files.\n\n',
+    );
     socket.emit('message', {
       agent: AGENT_ID,
       threadId,
@@ -287,7 +315,7 @@ export async function consultAgent(
         process.stdout.write(
           '\n[nx-adsp] No response after 2 minutes. ' +
             'The nxAdspAgent may still be deploying or the LLM is unresponsive. ' +
-            'Press Ctrl+C to skip and continue generation.\n'
+            'Press Ctrl+C to skip and continue generation.\n',
         );
       }
     }, 120000);
@@ -361,10 +389,12 @@ export async function consultAgent(
       socket.emit('workspace-update', {
         agent: AGENT_ID,
         threadId,
-        writes: Object.entries(projectContext.existingFiles).map(([path, content]) => ({
-          path,
-          content,
-        })),
+        writes: Object.entries(projectContext.existingFiles).map(
+          ([path, content]) => ({
+            path,
+            content,
+          }),
+        ),
         deletes: [],
       });
     });
@@ -379,17 +409,27 @@ export async function consultAgent(
     // else: description prompt is still open — post-prompt code will call sendInitialMessage.
   });
 
-  const describeToolCall = (toolName: string, args: Record<string, unknown>): string => {
+  const describeToolCall = (
+    toolName: string,
+    args: Record<string, unknown>,
+  ): string => {
     switch (toolName) {
       // Workspace tools (Mastra built-in names)
-      case 'mastra_workspace_write_file': return `Writing:  ${args['path']}`;
-      case 'mastra_workspace_edit_file':  return `Editing:  ${args['path']}`;
-      case 'mastra_workspace_read_file':  return `Reading:  ${args['path']}`;
-      case 'mastra_workspace_list_files': return `Listing workspace files`;
+      case 'mastra_workspace_write_file':
+        return `Writing:  ${args['path']}`;
+      case 'mastra_workspace_edit_file':
+        return `Editing:  ${args['path']}`;
+      case 'mastra_workspace_read_file':
+        return `Reading:  ${args['path']}`;
+      case 'mastra_workspace_list_files':
+        return `Listing workspace files`;
       // nx-adsp template tools (Mastra uses the agent registration key, not the tool id)
-      case 'listNxAdspTemplatesTool':     return `Listing available ADSP templates`;
-      case 'getNxAdspTemplateTool':       return `Getting template: ${args['templateId']}`;
-      default:                            return `Tool: ${toolName}`;
+      case 'listNxAdspTemplatesTool':
+        return `Listing available ADSP templates`;
+      case 'getNxAdspTemplateTool':
+        return `Getting template: ${args['templateId']}`;
+      default:
+        return `Tool: ${toolName}`;
     }
   };
 
@@ -397,10 +437,15 @@ export async function consultAgent(
 
   socket.on('stream', ({ chunk, done }) => {
     if (chunk?.type === 'tool-call') {
-      const p = chunk.payload as { toolName?: string; args?: Record<string, unknown> };
+      const p = chunk.payload as {
+        toolName?: string;
+        args?: Record<string, unknown>;
+      };
       if (p?.toolName) {
         stopThinking();
-        process.stdout.write(`${DIM}[nx-adsp] ${describeToolCall(p.toolName, p.args ?? {})}${RESET}\n`);
+        process.stdout.write(
+          `${DIM}[nx-adsp] ${describeToolCall(p.toolName, p.args ?? {})}${RESET}\n`,
+        );
       }
     }
 
@@ -426,24 +471,31 @@ export async function consultAgent(
         // text. Clear any active thinking indicator and show a dim hint so the
         // user knows the turn ended and they can reply or press Enter to finish.
         stopThinking();
-        process.stdout.write(`${DIM}[nx-adsp] Agent completed work without a response — reply or press Enter to apply files.${RESET}\n`);
+        process.stdout.write(
+          `${DIM}[nx-adsp] Agent completed work without a response — reply or press Enter to apply files.${RESET}\n`,
+        );
       }
       buffer = '';
-      firstDeltaOfTurn = true;  // reset for the next turn
+      firstDeltaOfTurn = true; // reset for the next turn
       promptUser();
     }
   });
 
-  socket.on('workspace-state', ({ files }: { files: { path: string; content: string }[] }) => {
-    // Only apply files the agent added or modified — not unchanged uploaded files.
-    const written = applyWorkspaceFiles(files ?? []);
-    if (written > 0) {
-      process.stdout.write(`\nApplied ${written} file(s) from agent workspace.\n`);
-    } else {
-      process.stdout.write('\nNo files generated by agent.\n');
-    }
-    cleanup(written);
-  });
+  socket.on(
+    'workspace-state',
+    ({ files }: { files: { path: string; content: string }[] }) => {
+      // Only apply files the agent added or modified — not unchanged uploaded files.
+      const written = applyWorkspaceFiles(files ?? []);
+      if (written > 0) {
+        process.stdout.write(
+          `\nApplied ${written} file(s) from agent workspace.\n`,
+        );
+      } else {
+        process.stdout.write('\nNo files generated by agent.\n');
+      }
+      cleanup(written);
+    },
+  );
 
   socket.on('session-expired', () => {
     process.stdout.write('\nAgent session expired.\n');
@@ -452,9 +504,11 @@ export async function consultAgent(
 
   socket.on('connect_error', (err) => {
     const errAny = err as unknown as Record<string, unknown>;
-    process.stdout.write(`\n[nx-adsp] Connection failed: ${err?.message ?? err}\n`);
     process.stdout.write(
-      `[nx-adsp] Error detail: ${JSON.stringify(errAny?.description ?? errAny?.context ?? errAny?.cause ?? 'none')}\n`
+      `\n[nx-adsp] Connection failed: ${err?.message ?? err}\n`,
+    );
+    process.stdout.write(
+      `[nx-adsp] Error detail: ${JSON.stringify(errAny?.description ?? errAny?.context ?? errAny?.cause ?? 'none')}\n`,
     );
     cleanup(0);
   });
@@ -518,7 +572,7 @@ export async function consultAgent(
 }
 
 async function resolveAgentServiceUrl(
-  directoryServiceUrl: string
+  directoryServiceUrl: string,
 ): Promise<string | null> {
   try {
     const urls = await getServiceUrls(directoryServiceUrl);

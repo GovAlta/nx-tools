@@ -17,10 +17,10 @@ describe('nx-release e2e', () => {
     it('should add release target and config files', async () => {
       const plugin = uniq('lib');
       await runNxCommandAsync(
-        `generate @nx/node:library ${plugin} --publishable --importPath @test/${plugin}`
+        `generate @nx/node:library ${plugin} --publishable --importPath @test/${plugin}`,
       );
       const result = await runNxCommandAsync(
-        `generate @abgov/nx-release:lib ${plugin}`
+        `generate @abgov/nx-release:lib ${plugin}`,
       );
 
       // npm warns to stderr for deprecated packages and allow-scripts; ignore warnings, check for actual errors
@@ -30,9 +30,13 @@ describe('nx-release e2e', () => {
       expect(() => checkFilesExist(`.releaserc.json`)).not.toThrow();
 
       // Get the actual project root from Nx (Nx 22 as-provided mode places libs at ${name}/, not libs/${name}/)
-      const projectInfo = await runNxCommandAsync(`show project ${plugin} --json`);
+      const projectInfo = await runNxCommandAsync(
+        `show project ${plugin} --json`,
+      );
       const projectRoot = JSON.parse(projectInfo.stdout).root;
-      expect(() => checkFilesExist(`${projectRoot}/.releaserc.json`)).not.toThrow();
+      expect(() =>
+        checkFilesExist(`${projectRoot}/.releaserc.json`),
+      ).not.toThrow();
 
       const releaseConfig = readJson(`${projectRoot}/.releaserc.json`);
       expect(releaseConfig.plugins).toBeDefined();
@@ -41,7 +45,7 @@ describe('nx-release e2e', () => {
     it('should not overwrite existing root .releaserc.json', async () => {
       const plugin = uniq('lib');
       await runNxCommandAsync(
-        `generate @nx/node:library ${plugin} --publishable --importPath @test/${plugin}`
+        `generate @nx/node:library ${plugin} --publishable --importPath @test/${plugin}`,
       );
 
       // Run twice — second run should leave root config unchanged
@@ -50,7 +54,7 @@ describe('nx-release e2e', () => {
 
       const plugin2 = uniq('lib');
       await runNxCommandAsync(
-        `generate @nx/node:library ${plugin2} --publishable --importPath @test/${plugin2}`
+        `generate @nx/node:library ${plugin2} --publishable --importPath @test/${plugin2}`,
       );
       await runNxCommandAsync(`generate @abgov/nx-release:lib ${plugin2}`);
 

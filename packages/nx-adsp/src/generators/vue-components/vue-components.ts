@@ -5,7 +5,11 @@ import {
   Tree,
   updateJson,
 } from '@nx/devkit';
-import { addOverrideToLintConfig, isEslintConfigSupported, lintConfigHasOverride } from '@nx/eslint/internal';
+import {
+  addOverrideToLintConfig,
+  isEslintConfigSupported,
+  lintConfigHasOverride,
+} from '@nx/eslint/internal';
 import type { Linter } from 'eslint';
 import * as path from 'path';
 
@@ -20,16 +24,20 @@ export function ensurePackageExports(host: Tree, libRoot: string): void {
   const pkgPath = `${libRoot}/package.json`;
   if (!host.exists(pkgPath)) return;
   const SRC = './src/index.ts';
-  updateJson<Record<string, unknown>, Record<string, unknown>>(host, pkgPath, (pkg) => {
-    pkg.main ??= SRC;
-    pkg.module ??= SRC;
-    pkg.types ??= SRC;
-    pkg.exports ??= {
-      './package.json': './package.json',
-      '.': { types: SRC, import: SRC, default: SRC },
-    };
-    return pkg;
-  });
+  updateJson<Record<string, unknown>, Record<string, unknown>>(
+    host,
+    pkgPath,
+    (pkg) => {
+      pkg.main ??= SRC;
+      pkg.module ??= SRC;
+      pkg.types ??= SRC;
+      pkg.exports ??= {
+        './package.json': './package.json',
+        '.': { types: SRC, import: SRC, default: SRC },
+      };
+      return pkg;
+    },
+  );
 }
 
 // Turns off vue/no-deprecated-slot-attribute for the lib. GoabModal projects into
@@ -51,20 +59,24 @@ function disableSlotAttributeRule(host: Tree, libRoot: string): void {
   if (!isEslintConfigSupported(host, libRoot)) {
     console.warn(
       `\n⚠  No ESLint config found for ${libRoot} — could not disable vue/no-deprecated-slot-attribute.\n` +
-      `   GoabModal uses goa-modal's native \`slot\` attribute; if lint flags it, turn\n` +
-      `   that rule off for this library.\n`
+        `   GoabModal uses goa-modal's native \`slot\` attribute; if lint flags it, turn\n` +
+        `   that rule off for this library.\n`,
     );
     return;
   }
 
   // `files` is `string | string[]` per the Linter type — normalize before checking.
   const isVueOverride = (o: Linter.ConfigOverride<Linter.RulesRecord>) =>
-    (Array.isArray(o.files) ? o.files : o.files ? [o.files] : []).some((f) => f.includes('vue'));
+    (Array.isArray(o.files) ? o.files : o.files ? [o.files] : []).some((f) =>
+      f.includes('vue'),
+    );
 
   const alreadyDisabled = lintConfigHasOverride(
     host,
     libRoot,
-    (o) => isVueOverride(o) && o.rules?.['vue/no-deprecated-slot-attribute'] === 'off'
+    (o) =>
+      isVueOverride(o) &&
+      o.rules?.['vue/no-deprecated-slot-attribute'] === 'off',
   );
   if (alreadyDisabled) {
     return;
@@ -85,7 +97,8 @@ export const LIB_NAME = 'vue-components';
 export function vueComponentsImportPath(host: Tree): string {
   let name = 'workspace';
   try {
-    name = JSON.parse(host.read('package.json')?.toString() ?? '{}').name || name;
+    name =
+      JSON.parse(host.read('package.json')?.toString() ?? '{}').name || name;
   } catch {
     /* keep fallback */
   }
@@ -110,7 +123,7 @@ export default async function (host: Tree) {
   if (!exists) {
     const { libraryGenerator } = await import('@nx/vue').catch(() => {
       throw new Error(
-        "The 'vue-components' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue"
+        "The 'vue-components' generator requires the '@nx/vue' plugin. Install it and re-run:\n  npm i -D @nx/vue",
       );
     });
     await libraryGenerator(host, {

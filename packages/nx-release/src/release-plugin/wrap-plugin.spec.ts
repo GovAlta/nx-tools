@@ -36,20 +36,17 @@ describe('wrapPlugin', () => {
       error: jest.fn(),
     };
 
-    const result = await wrapped(
-      { project: 'test', config: 'config' },
-      {
-        commits: [
-          { commit: { long: 'test1', short: 'test1' } } as Commit,
-          { commit: { long: 'test2', short: 'test2' } } as Commit,
-        ],
-        logger,
-        env: {},
-        cwd: '',
-        stderr: null,
-        stdout: null,
-      } as unknown as VerifyReleaseContext
-    );
+    const result = await wrapped({ project: 'test', config: 'config' }, {
+      commits: [
+        { commit: { long: 'test1', short: 'test1' } } as Commit,
+        { commit: { long: 'test2', short: 'test2' } } as Commit,
+      ],
+      logger,
+      env: {},
+      cwd: '',
+      stderr: null,
+      stdout: null,
+    } as unknown as VerifyReleaseContext);
 
     expect(result).toBe('result');
     expect(plugin.mock.calls.length).toBe(1);
@@ -68,18 +65,15 @@ describe('wrapPlugin', () => {
       error: jest.fn(),
     };
 
-    const result = await wrapped(
-      { project: null, config: 'config' },
-      {
-        commits: [
-          { commit: { long: 'test1', short: 'test1' } } as Commit,
-          { commit: { long: 'test2', short: 'test2' } } as Commit,
-        ],
-        logger,
-        env: {},
-        cwd: '',
-      } as unknown as VerifyReleaseContext
-    );
+    const result = await wrapped({ project: null, config: 'config' }, {
+      commits: [
+        { commit: { long: 'test1', short: 'test1' } } as Commit,
+        { commit: { long: 'test2', short: 'test2' } } as Commit,
+      ],
+      logger,
+      env: {},
+      cwd: '',
+    } as unknown as VerifyReleaseContext);
 
     expect(result).toBe('result');
     expect(plugin.mock.calls.length).toBe(1);

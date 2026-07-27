@@ -66,7 +66,9 @@ describe('convert-sandbox-target migration', () => {
 
     await migration(tree);
 
-    expect(readProjectConfiguration(tree, 'app').targets.sandbox.options).toEqual({
+    expect(
+      readProjectConfiguration(tree, 'app').targets.sandbox.options,
+    ).toEqual({
       sandboxProject: 'my-ns',
       registry: 'ghcr.io/test-org',
       database: 'postgres',
@@ -87,7 +89,7 @@ describe('convert-sandbox-target migration', () => {
     await migration(tree);
 
     expect(readProjectConfiguration(tree, 'app').targets.sandbox).toEqual(
-      executorTarget
+      executorTarget,
     );
   });
 
@@ -105,7 +107,7 @@ describe('convert-sandbox-target migration', () => {
     await migration(tree);
 
     expect(readProjectConfiguration(tree, 'app').targets.sandbox).toEqual(
-      unrelated
+      unrelated,
     );
   });
 });

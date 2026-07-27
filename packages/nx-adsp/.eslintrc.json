@@ -5,9 +5,7 @@
     "@nx/dependency-checks": [
       "error",
       {
-        "ignoredDependencies": [
-          "@abgov/nx-oc"
-        ],
+        "ignoredDependencies": ["@abgov/nx-oc"],
         "checkMissingDependencies": true, // toggle to disable
         "checkObsoleteDependencies": true, // toggle to disable
         "checkVersionMismatches": true // toggle to disable

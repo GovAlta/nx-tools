@@ -41,7 +41,7 @@ describe('Dotnet Service Generator', () => {
       {},
       {
         '@nx-dotnet/core': '^1.16.0',
-      }
+      },
     );
     await generator(host, options);
     expect(appGeneratorMock).toHaveBeenCalled();

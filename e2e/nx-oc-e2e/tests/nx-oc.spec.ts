@@ -12,22 +12,22 @@ describe('nx-oc e2e', () => {
     it('should create jenkins pipeline files', async () => {
       const plugin = uniq('pipeline');
       const result = await runNxCommandAsync(
-        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t jenkins --e ${plugin}-dev --r ghcr.io/test-org`
+        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t jenkins --e ${plugin}-dev --r ghcr.io/test-org`,
       );
 
       expect(result.stderr).not.toMatch(/error/i);
       expect(() =>
         checkFilesExist(
           `.openshift/environment.infra.yml`,
-          `.openshift/environments.yml`
-        )
+          `.openshift/environments.yml`,
+        ),
       ).not.toThrow();
     }, 60000);
 
     it('should create github actions pipeline files', async () => {
       const plugin = uniq('pipeline');
       const result = await runNxCommandAsync(
-        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t actions --e ${plugin}-dev --r ghcr.io/test-org`
+        `generate @abgov/nx-oc:pipeline ${plugin}-build ${plugin}-infra --t actions --e ${plugin}-dev --r ghcr.io/test-org`,
       );
 
       expect(result.stderr).toBeFalsy();
@@ -35,15 +35,17 @@ describe('nx-oc e2e', () => {
         checkFilesExist(
           `.openshift/environment.infra.yml`,
           `.openshift/environments.yml`,
-          `.github/workflows/pipeline.yml`
-        )
+          `.github/workflows/pipeline.yml`,
+        ),
       ).not.toThrow();
     }, 60000);
   });
 
   describe('apply-infra', () => {
     it('should run without error', async () => {
-      const result = await runNxCommandAsync(`generate @abgov/nx-oc:apply-infra`);
+      const result = await runNxCommandAsync(
+        `generate @abgov/nx-oc:apply-infra`,
+      );
       expect(result.stderr).toBeFalsy();
     }, 60000);
   });

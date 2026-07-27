@@ -26,7 +26,7 @@ function setupE2eWorkspace(mockUrl: string) {
   mkdirSync(localTmpDir, { recursive: true });
   execSync(
     `node ${require.resolve('nx')} new proj --nx-workspace-root=${localTmpDir} --no-interactive --skip-install --collection=@nx/workspace --npmScope=proj --preset=apps`,
-    { cwd: localTmpDir, stdio: ['ignore', 'ignore', 'ignore'] }
+    { cwd: localTmpDir, stdio: ['ignore', 'ignore', 'ignore'] },
   );
   patchPackageJsonForPlugin('@abgov/nx-adsp', 'dist/packages/nx-adsp');
   patchPackageJsonForPlugin('@abgov/nx-oc', 'dist/packages/nx-oc');
@@ -40,16 +40,21 @@ function setupE2eWorkspace(mockUrl: string) {
 
 const MOCK_CLIENT_UUID = 'aaaa1111-bbbb-cccc-dddd-eeee22223333';
 
-function respond(method: string, url: string, res: ServerResponse, port: number): void {
+function respond(
+  method: string,
+  url: string,
+  res: ServerResponse,
+  port: number,
+): void {
   const base = `http://localhost:${port}`;
 
   if (url.startsWith('/directory/v2/namespaces/platform/entries')) {
     return json(res, 200, [
-      { urn: 'urn:ads:platform:tenant-service',        url: base },
-      { urn: 'urn:ads:platform:tenant-service:v2',     url: base },
-      { urn: 'urn:ads:platform:event-service',         url: `${base}/event` },
+      { urn: 'urn:ads:platform:tenant-service', url: base },
+      { urn: 'urn:ads:platform:tenant-service:v2', url: base },
+      { urn: 'urn:ads:platform:event-service', url: `${base}/event` },
       { urn: 'urn:ads:platform:configuration-service', url: `${base}/config` },
-      { urn: 'urn:ads:platform:push-service',          url: `${base}/push` },
+      { urn: 'urn:ads:platform:push-service', url: `${base}/push` },
     ]);
   }
 
@@ -57,7 +62,11 @@ function respond(method: string, url: string, res: ServerResponse, port: number)
     return json(res, 200, { results: [{ name: 'test', realm: 'test' }] });
   }
 
-  if (method === 'GET' && url.includes('/clients') && url.includes('clientId=')) {
+  if (
+    method === 'GET' &&
+    url.includes('/clients') &&
+    url.includes('clientId=')
+  ) {
     return json(res, 200, []);
   }
 
@@ -87,7 +96,11 @@ function respond(method: string, url: string, res: ServerResponse, port: number)
   }
 
   if (url.includes('/roles')) {
-    return json(res, method === 'GET' ? 404 : 201, method === 'GET' ? { error: 'Role not found' } : {});
+    return json(
+      res,
+      method === 'GET' ? 404 : 201,
+      method === 'GET' ? { error: 'Role not found' } : {},
+    );
   }
 
   if (url.includes('/protocol-mappers')) {
@@ -110,10 +123,16 @@ describe('nx-adsp e2e', () => {
     let port = 0;
     mockServer = createServer((req: IncomingMessage, res: ServerResponse) => {
       let body = '';
-      req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
-      req.on('end', () => respond(req.method ?? 'GET', req.url ?? '', res, port));
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      req.on('end', () =>
+        respond(req.method ?? 'GET', req.url ?? '', res, port),
+      );
     });
-    await new Promise<void>((resolve) => mockServer.listen(0, '127.0.0.1', resolve));
+    await new Promise<void>((resolve) =>
+      mockServer.listen(0, '127.0.0.1', resolve),
+    );
     port = (mockServer.address() as AddressInfo).port;
     mockUrl = `http://localhost:${port}`;
     // Point the generators' ADSP calls at the mock via the ADSP_E2E_* overrides
@@ -128,7 +147,7 @@ describe('nx-adsp e2e', () => {
   afterAll(async () => {
     if (mockServer) {
       await new Promise<void>((resolve, reject) =>
-        mockServer.close((err) => (err ? reject(err) : resolve()))
+        mockServer.close((err) => (err ? reject(err) : resolve())),
       );
     }
   });
@@ -141,7 +160,7 @@ describe('nx-adsp e2e', () => {
     it('should generate and build', async () => {
       const plugin = uniq('express-service');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
+        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`,
       );
       checkFilesExist(`${plugin}/src/main.ts`);
       const result = await runNxCommandAsync(`build ${plugin}`);
@@ -151,7 +170,7 @@ describe('nx-adsp e2e', () => {
     it('should generate with an explicit access token', async () => {
       const plugin = uniq('express-service');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:express-service ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
       checkFilesExist(`${plugin}/src/main.ts`);
     }, 90000);
@@ -166,23 +185,23 @@ describe('nx-adsp e2e', () => {
     it('writes a Dockerfile and imports it locally for a node service', async () => {
       const svc = uniq('sbx-svc');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`
+        `generate @abgov/nx-adsp:express-service ${svc} dev --tenant=test --accessToken=mock-token --skipAgent --database=none`,
       );
       await runNxCommandAsync(
-        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
+        `generate @abgov/nx-oc:sandbox ${svc} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`,
       );
       checkFilesExist(
         `.openshift/${svc}/Dockerfile`,
-        `.openshift/${svc}/${svc}.yml`
+        `.openshift/${svc}/${svc}.yml`,
       );
       // The in-cluster BuildConfig manifest is gone.
       expect(
-        existsSync(join(tmpProjPath(), `.openshift/${svc}/sandbox-build.yml`))
+        existsSync(join(tmpProjPath(), `.openshift/${svc}/sandbox-build.yml`)),
       ).toBe(false);
       // The sandbox target is wired to the executor (which builds locally with
       // podman and imports the image); orchestration lives in the plugin now.
       const projectJson = JSON.parse(
-        readFileSync(join(tmpProjPath(), `${svc}/project.json`), 'utf-8')
+        readFileSync(join(tmpProjPath(), `${svc}/project.json`), 'utf-8'),
       );
       expect(projectJson.targets.sandbox.executor).toBe('@abgov/nx-oc:sandbox');
       expect(projectJson.targets.sandbox.options).toMatchObject({
@@ -191,7 +210,7 @@ describe('nx-adsp e2e', () => {
       });
       const dockerfile = readFileSync(
         join(tmpProjPath(), `.openshift/${svc}/Dockerfile`),
-        'utf-8'
+        'utf-8',
       );
       expect(dockerfile).toContain('node');
     }, 180000);
@@ -199,21 +218,21 @@ describe('nx-adsp e2e', () => {
     it('writes a Dockerfile and imports it locally for a frontend app', async () => {
       const app = uniq('sbx-app');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:vue-app ${app} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
       await runNxCommandAsync(
-        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`
+        `generate @abgov/nx-oc:sandbox ${app} --sandboxProject=test-build --registry=ghcr.io/test-org --tenant=test --accessToken=mock-token`,
       );
       checkFilesExist(
         `.openshift/${app}/Dockerfile`,
-        `.openshift/${app}/${app}.yml`
+        `.openshift/${app}/${app}.yml`,
       );
       expect(
-        existsSync(join(tmpProjPath(), `.openshift/${app}/sandbox-build.yml`))
+        existsSync(join(tmpProjPath(), `.openshift/${app}/sandbox-build.yml`)),
       ).toBe(false);
       const dockerfile = readFileSync(
         join(tmpProjPath(), `.openshift/${app}/Dockerfile`),
-        'utf-8'
+        'utf-8',
       );
       expect(dockerfile).toContain('nginx');
     }, 180000);
@@ -223,7 +242,7 @@ describe('nx-adsp e2e', () => {
     it('should generate and build', async () => {
       const plugin = uniq('react-app');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:react-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:react-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
       checkFilesExist(`${plugin}/src/app/app.tsx`);
       const result = await runNxCommandAsync(`build ${plugin}`);
@@ -235,7 +254,7 @@ describe('nx-adsp e2e', () => {
     it('should generate and build', async () => {
       const plugin = uniq('vue-app');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
       checkFilesExist(
         `${plugin}/src/App.vue`,
@@ -256,7 +275,7 @@ describe('nx-adsp e2e', () => {
     it('co-generates a vue-components lib whose test target passes', async () => {
       const plugin = uniq('vue-app');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
       checkFilesExist(
         'vue-components/src/index.ts',
@@ -274,7 +293,7 @@ describe('nx-adsp e2e', () => {
       // the generated eslint config rather than by running lint (see above).
       const eslintrc = readFileSync(
         join(tmpProjPath(), 'vue-components/.eslintrc.json'),
-        'utf-8'
+        'utf-8',
       );
       expect(eslintrc).toContain('"vue/no-deprecated-slot-attribute": "off"');
     }, 300000);
@@ -283,12 +302,12 @@ describe('nx-adsp e2e', () => {
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(
-      `generate @abgov/nx-adsp:angular-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+      `generate @abgov/nx-adsp:angular-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
     );
 
     checkFilesExist(
       `${plugin}/src/app/app.component.ts`,
-      `${plugin}/src/main.ts`
+      `${plugin}/src/main.ts`,
     );
 
     const result = await runNxCommandAsync(`build ${plugin}`);
@@ -299,7 +318,7 @@ describe('nx-adsp e2e', () => {
     it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pern');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:pern ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:pern ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
 
       checkFilesExist(
@@ -318,7 +337,7 @@ describe('nx-adsp e2e', () => {
     it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pean');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:pean ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:pean ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
 
       checkFilesExist(
@@ -337,7 +356,7 @@ describe('nx-adsp e2e', () => {
     it('should generate fullstack with Drizzle and build the service', async () => {
       const plugin = uniq('pevn');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:pevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:pevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
 
       checkFilesExist(
@@ -356,7 +375,7 @@ describe('nx-adsp e2e', () => {
     it('should generate fullstack and build the service', async () => {
       const plugin = uniq('mevn');
       await runNxCommandAsync(
-        `generate @abgov/nx-adsp:mevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`
+        `generate @abgov/nx-adsp:mevn ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
       );
 
       checkFilesExist(

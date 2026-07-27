@@ -18,7 +18,7 @@ utilsMock.getAdspConfiguration.mockResolvedValue({
 // jest.mock('@abgov/nx-oc') automocks adspProjectTags too — restore the real
 // (pure, no I/O) implementation so tag-writing behavior is actually exercised.
 utilsMock.adspProjectTags.mockImplementation(
-  jest.requireActual('@abgov/nx-oc').adspProjectTags
+  jest.requireActual('@abgov/nx-oc').adspProjectTags,
 );
 utilsMock.deploymentGenerator.mockResolvedValue(undefined);
 utilsMock.ensureAdspToken.mockResolvedValue('test-token');
@@ -41,7 +41,9 @@ describe('Express Service Generator', () => {
 
     expect(host.exists('apps/test/src/main.ts')).toBeTruthy();
     expect(host.exists('apps/test/src/environment.ts')).toBeTruthy();
-    expect(host.exists('apps/test/src/environments/environment.ts')).toBeFalsy();
+    expect(
+      host.exists('apps/test/src/environments/environment.ts'),
+    ).toBeFalsy();
   }, 60000);
 
   it('serves generated OpenAPI docs, discoverable via the root _links convention', async () => {
@@ -61,7 +63,9 @@ describe('Express Service Generator', () => {
     const mainTs = host.read('apps/test/src/main.ts').toString();
     expect(mainTs).toContain('OpenApiGeneratorV3');
     expect(mainTs).toContain('/swagger/docs/v1');
-    expect(mainTs).toContain("docs: { href: new URL('/swagger/docs/v1', rootUrl).href }");
+    expect(mainTs).toContain(
+      "docs: { href: new URL('/swagger/docs/v1', rootUrl).href }",
+    );
     // Document-level default security — without it, routes with no explicit
     // `security` override (e.g. /private) would inherit nothing at all,
     // rather than the accessToken requirement they actually enforce.
@@ -109,7 +113,10 @@ describe('Express Service Generator', () => {
     // Unrelated server preserved.
     expect(mcp.mcpServers.other).toEqual({ command: 'other-cmd', args: [] });
     // A team's customized adsp-sdk entry is not overwritten.
-    expect(mcp.mcpServers['adsp-sdk']).toEqual({ command: 'node', args: ['/local/build/main.js'] });
+    expect(mcp.mcpServers['adsp-sdk']).toEqual({
+      command: 'node',
+      args: ['/local/build/main.js'],
+    });
   }, 60000);
 
   it('factors routes into a router module mounted in main.ts (not inlined)', async () => {
@@ -119,7 +126,9 @@ describe('Express Service Generator', () => {
     // main.ts holds infra + the mount, not route handlers.
     const mainTs = host.read('apps/test/src/main.ts').toString();
     expect(mainTs).toContain('createErrorHandler');
-    expect(mainTs).toContain("import { exampleRouter } from './routes/example'");
+    expect(mainTs).toContain(
+      "import { exampleRouter } from './routes/example'",
+    );
     expect(mainTs).toContain('exampleRouter(eventService)');
     // The handler internals moved out of main.ts.
     expect(mainTs).not.toContain('authorize');
@@ -128,7 +137,9 @@ describe('Express Service Generator', () => {
     // The router module carries the handlers, capabilities passed in as args.
     expect(host.exists('apps/test/src/routes/example.ts')).toBeTruthy();
     const routerTs = host.read('apps/test/src/routes/example.ts').toString();
-    expect(routerTs).toContain('export function exampleRouter(eventService: EventService)');
+    expect(routerTs).toContain(
+      'export function exampleRouter(eventService: EventService)',
+    );
     expect(routerTs).toContain('authorize');
     expect(routerTs).toContain('createValidationHandler');
     expect(routerTs).toContain('eventService.send');
@@ -170,14 +181,17 @@ describe('Express Service Generator', () => {
     expect(config.targets['serve'].dependsOn).toContain('dev-db');
 
     // Drizzle has no client codegen, so build must NOT depend on db:generate.
-    expect(config.targets['build'].dependsOn ?? []).not.toContain('db:generate');
+    expect(config.targets['build'].dependsOn ?? []).not.toContain(
+      'db:generate',
+    );
     // The SQL migrations are shipped as a build asset.
     const assets = config.targets['build'].options.assets ?? [];
     expect(
       assets.some(
         (a: unknown) =>
-          typeof a === 'object' && (a as { output?: string }).output === 'drizzle'
-      )
+          typeof a === 'object' &&
+          (a as { output?: string }).output === 'drizzle',
+      ),
     ).toBe(true);
 
     // Tagged so the sandbox generator wires the DB without a --database flag.
@@ -212,9 +226,9 @@ describe('Express Service Generator', () => {
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['dev-db']).toBeFalsy();
-    expect((config.tags ?? []).some((t) => t.startsWith('adsp:database:'))).toBe(
-      false
-    );
+    expect(
+      (config.tags ?? []).some((t) => t.startsWith('adsp:database:')),
+    ).toBe(false);
   }, 60000);
 
   it('writes a provisioned CLIENT_SECRET to .env.local, not .env', async () => {
@@ -222,7 +236,9 @@ describe('Express Service Generator', () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, { ...options, accessToken: 'test-token' });
 
-    expect(host.read('apps/test/.env.local').toString()).toContain('CLIENT_SECRET=super-secret');
+    expect(host.read('apps/test/.env.local').toString()).toContain(
+      'CLIENT_SECRET=super-secret',
+    );
     expect(host.exists('apps/test/.env')).toBeFalsy();
   }, 60000);
 
@@ -236,7 +252,9 @@ describe('Express Service Generator', () => {
   }, 60000);
 
   it('does not overwrite or duplicate an existing CLIENT_SECRET in .env.local', async () => {
-    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('freshly-provisioned-secret');
+    keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce(
+      'freshly-provisioned-secret',
+    );
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     // express-service is a one-shot scaffolder (re-running it against an
     // existing project throws in @nx/express), so this exercises the guard
@@ -254,11 +272,16 @@ describe('Express Service Generator', () => {
   it('preserves an existing .env.local value (e.g. a prior dev-db run) alongside CLIENT_SECRET', async () => {
     keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('super-secret');
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-    host.write('apps/test/.env.local', 'DATABASE_URL=postgresql://test:test@localhost:5432/test_dev\n');
+    host.write(
+      'apps/test/.env.local',
+      'DATABASE_URL=postgresql://test:test@localhost:5432/test_dev\n',
+    );
     await generator(host, { ...options, accessToken: 'test-token' });
 
     const envLocal = host.read('apps/test/.env.local').toString();
-    expect(envLocal).toContain('DATABASE_URL=postgresql://test:test@localhost:5432/test_dev');
+    expect(envLocal).toContain(
+      'DATABASE_URL=postgresql://test:test@localhost:5432/test_dev',
+    );
     expect(envLocal).toContain('CLIENT_SECRET=super-secret');
   }, 60000);
 

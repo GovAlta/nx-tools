@@ -42,12 +42,12 @@ nx-tools/
 
 Always import from these aliases — never use relative paths across package boundaries.
 
-| Alias | Resolves to |
-|---|---|
-| `@abgov/nx-adsp` | `packages/nx-adsp/src/index.ts` |
-| `@abgov/nx-agent` | `packages/nx-agent/src/index.ts` |
-| `@abgov/nx-oc` | `packages/nx-oc/src/index.ts` |
-| `@abgov/nx-release` | `packages/nx-release/src/index.ts` |
+| Alias                           | Resolves to                                    |
+| ------------------------------- | ---------------------------------------------- |
+| `@abgov/nx-adsp`                | `packages/nx-adsp/src/index.ts`                |
+| `@abgov/nx-agent`               | `packages/nx-agent/src/index.ts`               |
+| `@abgov/nx-oc`                  | `packages/nx-oc/src/index.ts`                  |
+| `@abgov/nx-release`             | `packages/nx-release/src/index.ts`             |
 | `@abgov/semantic-release-nuget` | `packages/semantic-release-nuget/src/index.ts` |
 
 ---
@@ -200,11 +200,11 @@ promotion merges must stay pure (never fold a content edit into a merge commit).
 
 **@abgov major version = Nx major version − 10**
 
-| Nx version | @abgov packages |
-|---|---|
-| @nrwl/cli@11 | @abgov/nx-oc@1 |
-| @nrwl/cli@12 | @abgov/nx-oc@2 |
-| @nrwl/cli@15 | @abgov/nx-oc@5 |
+| Nx version    | @abgov packages          |
+| ------------- | ------------------------ |
+| @nrwl/cli@11  | @abgov/nx-oc@1           |
+| @nrwl/cli@12  | @abgov/nx-oc@2           |
+| @nrwl/cli@15  | @abgov/nx-oc@5           |
 | @nx/devkit@22 | @abgov/nx-oc@12 (`main`) |
 | @nx/devkit@23 | @abgov/nx-oc@13 (`beta`) |
 
@@ -232,13 +232,17 @@ Semantic-release sets the real published version at CI publish time.
 ## CI Pipeline
 
 ### `pull-request.yml`
+
 Triggers on PRs to `main` and `beta`:
+
 1. `npm run affected:lint -- --base=origin/$BASE_REF`
 2. `npm run affected:test -- --base=origin/$BASE_REF`
 3. `npm run affected:build -- --base=origin/$BASE_REF`
 
 ### `release-ci.yml`
+
 Triggers on push to `main` and `beta` (uses `nrwl/nx-set-shas` to find base SHA):
+
 1. Lint, test, build (affected)
 2. `npx nx affected --target release` — semantic-release per changed package
 

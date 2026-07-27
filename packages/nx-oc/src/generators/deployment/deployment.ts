@@ -10,7 +10,10 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
 import { getGitRemoteUrl, getGitHubRepo } from '../../utils/git-utils';
-import { detectApplicationType, getBuildOutputPath } from '../../utils/app-type';
+import {
+  detectApplicationType,
+  getBuildOutputPath,
+} from '../../utils/app-type';
 import { NormalizedSchema, Schema } from './schema';
 import { getAdspConfiguration } from '../../adsp';
 
@@ -18,7 +21,7 @@ const infraManifestFile = '.openshift/environments.yml';
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const projectName = names(options.project).fileName;
 
@@ -65,7 +68,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, `${options.appType}-files`),
     `./.openshift/${options.projectName}`,
-    templateOptions
+    templateOptions,
   );
 }
 
@@ -78,7 +81,7 @@ export default async function (host: Tree, options: Schema) {
 
   if (!host.exists(infraManifestFile)) {
     console.log(
-      `Cannot generate deployment; run 'nx g @abgov/nx-oc:pipeline' first.`
+      `Cannot generate deployment; run 'nx g @abgov/nx-oc:pipeline' first.`,
     );
     return;
   }
@@ -87,7 +90,7 @@ export default async function (host: Tree, options: Schema) {
   if (!normalizedOptions.appType) {
     throw new Error(
       `Could not detect the application type for "${normalizedOptions.projectName}" from its build target. ` +
-        `Pass --appType=node|frontend|dotnet to set it explicitly.`
+        `Pass --appType=node|frontend|dotnet to set it explicitly.`,
     );
   }
 

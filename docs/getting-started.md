@@ -30,12 +30,12 @@ All projects must exist before running the pipeline generator:
 
 `OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` are set automatically when the pipeline generator runs with `Apply the pipeline to OpenShift? Yes` (step 4). The following are set or needed manually:
 
-| Secret | How set | Notes |
-|--------|---------|-------|
-| `OPENSHIFT_SERVER` | Auto (step 4) | API URL derived from current `oc` context |
-| `OPENSHIFT_TOKEN` | Auto (step 4) | Token for the `github-actions` SA |
-| `REDHAT_IO_USERNAME` | Manual | Only needed for UBI images from `registry.redhat.io` |
-| `REDHAT_IO_PASSWORD` | Manual | Paired with `REDHAT_IO_USERNAME` |
+| Secret               | How set       | Notes                                                |
+| -------------------- | ------------- | ---------------------------------------------------- |
+| `OPENSHIFT_SERVER`   | Auto (step 4) | API URL derived from current `oc` context            |
+| `OPENSHIFT_TOKEN`    | Auto (step 4) | Token for the `github-actions` SA                    |
+| `REDHAT_IO_USERNAME` | Manual        | Only needed for UBI images from `registry.redhat.io` |
+| `REDHAT_IO_PASSWORD` | Manual        | Paired with `REDHAT_IO_USERNAME`                     |
 
 `GITHUB_TOKEN` is provided automatically by GitHub Actions — no setup required.
 
@@ -126,6 +126,7 @@ Respond to the prompts:
 ```
 
 When `Apply` is `Yes`, the generator:
+
 - Applies OC infra manifests (ImageStream, RBAC, service account)
 - Sets `OPENSHIFT_SERVER` and `OPENSHIFT_TOKEN` as GitHub Actions secrets automatically
 - Prompts once for a GitHub classic PAT (`read:packages`), creates the GHCR pull secret in OC, and links it to the `github-actions` SA
@@ -217,11 +218,11 @@ The frontend's public Keycloak client is created during scaffolding with only `h
 
 This is a **manual, one-time step per environment**, because each environment runs against a different ADSP tenant on a different Keycloak instance:
 
-| Environment | ADSP access (Keycloak) |
-| --- | --- |
-| `dev` | `access.adsp-dev.gov.ab.ca` |
-| `test` (UAT / pre-prod) | `access-uat.alberta.ca` |
-| `prod` | `access.alberta.ca` |
+| Environment             | ADSP access (Keycloak)      |
+| ----------------------- | --------------------------- |
+| `dev`                   | `access.adsp-dev.gov.ab.ca` |
+| `test` (UAT / pre-prod) | `access-uat.alberta.ca`     |
+| `prod`                  | `access.alberta.ca`         |
 
 Since pre-production and production are separate tenants on separate Keycloak instances, the generator (which authenticates against a single tenant) cannot configure them all — you register each one after its first deploy.
 
@@ -294,6 +295,7 @@ npx nx run my-app-app:sandbox
 ```
 
 Each command:
+
 1. Creates the app's Secrets on first run (ADSP client secret, `sandbox-postgres-creds`) and the per-app database. Idempotent.
 2. Builds the image locally (`podman build --platform=linux/amd64`) and pushes it to `<registry>/<sandboxProject>-<app>:sandbox` (registry resolved from the git remote on first run, persisted to `nx.json`).
 3. Imports the image into the namespace's imagestream (`reference-policy=local`, so pods pull from the internal registry) and applies the manifest.

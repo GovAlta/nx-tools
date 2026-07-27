@@ -22,7 +22,7 @@ disturbing anything it already set up.
 Currently sets up:
 
 1. **A Husky pre-commit hook** (`.husky/pre-commit`) that runs `nx affected` lint/test/build
-   against your *staged* changes before every commit:
+   against your _staged_ changes before every commit:
 
    ```sh
    git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test,build --stdin
@@ -91,10 +91,10 @@ Currently sets up:
 
 ### Options
 
-| Option | Default | Description |
-|---|---|---|
-| `targets` | `lint,test,build` | Targets run by both the pre-commit hook and the AGENTS.md guidance's self-check command |
-| `base` | `main` | Base branch used only in the AGENTS.md guidance's self-check command (not the pre-commit hook, which always diffs against staged changes) |
+| Option    | Default           | Description                                                                                                                               |
+| --------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `targets` | `lint,test,build` | Targets run by both the pre-commit hook and the AGENTS.md guidance's self-check command                                                   |
+| `base`    | `main`            | Base branch used only in the AGENTS.md guidance's self-check command (not the pre-commit hook, which always diffs against staged changes) |
 
 ```bash
 npx nx g @abgov/nx-agent:init --targets=lint,test --base=develop
@@ -137,10 +137,10 @@ glossary" generator; `domain-term` composes it as an internal step.
 
 ### Options
 
-| Option | Default | Description |
-|---|---|---|
-| `term` | — (required, positional) | The canonical domain term, as domain experts use it |
-| `project` | workspace root | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
+| Option    | Default                  | Description                                                                                                                                            |
+| --------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `term`    | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                    |
+| `project` | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
 
 ```bash
 npx nx g @abgov/nx-agent:domain-term Case --project=domain-lib

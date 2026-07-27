@@ -20,7 +20,7 @@ frontmatter shape stays consistent. Each file:
     A single citizen-facing request being tracked from intake through resolution.
 
 - `term` — the canonical name, matching the filename.
-- `aliases` — other words that mean the *same* thing; recording them here heads off a synonym
+- `aliases` — other words that mean the _same_ thing; recording them here heads off a synonym
   drifting into use unchecked elsewhere.
 - `not_confused_with` — similar-sounding terms this one is deliberately distinct from, and why.
   Leave it empty if there's no real ambiguity to guard against.

@@ -1,4 +1,4 @@
 export interface Schema {
-  term: string
-  project?: string
+  term: string;
+  project?: string;
 }

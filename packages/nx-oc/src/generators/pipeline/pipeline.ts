@@ -1,7 +1,11 @@
 import { formatFiles, generateFiles, Tree } from '@nx/devkit';
 import * as path from 'path';
 import { pipelineEnvs as envs } from '../../pipeline-envs';
-import { deriveRegistryFromRemote, getGitHubRepo, getGitRemoteUrl } from '../../utils/git-utils';
+import {
+  deriveRegistryFromRemote,
+  getGitHubRepo,
+  getGitRemoteUrl,
+} from '../../utils/git-utils';
 import { promptForGitHubPat } from '../../utils/gh-utils';
 import applyInfraGenerator from '../apply-infra/apply-infra';
 import setupSecretsGenerator from '../setup-secrets/setup-secrets';
@@ -16,7 +20,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     throw new Error('Each environment must be a unique project.');
   } else if (ocEnvProjects.length > envs.length) {
     throw new Error(
-      `Provided projects must correspond to ${envs.join(', ')} environments.`
+      `Provided projects must correspond to ${envs.join(', ')} environments.`,
     );
   }
 
@@ -38,7 +42,9 @@ async function resolveRegistry(registry?: string): Promise<string> {
   const remoteUrl = getGitRemoteUrl()?.trim();
   const derived = deriveRegistryFromRemote(remoteUrl);
   if (derived) {
-    console.log(`\n✓ Container registry: ${derived} (derived from git remote)\n`);
+    console.log(
+      `\n✓ Container registry: ${derived} (derived from git remote)\n`,
+    );
     return derived;
   }
 
@@ -46,7 +52,8 @@ async function resolveRegistry(registry?: string): Promise<string> {
   const answer = await prompt<{ registry: string }>({
     type: 'input',
     name: 'registry',
-    message: 'What container registry should images be published to (e.g., ghcr.io/my-org)?',
+    message:
+      'What container registry should images be published to (e.g., ghcr.io/my-org)?',
   });
   return answer.registry;
 }
@@ -72,26 +79,26 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   if (options.pipelineType === 'jenkins') {
     console.warn(
       'WARNING: Jenkins pipeline support is deprecated and will be removed in the next major version. ' +
-        'Use --type actions instead.'
+        'Use --type actions instead.',
     );
     generateFiles(
       host,
       path.join(__dirname, 'jenkins'),
       `./.openshift`,
-      templateOptions
+      templateOptions,
     );
   } else if (options.pipelineType === 'actions') {
     generateFiles(
       host,
       path.join(__dirname, 'actions/openshift'),
       `./.openshift`,
-      templateOptions
+      templateOptions,
     );
     generateFiles(
       host,
       path.join(__dirname, 'actions/workflows'),
       `./.github/workflows`,
-      templateOptions
+      templateOptions,
     );
   }
 }
@@ -114,16 +121,22 @@ export default async function (host: Tree, options: Schema) {
       // falls back to its own prompt when run standalone.
       const pat = await promptForGitHubPat(
         'Enter a GitHub PAT with read:packages + repo scope\n' +
-        '  (read:packages → OpenShift image pull; repo → e2e runner registration):'
+          '  (read:packages → OpenShift image pull; repo → e2e runner registration):',
       );
-      await setupSecretsGenerator(host, { infra: normalizedOptions.ocInfraProject, pat });
-      await setupRunnerGenerator(host, { infra: normalizedOptions.ocInfraProject, pat });
+      await setupSecretsGenerator(host, {
+        infra: normalizedOptions.ocInfraProject,
+        pat,
+      });
+      await setupRunnerGenerator(host, {
+        infra: normalizedOptions.ocInfraProject,
+        pat,
+      });
     } else {
       console.log(
         '\n⚠  No git remote found — skipping GitHub secrets and e2e runner setup.\n' +
-        `   Push to GitHub first then run:\n` +
-        `   npx nx g @abgov/nx-oc:setup-secrets --infra ${normalizedOptions.ocInfraProject}\n` +
-        `   npx nx g @abgov/nx-oc:setup-runner --infra ${normalizedOptions.ocInfraProject}\n`
+          `   Push to GitHub first then run:\n` +
+          `   npx nx g @abgov/nx-oc:setup-secrets --infra ${normalizedOptions.ocInfraProject}\n` +
+          `   npx nx g @abgov/nx-oc:setup-runner --infra ${normalizedOptions.ocInfraProject}\n`,
       );
     }
   }

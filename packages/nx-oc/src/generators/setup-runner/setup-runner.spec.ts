@@ -33,7 +33,9 @@ describe('Setup Runner Generator', () => {
     ghMock.checkGhCli.mockImplementation(() => undefined);
     ghMock.setGhVariable.mockReturnValue(true);
     ghMock.promptForGitHubPat.mockResolvedValue('test-pat');
-    gitMock.getGitRemoteUrl.mockReturnValue('https://github.com/GovAlta/nx-tools.git');
+    gitMock.getGitRemoteUrl.mockReturnValue(
+      'https://github.com/GovAlta/nx-tools.git',
+    );
     gitMock.getGitHubRepo.mockReturnValue('GovAlta/nx-tools');
   });
 
@@ -42,11 +44,24 @@ describe('Setup Runner Generator', () => {
     await generator(host, options);
 
     expect(ocMock.createGenericSecret).toHaveBeenCalledWith(
-      'github-runner-pat', { pat: 'test-pat' }, 'my-infra'
+      'github-runner-pat',
+      { pat: 'test-pat' },
+      'my-infra',
     );
-    expect(ocMock.runOcCommand).toHaveBeenCalledWith('apply', [], expect.anything());
-    expect(ocMock.rolloutRestartDeployment).toHaveBeenCalledWith('github-runner-playwright', 'my-infra');
-    expect(ghMock.setGhVariable).toHaveBeenCalledWith('RUN_E2E', 'true', 'GovAlta/nx-tools');
+    expect(ocMock.runOcCommand).toHaveBeenCalledWith(
+      'apply',
+      [],
+      expect.anything(),
+    );
+    expect(ocMock.rolloutRestartDeployment).toHaveBeenCalledWith(
+      'github-runner-playwright',
+      'my-infra',
+    );
+    expect(ghMock.setGhVariable).toHaveBeenCalledWith(
+      'RUN_E2E',
+      'true',
+      'GovAlta/nx-tools',
+    );
   });
 
   it('reuses a PAT passed in by the caller without prompting', async () => {
@@ -55,7 +70,9 @@ describe('Setup Runner Generator', () => {
 
     expect(ghMock.promptForGitHubPat).not.toHaveBeenCalled();
     expect(ocMock.createGenericSecret).toHaveBeenCalledWith(
-      'github-runner-pat', { pat: 'passed-in-pat' }, 'my-infra'
+      'github-runner-pat',
+      { pat: 'passed-in-pat' },
+      'my-infra',
     );
   });
 

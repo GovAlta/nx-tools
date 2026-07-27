@@ -1,12 +1,12 @@
-import { Tree } from '@nx/devkit'
+import { Tree } from '@nx/devkit';
 
-const AGENTS_MD_PATH = 'AGENTS.md'
+const AGENTS_MD_PATH = 'AGENTS.md';
 
 function getMarkers(sectionId: string) {
   return {
     start: `<!-- nx-agent:managed:${sectionId} -->`,
     end: `<!-- /nx-agent:managed:${sectionId} -->`,
-  }
+  };
 }
 
 /**
@@ -15,28 +15,32 @@ function getMarkers(sectionId: string) {
  * deliberate exception: content that doesn't vary by stack is safe to
  * refresh on every re-run rather than freeze at first-generation wording.
  */
-export function mergeManagedSection(host: Tree, sectionId: string, content: string): void {
-  const { start, end } = getMarkers(sectionId)
-  const block = `${start}\n${content.trim()}\n${end}`
+export function mergeManagedSection(
+  host: Tree,
+  sectionId: string,
+  content: string,
+): void {
+  const { start, end } = getMarkers(sectionId);
+  const block = `${start}\n${content.trim()}\n${end}`;
 
   if (!host.exists(AGENTS_MD_PATH)) {
-    host.write(AGENTS_MD_PATH, `${block}\n`)
-    return
+    host.write(AGENTS_MD_PATH, `${block}\n`);
+    return;
   }
 
-  const existing = host.read(AGENTS_MD_PATH).toString()
-  const startIndex = existing.indexOf(start)
-  const endIndex = existing.indexOf(end)
+  const existing = host.read(AGENTS_MD_PATH).toString();
+  const startIndex = existing.indexOf(start);
+  const endIndex = existing.indexOf(end);
 
   if (startIndex !== -1 && endIndex !== -1) {
-    const before = existing.slice(0, startIndex)
-    const after = existing.slice(endIndex + end.length)
-    host.write(AGENTS_MD_PATH, `${before}${block}${after}`)
-    return
+    const before = existing.slice(0, startIndex);
+    const after = existing.slice(endIndex + end.length);
+    host.write(AGENTS_MD_PATH, `${before}${block}${after}`);
+    return;
   }
 
-  const separator = existing.endsWith('\n') ? '\n' : '\n\n'
-  host.write(AGENTS_MD_PATH, `${existing}${separator}${block}\n`)
+  const separator = existing.endsWith('\n') ? '\n' : '\n\n';
+  host.write(AGENTS_MD_PATH, `${existing}${separator}${block}\n`);
 }
 
 /**
@@ -49,20 +53,20 @@ export function mergeManagedSection(host: Tree, sectionId: string, content: stri
  */
 export function removeManagedSection(host: Tree, sectionId: string): void {
   if (!host.exists(AGENTS_MD_PATH)) {
-    return
+    return;
   }
 
-  const { start, end } = getMarkers(sectionId)
-  const existing = host.read(AGENTS_MD_PATH).toString()
-  const startIndex = existing.indexOf(start)
-  const endIndex = existing.indexOf(end)
+  const { start, end } = getMarkers(sectionId);
+  const existing = host.read(AGENTS_MD_PATH).toString();
+  const startIndex = existing.indexOf(start);
+  const endIndex = existing.indexOf(end);
 
   if (startIndex === -1 || endIndex === -1) {
-    return
+    return;
   }
 
-  const before = existing.slice(0, startIndex)
-  const after = existing.slice(endIndex + end.length)
-  const combined = `${before}${after}`.replace(/\n{3,}/g, '\n\n')
-  host.write(AGENTS_MD_PATH, combined)
+  const before = existing.slice(0, startIndex);
+  const after = existing.slice(endIndex + end.length);
+  const combined = `${before}${after}`.replace(/\n{3,}/g, '\n\n');
+  host.write(AGENTS_MD_PATH, combined);
 }

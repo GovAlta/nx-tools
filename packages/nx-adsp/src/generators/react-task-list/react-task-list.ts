@@ -1,8 +1,4 @@
-import {
-  environments,
-  getServiceUrls,
-  ensureAdspToken,
-} from '@abgov/nx-oc';
+import { environments, getServiceUrls, ensureAdspToken } from '@abgov/nx-oc';
 import {
   Tree,
   formatFiles,
@@ -18,19 +14,19 @@ import { QueueDefinition } from '../../utils/task';
 
 async function getQueueDefinition(
   configurationServiceUrl: string,
-  token: string
+  token: string,
 ): Promise<{ queueDefinition: QueueDefinition; updateStreamId: string }> {
   const { data } = await axios.get<{
     configuration: { queues: Record<string, QueueDefinition> };
   }>(
     new URL(
       'configuration/v2/configuration/platform/task-service/active',
-      configurationServiceUrl
+      configurationServiceUrl,
     ).href,
     {
       headers: { Authorization: `Bearer ${token}` },
       params: { orLatest: true },
-    }
+    },
   );
 
   const queues = Object.values(data?.configuration?.queues || {});
@@ -47,7 +43,7 @@ async function getQueueDefinition(
   });
 
   const queueDefinition = queues.find(
-    (queue) => `${queue.namespace}:${queue.name}` === definition
+    (queue) => `${queue.namespace}:${queue.name}` === definition,
   );
 
   const { addStream } = await prompt<{ addStream: boolean }>({
@@ -63,7 +59,7 @@ async function getQueueDefinition(
     const result = await axios.patch(
       new URL(
         'configuration/v2/configuration/platform/push-service',
-        configurationServiceUrl
+        configurationServiceUrl,
       ).href,
       {
         operation: 'UPDATE',
@@ -101,7 +97,7 @@ async function getQueueDefinition(
           },
         },
       },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: `Bearer ${token}` } },
     );
 
     if (result.status === 200) {
@@ -114,7 +110,7 @@ async function getQueueDefinition(
 
 async function normalizeOptions(
   host: Tree,
-  options: Schema
+  options: Schema,
 ): Promise<NormalizedSchema> {
   const { env, accessToken } = options;
 
@@ -138,7 +134,7 @@ async function normalizeOptions(
 
   const { queueDefinition, updateStreamId } = await getQueueDefinition(
     configurationServiceUrl,
-    tenantToken
+    tenantToken,
   );
 
   return {
@@ -163,7 +159,7 @@ async function addFiles(host: Tree, options: NormalizedSchema) {
     host,
     path.join(__dirname, 'files'),
     `${options.projectRoot}/src/app`,
-    templateOptions
+    templateOptions,
   );
 }
 

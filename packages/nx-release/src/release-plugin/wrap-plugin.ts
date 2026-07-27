@@ -20,7 +20,7 @@ export const wrapPlugin =
 
     if (!project) {
       logger.log(
-        "Skipping filtering of commits; no 'project' in configuration..."
+        "Skipping filtering of commits; no 'project' in configuration...",
       );
     } else {
       logger.log(`Filtering commits to those affecting ${project}...`);
@@ -36,14 +36,14 @@ export const wrapPlugin =
         project,
         paths,
         from,
-        to
+        to,
       );
 
       filteredCommits = commits.filter((commit) => {
         const match = hashes.includes(commit.commit.long);
         if (match) {
           logger.log(
-            `Including commit ${commit.commit.short}: ${commit.message}`
+            `Including commit ${commit.commit.short}: ${commit.message}`,
           );
         }
         return match;
