@@ -38,11 +38,13 @@ describe('addJestCoverageConfig', () => {
 
     expect(out).toContain("coverageDirectory: 'test-output/jest/coverage',");
     expect(out).toContain('collectCoverage: true,');
+    expect(out).toContain("coverageReporters: ['html', 'text'],");
     expect(out).toContain('lines: 60,');
     expect(out).not.toContain(',,');
     // The result must be a valid object literal.
     const cfg = evalConfigObject(out);
     expect(cfg.collectCoverage).toBe(true);
+    expect(cfg.coverageReporters).toEqual(['html', 'text']);
     expect(
       (cfg.coverageThreshold as { global: { lines: number } }).global.lines,
     ).toBe(60);

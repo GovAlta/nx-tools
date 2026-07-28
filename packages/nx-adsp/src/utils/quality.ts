@@ -59,9 +59,19 @@ export default [
 }
 
 /**
- * Adds collectCoverage and a 60% line coverage threshold to the project's
- * jest.config.cts. The threshold is inactive until the first test file is
- * added (passWithNoTests exits before coverage is checked).
+ * Adds collectCoverage, a 60% line coverage threshold, and terminal-visible
+ * coverage reporters to the project's jest.config.cts. The threshold is
+ * inactive until the first test file is added (passWithNoTests exits before
+ * coverage is checked).
+ *
+ * @nx/jest's shared preset sets `coverageReporters: ['html']` — a report
+ * written to disk, with nothing printed to the terminal even when coverage
+ * runs. That's a real gap for a coding agent, whose main feedback loop *is*
+ * the terminal: a threshold failure alone only says the aggregate number
+ * dropped, not which files or lines are under it. `text` is set directly in
+ * this project's own jest.config.cts (overriding the preset's list for this
+ * project only, without touching the shared preset every other project
+ * inherits) so every `nx test` run prints the full per-file breakdown.
  */
 export function addJestCoverageConfig(host: Tree, projectRoot: string): void {
   const jestPath = `${projectRoot}/jest.config.cts`;
@@ -74,7 +84,7 @@ export function addJestCoverageConfig(host: Tree, projectRoot: string): void {
   // properties after it verbatim would produce an invalid object literal.
   const modified = existing.replace(
     /([ \t]*coverageDirectory:[^\n]*?),?\n/,
-    `$1,\n  collectCoverage: true,\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`,
+    `$1,\n  collectCoverage: true,\n  coverageReporters: ['html', 'text'],\n  coverageThreshold: {\n    global: {\n      lines: 60,\n    },\n  },\n`,
   );
   if (modified !== existing) {
     host.write(jestPath, modified);
