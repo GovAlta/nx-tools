@@ -111,6 +111,39 @@ describe('extractFrontmatterAncestorRefs', () => {
   it('returns an empty array when there is no frontmatter at all', () => {
     expect(extractFrontmatterAncestorRefs('just some text')).toEqual([]);
   });
+
+  it('reads a multi-line flow array — the shape Prettier wraps a long inline array into', () => {
+    const content = [
+      '---',
+      'name: Collision Report Lifecycle',
+      'project-docs-ancestors:',
+      '  [',
+      '    bounded-contexts:collision-reporting,',
+      '    domain-terms:collision-report,',
+      '    domain-terms:report-status,',
+      '    requirements:some-existing-requirement,',
+      '  ]',
+      '---',
+    ].join('\n');
+    expect(extractFrontmatterAncestorRefs(content)).toEqual([
+      'bounded-contexts:collision-reporting',
+      'domain-terms:collision-report',
+      'domain-terms:report-status',
+      'requirements:some-existing-requirement',
+    ]);
+  });
+
+  it('returns an empty array rather than throwing on malformed YAML', () => {
+    const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
+    expect(extractFrontmatterAncestorRefs(content)).toEqual([]);
+  });
+
+  it('returns an empty array when the key is present but not a list', () => {
+    const content = ['---', 'project-docs-ancestors: not-a-list', '---'].join(
+      '\n',
+    );
+    expect(extractFrontmatterAncestorRefs(content)).toEqual([]);
+  });
 });
 
 describe('extractCommentAncestorRefs', () => {

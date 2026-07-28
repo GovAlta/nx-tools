@@ -1,4 +1,5 @@
 import { Tree, getProjects } from '@nx/devkit';
+import * as yaml from 'yaml';
 import { ArtifactSchema } from './artifact-schema';
 
 // project-docs-ancestors convention: <type>[:<id>][#fragment], optionally
@@ -46,38 +47,33 @@ export function refKey(
 
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
+// Real YAML parsing, not hand-rolled per-shape regexes — frontmatter is YAML,
+// and `project-docs-ancestors` is a normal YAML sequence that can legally be
+// written as an inline flow array (`[a, b]`), a block list (`- a\n  - b`), or
+// (what Prettier reformats an inline array into once it's long enough to wrap)
+// a multi-line flow array. A regex per shape silently returned [] — no error,
+// no log — for whichever shape it didn't special-case; a real parser handles
+// all of them, and anything YAML legally allows in the future, uniformly.
 export function extractFrontmatterAncestorRefs(content: string): string[] {
   const block = FRONTMATTER_BLOCK.exec(content);
   if (!block) {
     return [];
   }
-  const frontmatter = block[1];
 
-  const inline = /^project-docs-ancestors:\s*\[(.*)\]\s*$/m.exec(frontmatter);
-  if (inline) {
-    return inline[1]
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  let frontmatter: unknown;
+  try {
+    frontmatter = yaml.parse(block[1]);
+  } catch {
+    return [];
   }
 
-  const lines = frontmatter.split('\n');
-  const headerIndex = lines.findIndex((line) =>
-    /^project-docs-ancestors:\s*$/.test(line),
-  );
-  if (headerIndex !== -1) {
-    const items: string[] = [];
-    for (let i = headerIndex + 1; i < lines.length; i++) {
-      const item = /^\s*-\s*(.+)$/.exec(lines[i]);
-      if (!item) {
-        break; // list ends at the first non-"- " line (next key, or blank)
-      }
-      items.push(item[1].trim());
-    }
-    return items;
+  const refs = (frontmatter as Record<string, unknown> | null)?.[
+    'project-docs-ancestors'
+  ];
+  if (!Array.isArray(refs)) {
+    return [];
   }
-
-  return [];
+  return refs.filter((ref): ref is string => typeof ref === 'string');
 }
 
 export function extractCommentAncestorRefs(content: string): string[] {
