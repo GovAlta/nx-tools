@@ -99,6 +99,31 @@ describe('Express Service Generator', () => {
     expect(agents).toContain('search_sdk_reference');
   }, 60000);
 
+  it('scaffolds a Jest e2e project with the port default fixed to match environment.ts', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    const e2eRoot = 'apps/test-e2e';
+    expect(host.exists(`${e2eRoot}/jest.config.cts`)).toBeTruthy();
+
+    // @nx/node:e2e-project's own template hardcodes a fallback port of 3000;
+    // nx-adsp's own environment.ts.__tmpl__ defaults PORT to 3333. Which of
+    // @nx/node's two jest.config.cts shapes (ts-jest vs. @swc/jest — see
+    // fixExpressServiceE2eProject's own tests for that variance) this
+    // workspace produces isn't deterministic here, but the port fix applies
+    // to both identically.
+    for (const file of ['global-setup.ts', 'global-teardown.ts']) {
+      const content = host.read(`${e2eRoot}/src/support/${file}`).toString();
+      expect(content).not.toContain(': 3000');
+      expect(content).toContain(': 3333');
+    }
+    const testSetup = host
+      .read(`${e2eRoot}/src/support/test-setup.ts`)
+      .toString();
+    expect(testSetup).not.toContain("?? '3000'");
+    expect(testSetup).toContain("?? '3333'");
+  }, 60000);
+
   it('merges .mcp.json without clobbering other servers or a customized entry', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     writeJson(host, '.mcp.json', {
