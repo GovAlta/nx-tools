@@ -285,4 +285,33 @@ describe('Deployment Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['apply-envs']).toBeFalsy();
   });
+
+  it('does nothing, without throwing, when pipeline has not been run yet', async () => {
+    // deploymentGenerator is composed, unconditionally, into the end of every
+    // nx-adsp app/service scaffolder (express-service, react-app, ...). A
+    // fresh workspace scaffolding its first app has almost certainly not run
+    // `pipeline` yet — this must resolve cleanly rather than throw, or
+    // scaffolding the app itself would fail for an unrelated,
+    // deployment-only reason.
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
+      },
+    });
+
+    await expect(
+      generator(host, { ...options, appType: 'node' }),
+    ).resolves.toBeUndefined();
+
+    expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.targets['apply-envs']).toBeFalsy();
+  });
 });
