@@ -28,9 +28,11 @@ cross-cutting decision, or a workspace where domain code hasn't been organized i
 not as a default just because something is widely used.
 
 **Expected ancestors.** An artifact-producing generator can declare, in
-`project-docs/artifact-schema.json`, what ancestor type its own kind normally expects — e.g. a domain
-term expecting a bounded context — by writing its own entry there on first use
-(`{ "<type>": { "expectedAncestorTypes": ["<type>", ...] } }`). `project-docs-lineage` reads this file
-generically, with no knowledge of any specific type baked in, and reports — never fails, since this
-is a convention nudge rather than a hard rule — an artifact of a scoped type with no matching
-ancestor as "unscoped."
+`project-docs/artifact-schema.json`, what ancestor type(s) its own kind normally expects — e.g. a
+domain term expecting a bounded context — by writing its own entry there on first use
+(`{ "<type>": { "expectedAncestorTypes": ["<type>", ...] } }`). That list is all-of, not any-of: a
+domain model expecting both a bounded context and a domain term is still missing part of its
+vocabulary with only one of the two. `project-docs-lineage` reads this file generically, with no
+knowledge of any specific type baked in, and reports — never fails, since this is a convention nudge
+rather than a hard rule — an artifact of a scoped type missing one of its expected ancestors as
+"unscoped."
