@@ -1,4 +1,5 @@
 import { Tree } from '@nx/devkit';
+import { readArtifactSchema } from '../../utils/artifact-schema';
 import { ensureGitignoreEntries } from '../../utils/gitignore';
 import {
   buildIndex,
@@ -17,11 +18,18 @@ export default async function (host: Tree) {
 
   const registry = buildRegistry(host);
   const index = buildIndex(host);
-  const violations = computeViolations(registry, index);
+  const artifactSchema = readArtifactSchema(host);
+  const violations = computeViolations(registry, index, artifactSchema);
 
   for (const orphan of violations.orphans) {
     // eslint-disable-next-line no-console
     console.log(`[nx-agent] orphan (nothing derives from it yet): ${orphan}`);
+  }
+  for (const unscoped of violations.unscoped) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[nx-agent] unscoped (missing an expected ancestor type): ${unscoped}`,
+    );
   }
   for (const broken of violations.brokenRefs) {
     // eslint-disable-next-line no-console

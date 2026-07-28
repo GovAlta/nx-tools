@@ -1,4 +1,5 @@
 import { Tree, getProjects } from '@nx/devkit';
+import { ArtifactSchema } from './artifact-schema';
 
 // project-docs-ancestors convention: <type>[:<id>][#fragment], optionally
 // qualified with a project name (<project>/<type>...). `type` is the literal
@@ -286,11 +287,17 @@ export function buildIndex(host: Tree): Index {
 export interface Violations {
   brokenRefs: { ref: string; referencedFrom: string }[];
   orphans: string[];
+  unscoped: string[];
 }
 
+// `artifactSchema` is plain data the workspace owns (see utils/artifact-schema.ts)
+// mapping an artifact `type` to the ancestor types it's expected to have — this
+// function never mentions a concrete type name, so a new artifact kind gets the
+// same soft check for free the moment its own generator registers an entry.
 export function computeViolations(
   registry: Registry,
   index: Index,
+  artifactSchema: ArtifactSchema = {},
 ): Violations {
   const brokenRefs: Violations['brokenRefs'] = [];
   for (const [key, entries] of index) {
@@ -303,7 +310,23 @@ export function computeViolations(
 
   const orphans = [...registry.keys()].filter((key) => !index.has(key));
 
-  return { brokenRefs, orphans };
+  const unscoped: string[] = [];
+  for (const [key, entry] of registry) {
+    const parsedKey = parseAncestorRef(key);
+    const expected = parsedKey && artifactSchema[parsedKey.type]?.expectedAncestorTypes;
+    if (!expected || expected.length === 0) {
+      continue;
+    }
+    const ancestorTypes = entry.ancestorRefs
+      .map((raw) => parseAncestorRef(raw)?.type)
+      .filter((type): type is string => !!type);
+    const satisfied = expected.some((type) => ancestorTypes.includes(type));
+    if (!satisfied) {
+      unscoped.push(key);
+    }
+  }
+
+  return { brokenRefs, orphans, unscoped };
 }
 
 // The two retrieval directions, deliberately not symmetric in cost. Forward

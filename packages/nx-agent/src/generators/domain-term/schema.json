@@ -13,7 +13,7 @@
     },
     "project": {
       "type": "string",
-      "description": "Scope this term to a specific project's project-docs/domain-terms/ instead of the workspace root — use when a bounded context spans a domain library and its consuming apps."
+      "description": "Scope this term to a specific project's project-docs/domain-terms/ instead of the workspace root — prefer this whenever the term already has a natural code home (most often a domain library other projects depend on); only use the workspace root when it genuinely doesn't have one."
     },
     "projectDocsAncestors": {
       "type": "array",

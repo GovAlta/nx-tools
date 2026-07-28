@@ -12,7 +12,7 @@ import { ensureReadme } from '../../utils/readme';
 import { resolveRefFromPath } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
-const DOMAIN_TERMS_SUBDIR = 'project-docs/domain-terms';
+const DOMAIN_MODELS_SUBDIR = 'project-docs/domain-models';
 const README_TEMPLATE_PATH = join(__dirname, 'README.template.md');
 
 function resolveTargetRoot(host: Tree, project?: string): string {
@@ -20,15 +20,15 @@ function resolveTargetRoot(host: Tree, project?: string): string {
 }
 
 // The container has no standalone value on its own (its README only exists to
-// explain the convention for the term about to be added), so this is an
-// internal step composed by domain-term rather than its own generator.
+// explain the convention for the model about to be added), so this is an
+// internal step composed by domain-model rather than its own generator.
 function ensureContainerReadme(
   host: Tree,
   containerDir: string,
   scoped: boolean,
 ): void {
   const sharedNote = scoped
-    ? ' This is shared by every project that depends on this library — keep the vocabulary consistent across the service and its frontends rather than letting each drift toward its own terms.'
+    ? ' This is shared by every project that depends on this library — keep the design consistent across the service and its consumers rather than letting each drift toward its own interpretation.'
     : '';
   const content = readFileSync(README_TEMPLATE_PATH, 'utf-8')
     .split('{{SHARED_CONTEXT_NOTE}}')
@@ -38,19 +38,16 @@ function ensureContainerReadme(
 
 export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project);
-  const containerDir = joinPathFragments(targetRoot, DOMAIN_TERMS_SUBDIR);
-  const slug = names(options.term).fileName;
-  const termPath = joinPathFragments(containerDir, `${slug}.md`);
+  const containerDir = joinPathFragments(targetRoot, DOMAIN_MODELS_SUBDIR);
+  const slug = names(options.name).fileName;
+  const modelPath = joinPathFragments(containerDir, `${slug}.md`);
 
   // A repeat/typo'd invocation should fail loudly rather than silently
-  // clobbering or duplicating a term — unlike the "never overwrite, skip
-  // silently" posture used for one-shot config like .secretlintrc.json,
-  // re-adding an existing term is almost always a mistake, not an
-  // idempotent re-run. Checked before ensureContainerReadme so a failing
-  // run has no side effects.
-  if (host.exists(termPath)) {
+  // clobbering or duplicating a model — same posture as domain-term. Checked
+  // before any write so a failing run has no side effects.
+  if (host.exists(modelPath)) {
     throw new Error(
-      `[nx-agent] ${termPath} already exists — edit it directly rather than regenerating it.`,
+      `[nx-agent] ${modelPath} already exists — edit it directly rather than regenerating it.`,
     );
   }
 
@@ -62,20 +59,21 @@ export default async function (host: Tree, options: Schema) {
   );
 
   ensureContainerReadme(host, containerDir, !!options.project);
-  ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
+  ensureArtifactSchemaEntry(host, 'domain-models', [
+    'bounded-contexts',
+    'domain-terms',
+  ]);
 
   const content = [
     '---',
-    `term: ${options.term}`,
-    'aliases: []',
-    'not_confused_with: []',
+    `name: ${options.name}`,
     `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,
     '---',
     '',
-    "<!-- Definition: describe this term in the domain's own language. -->",
+    '<!-- Design: describe the aggregates, entities, value objects, and invariants here. -->',
     '',
   ].join('\n');
-  host.write(termPath, content);
+  host.write(modelPath, content);
 
   await formatFiles(host);
 }
