@@ -294,6 +294,10 @@ export interface Violations {
 // mapping an artifact `type` to the ancestor types it's expected to have — this
 // function never mentions a concrete type name, so a new artifact kind gets the
 // same soft check for free the moment its own generator registers an entry.
+// `expectedAncestorTypes` is an all-of list, not any-of: e.g. domain-models
+// expects both a bounded-contexts and a domain-terms ancestor, not either —
+// a model with only the former is still missing the vocabulary it should be
+// built from, so it's still worth flagging.
 export function computeViolations(
   registry: Registry,
   index: Index,
@@ -313,14 +317,15 @@ export function computeViolations(
   const unscoped: string[] = [];
   for (const [key, entry] of registry) {
     const parsedKey = parseAncestorRef(key);
-    const expected = parsedKey && artifactSchema[parsedKey.type]?.expectedAncestorTypes;
+    const expected =
+      parsedKey && artifactSchema[parsedKey.type]?.expectedAncestorTypes;
     if (!expected || expected.length === 0) {
       continue;
     }
     const ancestorTypes = entry.ancestorRefs
       .map((raw) => parseAncestorRef(raw)?.type)
       .filter((type): type is string => !!type);
-    const satisfied = expected.some((type) => ancestorTypes.includes(type));
+    const satisfied = expected.every((type) => ancestorTypes.includes(type));
     if (!satisfied) {
       unscoped.push(key);
     }

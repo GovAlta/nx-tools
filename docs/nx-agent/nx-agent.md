@@ -297,9 +297,12 @@ own entry here on first use, declaring what ancestor type its kind normally expe
 ```
 
 `project-docs-lineage` reads this generically — it has no knowledge of any specific type baked in, so
-a hand-added entry for a custom artifact kind gets the same check for free. An artifact whose type has
-an entry here but no ancestor of an expected type is reported (not thrown, since this is a convention
-nudge rather than a hard rule) as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
+a hand-added entry for a custom artifact kind gets the same check for free. `expectedAncestorTypes` is
+an all-of list, not any-of: `domain-models` above requires an ancestor of _both_ `bounded-contexts`
+and `domain-terms`, not either — a model with only one is still missing part of the vocabulary it
+should be built from. An artifact whose type has an entry here but is missing an ancestor of one of
+the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
+as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
 
 ### Programmatic access
 

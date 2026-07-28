@@ -289,9 +289,13 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'term: A', '---'].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
-      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
-    });
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+      },
+    );
 
     expect(violations.unscoped).toEqual(['domain-terms:a']);
   });
@@ -311,9 +315,13 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
-      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
-    });
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+      },
+    );
 
     expect(violations.unscoped).toEqual([]);
   });
@@ -328,9 +336,73 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'name: B', '---'].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
-      'bounded-contexts': { expectedAncestorTypes: [] },
-    });
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'bounded-contexts': { expectedAncestorTypes: [] },
+      },
+    );
+
+    expect(violations.unscoped).toEqual([]);
+  });
+
+  it('flags an artifact with only some of several expected ancestor types (all-of, not any-of)', () => {
+    host.write(
+      'project-docs/bounded-contexts/b.md',
+      ['---', 'name: B', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [bounded-contexts:b]',
+        '---',
+      ].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'domain-models': {
+          expectedAncestorTypes: ['bounded-contexts', 'domain-terms'],
+        },
+      },
+    );
+
+    expect(violations.unscoped).toEqual(['domain-models:m']);
+  });
+
+  it('does not flag an artifact that has all of several expected ancestor types', () => {
+    host.write(
+      'project-docs/bounded-contexts/b.md',
+      ['---', 'name: B', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-terms/a.md',
+      ['---', 'term: A', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [bounded-contexts:b, domain-terms:a]',
+        '---',
+      ].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'domain-models': {
+          expectedAncestorTypes: ['bounded-contexts', 'domain-terms'],
+        },
+      },
+    );
 
     expect(violations.unscoped).toEqual([]);
   });
@@ -415,7 +487,12 @@ describe('getAncestors', () => {
     );
 
     expect(getAncestors(host, 'apps/test/src/main.ts')).toEqual([
-      { project: undefined, type: 'domain-terms', id: 'b', fragment: undefined },
+      {
+        project: undefined,
+        type: 'domain-terms',
+        id: 'b',
+        fragment: undefined,
+      },
     ]);
   });
 
@@ -429,7 +506,10 @@ describe('getAncestors', () => {
         '---',
       ].join('\n'),
     );
-    host.write('project-docs/bounded-contexts/c.md', ['---', 'name: C', '---'].join('\n'));
+    host.write(
+      'project-docs/bounded-contexts/c.md',
+      ['---', 'name: C', '---'].join('\n'),
+    );
     host.write(
       'apps/test/src/main.ts',
       '// project-docs-ancestors: domain-terms:b\nexport {};',
@@ -452,7 +532,12 @@ describe('getAncestors', () => {
     );
     host.write(
       'project-docs/bounded-contexts/c.md',
-      ['---', 'name: C', 'project-docs-ancestors: [domain-terms:b]', '---'].join('\n'),
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
     );
     host.write(
       'apps/test/src/main.ts',
@@ -460,9 +545,7 @@ describe('getAncestors', () => {
     );
 
     expect(
-      getAncestors(host, 'apps/test/src/main.ts', Infinity)
-        .map(refKey)
-        .sort(),
+      getAncestors(host, 'apps/test/src/main.ts', Infinity).map(refKey).sort(),
     ).toEqual(['bounded-contexts:c', 'domain-terms:b']);
   });
 });
@@ -499,10 +582,18 @@ describe('getDescendants', () => {
   });
 
   it('defaults to direct referrers only (depth 1)', () => {
-    host.write('project-docs/domain-terms/b.md', ['---', 'term: B', '---'].join('\n'));
+    host.write(
+      'project-docs/domain-terms/b.md',
+      ['---', 'term: B', '---'].join('\n'),
+    );
     host.write(
       'project-docs/bounded-contexts/c.md',
-      ['---', 'name: C', 'project-docs-ancestors: [domain-terms:b]', '---'].join('\n'),
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
     );
     host.write(
       'apps/test/src/main.ts',
@@ -515,10 +606,18 @@ describe('getDescendants', () => {
   });
 
   it('walks multiple hops when depth > 1, following referrers that are themselves registered artifacts', () => {
-    host.write('project-docs/domain-terms/b.md', ['---', 'term: B', '---'].join('\n'));
+    host.write(
+      'project-docs/domain-terms/b.md',
+      ['---', 'term: B', '---'].join('\n'),
+    );
     host.write(
       'project-docs/bounded-contexts/c.md',
-      ['---', 'name: C', 'project-docs-ancestors: [domain-terms:b]', '---'].join('\n'),
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
     );
     host.write(
       'apps/test/src/main.ts',
@@ -535,11 +634,21 @@ describe('getDescendants', () => {
   it('terminates on a cycle when depth is Infinity, without duplicates', () => {
     host.write(
       'project-docs/domain-terms/b.md',
-      ['---', 'term: B', 'project-docs-ancestors: [bounded-contexts:c]', '---'].join('\n'),
+      [
+        '---',
+        'term: B',
+        'project-docs-ancestors: [bounded-contexts:c]',
+        '---',
+      ].join('\n'),
     );
     host.write(
       'project-docs/bounded-contexts/c.md',
-      ['---', 'name: C', 'project-docs-ancestors: [domain-terms:b]', '---'].join('\n'),
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
     );
 
     expect(
