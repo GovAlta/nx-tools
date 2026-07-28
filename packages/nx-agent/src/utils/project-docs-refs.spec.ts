@@ -271,6 +271,69 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
 
     expect(registry.size).toBe(0);
   });
+
+  it('defaults to no unscoped violations when no schema is passed', () => {
+    host.write(
+      'project-docs/domain-terms/a.md',
+      ['---', 'term: A', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+
+    expect(violations.unscoped).toEqual([]);
+  });
+
+  it('flags an artifact missing an expected ancestor type as unscoped', () => {
+    host.write(
+      'project-docs/domain-terms/a.md',
+      ['---', 'term: A', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+    });
+
+    expect(violations.unscoped).toEqual(['domain-terms:a']);
+  });
+
+  it('does not flag an artifact that has one of the expected ancestor types', () => {
+    host.write(
+      'project-docs/bounded-contexts/b.md',
+      ['---', 'name: B', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-terms/a.md',
+      [
+        '---',
+        'term: A',
+        'project-docs-ancestors: [bounded-contexts:b]',
+        '---',
+      ].join('\n'),
+    );
+
+    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+    });
+
+    expect(violations.unscoped).toEqual([]);
+  });
+
+  it('does not check a type with no schema entry, or one with an empty expectation', () => {
+    host.write(
+      'project-docs/domain-terms/a.md',
+      ['---', 'term: A', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/bounded-contexts/b.md',
+      ['---', 'name: B', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(buildRegistry(host), buildIndex(host), {
+      'bounded-contexts': { expectedAncestorTypes: [] },
+    });
+
+    expect(violations.unscoped).toEqual([]);
+  });
 });
 
 describe('getAncestors', () => {

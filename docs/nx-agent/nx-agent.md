@@ -165,11 +165,11 @@ glossary" generator; `domain-term` composes it as an internal step.
 
 ### `domain-term` options
 
-| Option            | Default                  | Description                                                                                                                                            |
-| ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `term`            | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                    |
-| `project`         | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — use when a bounded context spans a domain library and its consuming apps |
-| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this term derives from — repeatable; resolved into `project-docs-ancestors` (see below)                         |
+| Option                 | Default                  | Description                                                                                                                                                                                                |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `term`                 | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                                                                        |
+| `project`              | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — prefer this whenever the term already has a natural code home (usually a domain library), not just workspace root by default |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this term derives from — repeatable; resolved into `project-docs-ancestors` (see below)                                                                        |
 
 ```bash
 npx nx g @abgov/nx-agent:domain-term Case --project=domain-lib
@@ -179,6 +179,78 @@ npx nx g @abgov/nx-agent:domain-term "Collision Report" --project-docs-ancestors
 Re-adding a term that already exists throws rather than silently overwriting or duplicating it —
 edit the file directly instead. A `--project-docs-ancestors` path that doesn't resolve to an existing
 artifact throws the same way, before anything is written.
+
+---
+
+## `bounded-context`
+
+A domain term's meaning only holds within a bounded context — the boundary past which the same word
+can mean something else entirely. Adds one:
+
+```bash
+npx nx g @abgov/nx-agent:bounded-context "Collision Reporting"
+```
+
+Creates `project-docs/bounded-contexts/collision-reporting.md`:
+
+```markdown
+---
+name: Collision Reporting
+aliases: []
+not_confused_with: []
+---
+
+<!-- Definition: describe what's inside this boundary, and what's explicitly outside it. -->
+```
+
+### `bounded-context` options
+
+| Option    | Default                  | Description                                                                                                                                                                                                          |
+| --------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`    | — (required, positional) | The canonical name of the bounded context                                                                                                                                                                            |
+| `project` | workspace root           | Scope the context to a specific project's `project-docs/bounded-contexts/` instead — prefer this whenever the context already has a natural code home (usually a domain library), not just workspace root by default |
+
+```bash
+npx nx g @abgov/nx-agent:bounded-context "Collision Reporting" --project=domain-lib
+```
+
+Re-adding a context that already exists throws rather than silently overwriting or duplicating it.
+
+---
+
+## `domain-model`
+
+The actual design — aggregates, entities, invariants — built from a bounded context and the domain
+terms it's composed from:
+
+```bash
+npx nx g @abgov/nx-agent:domain-model "Collision Report Lifecycle" \
+  --project-docs-ancestors=project-docs/bounded-contexts/collision-reporting.md \
+  --project-docs-ancestors=project-docs/domain-terms/collision-report.md
+```
+
+Creates `project-docs/domain-models/collision-report-lifecycle.md`:
+
+```markdown
+---
+name: Collision Report Lifecycle
+project-docs-ancestors: [bounded-contexts:collision-reporting, domain-terms:collision-report]
+---
+
+<!-- Design: describe the aggregates, entities, value objects, and invariants here. -->
+```
+
+### `domain-model` options
+
+| Option                 | Default                  | Description                                                                                                                                                                                                   |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                 | — (required, positional) | The canonical name of the domain model                                                                                                                                                                        |
+| `project`              | workspace root           | Scope the model to a specific project's `project-docs/domain-models/` instead — prefer this whenever the model already has a natural code home (usually a domain library), not just workspace root by default |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this model derives from — repeatable; normally the bounded context it belongs to plus the domain terms it's composed from                                         |
+
+Re-adding a model that already exists throws rather than silently overwriting or duplicating it. A
+`--project-docs-ancestors` path that doesn't resolve to an existing artifact throws the same way,
+before anything is written.
 
 ---
 
@@ -209,6 +281,25 @@ project, so a reference's meaning never depends on where it's found.
 
 Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself (or `--dry-run`
 it in your own CI) after adding or changing a reference.
+
+### `project-docs/artifact-schema.json`
+
+An artifact-producing generator (`domain-term`, `bounded-context`, `domain-model`) self-registers its
+own entry here on first use, declaring what ancestor type its kind normally expects — e.g.
+`domain-terms` expects a `bounded-contexts` ancestor:
+
+```json
+{
+  "bounded-contexts": { "expectedAncestorTypes": [] },
+  "domain-terms": { "expectedAncestorTypes": ["bounded-contexts"] },
+  "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] }
+}
+```
+
+`project-docs-lineage` reads this generically — it has no knowledge of any specific type baked in, so
+a hand-added entry for a custom artifact kind gets the same check for free. An artifact whose type has
+an entry here but no ancestor of an expected type is reported (not thrown, since this is a convention
+nudge rather than a hard rule) as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
 
 ### Programmatic access
 

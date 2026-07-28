@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentBoundedContext",
+  "title": "Add a bounded context",
+  "description": "Creates one file for a bounded context under project-docs/bounded-contexts/, with structured frontmatter (aliases, disambiguation) and a free-text boundary description. Bootstraps the bounded-contexts/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The canonical name of the bounded context (e.g. \"Collision Reporting\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What is the bounded context called?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this bounded context to a specific project's project-docs/bounded-contexts/ instead of the workspace root — prefer this whenever the context already has a natural code home (most often a domain library other projects depend on); only use the workspace root when it genuinely doesn't have one."
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

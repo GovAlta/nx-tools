@@ -13,6 +13,16 @@
       "schema": "./src/generators/domain-term/schema.json",
       "description": "Adds one domain term under project-docs/domain-terms/, with structured frontmatter and a free-text definition."
     },
+    "bounded-context": {
+      "factory": "./src/generators/bounded-context/bounded-context",
+      "schema": "./src/generators/bounded-context/schema.json",
+      "description": "Adds one bounded context under project-docs/bounded-contexts/, with structured frontmatter and a free-text boundary description."
+    },
+    "domain-model": {
+      "factory": "./src/generators/domain-model/domain-model",
+      "schema": "./src/generators/domain-model/schema.json",
+      "description": "Adds one domain model under project-docs/domain-models/, with a project-docs-ancestors frontmatter list and a free-text design body."
+    },
     "project-docs-lineage": {
       "factory": "./src/generators/project-docs-lineage/project-docs-lineage",
       "schema": "./src/generators/project-docs-lineage/schema.json",

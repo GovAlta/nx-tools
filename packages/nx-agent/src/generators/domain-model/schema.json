@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentDomainModel",
+  "title": "Add a domain model",
+  "description": "Creates one file for a domain model under project-docs/domain-models/, with a project-docs-ancestors frontmatter list and a free-text design body (aggregates, entities, invariants). Bootstraps the domain-models/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The canonical name of the domain model (e.g. \"Collision Report Lifecycle\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What is the domain model called?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this domain model to a specific project's project-docs/domain-models/ instead of the workspace root — prefer this whenever the model already has a natural code home (most often a domain library other projects depend on); only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this model derives from — normally the bounded context it belongs to plus the domain terms it's composed from (e.g. project-docs/bounded-contexts/collision-reporting.md). Each path must already exist; a backward reference only makes sense pointing at something already established."
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

@@ -1,5 +1,6 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { Tree, addProjectConfiguration } from '@nx/devkit';
+import { readArtifactSchema } from '../../utils/artifact-schema';
 import generator from './domain-term';
 
 describe('nx-agent domain-term generator', () => {
@@ -143,5 +144,13 @@ describe('nx-agent domain-term generator', () => {
 
     const readme = host.read('project-docs/domain-terms/README.md').toString();
     expect(readme).toContain('listing this folder');
+  });
+
+  it('registers its own artifact-schema entry expecting a bounded-contexts ancestor', async () => {
+    await generator(host, { term: 'Case' });
+
+    expect(readArtifactSchema(host)).toEqual({
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+    });
   });
 });
