@@ -47,6 +47,13 @@ describe('angular app generator', () => {
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 120000);
 
+  it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
+    await angularApp(appTree, options);
+
+    expect(appTree.exists('.mcp.json')).toBeTruthy();
+    expect(appTree.exists('.vscode/settings.json')).toBeTruthy();
+  }, 120000);
+
   it('scaffolds a Playwright e2e project (consistent across frontends)', async () => {
     await angularApp(appTree, options);
     expect(appTree.exists('apps/test-e2e/project.json')).toBeTruthy();

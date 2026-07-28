@@ -36,6 +36,14 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 30000);
 
+  it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    expect(host.exists('.mcp.json')).toBeTruthy();
+    expect(host.exists('.vscode/settings.json')).toBeTruthy();
+  }, 30000);
+
   it('scaffolds a Playwright e2e project (consistent across frontends)', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);

@@ -37,7 +37,14 @@ npx create-nx-workspace my-workspace
 # 2. Install the plugin and any required peer dependencies
 npm i -D @abgov/nx-adsp @nx/express
 
-# 3. Generate a quickstart (interactive prompts fill missing options)
+# 3. Set up nx-adsp's own workspace-root concerns (ADSP SDK MCP server, VS Code
+#    settings) — always run this right after installing the plugin. Every
+#    app/service generator below also runs it as one of its own steps, but
+#    running it here means grounded ADSP platform knowledge is available
+#    immediately, not only once you've scaffolded your first app.
+npx nx g @abgov/nx-adsp:init
+
+# 4. Generate a quickstart (interactive prompts fill missing options)
 npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ```
 
@@ -90,6 +97,28 @@ See [`@abgov/nx-oc`](https://www.npmjs.com/package/@abgov/nx-oc) for the sandbox
 deploy details.
 
 ## Generators
+
+### `init`
+
+Sets up nx-adsp's own workspace-root concerns: registers the ADSP SDK MCP server
+(`@abgov/adsp-sdk-mcp-server`) in `.mcp.json`, and shared VS Code settings. Every app/service
+generator below already runs this as one of its own steps — always run it directly right after
+installing the plugin, too, so grounded ADSP platform knowledge (tenant/realm/role model,
+`@abgov/adsp-service-sdk` reference) is available immediately, not only once you've scaffolded
+your first app. That gap matters for a decision made _before_ any app exists — a design pass, for
+instance — which a scaffolding-generator side effect can never reach in time.
+
+```bash
+npx nx g @abgov/nx-adsp:init
+```
+
+No options. Idempotent — merges into existing `.mcp.json`/`.vscode/settings.json` without
+clobbering another server, a customized `adsp-sdk` entry, or unrelated settings; safe to re-run.
+Project-scoped MCP servers only load at session start, so reconnect (or restart) your MCP client
+after running this before relying on the new tools — the generator's own output says so as a
+reminder.
+
+---
 
 ### `express-service`
 

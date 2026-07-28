@@ -56,6 +56,13 @@ describe('Vue App Generator', () => {
     expect(config.targets.build.options.outputPath).toBe('dist/apps/test');
   }, 30000);
 
+  it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
+    await generator(host, options);
+
+    expect(host.exists('.mcp.json')).toBeTruthy();
+    expect(host.exists('.vscode/settings.json')).toBeTruthy();
+  }, 30000);
+
   it('records the resolved env/tenant as project tags for the sandbox generator', async () => {
     await generator(host, options);
     const config = readProjectConfiguration(host, 'test');

@@ -20,12 +20,11 @@ import { consultAgent } from '../../utils/agent';
 import { ensureServiceClient } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
-  addAdspMcpServer,
   addEslintQualityRules,
   addJestCoverageConfig,
   addSemgrepTarget,
-  addVsCodeSettings,
 } from '../../utils/quality';
+import initGenerator from '../init/init';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -132,9 +131,10 @@ export default async function (host: Tree, options: Schema) {
     '**/*.test.ts',
   ]);
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
-  addVsCodeSettings(host);
-  // Equip coding agents with grounded ADSP docs + Node SDK reference lookup.
-  addAdspMcpServer(host);
+  // Equips coding agents with grounded ADSP docs + Node SDK reference lookup,
+  // and shared VS Code settings — nx-adsp's own workspace-root setup, run as
+  // one step here in case `nx-adsp:init` hasn't been run standalone yet.
+  await initGenerator(host);
 
   const projectConfig = readProjectConfiguration(
     host,
