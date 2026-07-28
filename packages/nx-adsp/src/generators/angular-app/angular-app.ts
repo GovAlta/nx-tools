@@ -13,9 +13,9 @@ import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
   addJestCoverageConfig,
   addSemgrepTarget,
-  addVsCodeSettings,
   guardPlaywrightWebServer,
 } from '../../utils/quality';
+import initGenerator from '../init/init';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -155,7 +155,10 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   const addedProxy = addFiles(host, normalizedOptions);
 
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
-  addVsCodeSettings(host);
+  // nx-adsp's own workspace-root setup (ADSP SDK MCP server + shared VS Code
+  // settings), run as one step here in case `nx-adsp:init` hasn't been run
+  // standalone yet.
+  await initGenerator(host);
 
   // @nx/angular generates app.ts/html/css/spec.ts (new naming) and nx-welcome.ts;
   // our templates use app.component.* and don't use nx-welcome.

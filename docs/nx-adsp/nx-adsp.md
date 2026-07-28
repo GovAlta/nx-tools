@@ -26,6 +26,8 @@ The plugin provides generators for Node/Express services, React, Angular, and Vu
 npm i -D @abgov/nx-adsp
 ```
 
+Always run `nx g @abgov/nx-adsp:init` right after installing — see [`init`](#init) below.
+
 ## Prerequisites
 
 Some generators require additional peer dependencies:
@@ -44,6 +46,28 @@ Some generators require additional peer dependencies:
 | `react-form`, `react-task-list` | existing React project in the workspace |
 
 ## Generators
+
+### init
+
+Sets up nx-adsp's own workspace-root concerns: registers the ADSP SDK MCP server
+(`@abgov/adsp-sdk-mcp-server`) in `.mcp.json`, and shared VS Code settings. Every app/service
+generator below already runs this as one of its own steps — always run it directly right after
+installing the plugin, too, so grounded ADSP platform knowledge (tenant/realm/role model,
+`@abgov/adsp-service-sdk` reference) is available immediately, not only once you've scaffolded
+your first app. That gap matters for a decision made _before_ any app exists — a design pass, for
+instance — which a scaffolding-generator side effect can never reach in time.
+
+```bash
+npx nx g @abgov/nx-adsp:init
+```
+
+No options. Idempotent — merges into existing `.mcp.json`/`.vscode/settings.json` without
+clobbering another server, a customized `adsp-sdk` entry, or unrelated settings; safe to re-run.
+Project-scoped MCP servers only load at session start, so reconnect (or restart) your MCP client
+after running this before relying on the new tools — the generator's own output says so as a
+reminder.
+
+---
 
 ### express-service
 

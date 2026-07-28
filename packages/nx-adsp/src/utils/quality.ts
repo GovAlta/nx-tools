@@ -170,6 +170,12 @@ export function addVsCodeSettings(host: Tree): void {
  * It's a stdio knowledge server (no credentials, run via npx), so wiring is just
  * config. Merges into an existing `.mcp.json` and never clobbers a user-customized
  * `adsp-sdk` entry, so it's safe to re-run and to run for every generated service.
+ *
+ * The reconnect reminder lives here, not in each caller — project-scoped MCP
+ * servers load at session start, so a file write mid-session (whether from
+ * an app/service generator or the standalone `init` generator) leaves the
+ * entry configured but inert until the client reconnects, and every caller
+ * needs to say so, not just one.
  */
 export function addAdspMcpServer(host: Tree): void {
   const mcpPath = '.mcp.json';
@@ -186,4 +192,10 @@ export function addAdspMcpServer(host: Tree): void {
   } else {
     writeJson(host, mcpPath, { mcpServers: { 'adsp-sdk': server } });
   }
+
+  console.log(
+    '\n✓ .mcp.json configures the ADSP SDK MCP server (adsp-sdk).\n' +
+      '  Project-scoped MCP servers load at session start, not on a mid-session file\n' +
+      '  change — reconnect (or restart) your MCP client now before relying on it.\n',
+  );
 }

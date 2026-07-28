@@ -14,9 +14,9 @@ import {
   addEslintQualityRules,
   addJestCoverageConfig,
   addSemgrepTarget,
-  addVsCodeSettings,
   guardPlaywrightWebServer,
 } from '../../utils/quality';
+import initGenerator from '../init/init';
 import {
   addDependenciesToPackageJson,
   formatFiles,
@@ -175,7 +175,10 @@ export default async function (host: Tree, options: Schema) {
     '**/*.test.tsx',
   ]);
   addJestCoverageConfig(host, normalizedOptions.projectRoot);
-  addVsCodeSettings(host);
+  // nx-adsp's own workspace-root setup (ADSP SDK MCP server + shared VS Code
+  // settings), run as one step here in case `nx-adsp:init` hasn't been run
+  // standalone yet.
+  await initGenerator(host);
 
   const config = readProjectConfiguration(host, options.name);
 

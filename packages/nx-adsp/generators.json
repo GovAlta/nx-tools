@@ -3,6 +3,11 @@
   "name": "nx-adsp",
   "version": "0.0.1",
   "generators": {
+    "init": {
+      "factory": "./src/generators/init/init",
+      "schema": "./src/generators/init/schema.json",
+      "description": "Sets up nx-adsp's own workspace-root concerns (ADSP SDK MCP server, shared VS Code settings). Run once per workspace, right after installing @abgov/nx-adsp."
+    },
     "express-service": {
       "factory": "./src/generators/express-service/express-service",
       "schema": "./src/generators/express-service/schema.json",
