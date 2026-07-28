@@ -152,6 +152,107 @@ export function guardPlaywrightWebServer(
   }
 }
 
+/**
+ * Fixes two bugs that surface when e2e testing is added to express-service,
+ * confirmed by actually running the generated `e2e` target rather than just
+ * inspecting the templates. The two have different owners — kept together
+ * here only because both need fixing at the same call site, not because
+ * they share a cause:
+ *
+ * 1. UPSTREAM BUG, not nx-adsp's — lives entirely inside `@nx/node`'s own
+ *    `e2e-project` generator (triggered here via `e2eTestRunner: 'jest'` on
+ *    the express application generator). Nothing about nx-adsp's own code
+ *    causes it, and it would reproduce in a plain `@nx/node`/`@nx/express`
+ *    workspace with no nx-adsp involved at all. Kept as a local workaround
+ *    anyway since nx-adsp doesn't control Nx's release cadence and a safe
+ *    no-op against already-correct output (see below) costs nothing if
+ *    upstream fixes it later — worth reporting to `nrwl/nx` regardless.
+ *
+ *    `@nx/node:e2e-project` writes one of two shapes for `jest.config.cts`
+ *    depending on whether `@swc/jest` is present in the workspace — not
+ *    necessarily for this project itself; a Vue/React app elsewhere in a
+ *    multi-app workspace pulling in `@swc/core` for its own build is enough
+ *    to flip it. The `@swc/jest` shape is `export default {...}` with a
+ *    top-level `import` — ESM syntax in a `.cts` file, which Node/ts-jest/SWC
+ *    always treat as CommonJS regardless of the workspace's own
+ *    `package.json` "type". Jest's own config loader (unlike its `transform`
+ *    pipeline, which only applies to *test* files) can't reconcile the two,
+ *    so the config fails to parse before a single test runs — every target
+ *    that reads it breaks outright with `SyntaxError: Cannot use import
+ *    statement outside a module`. Rewritten to `const {...} = require(...)`
+ *    / `module.exports = {...}`, matching both the pattern the service's own
+ *    `jest.config.cts` already uses correctly and the ts-jest shape
+ *    `@nx/node` writes when `@swc/jest` isn't present — which needs no fix,
+ *    so the two replaces below are safe no-ops against it.
+ *
+ *    (`src/support/*.ts` also import at the top level, but — verified by
+ *    running the target — those are plain `.ts` files that DO go through
+ *    the config's `transform` pipeline, so they don't need this fix; only
+ *    the config file itself, read before that pipeline exists, does.)
+ *
+ * 2. OUR OWN BUG, not Nx's — a convention mismatch entirely on nx-adsp's
+ *    side, not a defect in the upstream generator. `@nx/node:e2e-project`'s
+ *    fallback port of `3000` is a reasonable generic default with no
+ *    knowledge of any particular caller; it's only wrong here because
+ *    nx-adsp's own `environment.ts.__tmpl__` defaults `PORT` to `3333`
+ *    instead (matching `@nx/express`'s own scaffolded `main.ts` before
+ *    nx-adsp replaces it), and until this fix nothing reconciled the two.
+ *    There's no upstream fix to wait for — reconciling nx-adsp's own port
+ *    convention with whatever generates the e2e project is squarely
+ *    nx-adsp's job. Confirmed via a real run:
+ *    the express app logs `Listening at http://localhost:3333`, while
+ *    `global-setup.ts` waits on `3000` and never sees it open — the target
+ *    hangs, then fails with `Jest: Got error running globalSetup ...
+ *    reason: [AggregateError]`, no port number anywhere in the message.
+ */
+export function fixExpressServiceE2eProject(
+  host: Tree,
+  e2eProjectRoot: string,
+  port: number,
+): void {
+  const jestConfigPath = `${e2eProjectRoot}/jest.config.cts`;
+  if (host.exists(jestConfigPath)) {
+    const cfg = host
+      .read(jestConfigPath)
+      .toString()
+      .replace(
+        /^import \{([^}]+)\} from '([^']+)';$/m,
+        "const {$1} = require('$2');",
+      )
+      .replace(/^export default \{/m, 'module.exports = {');
+    host.write(jestConfigPath, cfg);
+  }
+
+  for (const file of ['global-setup.ts', 'global-teardown.ts']) {
+    const path = `${e2eProjectRoot}/src/support/${file}`;
+    if (!host.exists(path)) continue;
+    host.write(
+      path,
+      host
+        .read(path)
+        .toString()
+        .replace(
+          /process\.env\.PORT \? Number\(process\.env\.PORT\) : 3000/,
+          `process.env.PORT ? Number(process.env.PORT) : ${port}`,
+        ),
+    );
+  }
+
+  const testSetupPath = `${e2eProjectRoot}/src/support/test-setup.ts`;
+  if (host.exists(testSetupPath)) {
+    host.write(
+      testSetupPath,
+      host
+        .read(testSetupPath)
+        .toString()
+        .replace(
+          /process\.env\.PORT \?\? '3000'/,
+          `process.env.PORT ?? '${port}'`,
+        ),
+    );
+  }
+}
+
 export function addVsCodeSettings(host: Tree): void {
   const settingsPath = '.vscode/settings.json';
   const settings = {

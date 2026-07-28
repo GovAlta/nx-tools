@@ -23,9 +23,15 @@ import {
   addEslintQualityRules,
   addJestCoverageConfig,
   addSemgrepTarget,
+  fixExpressServiceE2eProject,
 } from '../../utils/quality';
 import initGenerator from '../init/init';
 import { Schema, NormalizedSchema } from './schema';
+
+// Must match environment.ts.__tmpl__'s own `PORT: num({ default: ... })` —
+// there's no --port option to source this from yet, so it's a second literal
+// kept in sync by convention rather than a single shared value.
+const DEFAULT_PORT = 3333;
 
 async function normalizeOptions(
   host: Tree,
@@ -80,15 +86,30 @@ export default async function (host: Tree, options: Schema) {
 
   const normalizedOptions = await normalizeOptions(host, options);
 
-  await initExpress(host, {
+  // @nx/express's own Schema type doesn't declare e2eTestRunner, even though
+  // its implementation forwards it straight through to @nx/node's own
+  // applicationGenerator (which does). Assigning to an inferred-type const
+  // first, rather than passing the object literal directly, sidesteps
+  // TypeScript's excess-property check on a type that's simply incomplete.
+  const initExpressOptions = {
     ...options,
     skipFormat: true,
     skipPackageJson: false,
     linter: Linter.EsLint,
     unitTestRunner: 'jest',
+    e2eTestRunner: 'jest',
     js: false,
     directory: normalizedOptions.projectRoot,
-  });
+  };
+  await initExpress(host, initExpressOptions);
+
+  // @nx/node:e2e-project's own generated output has two bugs of its own —
+  // see fixExpressServiceE2eProject's doc comment for how each was confirmed.
+  fixExpressServiceE2eProject(
+    host,
+    `${normalizedOptions.projectRoot}-e2e`,
+    DEFAULT_PORT,
+  );
 
   addDependenciesToPackageJson(
     host,
