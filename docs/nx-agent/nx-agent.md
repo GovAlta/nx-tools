@@ -86,7 +86,8 @@ Currently sets up:
    - **Version control practices** — atomic Conventional Commits, GitHub Flow, linear history.
    - **Conventions and consistency** — ubiquitous language (domain vocabulary, and the
      `domain-term` generator below), matching this project's own established patterns (including
-     `project-docs/`, if present), and following framework/library idioms.
+     `project-docs/`, if present), following framework/library idioms, and checking a connected
+     MCP server before recalling a platform/design-system API from memory.
    - **Code quality** — scope discipline, comments (why, not what), reuse before reinventing
      (existing generators and workspace ESLint rules over bespoke code), error handling, TODO
      transparency (including deliberately-accepted findings), test quality.

@@ -249,7 +249,7 @@ describe('nx-agent init generator', () => {
     );
   });
 
-  it('assembles all six groups with all twenty-one items in the correct order', async () => {
+  it('assembles all six groups with all twenty-two items in the correct order', async () => {
     await generator(host, {});
 
     const agentsMd = host.read('AGENTS.md').toString();
@@ -278,6 +278,7 @@ describe('nx-agent init generator', () => {
       'Project conventions',
       'Project-docs lineage',
       'Framework and library idioms',
+      'MCP servers',
       'Scope discipline',
       'Comments: why, not what',
       'Reuse before reinventing',

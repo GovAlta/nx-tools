@@ -102,6 +102,7 @@ const GUIDANCE_GROUPS: GuidanceGroup[] = [
       'project-conventions',
       'project-docs-lineage',
       'framework-and-library-idioms',
+      'mcp-servers',
     ],
   },
   {

@@ -64,7 +64,8 @@ Currently sets up:
      style/format/complexity tooling a project already has configured.
    - **Version control practices** — atomic Conventional Commits, GitHub Flow, linear history.
    - **Conventions and consistency** — ubiquitous language (domain vocabulary), matching this
-     project's own established patterns, and following framework/library idioms.
+     project's own established patterns, following framework/library idioms, and checking a
+     connected MCP server before recalling a platform/design-system API from memory.
    - **Code quality** — scope discipline, comments (why, not what), reuse before reinventing,
      error handling, TODO transparency, test quality.
 
