@@ -314,4 +314,43 @@ describe('Deployment Generator', () => {
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['apply-envs']).toBeFalsy();
   });
+
+  it('coexists with an existing sandbox deployment for the same project', async () => {
+    // sandbox writes its manifest to <project>.sandbox.yml (see sandbox.spec.ts),
+    // so deployment writing the pipeline-shaped <project>.yml alongside it must
+    // not disturb the sandbox manifest.
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await pipeline(host, {
+      pipeline: 'test',
+      registry: 'ghcr.io/test-org',
+      type: 'jenkins',
+      infra: 'test-infra',
+      envs: 'test-dev',
+    });
+
+    addProjectConfiguration(host, 'test', {
+      root: 'apps/test',
+      projectType: 'application',
+      targets: {
+        build: {
+          executor: '@nx/webpack:webpack',
+          options: { compiler: 'tsc', target: 'node' },
+        },
+      },
+    });
+    host.write(
+      '.openshift/test/test.sandbox.yml',
+      'kind: Template\nlabels:\n  deployment-mode: sandbox\n',
+    );
+
+    await generator(host, { ...options, appType: 'node' });
+
+    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
+    expect(host.exists('.openshift/test/test.sandbox.yml')).toBeTruthy();
+    expect(host.read('.openshift/test/test.sandbox.yml').toString()).toContain(
+      'deployment-mode: sandbox',
+    );
+    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(manifest).toContain('deployment-mode: pipeline');
+  });
 });

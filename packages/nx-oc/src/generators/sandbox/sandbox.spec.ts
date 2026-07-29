@@ -64,12 +64,17 @@ describe('Sandbox Generator', () => {
 
     await generator(host, options);
 
-    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
-    const manifest = host.read('.openshift/test/test.yml').toString();
+    // The manifest gets its own filename (rather than <project>.yml) so it can
+    // coexist with a `deployment`-generated pipeline manifest for the same
+    // project instead of one overwriting the other.
+    expect(host.exists('.openshift/test/test.sandbox.yml')).toBeTruthy();
+    expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
+    const manifest = host.read('.openshift/test/test.sandbox.yml').toString();
     expect(manifest).toContain('imagePullPolicy: Always');
     expect(manifest).not.toContain('ImageStream');
     expect(manifest).not.toContain('DEPLOY_TAG');
     expect(manifest).toContain('sandbox');
+    expect(manifest).toContain('deployment-mode: sandbox');
   });
 
   it('errors (does not prompt) when the registry cannot be resolved non-interactively', async () => {
@@ -98,8 +103,8 @@ describe('Sandbox Generator', () => {
 
     await generator(host, options);
 
-    expect(host.exists('.openshift/test/test.yml')).toBeTruthy();
-    const manifest = host.read('.openshift/test/test.yml').toString();
+    expect(host.exists('.openshift/test/test.sandbox.yml')).toBeTruthy();
+    const manifest = host.read('.openshift/test/test.sandbox.yml').toString();
     expect(manifest).toContain('imagePullPolicy: Always');
     expect(manifest).not.toContain('ImageStream');
   });
@@ -199,7 +204,9 @@ describe('Sandbox Generator', () => {
     expect(cmds.some((c) => c.includes('oc delete'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('--ignore-not-found'))).toBeTruthy();
     expect(cmds.some((c) => c.includes('test-sandbox'))).toBeTruthy();
-    expect(cmds.some((c) => c.includes('-l app=test'))).toBeTruthy();
+    expect(
+      cmds.some((c) => c.includes('-l app=test,deployment-mode=sandbox')),
+    ).toBeTruthy();
     expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
     // Teardown also removes the sandbox package (best-effort).
     expect(
@@ -220,7 +227,9 @@ describe('Sandbox Generator', () => {
       .toString();
     expect(dbManifest).toContain('sandbox-postgres-creds');
 
-    const appManifest = host.read('.openshift/test/test.yml').toString();
+    const appManifest = host
+      .read('.openshift/test/test.sandbox.yml')
+      .toString();
     expect(appManifest).toContain('sandbox-postgres-creds');
     expect(appManifest).toContain('$(POSTGRES_PASSWORD)');
 
@@ -243,7 +252,9 @@ describe('Sandbox Generator', () => {
       .toString();
     expect(dbManifest).toContain('sandbox-mongodb-creds');
 
-    const appManifest = host.read('.openshift/test/test.yml').toString();
+    const appManifest = host
+      .read('.openshift/test/test.sandbox.yml')
+      .toString();
     expect(appManifest).toContain('sandbox-mongodb-creds');
     expect(appManifest).toContain('$(MONGO_PASSWORD)');
 

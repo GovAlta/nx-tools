@@ -173,11 +173,21 @@ function addManifestFiles(host: Tree, options: NormalizedSchema) {
     ocInfraProject: options.sandboxProject,
     tmpl: '',
   };
+  const projectDir = `./.openshift/${options.projectName}`;
   generateFiles(
     host,
     path.join(__dirname, `../deployment/${options.appType}-files`),
-    `./.openshift/${options.projectName}`,
+    projectDir,
     templateOptions,
+  );
+  // The Dockerfile is byte-identical either way and stays shared, but the
+  // manifest content genuinely differs (image source, DB secret, no
+  // ImageStream trigger) — give it a distinct name so a project can carry
+  // both a sandbox manifest and a `deployment`-generated pipeline manifest
+  // side by side instead of one overwriting the other.
+  host.rename(
+    `${projectDir}/${options.projectName}.yml`,
+    `${projectDir}/${options.projectName}.sandbox.yml`,
   );
 }
 
@@ -243,7 +253,10 @@ function addSandboxTarget(host: Tree, options: NormalizedSchema) {
       executor: 'nx:run-commands',
       options: {
         commands: [
-          `oc delete all,configmap,is -l app=${projectName} -n ${sandboxProject} --ignore-not-found`,
+          // Scoped by deployment-mode too, not just app, so this can never
+          // delete a pipeline-shaped deployment for the same project that
+          // happens to land in the same namespace.
+          `oc delete all,configmap,is -l app=${projectName},deployment-mode=sandbox -n ${sandboxProject} --ignore-not-found`,
           `oc delete imagestream ${projectName} -n ${sandboxProject} --ignore-not-found`,
           // Remove the sandbox package (needs delete:packages). Best-effort:
           // sandbox packages are the unlinked ones and can also be pruned org-wide

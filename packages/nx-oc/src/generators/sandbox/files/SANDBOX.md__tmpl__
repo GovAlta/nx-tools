@@ -61,7 +61,7 @@ podman push "$REF"
 oc tag "$REF" <%= projectName %>:sandbox --reference-policy=local -n "$NS"
 until oc import-image <%= projectName %>:sandbox --confirm -n "$NS"; do sleep 3; done
 # (3) apply the manifest and roll out
-oc process -f .openshift/<%= projectName %>/<%= projectName %>.yml -p PROJECT="$NS" | oc apply -f -
+oc process -f .openshift/<%= projectName %>/<%= projectName %>.sandbox.yml -p PROJECT="$NS" | oc apply -f -
 oc rollout restart deployment/<%= projectName %> -n "$NS"
 oc rollout status  deployment/<%= projectName %> -n "$NS" --timeout=180s
 ```
@@ -81,7 +81,7 @@ oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
   `gh auth switch -u <account>`, then re-run with `--skipBuild`.
 - **Pod `FailedCreate` "exceeded quota"** — the namespace CPU quota is full.
   Free room: `oc get deploy -n <%= sandboxProject %>` then delete stale apps
-  (`oc delete all,configmap,is -l app=<old-app> -n <%= sandboxProject %>`), and re-run.
+  (`oc delete all,configmap,is -l app=<old-app>,deployment-mode=sandbox -n <%= sandboxProject %>`), and re-run.
 - **Pod `CrashLoopBackOff`** — `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>`.<% if (appType === 'node' && database && database !== 'none') { %>
   For the DB migration, also check the init container:
   `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>-migrate`.<% } %>

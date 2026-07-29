@@ -93,6 +93,15 @@ npx nx g @abgov/nx-oc:deployment my-app --appType node --env dev
 
 Run the generator once per environment per application. For a typical three-environment setup, run it three times with `--env dev`, `--env test`, and `--env prod`.
 
+`deployment` writes `.openshift/<project>/<project>.yml`; [`sandbox`](#sandbox-deployment-local-build)
+writes `.openshift/<project>/<project>.sandbox.yml` alongside it and shares the same
+`.openshift/<project>/Dockerfile` (identical either way). A project can have both — a
+real CI-driven pipeline deployment and a sandbox for local experimentation — at the same
+time; running one never touches the other's manifest. Every object either renders also
+carries a `deployment-mode: pipeline`/`sandbox` label (alongside the existing `app` label),
+so the `teardown-<env>` and `sandbox-teardown` targets' label-selector deletes can never
+remove the other mode's resources even if they ever land in the same namespace.
+
 ---
 
 ## Executor: `apply`

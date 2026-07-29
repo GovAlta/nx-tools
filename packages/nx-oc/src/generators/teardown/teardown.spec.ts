@@ -97,7 +97,9 @@ describe('Teardown Generator', () => {
 
     const config = readProjectConfiguration(host, 'test');
     const cmds: string[] = config.targets['teardown-dev'].options.commands;
-    expect(cmds.some((c) => c.includes('-l app=test'))).toBeTruthy();
+    expect(
+      cmds.some((c) => c.includes('-l app=test,deployment-mode=pipeline')),
+    ).toBeTruthy();
     expect(cmds.some((c) => c.includes('all,configmap'))).toBeTruthy();
   });
 });

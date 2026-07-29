@@ -318,7 +318,7 @@ export default async function runExecutor(
 
     run(
       'Apply manifest',
-      `oc process -f .openshift/${projectName}/${projectName}.yml -p PROJECT=${sandboxProject} | oc apply -f -`,
+      `oc process -f .openshift/${projectName}/${projectName}.sandbox.yml -p PROJECT=${sandboxProject} | oc apply -f -`,
       cwd,
     );
     run(
