@@ -17,7 +17,7 @@ export default async function (host: Tree) {
   ensureGitignoreEntries(host, ['.nx-agent/']);
 
   const registry = buildRegistry(host);
-  const index = buildIndex(host);
+  const index = buildIndex(host, registry);
   const artifactSchema = readArtifactSchema(host);
   const violations = computeViolations(registry, index, artifactSchema);
 

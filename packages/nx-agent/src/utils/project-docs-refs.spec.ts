@@ -614,6 +614,39 @@ describe('getDescendants', () => {
     );
   });
 
+  it("tags a descendant with its own artifact type when it's itself a registered artifact", () => {
+    host.write(
+      'project-docs/domain-terms/b.md',
+      ['---', 'term: B', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/bounded-contexts/c.md',
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
+    );
+
+    const [entry] = getDescendants(host, 'domain-terms:b');
+
+    expect(entry.file).toBe('project-docs/bounded-contexts/c.md');
+    expect(entry.type).toBe('bounded-contexts');
+  });
+
+  it('leaves type undefined for a plain source file referencing an artifact in a comment', () => {
+    host.write(
+      'apps/a/src/main.ts',
+      '// project-docs-ancestors: domain-terms:collision-report\nexport {};',
+    );
+
+    const [entry] = getDescendants(host, 'domain-terms:collision-report');
+
+    expect(entry.file).toBe('apps/a/src/main.ts');
+    expect(entry.type).toBeUndefined();
+  });
+
   it('defaults to direct referrers only (depth 1)', () => {
     host.write(
       'project-docs/domain-terms/b.md',
