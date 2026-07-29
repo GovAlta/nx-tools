@@ -19,6 +19,11 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Paths to existing project-docs/ artifacts this model derives from — normally the bounded context it belongs to plus the domain terms it's composed from (e.g. project-docs/bounded-contexts/collision-reporting.md). Each path must already exist; a backward reference only makes sense pointing at something already established."
+    },
+    "resolves": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing open-question/blocker artifacts this model resolves. Recorded distinctly from projectDocsAncestors (though also added there, so lineage traversal sees it as an ancestor too) so project-docs-lineage can report the resolution as such rather than mistaking any ancestor reference for one."
     }
   },
   "required": ["name"],

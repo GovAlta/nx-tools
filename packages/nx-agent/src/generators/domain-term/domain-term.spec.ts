@@ -28,7 +28,9 @@ describe('nx-agent domain-term generator', () => {
 
     await generator(host, {
       term: 'Collision Report',
-      projectDocsAncestors: ['project-docs/bounded-contexts/collision-reporting.md'],
+      projectDocsAncestors: [
+        'project-docs/bounded-contexts/collision-reporting.md',
+      ],
     });
 
     const content = host
@@ -152,5 +154,28 @@ describe('nx-agent domain-term generator', () => {
     expect(readArtifactSchema(host)).toEqual({
       'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
     });
+  });
+
+  it('--resolves writes the resolved ref into both project-docs-ancestors and resolves, and confirms it', async () => {
+    host.write(
+      'project-docs/open-questions/what-to-call-this.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await generator(host, {
+      term: 'Case',
+      resolves: ['project-docs/open-questions/what-to-call-this.md'],
+    });
+
+    const content = host.read('project-docs/domain-terms/case.md').toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [open-questions:what-to-call-this]',
+    );
+    expect(content).toContain('resolves: [open-questions:what-to-call-this]');
+    expect(logSpy).toHaveBeenCalledWith(
+      '✓ this domain term resolves open-questions:what-to-call-this',
+    );
+    logSpy.mockRestore();
   });
 });

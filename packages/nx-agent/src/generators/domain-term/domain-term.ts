@@ -9,7 +9,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveRefFromPath } from '../../utils/project-docs-refs';
+import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const DOMAIN_TERMS_SUBDIR = 'project-docs/domain-terms';
@@ -57,9 +57,12 @@ export default async function (host: Tree, options: Schema) {
   // Resolved (and, in doing so, validated) before any write — a path that
   // doesn't resolve to an existing project-docs/ artifact throws here, same
   // as the duplicate check above, so a failing run still has no side effects.
-  const projectDocsAncestors = (options.projectDocsAncestors ?? []).map(
-    (path) => resolveRefFromPath(host, path),
-  );
+  const { ancestors: projectDocsAncestors, resolvedRefs } =
+    resolveAncestorsAndResolves(
+      host,
+      options.projectDocsAncestors,
+      options.resolves,
+    );
 
   ensureContainerReadme(host, containerDir, !!options.project);
   ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
@@ -70,12 +73,17 @@ export default async function (host: Tree, options: Schema) {
     'aliases: []',
     'not_confused_with: []',
     `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,
+    `resolves: [${resolvedRefs.join(', ')}]`,
     '---',
     '',
     "<!-- Definition: describe this term in the domain's own language. -->",
     '',
   ].join('\n');
   host.write(termPath, content);
+
+  for (const ref of resolvedRefs) {
+    console.log(`✓ this domain term resolves ${ref}`);
+  }
 
   await formatFiles(host);
 }

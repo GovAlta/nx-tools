@@ -1,6 +1,9 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { Tree } from '@nx/devkit';
-import { ensureArtifactSchemaEntry, readArtifactSchema } from './artifact-schema';
+import {
+  ensureArtifactSchemaEntry,
+  readArtifactSchema,
+} from './artifact-schema';
 
 describe('readArtifactSchema', () => {
   let host: Tree;
@@ -66,6 +69,16 @@ describe('ensureArtifactSchemaEntry', () => {
       'domain-terms': {
         expectedAncestorTypes: ['bounded-contexts', 'something-else'],
       },
+    });
+  });
+
+  it('records tracksResolution when passed, and omits it when not', () => {
+    ensureArtifactSchemaEntry(host, 'open-questions', [], true);
+    ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
+
+    expect(readArtifactSchema(host)).toEqual({
+      'open-questions': { expectedAncestorTypes: [], tracksResolution: true },
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
     });
   });
 

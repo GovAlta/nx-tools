@@ -9,7 +9,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveRefFromPath } from '../../utils/project-docs-refs';
+import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const DOMAIN_MODELS_SUBDIR = 'project-docs/domain-models';
@@ -54,9 +54,12 @@ export default async function (host: Tree, options: Schema) {
   // Resolved (and, in doing so, validated) before any write — a path that
   // doesn't resolve to an existing project-docs/ artifact throws here, same
   // as the duplicate check above, so a failing run still has no side effects.
-  const projectDocsAncestors = (options.projectDocsAncestors ?? []).map(
-    (path) => resolveRefFromPath(host, path),
-  );
+  const { ancestors: projectDocsAncestors, resolvedRefs } =
+    resolveAncestorsAndResolves(
+      host,
+      options.projectDocsAncestors,
+      options.resolves,
+    );
 
   ensureContainerReadme(host, containerDir, !!options.project);
   ensureArtifactSchemaEntry(host, 'domain-models', [
@@ -68,12 +71,17 @@ export default async function (host: Tree, options: Schema) {
     '---',
     `name: ${options.name}`,
     `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,
+    `resolves: [${resolvedRefs.join(', ')}]`,
     '---',
     '',
     '<!-- Design: describe the aggregates, entities, value objects, and invariants here. -->',
     '',
   ].join('\n');
   host.write(modelPath, content);
+
+  for (const ref of resolvedRefs) {
+    console.log(`✓ this domain model resolves ${ref}`);
+  }
 
   await formatFiles(host);
 }

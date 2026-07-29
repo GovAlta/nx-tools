@@ -55,9 +55,7 @@ describe('nx-agent domain-model generator', () => {
     ).rejects.toThrow(/not found/);
 
     expect(
-      host.exists(
-        'project-docs/domain-models/collision-report-lifecycle.md',
-      ),
+      host.exists('project-docs/domain-models/collision-report-lifecycle.md'),
     ).toBe(false);
     expect(host.exists('project-docs/domain-models/README.md')).toBe(false);
   });
@@ -82,9 +80,7 @@ describe('nx-agent domain-model generator', () => {
   it('creates the container README on first run', async () => {
     await generator(host, { name: 'Collision Report Lifecycle' });
 
-    const readme = host
-      .read('project-docs/domain-models/README.md')
-      .toString();
+    const readme = host.read('project-docs/domain-models/README.md').toString();
     expect(readme).toContain('# Domain models');
     expect(readme).toContain('nx g @abgov/nx-agent:domain-model');
   });
@@ -107,9 +103,7 @@ describe('nx-agent domain-model generator', () => {
       ),
     ).toBe(true);
     expect(
-      host.exists(
-        'project-docs/domain-models/collision-report-lifecycle.md',
-      ),
+      host.exists('project-docs/domain-models/collision-report-lifecycle.md'),
     ).toBe(false);
   });
 
@@ -150,5 +144,57 @@ describe('nx-agent domain-model generator', () => {
         expectedAncestorTypes: ['bounded-contexts', 'domain-terms'],
       },
     });
+  });
+
+  it('--resolves writes the resolved ref into both project-docs-ancestors and resolves, and confirms it', async () => {
+    host.write(
+      'project-docs/open-questions/reviewer-authorization.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await generator(host, {
+      name: 'Collision Report Lifecycle',
+      resolves: ['project-docs/open-questions/reviewer-authorization.md'],
+    });
+
+    const content = host
+      .read('project-docs/domain-models/collision-report-lifecycle.md')
+      .toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [open-questions:reviewer-authorization]',
+    );
+    expect(content).toContain(
+      'resolves: [open-questions:reviewer-authorization]',
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      '✓ this domain model resolves open-questions:reviewer-authorization',
+    );
+    logSpy.mockRestore();
+  });
+
+  it('--resolves dedupes against an identical path already passed via --projectDocsAncestors', async () => {
+    host.write(
+      'project-docs/open-questions/reviewer-authorization.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+
+    await generator(host, {
+      name: 'Collision Report Lifecycle',
+      projectDocsAncestors: [
+        'project-docs/open-questions/reviewer-authorization.md',
+      ],
+      resolves: ['project-docs/open-questions/reviewer-authorization.md'],
+    });
+
+    const content = host
+      .read('project-docs/domain-models/collision-report-lifecycle.md')
+      .toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [open-questions:reviewer-authorization]',
+    );
+    expect(content).not.toContain(
+      'open-questions:reviewer-authorization, open-questions:reviewer-authorization',
+    );
   });
 });

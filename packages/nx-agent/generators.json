@@ -23,6 +23,16 @@
       "schema": "./src/generators/domain-model/schema.json",
       "description": "Adds one domain model under project-docs/domain-models/, with a project-docs-ancestors frontmatter list and a free-text design body."
     },
+    "open-question": {
+      "factory": "./src/generators/open-question/open-question",
+      "schema": "./src/generators/open-question/schema.json",
+      "description": "Adds one open question under project-docs/open-questions/, with a project-docs-ancestors frontmatter list and a free-text body describing what's undecided."
+    },
+    "blocker": {
+      "factory": "./src/generators/blocker/blocker",
+      "schema": "./src/generators/blocker/schema.json",
+      "description": "Adds one blocker under project-docs/blockers/, with a project-docs-ancestors frontmatter list and a free-text body describing what needs fixing."
+    },
     "project-docs-lineage": {
       "factory": "./src/generators/project-docs-lineage/project-docs-lineage",
       "schema": "./src/generators/project-docs-lineage/schema.json",

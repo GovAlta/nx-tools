@@ -439,6 +439,117 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
 
     expect(violations.unscoped).toEqual([]);
   });
+
+  const OPEN_QUESTIONS_SCHEMA = {
+    'open-questions': { expectedAncestorTypes: [], tracksResolution: true },
+  };
+
+  it('reports an open-questions artifact with no resolves reference as open', () => {
+    host.write(
+      'project-docs/open-questions/q.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      OPEN_QUESTIONS_SCHEMA,
+    );
+
+    expect(violations.resolutionStatus).toEqual({
+      open: ['open-questions:q'],
+      resolved: [],
+    });
+  });
+
+  it("reports an open-questions artifact named in another artifact's resolves field as resolved", () => {
+    host.write(
+      'project-docs/open-questions/q.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [open-questions:q]',
+        'resolves: [open-questions:q]',
+        '---',
+      ].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      OPEN_QUESTIONS_SCHEMA,
+    );
+
+    expect(violations.resolutionStatus).toEqual({
+      open: [],
+      resolved: ['open-questions:q'],
+    });
+  });
+
+  it('does not count a plain project-docs-ancestors citation (no resolves) as a resolution, even from a peer blocker/open-question', () => {
+    host.write(
+      'project-docs/open-questions/q.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    // A blocker citing the question as context, not resolving it.
+    host.write(
+      'project-docs/blockers/b.md',
+      [
+        '---',
+        'project-docs-ancestors: [open-questions:q]',
+        'resolves: []',
+        '---',
+      ].join('\n'),
+    );
+    // A second open question citing the first for context, not resolving it.
+    host.write(
+      'project-docs/open-questions/q2.md',
+      [
+        '---',
+        'project-docs-ancestors: [open-questions:q]',
+        'resolves: []',
+        '---',
+      ].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'open-questions': {
+          expectedAncestorTypes: [],
+          tracksResolution: true,
+        },
+        blockers: { expectedAncestorTypes: [], tracksResolution: true },
+      },
+    );
+
+    expect(violations.resolutionStatus.open).toContain('open-questions:q');
+    expect(violations.resolutionStatus.resolved).not.toContain(
+      'open-questions:q',
+    );
+  });
+
+  it('does not report resolution status for a type without tracksResolution', () => {
+    host.write(
+      'project-docs/domain-terms/t.md',
+      ['---', 'term: T', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'domain-terms': { expectedAncestorTypes: [] },
+      },
+    );
+
+    expect(violations.resolutionStatus).toEqual({ open: [], resolved: [] });
+  });
 });
 
 describe('getAncestors', () => {
