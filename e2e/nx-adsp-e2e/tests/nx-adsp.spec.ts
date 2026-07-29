@@ -192,7 +192,7 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(
         `.openshift/${svc}/Dockerfile`,
-        `.openshift/${svc}/${svc}.yml`,
+        `.openshift/${svc}/${svc}.sandbox.yml`,
       );
       // The in-cluster BuildConfig manifest is gone.
       expect(
@@ -225,7 +225,7 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(
         `.openshift/${app}/Dockerfile`,
-        `.openshift/${app}/${app}.yml`,
+        `.openshift/${app}/${app}.sandbox.yml`,
       );
       expect(
         existsSync(join(tmpProjPath(), `.openshift/${app}/sandbox-build.yml`)),

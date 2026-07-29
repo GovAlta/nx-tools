@@ -4,6 +4,7 @@ metadata:
   name: <%= projectName %>
 labels:
   app: <%= projectName %>
+  deployment-mode: <%= sandbox ? 'sandbox' : 'pipeline' %>
 parameters:
 <% if (!sandbox) { %>
   - name: INFRA_PROJECT

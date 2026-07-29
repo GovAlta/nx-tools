@@ -59,7 +59,10 @@ export default async function (host: Tree, options: Schema) {
       executor: 'nx:run-commands',
       options: {
         commands: [
-          `oc delete all,configmap -l app=${projectName} -n ${envProject} --ignore-not-found`,
+          // Scoped by deployment-mode too, not just app, so this can never
+          // delete a sandbox deployment for the same project that happens to
+          // land in the same namespace.
+          `oc delete all,configmap -l app=${projectName},deployment-mode=pipeline -n ${envProject} --ignore-not-found`,
         ],
       },
     },

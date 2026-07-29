@@ -67,6 +67,11 @@ describe('sandbox executor', () => {
       true,
     );
     expect(has('oc create secret docker-registry ghcr-pull')).toBe(true);
+    expect(
+      has(
+        'oc process -f .openshift/test/test.sandbox.yml -p PROJECT=test-sandbox',
+      ),
+    ).toBe(true);
     expect(has('oc rollout restart deployment/test -n test-sandbox')).toBe(
       true,
     );
