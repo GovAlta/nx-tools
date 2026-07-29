@@ -103,10 +103,13 @@ function runAdspLogin(options: {
 
 /**
  * Obtain an ADSP access token via @abgov/adsp-cli. Fast path: a cached/refreshed
- * token from a prior `adsp login` (no browser). If none — and the run is
- * interactive — drive `adsp login` (browser) once, then read the fresh token.
- * In a non-interactive run it never opens a browser; it throws with the exact
- * `adsp login` command to run instead.
+ * token from a prior `adsp login` (no browser) — or, since @abgov/adsp-cli
+ * ^1.7.0, a fresh client_credentials token when ADSP_CLIENT_ID/ADSP_CLIENT_SECRET
+ * are set (a CI service account; see the 'adsp-cli-ci' Keycloak client). If
+ * neither works — and the run is interactive — drive `adsp login` (browser)
+ * once, then read the fresh token. In a non-interactive run it never opens a
+ * browser; it throws with the exact `adsp login` command to run instead (or
+ * the CI env vars to set).
  *
  * When `scopes` (e.g. the admin scope) can't be satisfied even after a login —
  * a user who isn't a realm admin — it falls back to a base-scope token so
@@ -119,46 +122,72 @@ export async function ensureAdspToken(options: {
   scopes?: string[];
 }): Promise<string | undefined> {
   const { env, realm, tenant, scopes = [] } = options;
-  // Force the CLI to talk to the generator's target environment. Note: we set
-  // ADSP_ENV, never ADSP_TENANT_REALM — the latter would make getStatus() drop
-  // the persisted tenantName (it can't trust a name against an overridden realm).
-  // Default to 'test' (UAT), never 'prod' — matches every generator's schema
-  // default and avoids an accidental production hit if env is ever unset.
+  // Force the CLI to talk to the generator's target environment. Default to
+  // 'test' (UAT), never 'prod' — matches every generator's schema default and
+  // avoids an accidental production hit if env is ever unset.
   process.env.ADSP_ENV = env || process.env.ADSP_ENV || 'test';
 
-  const fetchToken = async (): Promise<string | undefined> => {
-    const result = await getAccessToken(scopes.length ? { scopes } : undefined);
-    return result.status === 'ok' ? result.token : undefined;
-  };
-
-  let token = await fetchToken();
-  if (token) return token;
-
-  if (isNonInteractive()) {
-    const loginCmd = [
-      'npx @abgov/adsp-cli login',
-      `--env ${env}`,
-      tenant ? `--tenant "${tenant}"` : realm ? `--realm ${realm}` : '',
-      ...scopes.map((s) => `--scope ${s}`),
-    ]
-      .filter(Boolean)
-      .join(' ');
-    throw new Error(
-      `Not signed in to ADSP (non-interactive run). Sign in first with:\n  ${loginCmd}`,
-    );
+  // getAccessToken()'s cache lookup and its CI client_credentials fallback both
+  // require a resolvable realm (ADSP_TENANT_REALM or a persisted config) — set
+  // it only when we already know it (the --tenant/--tenantRealm path), and only
+  // for the duration of this call. Left unset otherwise (no realm known yet, so
+  // nothing to set) and always restored afterward rather than left set, so it
+  // doesn't leak into a later, --tenant-less call in the same process — that
+  // path relies on getStatus() trusting the *persisted* tenant name, which it
+  // only does when the realm didn't come from this env var.
+  const previousRealmEnv = process.env.ADSP_TENANT_REALM;
+  if (realm) {
+    process.env.ADSP_TENANT_REALM = realm;
   }
 
-  runAdspLogin({ env, realm, tenant, scopes });
-  token = await fetchToken();
-  if (token) return token;
+  try {
+    const fetchToken = async (): Promise<string | undefined> => {
+      const result = await getAccessToken(
+        scopes.length ? { scopes } : undefined,
+      );
+      return result.status === 'ok' ? result.token : undefined;
+    };
 
-  // The requested scope wasn't granted (e.g. non-admin user). Fall back to a
-  // base-scope token so the rest of generation still works.
-  if (scopes.length) {
-    const base = await getAccessToken();
-    if (base.status === 'ok') return base.token;
+    let token = await fetchToken();
+    if (token) return token;
+
+    if (isNonInteractive()) {
+      const loginCmd = [
+        'npx @abgov/adsp-cli login',
+        `--env ${env}`,
+        tenant ? `--tenant "${tenant}"` : realm ? `--realm ${realm}` : '',
+        ...scopes.map((s) => `--scope ${s}`),
+      ]
+        .filter(Boolean)
+        .join(' ');
+      throw new Error(
+        `Not signed in to ADSP (non-interactive run). Sign in first with:\n  ${loginCmd}\n` +
+          'Or, for a CI service account, set ADSP_CLIENT_ID and ADSP_CLIENT_SECRET ' +
+          "(requires @abgov/adsp-cli ^1.7.0 and the tenant's 'adsp-cli-ci' Keycloak " +
+          'client to be enabled with credentials generated).',
+      );
+    }
+
+    runAdspLogin({ env, realm, tenant, scopes });
+    token = await fetchToken();
+    if (token) return token;
+
+    // The requested scope wasn't granted (e.g. non-admin user). Fall back to a
+    // base-scope token so the rest of generation still works.
+    if (scopes.length) {
+      const base = await getAccessToken();
+      if (base.status === 'ok') return base.token;
+    }
+    return undefined;
+  } finally {
+    if (realm) {
+      if (previousRealmEnv === undefined) {
+        delete process.env.ADSP_TENANT_REALM;
+      } else {
+        process.env.ADSP_TENANT_REALM = previousRealmEnv;
+      }
+    }
   }
-  return undefined;
 }
 
 export async function getServiceUrls(directoryUrl: string) {
