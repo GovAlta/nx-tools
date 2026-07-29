@@ -46,7 +46,8 @@ export default async function (host: Tree, options: Schema) {
   }
 
   try {
-    checkGhCli();
+    // repo scope is what gh variable set needs to write RUN_E2E below.
+    checkGhCli('repo');
   } catch (e) {
     console.log(e instanceof Error ? e.message : String(e));
     return;

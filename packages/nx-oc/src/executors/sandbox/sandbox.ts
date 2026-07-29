@@ -1,6 +1,7 @@
 import { ExecutorContext, logger } from '@nx/devkit';
 import { execSync } from 'child_process';
 import { detectApplicationType } from '../../utils/app-type';
+import { activeAccountScopes } from '../../utils/gh-utils';
 import { ensureOcLogin } from '../../utils/oc-utils';
 import { SandboxExecutorSchema } from './schema';
 
@@ -16,16 +17,50 @@ function requireTool(tool: string, hint: string): void {
   }
 }
 
+// write:packages is mandatory — the push + pull-secret steps below can't work
+// at all without it. delete:packages is only needed by the (best-effort,
+// `|| true`'d) GHCR package deletion in the sandbox-teardown target this
+// generator also wires up — that call already tolerates failing silently, so
+// its absence is worth a warning here rather than a hard failure now.
+const REQUIRED_GH_SCOPE = 'write:packages';
+const RECOMMENDED_GH_SCOPE = 'delete:packages';
+
 // The pull secret + registry login read the gh session token, so gh must be
-// installed AND authenticated. Checked up front so a missing/expired login
-// fails before the slow build rather than at the push/import step.
+// installed, authenticated, AND the *active* account's token must actually
+// carry write:packages — `gh auth status` succeeding only confirms *an*
+// account is logged in, not that it has the scope the push/pull-secret steps
+// below need, so that's checked explicitly too, up front, before the slow
+// build rather than at the push/import step where the failure is a bare
+// registry auth error with no mention of scope at all.
 function requireGhAuth(): void {
   requireTool('gh', 'Install the GitHub CLI (https://cli.github.com).');
+
+  let status: string;
   try {
-    execSync('gh auth status', { stdio: 'ignore', shell: '/bin/bash' });
+    status = execSync('gh auth status 2>&1', {
+      shell: '/bin/bash',
+    }).toString();
   } catch {
     throw new Error(
       'gh is installed but not authenticated. Run `gh auth login` as an account with write:packages on the registry org (check/switch with `gh auth status` / `gh auth switch`).',
+    );
+  }
+
+  const scopes = activeAccountScopes(status);
+  if (!scopes) return;
+
+  if (!scopes.includes(REQUIRED_GH_SCOPE)) {
+    throw new Error(
+      `The active gh account is missing the '${REQUIRED_GH_SCOPE}' scope needed to push the image and create the pull secret. ` +
+        `Run \`gh auth refresh -h github.com -s ${REQUIRED_GH_SCOPE}\` to add it to the current login, or \`gh auth switch\` first ` +
+        `if a different, already-scoped account should be active.`,
+    );
+  }
+  if (!scopes.includes(RECOMMENDED_GH_SCOPE)) {
+    logger.warn(
+      `[nx-oc] The active gh account is missing the '${RECOMMENDED_GH_SCOPE}' scope. Deploying will still work, but ` +
+        `\`sandbox-teardown\`'s GHCR package deletion is best-effort and will silently no-op without it, leaving the ` +
+        `image behind. Run \`gh auth refresh -h github.com -s ${RECOMMENDED_GH_SCOPE}\` to add it now.`,
     );
   }
 }

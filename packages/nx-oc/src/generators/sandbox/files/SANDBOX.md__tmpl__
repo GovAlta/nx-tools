@@ -75,10 +75,18 @@ oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
 
 ## Known issues & workarounds
 
-- **`podman push` / import fails with an auth error** — the *active* `gh`
-  account lacks `write:packages` (or access to the org). Preflight only confirms
-  *an* account is logged in, not its scope. Check `gh auth status`; switch with
-  `gh auth switch -u <account>`, then re-run with `--skipBuild`.
+- **Preflight fails with `missing the 'write:packages' scope`** — the *active*
+  `gh` account is logged in but its token doesn't carry `write:packages` (or it
+  lacks access to the org). Run `gh auth refresh -h github.com -s write:packages`
+  to add the scope to the current login, or `gh auth switch -u <account>` first
+  if a different, already-scoped account should be active — then re-run.
+  If the push/import still fails with an auth error *after* preflight passes,
+  the account also needs actual access to the registry org, not just the scope.
+- **Preflight warns about `delete:packages`** — not fatal; deploy proceeds. It
+  means `sandbox-teardown`'s GHCR package deletion (best-effort) will silently
+  no-op without it, leaving the image behind. Run
+  `gh auth refresh -h github.com -s delete:packages` before tearing down if
+  you want that cleanup to actually happen.
 - **Pod `FailedCreate` "exceeded quota"** — the namespace CPU quota is full.
   Free room: `oc get deploy -n <%= sandboxProject %>` then delete stale apps
   (`oc delete all,configmap,is -l app=<old-app>,deployment-mode=sandbox -n <%= sandboxProject %>`), and re-run.

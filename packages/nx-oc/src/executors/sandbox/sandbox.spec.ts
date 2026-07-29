@@ -126,7 +126,7 @@ describe('sandbox executor', () => {
 
   it('fails fast when gh is installed but not authenticated (before the build)', async () => {
     execSync.mockImplementation((cmd: string) => {
-      if (cmd === 'gh auth status') throw new Error('not logged in');
+      if (cmd === 'gh auth status 2>&1') throw new Error('not logged in');
       return Buffer.from('');
     });
     const result = await runExecutor(baseOptions, context());
@@ -134,6 +134,84 @@ describe('sandbox executor', () => {
     // gh checked up front — no build/push happened
     expect(commands().some((c) => c.includes('nx build test'))).toBe(false);
     expect(commands().some((c) => c.includes('podman build'))).toBe(false);
+  });
+
+  it('fails fast, before the build, when the active gh account is missing write:packages', async () => {
+    const status = `github.com
+  ✓ Logged in to github.com account someone (keyring)
+  - Active account: true
+  - Git operations protocol: https
+  - Token: gho_************************************
+  - Token scopes: 'gist', 'read:org', 'repo'
+`;
+    execSync.mockImplementation((cmd: string) => {
+      if (cmd === 'gh auth status 2>&1') return Buffer.from(status);
+      return Buffer.from('');
+    });
+    const result = await runExecutor(baseOptions, context());
+    expect(result.success).toBe(false);
+    expect(commands().some((c) => c.includes('nx build test'))).toBe(false);
+    expect(commands().some((c) => c.includes('podman build'))).toBe(false);
+  });
+
+  it('proceeds when the active gh account has write:packages, even if another logged-in account does not', async () => {
+    const status = `github.com
+  ✓ Logged in to github.com account other-account (keyring)
+  - Active account: false
+  - Token scopes: 'gist', 'read:org', 'repo'
+
+  ✓ Logged in to github.com account active-account (keyring)
+  - Active account: true
+  - Token scopes: 'delete:packages', 'gist', 'read:org', 'repo', 'write:packages'
+`;
+    execSync.mockImplementation((cmd: string) => {
+      if (cmd === 'gh auth status 2>&1') return Buffer.from(status);
+      return Buffer.from('');
+    });
+    const result = await runExecutor(baseOptions, context());
+    expect(result.success).toBe(true);
+    expect(commands().some((c) => c.includes('podman build'))).toBe(true);
+  });
+
+  it('warns (without failing) when the active gh account has write:packages but not delete:packages', async () => {
+    const status = `github.com
+  ✓ Logged in to github.com account active-account (keyring)
+  - Active account: true
+  - Token scopes: 'gist', 'read:org', 'repo', 'write:packages'
+`;
+    execSync.mockImplementation((cmd: string) => {
+      if (cmd === 'gh auth status 2>&1') return Buffer.from(status);
+      return Buffer.from('');
+    });
+    const warnSpy = jest
+      .spyOn(logger, 'warn')
+      .mockImplementation(() => undefined);
+    const result = await runExecutor(baseOptions, context());
+    expect(result.success).toBe(true);
+    expect(commands().some((c) => c.includes('podman build'))).toBe(true);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('delete:packages'),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when the active gh account has both write:packages and delete:packages', async () => {
+    const status = `github.com
+  ✓ Logged in to github.com account active-account (keyring)
+  - Active account: true
+  - Token scopes: 'delete:packages', 'gist', 'read:org', 'repo', 'write:packages'
+`;
+    execSync.mockImplementation((cmd: string) => {
+      if (cmd === 'gh auth status 2>&1') return Buffer.from(status);
+      return Buffer.from('');
+    });
+    const warnSpy = jest
+      .spyOn(logger, 'warn')
+      .mockImplementation(() => undefined);
+    const result = await runExecutor(baseOptions, context());
+    expect(result.success).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('retries oc import-image on the tag-reconcile race', async () => {
