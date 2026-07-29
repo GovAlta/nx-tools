@@ -379,6 +379,10 @@ also offers a **+ Create a new tenant** choice, in `dev`/`test` (never `prod`), 
 accounts — see the [package README](https://github.com/GovAlta/nx-tools/blob/main/packages/nx-adsp/README.md#authentication)
 for the exact eligibility rules.
 
+A non-interactive run (CI) can also authenticate as a CI service account by setting
+`ADSP_CLIENT_ID`/`ADSP_CLIENT_SECRET`, instead of pre-obtaining a token for `--accessToken` — see the
+package README linked above.
+
 ## Agent consultation
 
 `express-service`, `react-app`, `angular-app`, `vue-app`, and the fullstack composites connect to

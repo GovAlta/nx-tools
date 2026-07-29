@@ -251,9 +251,13 @@ npx @abgov/adsp-cli login --env <dev|test|prod> --tenant "<Your Tenant>" --scope
 When you run a generator:
 
 - if a valid cached token exists, generation proceeds with no prompt;
-- if not, an **interactive** run launches `adsp login` for you (browser); a
-  **non-interactive** run (`--no-interactive` / CI) fails with the exact
-  `adsp login` command to run first.
+- if `ADSP_CLIENT_ID`/`ADSP_CLIENT_SECRET` are set (a CI service account â€” requires
+  `@abgov/adsp-cli` ^1.7.0+ and the tenant's `adsp-cli-ci` Keycloak client enabled with credentials
+  generated), a fresh token is acquired non-interactively via that account, no browser and no prior
+  `adsp login` needed;
+- otherwise, an **interactive** run launches `adsp login` for you (browser); a **non-interactive**
+  run (`--no-interactive` / CI) fails with the exact `adsp login` command to run first, or the two
+  env vars above to set instead.
 
 Generator flags that steer which tenant/token is used:
 
@@ -269,7 +273,7 @@ have a tenant yet? That picker also offers a **+ Create a new tenant** choice â€
 `tenant-service-admin`, and (unless `tenant-service-admin`) that doesn't already own a tenant (one
 per admin email). Picking it prompts for a name and waits for the new realm to finish provisioning
 before continuing the login as that tenant. Requires `@abgov/adsp-cli` ^1.4.0+ (this plugin pins
-^1.6.0 or later).
+^1.7.0 or later).
 
 ## Agent consultation
 
