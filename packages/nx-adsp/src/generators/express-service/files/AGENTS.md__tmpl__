@@ -68,6 +68,17 @@ need project-scoped MCP enabled. The server runs via `npx` and needs no credenti
 | `src/database.ts` | Mongoose connection helpers — `connectDatabase()` and `disconnectDatabase()` |
 <% } %>
 
+## Health and readiness checks
+
+`/health` and (<% if (database !== 'none') { %>already, since this service has a database<% } else { %>if this service later gains a database or another required dependency<% } %>) `/health/ready` are two different questions, mapped to the two different OpenShift probes for a reason — conflating them into one endpoint means an outage in a downstream dependency gets treated as "restart this pod," which does not fix the outage and just adds a restart loop on top of it:
+
+- **`/health` — liveness: is the process itself up.** Stays dependency-free on purpose. Don't add a check here for anything this service depends on but doesn't own.
+<% if (database !== 'none') { %>
+- **`/health/ready` — readiness: can this pod actually serve requests right now.** Already checks the database (`isDatabaseReady()` in `src/database.ts`) — a real round-trip query, not just a pool-state flag. **Extend this handler, not `/health`, for any other resource this service can't function without** — another required downstream API, a message broker, a required ADSP capability beyond what `healthCheck()` already covers — following the same reasoning: a dependency being down should hold traffic (503, readiness), not trigger a pod restart (liveness) that can't fix a problem outside this pod.
+<% } else { %>
+- If this service later gains a database or another hard dependency, add a `/health/ready` route that checks it (see `@abgov/nx-adsp:express-service --database postgres|mongo` for the shipped pattern) and point the deployment's `readinessProbe` at it instead of `/health` — don't check dependencies from the liveness route.
+<% } %>
+
 ## SDK capabilities
 
 `initializeService()` returns `capabilities`:
