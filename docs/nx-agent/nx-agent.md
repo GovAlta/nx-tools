@@ -144,6 +144,7 @@ term: Case
 aliases: []
 not_confused_with: []
 project-docs-ancestors: []
+resolves: []
 ---
 
 <!-- Definition: describe this term in the domain's own language. -->
@@ -154,6 +155,9 @@ project-docs-ancestors: []
 - `not_confused_with` — similar-sounding terms this one is deliberately distinct from, and why.
 - `project-docs-ancestors` — other `project-docs/` artifacts this term derives from (see
   `project-docs-lineage` below) — set via `--project-docs-ancestors`, never by hand.
+- `resolves` — which of those ancestors (typically an `open-question`/`blocker`) this term
+  specifically _resolves_, not just builds on — set via `--resolves`, a distinct flag from
+  `--project-docs-ancestors` even though the same ref also lands there.
 
 One file per term rather than a single flat glossary, so frontmatter (a per-file construct in
 every tool that uses the term) is meaningful, and so listing the folder — cheap, just filenames —
@@ -166,11 +170,12 @@ glossary" generator; `domain-term` composes it as an internal step.
 
 ### `domain-term` options
 
-| Option                 | Default                  | Description                                                                                                                                                                                                |
-| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `term`                 | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                                                                        |
-| `project`              | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — prefer this whenever the term already has a natural code home (usually a domain library), not just workspace root by default |
-| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this term derives from — repeatable; resolved into `project-docs-ancestors` (see below)                                                                        |
+| Option                 | Default                  | Description                                                                                                                                                                                                        |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `term`                 | — (required, positional) | The canonical domain term, as domain experts use it                                                                                                                                                                |
+| `project`              | workspace root           | Scope the term to a specific project's `project-docs/domain-terms/` instead — prefer this whenever the term already has a natural code home (usually a domain library), not just workspace root by default         |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this term derives from — repeatable; resolved into `project-docs-ancestors` (see below)                                                                                |
+| `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this term resolves — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such |
 
 ```bash
 npx nx g @abgov/nx-agent:domain-term Case --project=domain-lib
@@ -199,6 +204,8 @@ Creates `project-docs/bounded-contexts/collision-reporting.md`:
 name: Collision Reporting
 aliases: []
 not_confused_with: []
+project-docs-ancestors: []
+resolves: []
 ---
 
 <!-- Definition: describe what's inside this boundary, and what's explicitly outside it. -->
@@ -206,10 +213,12 @@ not_confused_with: []
 
 ### `bounded-context` options
 
-| Option    | Default                  | Description                                                                                                                                                                                                          |
-| --------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`    | — (required, positional) | The canonical name of the bounded context                                                                                                                                                                            |
-| `project` | workspace root           | Scope the context to a specific project's `project-docs/bounded-contexts/` instead — prefer this whenever the context already has a natural code home (usually a domain library), not just workspace root by default |
+| Option                 | Default                  | Description                                                                                                                                                                                                           |
+| ---------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                 | — (required, positional) | The canonical name of the bounded context                                                                                                                                                                             |
+| `project`              | workspace root           | Scope the context to a specific project's `project-docs/bounded-contexts/` instead — prefer this whenever the context already has a natural code home (usually a domain library), not just workspace root by default  |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this context derives from — repeatable; resolved into `project-docs-ancestors`                                                                                            |
+| `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this context resolves — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such |
 
 ```bash
 npx nx g @abgov/nx-agent:bounded-context "Collision Reporting" --project=domain-lib
@@ -236,6 +245,7 @@ Creates `project-docs/domain-models/collision-report-lifecycle.md`:
 ---
 name: Collision Report Lifecycle
 project-docs-ancestors: [bounded-contexts:collision-reporting, domain-terms:collision-report]
+resolves: []
 ---
 
 <!-- Design: describe the aggregates, entities, value objects, and invariants here. -->
@@ -243,15 +253,85 @@ project-docs-ancestors: [bounded-contexts:collision-reporting, domain-terms:coll
 
 ### `domain-model` options
 
-| Option                 | Default                  | Description                                                                                                                                                                                                   |
-| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                 | — (required, positional) | The canonical name of the domain model                                                                                                                                                                        |
-| `project`              | workspace root           | Scope the model to a specific project's `project-docs/domain-models/` instead — prefer this whenever the model already has a natural code home (usually a domain library), not just workspace root by default |
-| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this model derives from — repeatable; normally the bounded context it belongs to plus the domain terms it's composed from                                         |
+| Option                 | Default                  | Description                                                                                                                                                                                                         |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                 | — (required, positional) | The canonical name of the domain model                                                                                                                                                                              |
+| `project`              | workspace root           | Scope the model to a specific project's `project-docs/domain-models/` instead — prefer this whenever the model already has a natural code home (usually a domain library), not just workspace root by default       |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this model derives from — repeatable; normally the bounded context it belongs to plus the domain terms it's composed from                                               |
+| `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this model resolves — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such |
 
 Re-adding a model that already exists throws rather than silently overwriting or duplicating it. A
 `--project-docs-ancestors` path that doesn't resolve to an existing artifact throws the same way,
 before anything is written.
+
+---
+
+## `open-question`
+
+Something undecided that can't be guessed at — needs input, a decision, or more information before
+work depending on it can proceed:
+
+```bash
+npx nx g @abgov/nx-agent:open-question "Reviewer Authorization" \
+  --project-docs-ancestors=project-docs/requirements/reviewer-role.md
+```
+
+Creates `project-docs/open-questions/reviewer-authorization.md`:
+
+```markdown
+---
+project-docs-ancestors: [requirements:reviewer-role]
+resolves: []
+---
+
+<!-- What's undecided, and why it can't be guessed at. -->
+```
+
+### `open-question` options
+
+| Option                 | Default                  | Description                                                                                                                                 |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `question`             | — (required, positional) | A short slug for what's undecided                                                                                                           |
+| `project`              | workspace root           | Scope the question to a specific project's `project-docs/open-questions/` instead — prefer this whenever it already has a natural code home |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this question grounds on — repeatable; an open question can ground on any artifact kind         |
+
+A question is never marked resolved by editing its own file — some other artifact resolves it via
+its own `--resolves` flag (see `domain-term`/`bounded-context`/`domain-model` above). Re-adding a
+question that already exists throws rather than silently overwriting or duplicating it.
+
+---
+
+## `blocker`
+
+An existing artifact that needs revision — something already established but wrong, incomplete, or
+in conflict with something discovered later:
+
+```bash
+npx nx g @abgov/nx-agent:blocker "Cant Ship Payment Flow" \
+  --project-docs-ancestors=project-docs/domain-models/collision-report-lifecycle.md
+```
+
+Creates `project-docs/blockers/cant-ship-payment-flow.md`:
+
+```markdown
+---
+project-docs-ancestors: [domain-models:collision-report-lifecycle]
+resolves: []
+---
+
+<!-- What needs fixing, and why it is blocking. -->
+```
+
+### `blocker` options
+
+| Option                 | Default                  | Description                                                                                                                          |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `description`          | — (required, positional) | A short slug for what needs fixing                                                                                                   |
+| `project`              | workspace root           | Scope the blocker to a specific project's `project-docs/blockers/` instead — prefer this whenever it already has a natural code home |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this blocker relates to — repeatable; typically the artifact that needs revision         |
+
+Same resolution model as `open-question`: never mark it resolved by editing its own file — the
+artifact that actually revises the thing it's blocking resolves it via `--resolves`.
 
 ---
 
@@ -283,27 +363,53 @@ project, so a reference's meaning never depends on where it's found.
 Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself (or `--dry-run`
 it in your own CI) after adding or changing a reference.
 
+Also reports which `open-question`/`blocker` artifacts are still open versus resolved — see
+`resolutionStatus` below.
+
 ### `project-docs/artifact-schema.json`
 
-An artifact-producing generator (`domain-term`, `bounded-context`, `domain-model`) self-registers its
-own entry here on first use, declaring what ancestor type its kind normally expects — e.g.
-`domain-terms` expects a `bounded-contexts` ancestor:
+An artifact-producing generator (`domain-term`, `bounded-context`, `domain-model`, `open-question`,
+`blocker`) self-registers its own entry here on first use, declaring what ancestor type its kind
+normally expects — e.g. `domain-terms` expects a `bounded-contexts` ancestor — and, separately,
+whether its kind has a resolution lifecycle at all:
 
 ```json
 {
   "bounded-contexts": { "expectedAncestorTypes": [] },
   "domain-terms": { "expectedAncestorTypes": ["bounded-contexts"] },
-  "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] }
+  "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] },
+  "open-questions": { "expectedAncestorTypes": [], "tracksResolution": true },
+  "blockers": { "expectedAncestorTypes": [], "tracksResolution": true }
 }
 ```
 
 `project-docs-lineage` reads this generically — it has no knowledge of any specific type baked in, so
-a hand-added entry for a custom artifact kind gets the same check for free. `expectedAncestorTypes` is
+a hand-added entry for a custom artifact kind gets the same checks for free. `expectedAncestorTypes` is
 an all-of list, not any-of: `domain-models` above requires an ancestor of _both_ `bounded-contexts`
 and `domain-terms`, not either — a model with only one is still missing part of the vocabulary it
 should be built from. An artifact whose type has an entry here but is missing an ancestor of one of
 the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
 as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
+
+`tracksResolution: true` is what makes `open-questions`/`blockers` show up in `resolutionStatus`
+(below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking
+and gets settled by another artifact) gets the same open/resolved report for free by declaring it.
+
+### `resolutionStatus`
+
+`violations.resolutionStatus` in `.nx-agent/lineage.json` splits every artifact whose type has
+`tracksResolution: true` into `open` and `resolved`:
+
+```json
+{ "open": ["open-questions:reviewer-authorization"], "resolved": ["blockers:cant-ship-payment-flow"] }
+```
+
+"Resolved" means some artifact's own `resolves` field names this key — not merely that something
+references it via `project-docs-ancestors`. That distinction matters: a `blocker` or another
+`open-question` citing an existing one _because_ it's still unresolved would, under a looser
+"anything references it" test, get misread as having resolved it. A deferral (explicitly punted, not
+decided) isn't a third computed bucket — it stays `open`, with the _why_ left to the artifact's own
+prose, same as an `orphan` doesn't try to distinguish "temporary" from "abandoned."
 
 ### Programmatic access
 

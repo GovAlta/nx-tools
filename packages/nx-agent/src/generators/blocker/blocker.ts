@@ -9,10 +9,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
+import { resolveRefFromPath } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
-const BOUNDED_CONTEXTS_SUBDIR = 'project-docs/bounded-contexts';
+const BLOCKERS_SUBDIR = 'project-docs/blockers';
 const README_TEMPLATE_PATH = join(__dirname, 'README.template.md');
 
 function resolveTargetRoot(host: Tree, project?: string): string {
@@ -20,15 +20,15 @@ function resolveTargetRoot(host: Tree, project?: string): string {
 }
 
 // The container has no standalone value on its own (its README only exists to
-// explain the convention for the context about to be added), so this is an
-// internal step composed by bounded-context rather than its own generator.
+// explain the convention for the blocker about to be added), so this is an
+// internal step composed by blocker rather than its own generator.
 function ensureContainerReadme(
   host: Tree,
   containerDir: string,
   scoped: boolean,
 ): void {
   const sharedNote = scoped
-    ? ' This is shared by every project that depends on this library — keep the boundary consistent across the service and its consumers rather than letting each drift toward its own interpretation.'
+    ? ' This is shared by every project that depends on this library — a blocker raised here may affect every consumer, not just the one that noticed it.'
     : '';
   const content = readFileSync(README_TEMPLATE_PATH, 'utf-8')
     .split('{{SHARED_CONTEXT_NOTE}}')
@@ -38,49 +38,42 @@ function ensureContainerReadme(
 
 export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project);
-  const containerDir = joinPathFragments(targetRoot, BOUNDED_CONTEXTS_SUBDIR);
-  const slug = names(options.name).fileName;
-  const contextPath = joinPathFragments(containerDir, `${slug}.md`);
+  const containerDir = joinPathFragments(targetRoot, BLOCKERS_SUBDIR);
+  const slug = names(options.description).fileName;
+  const blockerPath = joinPathFragments(containerDir, `${slug}.md`);
 
   // A repeat/typo'd invocation should fail loudly rather than silently
-  // clobbering or duplicating a context — same posture as domain-term.
+  // clobbering or duplicating a blocker — same posture as domain-model.
   // Checked before any write so a failing run has no side effects.
-  if (host.exists(contextPath)) {
+  if (host.exists(blockerPath)) {
     throw new Error(
-      `[nx-agent] ${contextPath} already exists — edit it directly rather than regenerating it.`,
+      `[nx-agent] ${blockerPath} already exists — edit it directly rather than regenerating it.`,
     );
   }
 
   // Resolved (and, in doing so, validated) before any write — a path that
   // doesn't resolve to an existing project-docs/ artifact throws here, same
   // as the duplicate check above, so a failing run still has no side effects.
-  const { ancestors: projectDocsAncestors, resolvedRefs } =
-    resolveAncestorsAndResolves(
-      host,
-      options.projectDocsAncestors,
-      options.resolves,
-    );
+  const projectDocsAncestors = (options.projectDocsAncestors ?? []).map(
+    (path) => resolveRefFromPath(host, path),
+  );
 
   ensureContainerReadme(host, containerDir, !!options.project);
-  ensureArtifactSchemaEntry(host, 'bounded-contexts', []);
+  // No fixed expected ancestor type — a blocker can relate to any artifact
+  // kind. tracksResolution: true is what makes project-docs-lineage report
+  // this blocker as open/resolved.
+  ensureArtifactSchemaEntry(host, 'blockers', [], true);
 
   const content = [
     '---',
-    `name: ${options.name}`,
-    'aliases: []',
-    'not_confused_with: []',
     `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,
-    `resolves: [${resolvedRefs.join(', ')}]`,
+    'resolves: []',
     '---',
     '',
-    "<!-- Definition: describe what's inside this boundary, and what's explicitly outside it. -->",
+    '<!-- What needs fixing, and why it is blocking. -->',
     '',
   ].join('\n');
-  host.write(contextPath, content);
-
-  for (const ref of resolvedRefs) {
-    console.log(`✓ this bounded context resolves ${ref}`);
-  }
+  host.write(blockerPath, content);
 
   await formatFiles(host);
 }

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentOpenQuestion",
+  "title": "Add an open question",
+  "description": "Creates one file for an open question under project-docs/open-questions/, with a project-docs-ancestors frontmatter list and a free-text body describing what's undecided and why. Bootstraps the open-questions/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "question": {
+      "type": "string",
+      "description": "A short slug for what's undecided (e.g. \"Reviewer Authorization\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What's undecided?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this open question to a specific project's project-docs/open-questions/ instead of the workspace root — prefer this whenever the question already has a natural code home; only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this question grounds on — an open question can ground on any artifact kind (a service description, a requirement, a specific rule). Each path must already exist; a backward reference only makes sense pointing at something already established."
+    }
+  },
+  "required": ["question"],
+  "additionalProperties": false
+}

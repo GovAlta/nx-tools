@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentBlocker",
+  "title": "Add a blocker",
+  "description": "Creates one file for a blocker under project-docs/blockers/, with a project-docs-ancestors frontmatter list and a free-text body describing what needs fixing and why. Bootstraps the blockers/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "A short slug for what needs fixing (e.g. \"Cant Ship Payment Flow\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What needs fixing, and why is it blocking?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this blocker to a specific project's project-docs/blockers/ instead of the workspace root — prefer this whenever the blocker already has a natural code home; only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this blocker relates to — typically the artifact that needs revision. Each path must already exist; a backward reference only makes sense pointing at something already established."
+    }
+  },
+  "required": ["description"],
+  "additionalProperties": false
+}

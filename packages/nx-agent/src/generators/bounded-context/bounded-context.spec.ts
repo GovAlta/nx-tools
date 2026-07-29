@@ -134,4 +134,52 @@ describe('nx-agent bounded-context generator', () => {
       'bounded-contexts': { expectedAncestorTypes: [] },
     });
   });
+
+  it('resolves --project-docs-ancestors paths into the canonical reference and writes them', async () => {
+    host.write(
+      'project-docs/open-questions/reviewer-authorization.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+
+    await generator(host, {
+      name: 'Collision Reporting',
+      projectDocsAncestors: [
+        'project-docs/open-questions/reviewer-authorization.md',
+      ],
+    });
+
+    const content = host
+      .read('project-docs/bounded-contexts/collision-reporting.md')
+      .toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [open-questions:reviewer-authorization]',
+    );
+  });
+
+  it('--resolves writes the resolved ref into both project-docs-ancestors and resolves, and confirms it', async () => {
+    host.write(
+      'project-docs/open-questions/reviewer-authorization.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await generator(host, {
+      name: 'Collision Reporting',
+      resolves: ['project-docs/open-questions/reviewer-authorization.md'],
+    });
+
+    const content = host
+      .read('project-docs/bounded-contexts/collision-reporting.md')
+      .toString();
+    expect(content).toContain(
+      'project-docs-ancestors: [open-questions:reviewer-authorization]',
+    );
+    expect(content).toContain(
+      'resolves: [open-questions:reviewer-authorization]',
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      '✓ this bounded context resolves open-questions:reviewer-authorization',
+    );
+    logSpy.mockRestore();
+  });
 });

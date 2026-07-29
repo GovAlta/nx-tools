@@ -37,6 +37,14 @@ export default async function (host: Tree) {
       `[nx-agent] broken reference "${broken.ref}" in ${broken.referencedFrom}`,
     );
   }
+  for (const open of violations.resolutionStatus.open) {
+    // eslint-disable-next-line no-console
+    console.log(`[nx-agent] open (unresolved): ${open}`);
+  }
+  for (const resolved of violations.resolutionStatus.resolved) {
+    // eslint-disable-next-line no-console
+    console.log(`[nx-agent] resolved: ${resolved}`);
+  }
 
   host.write(
     LINEAGE_PATH,

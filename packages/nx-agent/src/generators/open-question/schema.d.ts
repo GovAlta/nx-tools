@@ -1,6 +1,5 @@
 export interface Schema {
-  term: string;
+  question: string;
   project?: string;
   projectDocsAncestors?: string[];
-  resolves?: string[];
 }

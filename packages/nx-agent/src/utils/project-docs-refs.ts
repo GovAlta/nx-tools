@@ -48,13 +48,18 @@ export function refKey(
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
 // Real YAML parsing, not hand-rolled per-shape regexes — frontmatter is YAML,
-// and `project-docs-ancestors` is a normal YAML sequence that can legally be
+// and a reference-list field is a normal YAML sequence that can legally be
 // written as an inline flow array (`[a, b]`), a block list (`- a\n  - b`), or
 // (what Prettier reformats an inline array into once it's long enough to wrap)
 // a multi-line flow array. A regex per shape silently returned [] — no error,
 // no log — for whichever shape it didn't special-case; a real parser handles
 // all of them, and anything YAML legally allows in the future, uniformly.
-export function extractFrontmatterAncestorRefs(content: string): string[] {
+// Shared by every frontmatter reference-list field (`project-docs-ancestors`,
+// `resolves`) rather than re-implementing the same parse per field.
+export function extractFrontmatterField(
+  content: string,
+  field: string,
+): string[] {
   const block = FRONTMATTER_BLOCK.exec(content);
   if (!block) {
     return [];
@@ -67,13 +72,15 @@ export function extractFrontmatterAncestorRefs(content: string): string[] {
     return [];
   }
 
-  const refs = (frontmatter as Record<string, unknown> | null)?.[
-    'project-docs-ancestors'
-  ];
+  const refs = (frontmatter as Record<string, unknown> | null)?.[field];
   if (!Array.isArray(refs)) {
     return [];
   }
   return refs.filter((ref): ref is string => typeof ref === 'string');
+}
+
+export function extractFrontmatterAncestorRefs(content: string): string[] {
+  return extractFrontmatterField(content, 'project-docs-ancestors');
 }
 
 export function extractCommentAncestorRefs(content: string): string[] {
@@ -146,9 +153,39 @@ export function resolveRefFromPath(host: Tree, rawPath: string): string {
   return refKey({ project, type, id });
 }
 
+// Shared by every artifact-producing generator that supports both
+// --projectDocsAncestors and --resolves: resolves each (same
+// resolveRefFromPath, so an unresolvable path throws before any write either
+// way), then merges the resolved refs into the ancestors list — a resolution
+// is still structurally an ancestor, so getAncestors/getDescendants/unscoped
+// traversal sees it regardless of which flag added it — while keeping the
+// resolved refs available separately so the caller can also write the
+// distinct `resolves` frontmatter field project-docs-lineage's
+// resolutionStatus actually reads.
+export function resolveAncestorsAndResolves(
+  host: Tree,
+  projectDocsAncestors: string[] | undefined,
+  resolves: string[] | undefined,
+): { ancestors: string[]; resolvedRefs: string[] } {
+  const ancestors = (projectDocsAncestors ?? []).map((path) =>
+    resolveRefFromPath(host, path),
+  );
+  const resolvedRefs = (resolves ?? []).map((path) =>
+    resolveRefFromPath(host, path),
+  );
+  return {
+    ancestors: [...new Set([...ancestors, ...resolvedRefs])],
+    resolvedRefs,
+  };
+}
+
 export interface RegistryEntry {
   path: string;
   ancestorRefs: string[];
+  // Refs this artifact explicitly claims to resolve (via --resolves), not
+  // just build on — a strict subset of ancestorRefs, since a resolved ref is
+  // also written there for traversal. See computeViolations' resolutionStatus.
+  resolves: string[];
 }
 
 export type Registry = Map<string, RegistryEntry>;
@@ -263,6 +300,7 @@ function registerArtifact(
   registry.set(key, {
     path,
     ancestorRefs: extractFrontmatterAncestorRefs(content),
+    resolves: extractFrontmatterField(content, 'resolves'),
   });
 }
 
@@ -311,6 +349,7 @@ export interface Violations {
   brokenRefs: { ref: string; referencedFrom: string }[];
   orphans: string[];
   unscoped: string[];
+  resolutionStatus: { open: string[]; resolved: string[] };
 }
 
 // `artifactSchema` is plain data the workspace owns (see utils/artifact-schema.ts)
@@ -354,7 +393,36 @@ export function computeViolations(
     }
   }
 
-  return { brokenRefs, orphans, unscoped };
+  // Which kinds get an open/resolved fact at all is data-driven
+  // (tracksResolution), same as expectedAncestorTypes above — no concrete
+  // type name here either. "Resolved" is a direct registry-to-registry
+  // check (does any artifact's own `resolves` list name this key), not a
+  // proxy on referrer type: a blocker or another open question citing this
+  // one *because* it's still unresolved would, under a type-based proxy,
+  // get misread as resolving it.
+  const resolvedKeys = new Set<string>();
+  for (const entry of registry.values()) {
+    for (const resolved of entry.resolves) {
+      resolvedKeys.add(resolved);
+    }
+  }
+
+  const resolutionStatus: Violations['resolutionStatus'] = {
+    open: [],
+    resolved: [],
+  };
+  for (const key of registry.keys()) {
+    const parsedKey = parseAncestorRef(key);
+    if (!parsedKey || !artifactSchema[parsedKey.type]?.tracksResolution) {
+      continue;
+    }
+    (resolvedKeys.has(key)
+      ? resolutionStatus.resolved
+      : resolutionStatus.open
+    ).push(key);
+  }
+
+  return { brokenRefs, orphans, unscoped, resolutionStatus };
 }
 
 // The two retrieval directions, deliberately not symmetric in cost. Forward

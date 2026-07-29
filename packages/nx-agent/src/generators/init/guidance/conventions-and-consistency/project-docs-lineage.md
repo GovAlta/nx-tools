@@ -11,11 +11,22 @@ entirely for a singular one (a type with exactly one file, directly under `proje
 subfolder) — e.g. `domain-terms:case` for a term, `architecture-overview` alone for a one-off doc.
 Only ever reference something that already exists — this is a backward reference, and deriving from
 a thing that doesn't exist yet isn't a real case. `nx g @abgov/nx-agent:domain-term`,
-`:bounded-context`, and `:domain-model` each resolve a `--project-docs-ancestors <path>` for you
-(from an existing artifact's path, not a hand-typed `type:id` string) rather than requiring you to
-know the format; other artifact-producing generators should do the same. Run
-`nx g @abgov/nx-agent:project-docs-lineage` to build the full graph and catch a broken reference —
-not yet wired into the pre-commit hook, so run it yourself after adding or changing a reference.
+`:bounded-context`, `:domain-model`, `:open-question`, and `:blocker` each resolve a
+`--project-docs-ancestors <path>` for you (from an existing artifact's path, not a hand-typed
+`type:id` string) rather than requiring you to know the format; other artifact-producing generators
+should do the same. Run `nx g @abgov/nx-agent:project-docs-lineage` to build the full graph and catch
+a broken reference — not yet wired into the pre-commit hook, so run it yourself after adding or
+changing a reference.
+
+**Open questions and blockers.** `nx g @abgov/nx-agent:open-question`/`:blocker` capture something
+undecided or something that needs revision as its own artifact, rather than leaving it in prose where
+it's easy to lose track of. They're resolved by a _different_ artifact — the one that actually settles
+it — passing `--resolves <path>` (on `domain-term`/`bounded-context`/`domain-model`), not by
+hand-editing the question/blocker file itself. `--resolves` is layered on top of
+`--project-docs-ancestors` (the resolved ref lands in both places), so it's still visible to normal
+lineage traversal; the distinct `resolves` field is what lets `project-docs-lineage` report a question
+or blocker as resolved specifically, rather than mistaking any artifact that merely cites it for
+context as having settled it.
 
 **Where an artifact belongs**, one level below the format above: a bounded context, domain model, or
 domain term can be scoped to a specific project (`--project <p>`) instead of the workspace root, and

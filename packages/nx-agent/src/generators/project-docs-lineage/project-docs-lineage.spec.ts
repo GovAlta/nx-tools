@@ -108,4 +108,49 @@ describe('nx-agent project-docs-lineage generator', () => {
     const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
     expect(lineage.violations.unscoped).toEqual([]);
   });
+
+  it('reports resolutionStatus without throwing, console-logging open and resolved keys', async () => {
+    host.write(
+      'project-docs/artifact-schema.json',
+      JSON.stringify({
+        'open-questions': { expectedAncestorTypes: [], tracksResolution: true },
+      }),
+    );
+    host.write(
+      'project-docs/open-questions/still-open.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/open-questions/resolved-one.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [open-questions:resolved-one]',
+        'resolves: [open-questions:resolved-one]',
+        '---',
+      ].join('\n'),
+    );
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await expect(generator(host)).resolves.toBeUndefined();
+
+    const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+    expect(lineage.violations.resolutionStatus.open).toEqual([
+      'open-questions:still-open',
+    ]);
+    expect(lineage.violations.resolutionStatus.resolved).toEqual([
+      'open-questions:resolved-one',
+    ]);
+    expect(logSpy).toHaveBeenCalledWith(
+      '[nx-agent] open (unresolved): open-questions:still-open',
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      '[nx-agent] resolved: open-questions:resolved-one',
+    );
+    logSpy.mockRestore();
+  });
 });
