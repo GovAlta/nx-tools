@@ -87,7 +87,11 @@ const GUIDANCE_GROUPS: GuidanceGroup[] = [
   {
     title: 'Verifying your work',
     folder: 'verifying-your-work',
-    items: ['pre-commit-checks', 'style-formatting-and-complexity-tooling'],
+    items: [
+      'pre-commit-checks',
+      'style-formatting-and-complexity-tooling',
+      'accessibility-checks',
+    ],
   },
   {
     title: 'Version control practices',

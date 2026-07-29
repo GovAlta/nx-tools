@@ -67,6 +67,10 @@ describe('angular app generator', () => {
       ? 'apps/test-e2e/playwright.config.mts'
       : 'apps/test-e2e/playwright.config.ts';
     expect(appTree.read(cfg).toString()).toContain('process.env.BASE_URL');
+    // Accessibility check (axe-core, WCAG 2.1 A/AA) rides along in the same e2e project.
+    expect(appTree.exists('apps/test-e2e/src/a11y.spec.ts')).toBeTruthy();
+    const pkgJson = JSON.parse(appTree.read('package.json').toString());
+    expect(pkgJson.devDependencies['@axe-core/playwright']).toBeTruthy();
   }, 120000);
 
   it('AGENTS.md points at the current design system docs', async () => {

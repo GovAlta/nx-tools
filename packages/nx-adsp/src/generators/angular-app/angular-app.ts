@@ -11,6 +11,7 @@ import {
 } from '../../utils/keycloak-admin';
 import { PLUGIN_VERSION } from '../../utils/plugin-version';
 import {
+  addAxeAccessibilityCheck,
   addJestCoverageConfig,
   addSemgrepTarget,
   guardPlaywrightWebServer,
@@ -133,6 +134,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   // Let the Playwright e2e target the deployed URL (BASE_URL) in CI instead of
   // always starting a local dev server — see the nx-oc pipeline's e2e jobs.
   guardPlaywrightWebServer(host, `${normalizedOptions.projectRoot}-e2e`);
+  addAxeAccessibilityCheck(host, `${normalizedOptions.projectRoot}-e2e`);
 
   addDependenciesToPackageJson(
     host,
@@ -149,7 +151,9 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       'keycloak-js': '^23.0.7',
       'zone.js': '~0.15.0',
     },
-    {},
+    {
+      '@axe-core/playwright': '^4.12.1',
+    },
   );
 
   const addedProxy = addFiles(host, normalizedOptions);
