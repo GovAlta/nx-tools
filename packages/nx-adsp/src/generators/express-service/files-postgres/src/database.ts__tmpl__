@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
@@ -12,3 +13,10 @@ const pool = new Pool({ connectionString: environment.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
 export const closeDatabase = (): Promise<void> => pool.end();
+
+// A trivial round-trip query, not just a pool-state check — proves the
+// database is actually reachable and answering, the same reason `pg_isready`
+// exists. Used by /health/ready, not by `main.ts` directly.
+export const isDatabaseReady = async (): Promise<void> => {
+  await db.execute(sql`SELECT 1`);
+};

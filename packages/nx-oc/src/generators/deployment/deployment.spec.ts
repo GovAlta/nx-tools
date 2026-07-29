@@ -158,6 +158,9 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('readinessProbe');
     expect(manifest).toContain('livenessProbe');
+    // No database configured — readiness falls back to the plain liveness
+    // endpoint rather than pointing at a /health/ready that doesn't exist.
+    expect(manifest).not.toContain('/health/ready');
     // The service authenticates with ADSP using a confidential client secret,
     // injected from the ${APP_NAME}-secrets Secret.
     expect(manifest).toContain('CLIENT_SECRET');
@@ -227,6 +230,9 @@ describe('Deployment Generator', () => {
     expect(manifest).toContain('DATABASE_URL');
     expect(manifest).toContain('initContainers');
     expect(manifest).toContain('migrate.js');
+    // Readiness (not liveness) points at the DB-checked endpoint — a DB
+    // outage should hold traffic, not restart a pod that can't fix it.
+    expect(manifest).toContain('path: /health/ready');
   });
 
   it('includes MONGODB_URI secretKeyRef without init container for mongo node deployment', async () => {
@@ -255,6 +261,7 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('MONGODB_URI');
     expect(manifest).not.toContain('initContainers');
+    expect(manifest).toContain('path: /health/ready');
   });
 
   it('throws an actionable error when the app type cannot be detected', async () => {

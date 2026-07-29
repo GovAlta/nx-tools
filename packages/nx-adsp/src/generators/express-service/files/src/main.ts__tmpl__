@@ -7,9 +7,9 @@ import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
 <% if (database === 'postgres') { %>
-import { closeDatabase } from './database';
+import { closeDatabase, isDatabaseReady } from './database';
 <% } else if (database === 'mongo') { %>
-import { connectDatabase, disconnectDatabase } from './database';
+import { connectDatabase, disconnectDatabase, isDatabaseReady } from './database';
 <% } %>
 import { environment } from './environment';
 import { exampleEventDefinition } from './events';
@@ -54,10 +54,34 @@ async function initializeApp() {
   passport.use('tenant', tenantStrategy);
   app.use(passport.initialize());
 
+  // Liveness — is the process itself up. Deliberately stays dependency-free
+  // (platform reachability, not this app's own resources) so an outage in a
+  // downstream dependency doesn't get treated as "restart this pod," which
+  // wouldn't fix the outage and would just cause a needless restart loop.
   app.get('/health', async (_req, res) => {
     const platform = await healthCheck();
     res.json({ ...platform });
   });
+<% if (database !== 'none') { %>
+  // Readiness — can this pod actually serve requests right now. Checks the
+  // database because this service can't do anything useful without it; 503
+  // tells the platform to hold traffic rather than route it somewhere that
+  // will 500. Extend this handler (not /health above) for any other resource
+  // this service can't function without — another required downstream API,
+  // a message broker, etc. — following the same "hold traffic, don't
+  // restart" reasoning; see AGENTS.md's "Health and readiness checks".
+  app.get('/health/ready', async (_req, res) => {
+    try {
+      await isDatabaseReady();
+      res.json({ ready: true });
+    } catch (err) {
+      res.status(503).json({
+        ready: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  });
+<% } %>
 
   // Generated once from the routers' registry.registerPath() calls (see
   // routes/example.ts) — every router imported above has already registered
@@ -85,6 +109,9 @@ async function initializeApp() {
       _links: {
         self: { href: new URL(req.originalUrl, rootUrl).href },
         health: { href: new URL('/health', rootUrl).href },
+<% if (database !== 'none') { %>
+        ready: { href: new URL('/health/ready', rootUrl).href },
+<% } %>
         api: { href: new URL('/<%= projectName %>/v1', rootUrl).href },
         docs: { href: new URL('/swagger/docs/v1', rootUrl).href },
       },

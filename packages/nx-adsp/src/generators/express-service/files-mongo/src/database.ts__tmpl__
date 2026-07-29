@@ -9,3 +9,13 @@ export async function connectDatabase(): Promise<void> {
 export async function disconnectDatabase(): Promise<void> {
   await mongoose.disconnect();
 }
+
+// A real ping, not just `readyState === 1` — the connection can report
+// "connected" while actually stale. Used by /health/ready, not by `main.ts`
+// directly.
+export async function isDatabaseReady(): Promise<void> {
+  if (!mongoose.connection.db) {
+    throw new Error('Database connection not established.');
+  }
+  await mongoose.connection.db.admin().ping();
+}

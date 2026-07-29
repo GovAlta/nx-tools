@@ -187,7 +187,11 @@ objects:
                   memory: 50Mi
               readinessProbe:
                 httpGet:
+<% if (database === 'postgres' || database === 'mongo') { %>
+                  path: /health/ready
+<% } else { %>
                   path: /health
+<% } %>
                   port: 3333
                 initialDelaySeconds: 10
                 periodSeconds: 10

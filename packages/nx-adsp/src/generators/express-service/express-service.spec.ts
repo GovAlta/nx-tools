@@ -192,6 +192,13 @@ describe('Express Service Generator', () => {
     const database = host.read('apps/test/src/database.ts').toString();
     expect(database).toContain('drizzle-orm/node-postgres');
     expect(database).toContain('closeDatabase');
+    expect(database).toContain('isDatabaseReady');
+
+    // Readiness (DB-checked) is wired up separately from liveness — a DB
+    // outage should hold traffic, not restart a pod that can't fix it.
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).toContain('isDatabaseReady');
+    expect(mainTs).toContain("app.get('/health/ready'");
 
     // webpack emits a second bundle (migrate.js) for the deploy init container.
     const webpackConfig = host.read('apps/test/webpack.config.js').toString();
@@ -233,6 +240,11 @@ describe('Express Service Generator', () => {
 
     const database = host.read('apps/test/src/database.ts').toString();
     expect(database).toContain('mongoose');
+    expect(database).toContain('isDatabaseReady');
+
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).toContain('isDatabaseReady');
+    expect(mainTs).toContain("app.get('/health/ready'");
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['dev-db']).toBeTruthy();
@@ -248,6 +260,12 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/src/db/schema.ts')).toBeFalsy();
     expect(host.exists('apps/test/src/database.ts')).toBeFalsy();
     expect(host.exists('apps/test/scripts/dev-db.sh')).toBeFalsy();
+
+    // No database to check readiness against — don't emit a route that
+    // would always report ready regardless of anything real.
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).not.toContain('/health/ready');
+    expect(mainTs).not.toContain('isDatabaseReady');
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['dev-db']).toBeFalsy();
