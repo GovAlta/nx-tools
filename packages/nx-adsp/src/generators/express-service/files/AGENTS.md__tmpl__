@@ -26,6 +26,13 @@ APIs from memory** when integrating ADSP capabilities:
 
 - `get_platform_quickstart` — the canonical `initializePlatform` usage pattern and
   a capabilities summary. Start here for "how do I use ADSP from this service?".
+  Covers `serviceConfigurations` too — registration creates resources, not just
+  declares a dependency, and there's both a `NamedConfiguration` and a
+  plain-object variant.
+- `get_service_configuration_schema` — fetches the live configuration schema for
+  a platform service from configuration-service. Use this before writing a
+  `serviceConfigurations` entry in `initializeService()` so its shape matches
+  what that service actually expects, instead of guessing.
 - `search_sdk_reference` — look up `@abgov/adsp-service-sdk` by symbol, module, or
   keyword; returns kind, description, option/return shape, example, deprecation.
 - `search_adsp_docs` — keyword search across ADSP platform docs (getting started,

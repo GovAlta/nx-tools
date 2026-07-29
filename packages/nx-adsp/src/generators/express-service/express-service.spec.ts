@@ -96,6 +96,7 @@ describe('Express Service Generator', () => {
     const agents = host.read('apps/test/AGENTS.md').toString();
     expect(agents).toContain('@abgov/adsp-sdk-mcp-server');
     expect(agents).toContain('get_platform_quickstart');
+    expect(agents).toContain('get_service_configuration_schema');
     expect(agents).toContain('search_sdk_reference');
   }, 60000);
 
