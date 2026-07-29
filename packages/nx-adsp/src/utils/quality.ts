@@ -152,6 +152,47 @@ export function guardPlaywrightWebServer(
   }
 }
 
+const AXE_SPEC_CONTENT = `import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+// Scoped to WCAG 2.1 A/AA — the standard compliance baseline — rather than
+// axe-core's full default ruleset, which also includes "best-practice" rules
+// (e.g. requiring a landmark region, requiring exactly one <h1>) that aren't
+// tied to any WCAG success criterion and are legitimately opinionated. A pass
+// here means the WCAG 2.1 A/AA baseline, not full accessibility conformance.
+const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+test('has no WCAG 2.1 A/AA accessibility violations', async ({ page }) => {
+  await page.goto('/');
+
+  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+
+  const summary = results.violations.map(
+    (v) =>
+      \`[\${v.impact}] \${v.id}: \${v.help} (\${v.nodes.length} node(s)) \${v.helpUrl}\`,
+  );
+  expect(summary, summary.join('\\n')).toEqual([]);
+});
+`;
+
+/**
+ * Writes a Playwright + axe-core accessibility spec into the generated e2e
+ * project, scoped to WCAG 2.1 A/AA (see AXE_SPEC_CONTENT's own comment for
+ * why not axe's full default ruleset). Runs automatically as part of the
+ * project's normal `e2e` target — no separate command to remember.
+ *
+ * Idempotent: a no-op if the spec already exists, so a manual edit survives
+ * re-running the generator, matching guardPlaywrightWebServer's style above.
+ */
+export function addAxeAccessibilityCheck(
+  host: Tree,
+  e2eProjectRoot: string,
+): void {
+  const specPath = `${e2eProjectRoot}/src/a11y.spec.ts`;
+  if (host.exists(specPath)) return;
+  host.write(specPath, AXE_SPEC_CONTENT);
+}
+
 /**
  * Fixes two bugs that surface when e2e testing is added to express-service,
  * confirmed by actually running the generated `e2e` target rather than just

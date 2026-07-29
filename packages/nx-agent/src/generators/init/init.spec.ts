@@ -249,7 +249,7 @@ describe('nx-agent init generator', () => {
     );
   });
 
-  it('assembles all six groups with all twenty-two items in the correct order', async () => {
+  it('assembles all six groups with all twenty-three items in the correct order', async () => {
     await generator(host, {});
 
     const agentsMd = host.read('AGENTS.md').toString();
@@ -271,6 +271,7 @@ describe('nx-agent init generator', () => {
       'Choosing a dependency',
       'Pre-commit checks',
       'Style, formatting, and complexity tooling',
+      'Accessibility checks',
       'Atomic, conventional commits',
       'GitHub Flow',
       'Linear history',

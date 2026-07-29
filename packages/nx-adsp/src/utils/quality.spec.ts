@@ -1,6 +1,10 @@
 import { Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import { addJestCoverageConfig, fixExpressServiceE2eProject } from './quality';
+import {
+  addAxeAccessibilityCheck,
+  addJestCoverageConfig,
+  fixExpressServiceE2eProject,
+} from './quality';
 
 function makeConfig(coverageDirectoryLine: string): string {
   return [
@@ -217,5 +221,35 @@ module.exports = async function () {
       fixExpressServiceE2eProject(tree, 'apps/none-e2e', 3333),
     ).not.toThrow();
     expect(tree.exists('apps/none-e2e/jest.config.cts')).toBe(false);
+  });
+});
+
+describe('addAxeAccessibilityCheck', () => {
+  let tree: Tree;
+  beforeEach(() => {
+    tree = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+  });
+
+  it('writes an a11y spec scoped to WCAG 2.1 A/AA', () => {
+    addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
+
+    const specPath = 'apps/my-app-e2e/src/a11y.spec.ts';
+    expect(tree.exists(specPath)).toBe(true);
+    const spec = tree.read(specPath).toString();
+    expect(spec).toContain("import AxeBuilder from '@axe-core/playwright'");
+    expect(spec).toContain("['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']");
+    expect(spec).toContain('.withTags(WCAG_TAGS).analyze()');
+    expect(spec).toContain("await page.goto('/')");
+    expect(spec).toContain('expect(summary, summary.join');
+  });
+
+  it('is idempotent — a second call does not clobber a manually-edited file', () => {
+    addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
+    const specPath = 'apps/my-app-e2e/src/a11y.spec.ts';
+    tree.write(specPath, '// manually edited\n');
+
+    addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
+
+    expect(tree.read(specPath).toString()).toBe('// manually edited\n');
   });
 });

@@ -161,6 +161,10 @@ npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 | `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                   |
 | `proxy`       | —     | No       | Nginx proxy rule(s) as `{ location, proxyPass }` or an array of such objects                                                                                                       |
 
+The generated Playwright e2e project includes an axe-core accessibility check (`a11y.spec.ts`),
+scoped to WCAG 2.1 A/AA, that runs automatically as part of the `e2e` target — no separate command
+needed. `angular-app` and `vue-app` include the same check.
+
 ---
 
 ### `angular-app`
