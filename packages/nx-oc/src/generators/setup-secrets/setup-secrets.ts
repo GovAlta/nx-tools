@@ -38,7 +38,8 @@ export default async function (host: Tree, options: Schema) {
   }
 
   try {
-    checkGhCli();
+    // repo scope is what gh secret set needs to write Actions secrets below.
+    checkGhCli('repo');
   } catch (e) {
     console.log(e instanceof Error ? e.message : String(e));
     return;

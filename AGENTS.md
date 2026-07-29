@@ -312,7 +312,12 @@ Key wiring to preserve when editing:
   prompt; it's lowercased and stored under `generators['@abgov/nx-oc:sandbox']` in `nx.json`.
 - **Auth**: the deploy reads `gh auth token` for both the image push and the pull secret (no PAT
   stored), so the **active** `gh` account must have `write:packages` on the registry org — the
-  preflight checks `gh auth status` but not the scope/identity.
+  preflight parses `gh auth status`'s own output to check the _active_ account's scopes
+  specifically (not just that some account is logged in) and fails fast with the exact
+  `gh auth refresh -s write:packages` fix if it's missing. It also warns (non-fatal) if
+  `delete:packages` is missing — needed only by `sandbox-teardown`'s best-effort GHCR package
+  deletion, which already tolerates failing silently. It can't check registry-org access
+  itself, though — that still only surfaces as a push/import auth error.
 - The generator unit tests assert the target/manifest shape; the executor tests mock `child_process`
   `execSync` and assert the command sequence/preflight/retry.
 
