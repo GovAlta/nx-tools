@@ -155,9 +155,25 @@ export type Registry = Map<string, RegistryEntry>;
 
 export interface DescendantEntry {
   file: string;
+  // The descendant's own artifact type — only present when `file` is itself
+  // a registered project-docs artifact (a plain source file that merely
+  // references one in a comment has no type of its own).
+  type?: string;
 }
 
 export type Index = Map<string, DescendantEntry[]>;
+
+// Reverse of a Registry's own path -> key direction, shared by buildIndex
+// (to type each descendant that's itself a registered artifact) and
+// getDescendants' depth > 1 walk (to hop from a referrer's file back to the
+// key something else might reference it by).
+function buildPathToKeyMap(registry: Registry): Map<string, string> {
+  const pathToKey = new Map<string, string>();
+  for (const [key, entry] of registry) {
+    pathToKey.set(entry.path, key);
+  }
+  return pathToKey;
+}
 
 const REF_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.md'];
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.nx']);
@@ -251,9 +267,15 @@ function registerArtifact(
 }
 
 // Every project-docs-ancestors reference found anywhere in the workspace's
-// source files, inverted into "referenced by" per target key.
-export function buildIndex(host: Tree): Index {
+// source files, inverted into "referenced by" per target key. Accepts an
+// already-built registry to avoid re-walking project-docs/ when the caller
+// has one on hand (e.g. project-docs-lineage); builds one otherwise.
+export function buildIndex(
+  host: Tree,
+  registry: Registry = buildRegistry(host),
+): Index {
   const index: Index = new Map();
+  const pathToKey = buildPathToKeyMap(registry);
 
   for (const file of walk(host, '')) {
     if (!REF_SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext))) {
@@ -265,6 +287,11 @@ export function buildIndex(host: Tree): Index {
       ? extractFrontmatterAncestorRefs(content)
       : extractCommentAncestorRefs(content);
 
+    const descendantKey = pathToKey.get(file);
+    const type = descendantKey
+      ? (parseAncestorRef(descendantKey)?.type ?? undefined)
+      : undefined;
+
     for (const raw of rawRefs) {
       const parsed = parseAncestorRef(raw);
       if (!parsed) {
@@ -272,7 +299,7 @@ export function buildIndex(host: Tree): Index {
       }
       const key = refKey(parsed);
       const entries = index.get(key) ?? [];
-      entries.push({ file });
+      entries.push({ file, type });
       index.set(key, entries);
     }
   }
@@ -416,7 +443,8 @@ export function getDescendants(
   key: string,
   depth = 1,
 ): DescendantEntry[] {
-  const index = buildIndex(host);
+  const registry = buildRegistry(host);
+  const index = buildIndex(host, registry);
   const direct = index.get(key) ?? [];
   if (depth <= 1) {
     return direct;
@@ -426,11 +454,7 @@ export function getDescendants(
   // (has its own key something else could reference) — a plain source file
   // is always a leaf in this direction, since nothing can target it (every
   // reference resolves under project-docs/, never to an arbitrary path).
-  const registry = buildRegistry(host);
-  const pathToKey = new Map<string, string>();
-  for (const [k, entry] of registry) {
-    pathToKey.set(entry.path, k);
-  }
+  const pathToKey = buildPathToKeyMap(registry);
 
   const visited = new Map<string, DescendantEntry>();
   let frontier = direct;
