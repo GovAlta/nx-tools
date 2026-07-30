@@ -16,7 +16,9 @@ a thing that doesn't exist yet isn't a real case. `nx g @abgov/nx-agent:domain-t
 `type:id` string) rather than requiring you to know the format; other artifact-producing generators
 should do the same. Run `nx g @abgov/nx-agent:project-docs-lineage` to build the full graph and catch
 a broken reference — not yet wired into the pre-commit hook, so run it yourself after adding or
-changing a reference.
+changing a reference. `nx g @abgov/nx-agent:project-docs-report` builds the same graph into a
+human-readable, self-contained HTML report (status summary + a Mermaid lineage diagram) instead of
+`lineage.json` — optionally scoped to one project with `--project`.
 
 **Open questions and blockers.** `nx g @abgov/nx-agent:open-question`/`:blocker` capture something
 undecided or something that needs revision as its own artifact, rather than leaving it in prose where
