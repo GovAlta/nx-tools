@@ -36,6 +36,19 @@ describe('React App Generator', () => {
     expect(host.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 30000);
 
+  it('loads design tokens before web-components CSS, so goa-* elements are actually styled', async () => {
+    // @abgov/web-components' own CSS only defines rules in terms of --goa-*
+    // custom properties — without the tokens stylesheet also loaded, every
+    // goa-* element (header, banner, buttons) renders with no spacing at
+    // all, not just unbranded. Regression guard for exactly that gap.
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    const mainTsx = host.read('apps/test/src/main.tsx').toString();
+    expect(mainTsx).toContain("import '@abgov/design-tokens/dist/tokens.css';");
+    expect(mainTsx).toContain("import '@abgov/web-components/index.css';");
+  }, 30000);
+
   it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);
