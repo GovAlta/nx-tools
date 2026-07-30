@@ -148,7 +148,7 @@ nx run <%= projectName %>:teardown-dev      # remove from dev environment
 
 ## Sandbox deployment (local build)
 
-`nx run <%= projectName %>:sandbox` builds the image **locally with podman**, pushes it to GHCR, and deploys it to your namespace — no git push or CI wait. Run the generator once first to add the targets:
+**Deployment target: `sandbox`.** `nx run <%= projectName %>:sandbox` builds the image **locally with podman**, pushes it to GHCR, and deploys it to your namespace — no git push or CI wait. Run the generator once first to add the targets:
 
 ```bash
 nx g @abgov/nx-oc:sandbox <%= projectName %> --sandboxProject <your-namespace>
