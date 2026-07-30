@@ -150,7 +150,7 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/design-tokens': '2.9.0',
+      '@abgov/design-tokens': '2.12.0',
       '@abgov/react-components': '7.3.0',
       '@abgov/web-components': '2.3.0',
       '@reduxjs/toolkit': '^2.5.1',
