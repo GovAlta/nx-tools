@@ -155,6 +155,12 @@ the image **locally with podman**, pushes it to a container registry (GHCR), and
 imports it into your OpenShift namespace — no git push or CI wait. (Requires the
 Nx 23 line, `@abgov/nx-oc` 13.x.)
 
+`sandbox` writes `.openshift/<project>/<project>.sandbox.yml`, alongside
+[`deployment`](#deployment)'s `.openshift/<project>/<project>.yml` — the two share
+the same `.openshift/<project>/Dockerfile` (identical either way) but never touch
+each other's manifest. A project can have both — a real CI-driven pipeline
+deployment and a sandbox for local experimentation — at the same time.
+
 ```bash
 # Add the sandbox targets to a project (run once per app)
 npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject=<namespace> --registry=ghcr.io/<org>
@@ -193,8 +199,15 @@ sequence, quota/auth/CrashLoopBackOff guidance).
 
 ## Typical workflow
 
+### Production pipeline
+
 1. Run `pipeline` once per workspace to generate shared build infrastructure manifests.
 2. Run `apply-infra` (or pass `--apply` to `pipeline`) to provision the resources on the cluster.
 3. Run `deployment` for each application and environment combination.
 4. Add an `apply` executor target to each application's `project.json`.
 5. In your GitHub Actions or Jenkins pipeline, call `npx nx run my-app:deploy` to apply manifests during CI/CD.
+
+### Sandbox iteration
+
+1. Run `sandbox` for each application, passing `--sandboxProject` and `--database` as needed.
+2. Run `npx nx run my-app:sandbox` to build, push, and deploy. Repeat on every change.
