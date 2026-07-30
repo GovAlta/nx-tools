@@ -29,7 +29,21 @@ describe('nx-agent project-docs-report generator', () => {
           expectedAncestorTypes: [],
           tracksResolution: true,
         },
+        'iteration-retrospectives': {
+          expectedAncestorTypes: [],
+          terminal: true,
+        },
       }),
+    );
+    host.write(
+      'project-docs/iteration-retrospectives/closed-out.md',
+      [
+        '---',
+        'title: Closed Out',
+        'project-docs-ancestors: []',
+        'resolves: []',
+        '---',
+      ].join('\n'),
     );
     host.write(
       'project-docs/open-questions/still-open.md',
@@ -85,6 +99,9 @@ describe('nx-agent project-docs-report generator', () => {
     expect(html).toContain(
       '<div class="count">1</div><div class="label">Open</div>',
     );
+    // domain-terms:unused is the only real orphan — iteration-retrospectives:
+    // closed-out has zero descendants too, but is terminal, so it must not
+    // inflate this count.
     expect(html).toContain(
       '<div class="count">1</div><div class="label">Orphaned</div>',
     );
@@ -106,6 +123,16 @@ describe('nx-agent project-docs-report generator', () => {
     expect(html).toContain('<pre class="mermaid">');
     expect(html).toContain('flowchart TD');
     expect(html).toContain('mermaid.initialize');
+
+    // a terminal artifact (zero descendants by design) gets its own distinct
+    // graph style and table badge, rather than looking like a plain orphan
+    expect(html).toContain(
+      '✓ iteration-retrospectives:closed-out&quot;]:::terminal',
+    );
+    expect(html).toContain(
+      '<span class="badge badge-terminal">Closed out</span>',
+    );
+    expect(html).toContain('Closed out (terminal)');
 
     // deterministic fallback, with its explicit note
     expect(html).toContain(

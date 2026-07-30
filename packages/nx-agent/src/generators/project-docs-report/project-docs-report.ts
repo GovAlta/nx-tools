@@ -1,6 +1,9 @@
 import { Tree, joinPathFragments, readProjectConfiguration } from '@nx/devkit';
 import { readFileSync } from 'fs';
-import { readArtifactSchema } from '../../utils/artifact-schema';
+import {
+  ArtifactSchema,
+  readArtifactSchema,
+} from '../../utils/artifact-schema';
 import { ensureGitignoreEntries } from '../../utils/gitignore';
 import {
   Registry,
@@ -98,6 +101,7 @@ function buildStyles(): string {
     .badge-resolved { background: ${TOKENS.success.bg}; border: 1px solid ${TOKENS.success.border}; color: ${TOKENS.success.text}; }
     .badge-open { background: ${TOKENS.important.bg}; border: 1px solid ${TOKENS.important.border}; color: ${TOKENS.important.text}; }
     .badge-orphan { background: ${TOKENS.interactive.bg}; border: 1px solid ${TOKENS.interactive.border}; color: ${TOKENS.interactive.text}; }
+    .badge-terminal { background: ${TOKENS.background}; border: 1px solid ${TOKENS.textMuted}; color: ${TOKENS.textMuted}; }
     .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.875rem; color: ${TOKENS.textMuted}; margin-top: 0.75rem; }
     .legend-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; margin-right: 0.375rem; vertical-align: middle; }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -106,6 +110,11 @@ function buildStyles(): string {
     .synthesis-note { color: ${TOKENS.textMuted}; font-size: 0.8125rem; font-style: italic; }
     .mermaid { text-align: center; }
   `;
+}
+
+function isTerminalKey(key: string, artifactSchema: ArtifactSchema): boolean {
+  const type = parseAncestorRef(key)?.type;
+  return !!type && !!artifactSchema[type]?.terminal;
 }
 
 function sanitizeLabel(label: string): string {
@@ -129,6 +138,7 @@ function buildMermaidFlowchart(
   resolvedKeys: Set<string>,
   openKeys: Set<string>,
   orphanKeys: Set<string>,
+  artifactSchema: ArtifactSchema,
 ): string {
   const nodeIds = new Map<string, string>();
   renderedKeys.forEach((key, i) => nodeIds.set(key, `n${i}`));
@@ -138,12 +148,14 @@ function buildMermaidFlowchart(
     `classDef resolved fill:${TOKENS.success.bg},stroke:${TOKENS.success.border},color:${TOKENS.success.text}`,
     `classDef open fill:${TOKENS.important.bg},stroke:${TOKENS.important.border},color:${TOKENS.important.text}`,
     `classDef orphan fill:${TOKENS.interactive.bg},stroke:${TOKENS.interactive.border},color:${TOKENS.interactive.text}`,
+    `classDef terminal fill:${TOKENS.background},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted}`,
     `classDef context fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted},stroke-dasharray: 4 4`,
   ];
 
   for (const key of renderedKeys) {
     const id = nodeIds.get(key);
     const isContext = !inScopeSet.has(key);
+    const isTerminal = isTerminalKey(key, artifactSchema);
     const cls = isContext
       ? 'context'
       : resolvedKeys.has(key)
@@ -152,8 +164,12 @@ function buildMermaidFlowchart(
           ? 'open'
           : orphanKeys.has(key)
             ? 'orphan'
-            : '';
-    lines.push(`  ${id}["${sanitizeLabel(key)}"]${cls ? `:::${cls}` : ''}`);
+            : isTerminal
+              ? 'terminal'
+              : '';
+    const label =
+      isTerminal && !isContext ? `✓ ${sanitizeLabel(key)}` : sanitizeLabel(key);
+    lines.push(`  ${id}["${label}"]${cls ? `:::${cls}` : ''}`);
   }
 
   const drawnEdges = new Set<string>();
@@ -254,6 +270,7 @@ function statusBadge(
   resolvedSet: Set<string>,
   openSet: Set<string>,
   orphanSet: Set<string>,
+  artifactSchema: ArtifactSchema,
 ): string {
   if (resolvedSet.has(key)) {
     return '<span class="badge badge-resolved">Resolved</span>';
@@ -264,6 +281,9 @@ function statusBadge(
   if (orphanSet.has(key)) {
     return '<span class="badge badge-orphan">Orphan</span>';
   }
+  if (isTerminalKey(key, artifactSchema)) {
+    return '<span class="badge badge-terminal">Closed out</span>';
+  }
   return '';
 }
 
@@ -273,6 +293,7 @@ function buildTable(
   resolvedSet: Set<string>,
   openSet: Set<string>,
   orphanSet: Set<string>,
+  artifactSchema: ArtifactSchema,
 ): string {
   const rows = [...inScopeKeys]
     .sort()
@@ -283,7 +304,7 @@ function buildTable(
         <td>${escapeHtml(key)}</td>
         <td>${escapeHtml(type)}</td>
         <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
-        <td>${statusBadge(key, resolvedSet, openSet, orphanSet)}</td>
+        <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
       </tr>`;
     })
     .join('');
@@ -368,6 +389,7 @@ ${params.cardsHtml}
 <span><span class="legend-swatch" style="background:${TOKENS.success.bg};border:1px solid ${TOKENS.success.border}"></span>Resolved</span>
 <span><span class="legend-swatch" style="background:${TOKENS.important.bg};border:1px solid ${TOKENS.important.border}"></span>Open</span>
 <span><span class="legend-swatch" style="background:${TOKENS.interactive.bg};border:1px solid ${TOKENS.interactive.border}"></span>Orphaned</span>
+<span><span class="legend-swatch" style="background:${TOKENS.background};border:1px solid ${TOKENS.textMuted}"></span>Closed out (terminal)</span>
 <span><span class="legend-swatch" style="background:${TOKENS.backgroundSubtle};border:1px dashed ${TOKENS.textMuted}"></span>Context (out of scope)</span>
 </div>
 </section>
@@ -497,6 +519,7 @@ export default async function (host: Tree, options: Schema) {
     resolvedKeySet,
     openKeySet,
     orphanKeySet,
+    artifactSchema,
   );
 
   const html = buildHtml({
@@ -513,6 +536,7 @@ export default async function (host: Tree, options: Schema) {
       resolvedKeySet,
       openKeySet,
       orphanKeySet,
+      artifactSchema,
     ),
     brokenRefsHtml: buildBrokenRefsSection(inScopeBrokenRefs),
     flowchart,
