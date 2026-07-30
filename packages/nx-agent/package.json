@@ -10,6 +10,7 @@
     "directory": "packages/nx-agent"
   },
   "dependencies": {
+    "marked": "~15.0.12",
     "mermaid": "~11.16.0",
     "yaml": "~2.9.0"
   },

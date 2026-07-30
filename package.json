@@ -32,6 +32,7 @@
     "@angular/core": "21.2.17",
     "@nx/devkit": "23.0.1",
     "json-schema-to-typescript": "^13.0.1",
+    "marked": "~15.0.12",
     "mermaid": "~11.16.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
