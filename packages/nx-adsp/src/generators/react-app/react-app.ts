@@ -156,7 +156,14 @@ export default async function (host: Tree, options: Schema) {
       '@reduxjs/toolkit': '^2.5.1',
       'keycloak-js': '^23.0.7',
       'react-redux': '^9.2.0',
-      'react-router-dom': '6.30.3',
+      // 6.30.4, not 6.30.3: GHSA-2j2x-hqr9-3h42 (moderate) — a same-origin
+      // redirect whose path starts with "//" was reinterpreted as a
+      // protocol-relative URL, causing an open redirect. Fixed in 6.30.4,
+      // the last 6.x release. Two other advisories affecting this line
+      // (GHSA-jjmj-jmhj-qwj2, GHSA-wrjc-x8rr-h8h6) have no 6.x fix at all —
+      // only React Router v7 (a breaking migration: v7 merges
+      // react-router-dom into react-router and changes several APIs).
+      'react-router-dom': '6.30.4',
     },
     {
       '@axe-core/playwright': '^4.12.1',
