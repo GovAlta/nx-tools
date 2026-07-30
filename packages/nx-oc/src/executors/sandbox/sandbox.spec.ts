@@ -67,6 +67,19 @@ describe('sandbox executor', () => {
       true,
     );
     expect(has('oc create secret docker-registry ghcr-pull')).toBe(true);
+    // GITHUB_ACTOR (set by the Actions runner) must take priority over `gh api
+    // user -q .login`, which 403s for a GitHub App/installation token — the
+    // registry login and the pull secret both need this fallback to work in CI.
+    const registryLogin = cmds.find((c) => c.includes('podman login'));
+    const pullSecret = cmds.find((c) =>
+      c.includes('oc create secret docker-registry ghcr-pull'),
+    );
+    expect(registryLogin).toContain(
+      '-u "${GITHUB_ACTOR:-$(gh api user -q .login)}"',
+    );
+    expect(pullSecret).toContain(
+      '--docker-username="${GITHUB_ACTOR:-$(gh api user -q .login)}"',
+    );
     expect(
       has(
         'oc process -f .openshift/test/test.sandbox.yml -p PROJECT=test-sandbox',

@@ -319,10 +319,16 @@ export default async function runExecutor(
     }
     if (!skipPush) {
       // gh supplies the token so no PAT is stored; the same session token backs
-      // the pull secret below.
+      // the pull secret below. GITHUB_ACTOR (always set by the Actions runner)
+      // takes priority over `gh api user -q .login`: GET /user categorically
+      // 403s for a GitHub App/installation token (GITHUB_TOKEN), regardless of
+      // its granted permissions — confirmed against a real CI run — so a
+      // workflow with `packages: write` still needs this fallback to publish
+      // under its own GITHUB_TOKEN with no PAT. Local/interactive use (no
+      // GITHUB_ACTOR set) is unaffected — still resolves the active gh account.
       run(
         'Registry login',
-        `gh auth token | podman login ${registryHost} -u "$(gh api user -q .login)" --password-stdin`,
+        `gh auth token | podman login ${registryHost} -u "\${GITHUB_ACTOR:-$(gh api user -q .login)}" --password-stdin`,
         cwd,
       );
       run('Push image', `podman push ${imageRef}`, cwd);
@@ -330,10 +336,11 @@ export default async function runExecutor(
 
     // ---- import into the namespace imagestream + roll out ----
     // Per-deploy pull secret from the gh session (no long-lived PAT needed).
+    // Same GITHUB_ACTOR fallback as the registry login above, same reason.
     run(
       'Upsert pull secret',
       `oc create secret docker-registry ghcr-pull ` +
-        `--docker-server=${registryHost} --docker-username="$(gh api user -q .login)" --docker-password="$(gh auth token)" ` +
+        `--docker-server=${registryHost} --docker-username="\${GITHUB_ACTOR:-$(gh api user -q .login)}" --docker-password="$(gh auth token)" ` +
         `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
       cwd,
     );

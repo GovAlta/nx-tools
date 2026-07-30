@@ -318,6 +318,11 @@ Key wiring to preserve when editing:
   `delete:packages` is missing — needed only by `sandbox-teardown`'s best-effort GHCR package
   deletion, which already tolerates failing silently. It can't check registry-org access
   itself, though — that still only surfaces as a push/import auth error.
+- **CI**: the registry-login and pull-secret username falls back through `GITHUB_ACTOR` before
+  calling `gh api user -q .login` — `GET /user` categorically 403s for a GitHub App/installation
+  token (`GITHUB_TOKEN`), so a workflow running this executor under its own token (no PAT) needs the
+  `GITHUB_ACTOR` fallback the Actions runner always sets. Local/interactive use is unaffected —
+  `GITHUB_ACTOR` is unset there, so it still resolves the active `gh` account.
 - The generator unit tests assert the target/manifest shape; the executor tests mock `child_process`
   `execSync` and assert the command sequence/preflight/retry.
 
