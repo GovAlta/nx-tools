@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentProjectDocsReport",
+  "title": "Build an HTML project-docs status report",
+  "description": "Scans the workspace for project-docs/ artifacts (same data as project-docs-lineage) and writes a single, self-contained HTML report with a lineage graph and status summary. Not committed. Run with --dry-run to preview without writing.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Scope the report to one project's own artifacts (plus their direct ancestors, shown as context) instead of the whole workspace. Violations are always computed workspace-wide first, so scoping never misclassifies a cross-project reference."
+    },
+    "outputPath": {
+      "type": "string",
+      "description": "Where to write the report. Defaults to project-docs/report.html under the workspace root, or under the scoped project's own root when --project is given."
+    },
+    "noSynthesis": {
+      "type": "boolean",
+      "description": "Skip the claude/gh-copilot synthesis cascade entirely and always use the deterministic, computed summary — for CI or anyone who wants reproducible, LLM-independent report diffs.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}
