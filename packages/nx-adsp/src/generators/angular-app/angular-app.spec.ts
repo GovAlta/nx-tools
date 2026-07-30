@@ -47,6 +47,19 @@ describe('angular app generator', () => {
     expect(appTree.exists('apps/test/nginx.conf')).toBeTruthy();
   }, 120000);
 
+  it('renders the sign-in button in the app header (needs the "utilities" slot)', async () => {
+    // goab-app-header (v2) only renders content placed in a named slot — GoA's
+    // own design system docs put account/sign-in actions in "utilities" (vs.
+    // "navigation" for nav links). A bare child with no slot attribute
+    // renders nothing, silently dropping the sign-in button. Regression
+    // guard for exactly that gap.
+    await angularApp(appTree, options);
+    const appHtml = appTree
+      .read('apps/test/src/app/app.component.html')
+      .toString();
+    expect(appHtml).toMatch(/<div slot="utilities">[\s\S]*<goab-button-group/);
+  }, 120000);
+
   it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
     await angularApp(appTree, options);
 
