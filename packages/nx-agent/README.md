@@ -492,6 +492,11 @@ actually reporting on rather than in a new top-level directory. `--outputPath` o
 Unlike `project-docs-lineage`, this never throws on a broken reference — surfacing exactly that kind
 of bad news is the point of a status report, not something to gate on.
 
+Graph nodes and table rows are colored by status — resolved, open, orphaned, or (a distinct style,
+with a "Closed out" badge and a `✓` in the graph) a `terminal`-typed artifact like an
+`iteration-retrospective`, so a permanently-zero-descendant close-out reads as done rather than
+looking like an ordinary orphan.
+
 ### `--project` scoping
 
 `registry`/`index`/`violations` are always computed over the full workspace first, unconditionally —
