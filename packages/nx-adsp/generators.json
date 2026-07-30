@@ -37,12 +37,14 @@
     "react-form": {
       "factory": "./src/generators/react-form/react-form",
       "schema": "./src/generators/react-form/schema.json",
-      "description": "Generator that creates a React component based on an ADSP Form Definition."
+      "description": "Generator that creates a React component based on an ADSP Form Definition.",
+      "x-deprecated": "Superseded by ADSP's hosted Form App, which renders a form definition with no custom code (see https://govalta.github.io/adsp-monorepo/tutorials/form-service/form-app.html). This generator's dynamic-templating approach — generating bespoke React source from a form definition's dataSchema — predates that and is no longer the recommended integration path."
     },
     "react-task-list": {
       "factory": "./src/generators/react-task-list/react-task-list",
       "schema": "./src/generators/react-task-list/schema.json",
-      "description": "Generator that creates a React component based on an ADSP Task Queue."
+      "description": "Generator that creates a React component based on an ADSP Task Queue.",
+      "x-deprecated": "Superseded by ADSP's hosted Task App, which reviews/assesses queue items with no custom code (see https://govalta.github.io/adsp-monorepo/tutorials/task-service/task-app.html). This generator's dynamic-templating approach predates that and is no longer the recommended integration path."
     },
     "angular-app": {
       "factory": "./src/generators/angular-app/angular-app",

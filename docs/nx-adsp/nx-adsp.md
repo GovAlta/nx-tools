@@ -279,7 +279,12 @@ Accepts the same options as `dotnet-service`.
 
 ---
 
-### react-form
+### react-form (deprecated)
+
+**Deprecated** — superseded by ADSP's hosted [Form App](https://govalta.github.io/adsp-monorepo/tutorials/form-service/form-app.html),
+which renders a form definition directly with no custom code. This generator's dynamic-templating
+approach — generating bespoke React source from a form definition's `dataSchema` — predates that
+and is no longer the recommended integration path.
 
 Adds a React component generated from an existing [ADSP Form Definition](https://govalta.github.io/adsp-monorepo/) to an existing project. The generator fetches available form definitions from the ADSP Form service for the target environment.
 
@@ -295,7 +300,11 @@ npx nx g @abgov/nx-adsp:react-form my-app --env test
 
 ---
 
-### react-task-list
+### react-task-list (deprecated)
+
+**Deprecated** — superseded by ADSP's hosted [Task App](https://govalta.github.io/adsp-monorepo/tutorials/task-service/task-app.html),
+which reviews/assesses queue items directly with no custom code. Same dynamic-templating approach
+as `react-form`, and no longer the recommended integration path for the same reason.
 
 Adds a React task list component driven by an [ADSP Task Queue](https://govalta.github.io/adsp-monorepo/) to an existing project.
 
