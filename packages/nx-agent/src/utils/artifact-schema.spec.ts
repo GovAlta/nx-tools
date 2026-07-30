@@ -82,6 +82,34 @@ describe('ensureArtifactSchemaEntry', () => {
     });
   });
 
+  it('records terminal when passed, and omits it when not', () => {
+    ensureArtifactSchemaEntry(
+      host,
+      'iteration-retrospectives',
+      [],
+      undefined,
+      true,
+    );
+    ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
+
+    expect(readArtifactSchema(host)).toEqual({
+      'iteration-retrospectives': { expectedAncestorTypes: [], terminal: true },
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+    });
+  });
+
+  it('records both tracksResolution and terminal together when both are passed', () => {
+    ensureArtifactSchemaEntry(host, 'blockers', [], true, true);
+
+    expect(readArtifactSchema(host)).toEqual({
+      blockers: {
+        expectedAncestorTypes: [],
+        tracksResolution: true,
+        terminal: true,
+      },
+    });
+  });
+
   it('preserves a hand-added entry for a type nx-agent knows nothing about', () => {
     host.write(
       'project-docs/artifact-schema.json',

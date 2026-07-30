@@ -79,8 +79,22 @@ export function extractFrontmatterField(
   return refs.filter((ref): ref is string => typeof ref === 'string');
 }
 
+// Every artifact-producing generator that supports both --projectDocsAncestors
+// and --resolves already duplicates a resolved ref into project-docs-ancestors
+// at write time (resolveAncestorsAndResolves, below) — "a resolution is still
+// structurally an ancestor" — but that's only true for generator-authored
+// files. A hand-authored artifact (the normal state before a type earns its
+// own generator) has no such write-time step, so its resolves field is easy
+// to write without remembering to duplicate the ref into
+// project-docs-ancestors too — nothing enforces that duplication. Unioning
+// here, in the one function every ancestor-ref reader (the registry, the
+// index buildIndex uses for orphans/brokenRefs, and getAncestors at depth 1)
+// already shares, makes the invariant true unconditionally instead of only
+// for generator-produced content.
 export function extractFrontmatterAncestorRefs(content: string): string[] {
-  return extractFrontmatterField(content, 'project-docs-ancestors');
+  const ancestors = extractFrontmatterField(content, 'project-docs-ancestors');
+  const resolves = extractFrontmatterField(content, 'resolves');
+  return [...new Set([...ancestors, ...resolves])];
 }
 
 export function extractCommentAncestorRefs(content: string): string[] {
@@ -374,7 +388,18 @@ export function computeViolations(
     }
   }
 
-  const orphans = [...registry.keys()].filter((key) => !index.has(key));
+  // A terminal type (declared, same as expectedAncestorTypes/tracksResolution,
+  // by its own generator — no hardcoded type name here either) always has
+  // zero descendants by design once it's closed out correctly: that's what
+  // correct looks like, not neglect, so it's excluded from orphans rather
+  // than reported alongside a domain-model nobody's designed against yet.
+  const orphans = [...registry.keys()].filter((key) => {
+    if (index.has(key)) {
+      return false;
+    }
+    const parsedKey = parseAncestorRef(key);
+    return !parsedKey || !artifactSchema[parsedKey.type]?.terminal;
+  });
 
   const unscoped: string[] = [];
   for (const [key, entry] of registry) {
