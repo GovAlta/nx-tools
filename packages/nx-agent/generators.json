@@ -33,6 +33,11 @@
       "schema": "./src/generators/blocker/schema.json",
       "description": "Adds one blocker under project-docs/blockers/, with a project-docs-ancestors frontmatter list and a free-text body describing what needs fixing."
     },
+    "iteration-retrospective": {
+      "factory": "./src/generators/iteration-retrospective/iteration-retrospective",
+      "schema": "./src/generators/iteration-retrospective/schema.json",
+      "description": "Adds one iteration close-out record under project-docs/iteration-retrospectives/, with a project-docs-ancestors frontmatter list and a free-text body describing what the pass did. Self-registers as terminal so a correctly-closed-out record is never reported as an orphan."
+    },
     "project-docs-lineage": {
       "factory": "./src/generators/project-docs-lineage/project-docs-lineage",
       "schema": "./src/generators/project-docs-lineage/schema.json",

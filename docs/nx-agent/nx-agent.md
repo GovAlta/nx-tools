@@ -335,6 +335,46 @@ artifact that actually revises the thing it's blocking resolves it via `--resolv
 
 ---
 
+## `iteration-retrospective`
+
+A close-out record for a single iteration's pass — what it did, what was found and fixed along the
+way, and an explicit status when "deployment succeeded" and "verified working end-to-end" diverge:
+
+```bash
+npx nx g @abgov/nx-agent:iteration-retrospective "Submit Minor Collision Report" \
+  --project-docs-ancestors=project-docs/requirements/submit-minor-collision-report.md \
+  --resolves=project-docs/blockers/no-write-packages-credential-for-ghcr-sandbox-push.md
+```
+
+Creates `project-docs/iteration-retrospectives/submit-minor-collision-report.md`:
+
+```markdown
+---
+title: Submit Minor Collision Report
+project-docs-ancestors: [requirements:submit-minor-collision-report, blockers:no-write-packages-credential-for-ghcr-sandbox-push]
+resolves: [blockers:no-write-packages-credential-for-ghcr-sandbox-push]
+---
+
+<!-- Free-text body: what this pass did, what was found and fixed along the way, and an
+     explicit status when "deployment succeeded" and "verified working end-to-end" diverge. -->
+```
+
+### `iteration-retrospective` options
+
+| Option                 | Default                  | Description                                                                                                                                                                                                                        |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                | — (required, positional) | A short title for this iteration's pass                                                                                                                                                                                            |
+| `project`              | workspace root           | Scope the retrospective to a specific project's `project-docs/iteration-retrospectives/` instead — prefer this whenever the iteration already has a natural code home                                                              |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this pass covered — repeatable; every requirement, domain model, or design substantively created, revised, or touched this iteration, not just the requirement it nominally closes out |
+| `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this iteration resolved — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such            |
+
+Self-registers its own `project-docs/artifact-schema.json` entry as `terminal: true` — a
+correctly-closed-out retrospective has zero descendants by design, so it's excluded from
+`project-docs-lineage`'s orphan report rather than flagged alongside a genuine dead-end. Re-adding a
+retrospective that already exists throws rather than silently overwriting or duplicating it.
+
+---
+
 ## `project-docs-lineage`
 
 Scans the whole workspace for `project-docs/` artifacts and `project-docs-ancestors` references —

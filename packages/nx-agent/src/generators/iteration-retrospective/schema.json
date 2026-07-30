@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentIterationRetrospective",
+  "title": "Add an iteration retrospective",
+  "description": "Creates one close-out record for a single iteration under project-docs/iteration-retrospectives/, with a project-docs-ancestors frontmatter list and a free-text body describing what the pass did. Bootstraps the iteration-retrospectives/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "A short title for this iteration's pass (e.g. \"Submit Minor Collision Report\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What was this iteration's pass called?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this retrospective to a specific project's project-docs/iteration-retrospectives/ instead of the workspace root — prefer this whenever the iteration already has a natural code home; only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this pass covered — every requirement, domain model, or design substantively created, revised, or touched this iteration, not just the requirement it nominally closes out. Each path must already exist; a backward reference only makes sense pointing at something already established."
+    },
+    "resolves": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing open-question/blocker artifacts this iteration resolved. Recorded distinctly from projectDocsAncestors (though also added there, so lineage traversal sees it as an ancestor too) so project-docs-lineage can report the resolution as such rather than mistaking any ancestor reference for one."
+    }
+  },
+  "required": ["title"],
+  "additionalProperties": false
+}
