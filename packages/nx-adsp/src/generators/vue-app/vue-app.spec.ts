@@ -63,6 +63,18 @@ describe('Vue App Generator', () => {
     expect(host.exists('.vscode/settings.json')).toBeTruthy();
   }, 30000);
 
+  it('loads design tokens before web-components CSS, so goa-* elements are actually styled', async () => {
+    // @abgov/web-components' own CSS only defines rules in terms of --goa-*
+    // custom properties — without the tokens stylesheet also loaded, every
+    // goa-* element (header, banner, buttons) renders with no spacing at
+    // all, not just unbranded. Regression guard for exactly that gap.
+    await generator(host, options);
+
+    const mainTs = host.read('apps/test/src/main.ts').toString();
+    expect(mainTs).toContain("import '@abgov/design-tokens/dist/tokens.css';");
+    expect(mainTs).toContain("import '@abgov/web-components/index.css';");
+  }, 30000);
+
   it('records the resolved env/tenant as project tags for the sandbox generator', async () => {
     await generator(host, options);
     const config = readProjectConfiguration(host, 'test');

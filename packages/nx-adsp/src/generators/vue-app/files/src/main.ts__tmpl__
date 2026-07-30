@@ -1,3 +1,8 @@
+// Design tokens must load before web-components' own CSS — every goa-*
+// element styles itself through --goa-* custom properties (spacing,
+// color, type) defined here; without them, headers/banners/buttons render
+// with no spacing at all rather than looking unbranded but boxy.
+import '@abgov/design-tokens/dist/tokens.css';
 import '@abgov/web-components';
 import '@abgov/web-components/index.css';
 import { createApp } from 'vue';
