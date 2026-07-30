@@ -140,7 +140,7 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     host,
     {
       '@abgov/angular-components': '5.3.0',
-      '@abgov/design-tokens': '2.9.0',
+      '@abgov/design-tokens': '2.12.0',
       // Pin exact (not ^2.0.0): angular-components 5.3.0 imports symbols added in
       // ui-components-common 2.3.0 (e.g. GoabWorkspaceLayoutScrollState), so a
       // lower 2.x resolves and fails the build. Keep this in lockstep with the

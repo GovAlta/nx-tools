@@ -132,13 +132,17 @@ export default async function (host: Tree, options: Schema) {
 
   // Ensure the shared GoA wrapper library exists (idempotent — created once per
   // workspace, refreshed on later runs). Apps import it instead of each carrying
-  // their own copy, so it's one place to swap for @abgov/vue-components later.
+  // their own copy. This stays the long-term approach, not a stopgap: the
+  // published @abgov/vue-components package (checked directly) is an abandoned
+  // Vue 2 relic from 2021 across every dist-tag (latest/next/alpha/beta) — not a
+  // real current alternative — and GoA's own design-system docs don't list Vue
+  // as a supported framework at all.
   await vueComponentsGenerator(host);
 
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/design-tokens': '2.9.0',
+      '@abgov/design-tokens': '2.12.0',
       '@abgov/web-components': '2.3.0',
       // keycloak-js is a transitive dependency of @dsb-norge/vue-keycloak-js;
       // don't pin it directly or the versions diverge into two copies.
