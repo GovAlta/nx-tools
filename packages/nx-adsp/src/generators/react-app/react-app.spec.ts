@@ -49,6 +49,19 @@ describe('React App Generator', () => {
     expect(mainTsx).toContain("import '@abgov/web-components/index.css';");
   }, 30000);
 
+  it('renders the sign-in button in the app header (needs the "utilities" slot)', async () => {
+    // GoabAppHeader (v2) only renders content placed in a named slot — GoA's
+    // own design system docs put account/sign-in actions in "utilities" (vs.
+    // "navigation" for nav links). A bare child with no slot attribute
+    // renders nothing, silently dropping the sign-in button. Regression
+    // guard for exactly that gap.
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+
+    const appTsx = host.read('apps/test/src/app/app.tsx').toString();
+    expect(appTsx).toMatch(/<div slot="utilities">[\s\S]*<GoabButtonGroup/);
+  }, 30000);
+
   it("runs nx-adsp's own workspace-root setup (ADSP SDK MCP server + VS Code settings)", async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, options);

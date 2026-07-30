@@ -1,14 +1,20 @@
 <div class="app">
   <goab-microsite-header type="alpha"></goab-microsite-header>
   <goab-app-header url="/" heading="<%= projectName %>">
-    <goab-button-group alignment="end">
-      @if (userName) { <span>{{ userName }}</span> }
-      @if (!isLoggedIn) {
-        <goab-button type="tertiary" (onClick)="login()">Sign in</goab-button>
-      } @else {
-        <goab-button type="tertiary" (onClick)="logout()">Sign out</goab-button>
-      }
-    </goab-button-group>
+    <!-- goab-app-header only renders content placed in a named slot — the
+         "utilities" slot is where GoA's own design system docs put
+         account/sign-in actions (as opposed to "navigation" for nav links).
+         A bare child with no slot attribute renders nothing. -->
+    <div slot="utilities">
+      <goab-button-group alignment="end">
+        @if (userName) { <span>{{ userName }}</span> }
+        @if (!isLoggedIn) {
+          <goab-button type="tertiary" (onClick)="login()">Sign in</goab-button>
+        } @else {
+          <goab-button type="tertiary" (onClick)="logout()">Sign out</goab-button>
+        }
+      </goab-button-group>
+    </div>
   </goab-app-header>
   <goab-hero-banner #heroBanner heading="<%= projectName %>"></goab-hero-banner>
   <main>

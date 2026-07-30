@@ -35,18 +35,24 @@ export function App() {
     <div className={styles.app}>
       <GoabMicrositeHeader type="alpha" />
       <GoabAppHeader url="/" heading="<%= projectName %>">
-        <GoabButtonGroup alignment="end">
-          {name && <span>{name}</span>}
-          {!authenticated ? (
-            <GoabButton type="tertiary" onClick={() => dispatch(loginUser())}>
-              Sign in
-            </GoabButton>
-          ) : (
-            <GoabButton type="tertiary" onClick={() => dispatch(logoutUser())}>
-              Sign out
-            </GoabButton>
-          )}
-        </GoabButtonGroup>
+        {/* GoabAppHeader only renders content placed in a named slot — the
+            "utilities" slot is where GoA's own design system docs put
+            account/sign-in actions (as opposed to "navigation" for nav
+            links). A bare child with no slot attribute renders nothing. */}
+        <div slot="utilities">
+          <GoabButtonGroup alignment="end">
+            {name && <span>{name}</span>}
+            {!authenticated ? (
+              <GoabButton type="tertiary" onClick={() => dispatch(loginUser())}>
+                Sign in
+              </GoabButton>
+            ) : (
+              <GoabButton type="tertiary" onClick={() => dispatch(logoutUser())}>
+                Sign out
+              </GoabButton>
+            )}
+          </GoabButtonGroup>
+        </div>
       </GoabAppHeader>
       <GoabHeroBanner heading="<%= projectName %>" backgroundUrl="/assets/banner.jpg" />
       <main>

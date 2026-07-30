@@ -247,6 +247,17 @@ describe('Vue App Generator', () => {
     expect(app).toContain('goa-button-group');
   }, 30000);
 
+  it('renders the sign-in button in the app header (needs the "utilities" slot)', async () => {
+    // goa-app-header (v2) only renders content placed in a named slot — GoA's
+    // own design system docs put account/sign-in actions in "utilities" (vs.
+    // "navigation" for nav links). A bare child with no slot attribute
+    // renders nothing, silently dropping the sign-in button. Regression
+    // guard for exactly that gap.
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toMatch(/<div slot="utilities">[\s\S]*<goa-button-group/);
+  }, 30000);
+
   it('removes the @nx/vue demo scaffold and ships a passing App test', async () => {
     await generator(host, options);
     // The stale nx demo + its failing test must be gone (they fail against our shell).
