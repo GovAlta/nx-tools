@@ -344,7 +344,8 @@ whether its kind has a resolution lifecycle at all:
   "domain-terms": { "expectedAncestorTypes": ["bounded-contexts"] },
   "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] },
   "open-questions": { "expectedAncestorTypes": [], "tracksResolution": true },
-  "blockers": { "expectedAncestorTypes": [], "tracksResolution": true }
+  "blockers": { "expectedAncestorTypes": [], "tracksResolution": true },
+  "iteration-retrospectives": { "expectedAncestorTypes": [], "terminal": true }
 }
 ```
 
@@ -359,6 +360,22 @@ as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
 `tracksResolution: true` is what makes `open-questions`/`blockers` show up in `resolutionStatus`
 (below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking
 and gets settled by another artifact) gets the same open/resolved report for free by declaring it.
+
+`terminal: true` marks a type where zero descendants is what correct looks like, not a sign of
+neglect — a close-out/retrospective artifact, working exactly as intended, still has nothing ever
+built on top of it. See `orphans` below.
+
+### `orphans`
+
+`violations.orphans` lists every registered artifact nothing in the workspace references — the
+"nothing derives from it yet" case, distinct from `unscoped` (missing an _expected_ ancestor,
+the opposite direction). Two things feed correctly into what counts as "referenced":
+
+- A reference counts whether it's a plain `project-docs-ancestors` citation or a `resolves` one —
+  a resolution is a real reference too, even when it's the only field naming the target (the normal
+  shape for a hand-authored artifact, before its type earns a generator with a `--resolves` flag
+  that would otherwise duplicate the ref into `project-docs-ancestors` for you).
+- A type with `terminal: true` is excluded from `orphans` entirely, regardless of descendant count.
 
 ### `resolutionStatus`
 

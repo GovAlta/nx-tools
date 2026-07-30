@@ -144,6 +144,31 @@ describe('extractFrontmatterAncestorRefs', () => {
     );
     expect(extractFrontmatterAncestorRefs(content)).toEqual([]);
   });
+
+  it('unions in resolves — a hand-authored resolution counts as an ancestor reference too', () => {
+    const content = [
+      '---',
+      'project-docs-ancestors: [requirements:some-requirement]',
+      'resolves: [blockers:some-blocker]',
+      '---',
+    ].join('\n');
+    expect(extractFrontmatterAncestorRefs(content)).toEqual([
+      'requirements:some-requirement',
+      'blockers:some-blocker',
+    ]);
+  });
+
+  it('dedupes when resolves is already duplicated into project-docs-ancestors (the generator-authored shape)', () => {
+    const content = [
+      '---',
+      'project-docs-ancestors: [blockers:some-blocker]',
+      'resolves: [blockers:some-blocker]',
+      '---',
+    ].join('\n');
+    expect(extractFrontmatterAncestorRefs(content)).toEqual([
+      'blockers:some-blocker',
+    ]);
+  });
 });
 
 describe('extractCommentAncestorRefs', () => {
@@ -275,6 +300,78 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
 
     expect(violations.orphans).toEqual(['domain-terms:unused']);
     expect(violations.brokenRefs).toEqual([]);
+  });
+
+  it('does not flag a hand-authored resolution as an orphan, even without duplicating the ref into project-docs-ancestors', () => {
+    // Mirrors the real case that motivated this: a resolution authored by
+    // hand (no generator for the referencing type yet) that only sets
+    // `resolves`, unlike a generator-authored one which also duplicates the
+    // ref into project-docs-ancestors at write time.
+    host.write(
+      'project-docs/blockers/some-blocker.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/iteration-retrospectives/first.md',
+      [
+        '---',
+        'project-docs-ancestors: [requirements:some-requirement]',
+        'resolves: [blockers:some-blocker]',
+        '---',
+      ].join('\n'),
+    );
+    host.write(
+      'project-docs/requirements/some-requirement.md',
+      ['---', 'name: Some requirement', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+
+    expect(violations.orphans).not.toContain('blockers:some-blocker');
+  });
+
+  it('excludes a terminal-typed artifact from orphans even with zero descendants', () => {
+    host.write(
+      'project-docs/iteration-retrospectives/first.md',
+      ['---', 'project-docs-ancestors: []', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'iteration-retrospectives': {
+          expectedAncestorTypes: [],
+          terminal: true,
+        },
+      },
+    );
+
+    expect(violations.orphans).not.toContain('iteration-retrospectives:first');
+  });
+
+  it('still flags a non-terminal artifact with zero descendants as an orphan, alongside a terminal one with none', () => {
+    host.write(
+      'project-docs/iteration-retrospectives/first.md',
+      ['---', 'project-docs-ancestors: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/unpicked-up.md',
+      ['---', 'name: Unpicked up', '---'].join('\n'),
+    );
+
+    const violations = computeViolations(
+      buildRegistry(host),
+      buildIndex(host),
+      {
+        'iteration-retrospectives': {
+          expectedAncestorTypes: [],
+          terminal: true,
+        },
+      },
+    );
+
+    expect(violations.orphans).toEqual(['domain-models:unpicked-up']);
   });
 
   it('handles a multi-ref file deriving from more than one artifact', () => {
