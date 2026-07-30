@@ -154,6 +154,27 @@ objects:
     metadata:
       name: ${APP_NAME}
       namespace: ${PROJECT}
+      annotations:
+        # Baseline per-SOURCE-IP rate limiting at the router — layered under
+        # whatever cross-cutting network-level rate limiting already exists
+        # in front of this cluster, not a replacement for it. Exists so this
+        # manifest doesn't read as "no rate limiting at all" just because the
+        # real protection lives outside what's visible here.
+        #
+        # concurrent-tcp: max simultaneous connections from one source IP.
+        # rate-tcp: max new TCP connections from one source IP per 3s (the
+        #   router's own fixed window for this counter, not configurable).
+        # rate-http: max HTTP requests from one source IP per 10s (likewise
+        #   fixed by the router).
+        #
+        # Numbers below are a generous starting point — guard against
+        # blatant abuse, not shape legitimate traffic — tune per app if its
+        # real usage differs. A shared corporate NAT/VPN egress can put many
+        # real users behind one source IP, so avoid setting these too tight.
+        haproxy.router.openshift.io/rate-limit-connections: 'true'
+        haproxy.router.openshift.io/rate-limit-connections.concurrent-tcp: '200'
+        haproxy.router.openshift.io/rate-limit-connections.rate-tcp: '200'
+        haproxy.router.openshift.io/rate-limit-connections.rate-http: '2000'
     spec:
       port:
         targetPort: http

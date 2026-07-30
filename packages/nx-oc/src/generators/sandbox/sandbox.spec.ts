@@ -75,6 +75,11 @@ describe('Sandbox Generator', () => {
     expect(manifest).not.toContain('DEPLOY_TAG');
     expect(manifest).toContain('sandbox');
     expect(manifest).toContain('deployment-mode: sandbox');
+    // The Route template is shared with `deployment`, so the baseline
+    // rate-limit annotations apply to sandbox manifests too.
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections',
+    );
   });
 
   it('errors (does not prompt) when the registry cannot be resolved non-interactively', async () => {
@@ -107,6 +112,9 @@ describe('Sandbox Generator', () => {
     const manifest = host.read('.openshift/test/test.sandbox.yml').toString();
     expect(manifest).toContain('imagePullPolicy: Always');
     expect(manifest).not.toContain('ImageStream');
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections',
+    );
   });
 
   it('adds a sandbox target wired to the @abgov/nx-oc:sandbox executor', async () => {
