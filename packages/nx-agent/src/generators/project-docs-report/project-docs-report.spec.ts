@@ -139,6 +139,19 @@ describe('nx-agent project-docs-report generator', () => {
       'LLM synthesis unavailable in this environment — showing computed summary.',
     );
     expect(html).toContain('project-docs artifact(s) tracked');
+
+    // each artifact's own content is navigable in place: a table link and a
+    // graph click directive both point at the same anchor, which holds its
+    // markdown body rendered to real HTML (not raw markdown source)
+    expect(html).toContain(
+      '<td><a href="#artifact-open-questions-still-open">open-questions:still-open</a></td>',
+    );
+    expect(html).toMatch(
+      /click n\d+ &quot;#artifact-open-questions-still-open&quot; &quot;View content&quot;/,
+    );
+    expect(html).toContain('<div id="artifact-open-questions-still-open"');
+    // rendered from markdown to a real <p>, not dumped as raw source text
+    expect(html).toContain('<p>Why this is still undecided.</p>');
   });
 
   it('is excluded from version control via the resolved output path', async () => {
@@ -205,17 +218,19 @@ describe('nx-agent project-docs-report generator', () => {
       await generator(host, { project: 'billing', noSynthesis: true });
       const html = host.read('apps/billing/project-docs/report.html', 'utf-8');
 
-      // in-scope artifact: full table row (its own key as the row's first
-      // cell) + graph node
+      // in-scope artifact: full table row (its own key, linked to its detail
+      // anchor, as the row's first cell) + graph node
       expect(html).toContain(
-        '<tr>\n        <td>billing/bounded-contexts:invoicing</td>',
+        '<tr>\n        <td><a href="#artifact-billing-bounded-contexts-invoicing">billing/bounded-contexts:invoicing</a></td>',
       );
 
       // workspace-level ancestor: graph node (context) + listed as an
       // ancestor in invoicing's own row, but never its own table row. The
       // flowchart text is HTML-escaped when embedded, so `"` -> `&quot;`.
       expect(html).toContain('n1[&quot;domain-terms:money&quot;]:::context');
-      expect(html).not.toContain('<tr>\n        <td>domain-terms:money</td>');
+      expect(html).not.toContain(
+        '<td><a href="#artifact-domain-terms-money">domain-terms:money</a></td>',
+      );
 
       // a different project's unrelated artifact appears nowhere at all
       expect(html).not.toContain('shipping/domain-terms:shipment');

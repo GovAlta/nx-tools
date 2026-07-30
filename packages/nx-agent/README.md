@@ -497,6 +497,11 @@ with a "Closed out" badge and a `✓` in the graph) a `terminal`-typed artifact 
 `iteration-retrospective`, so a permanently-zero-descendant close-out reads as done rather than
 looking like an ordinary orphan.
 
+Each artifact's own markdown body — rendered to real HTML via [marked](https://marked.js.org/), not
+shown as raw source — is one click away: both its table row and its graph node link to an in-page
+detail panel (`#artifact-<key>`), shown via plain CSS `:target` rather than any script, so it stays
+part of the same single file.
+
 ### `--project` scoping
 
 `registry`/`index`/`violations` are always computed over the full workspace first, unconditionally —

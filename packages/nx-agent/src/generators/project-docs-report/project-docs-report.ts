@@ -1,5 +1,6 @@
 import { Tree, joinPathFragments, readProjectConfiguration } from '@nx/devkit';
 import { readFileSync } from 'fs';
+import { marked } from 'marked';
 import {
   ArtifactSchema,
   readArtifactSchema,
@@ -36,6 +37,13 @@ function escapeHtml(value: string): string {
 
 function stripFrontmatter(content: string): string {
   return content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+}
+
+// A registry key's own format (<project>/type:id) is already constrained in
+// practice, but this is the one place it becomes an HTML id/URL fragment, so
+// swap anything outside that safe set defensively rather than assume.
+function toAnchorId(key: string): string {
+  return `artifact-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 }
 
 // Curated, hand-copied subset of @abgov/design-tokens@2.12.0's dist/tokens.css
@@ -109,6 +117,20 @@ function buildStyles(): string {
     th { color: ${TOKENS.textMuted}; font-weight: 600; }
     .synthesis-note { color: ${TOKENS.textMuted}; font-size: 0.8125rem; font-style: italic; }
     .mermaid { text-align: center; }
+    .detail {
+      display: none;
+      background: ${TOKENS.background};
+      border: 1px solid ${TOKENS.interactive.border};
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      max-width: 960px;
+    }
+    .detail:target { display: block; }
+    .detail h3 { margin-top: 0; color: ${TOKENS.brand}; }
+    .detail-close { float: right; font-size: 0.875rem; font-weight: 400; }
+    .detail-path { color: ${TOKENS.textMuted}; font-size: 0.8125rem; }
+    .detail-body :first-child { margin-top: 0; }
   `;
 }
 
@@ -170,6 +192,15 @@ function buildMermaidFlowchart(
     const label =
       isTerminal && !isContext ? `✓ ${sanitizeLabel(key)}` : sanitizeLabel(key);
     lines.push(`  ${id}["${label}"]${cls ? `:::${cls}` : ''}`);
+  }
+
+  // Every rendered node (including context ones) gets a detail section
+  // built below, so every node can link there — clicking navigates to the
+  // artifact's own content in place, no dangling links.
+  for (const key of renderedKeys) {
+    lines.push(
+      `  click ${nodeIds.get(key)} "#${toAnchorId(key)}" "View content"`,
+    );
   }
 
   const drawnEdges = new Set<string>();
@@ -301,7 +332,7 @@ function buildTable(
       const entry = registry.get(key);
       const type = parseAncestorRef(key)?.type ?? '';
       return `<tr>
-        <td>${escapeHtml(key)}</td>
+        <td><a href="#${toAnchorId(key)}">${escapeHtml(key)}</a></td>
         <td>${escapeHtml(type)}</td>
         <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
         <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
@@ -325,6 +356,38 @@ function buildBrokenRefsSection(brokenRefs: Violations['brokenRefs']): string {
     )
     .join('');
   return `<h2>Broken references</h2><ul>${items}</ul>`;
+}
+
+// One hidden <div> per rendered node (in-scope + context, matching the
+// graph), each targetable by the `click`/table-link anchors above.
+// `:target` — not JS — toggles visibility: navigating to #artifact-<id>
+// both scrolls to and reveals that one div, and only ever matches one at a
+// time, so this needs nothing beyond plain CSS to behave like a "page" for
+// each artifact while staying inside the one self-contained HTML file.
+function buildArtifactDetails(
+  host: Tree,
+  renderedKeys: string[],
+  registry: Registry,
+): string {
+  const sections = renderedKeys
+    .map((key) => {
+      const entry = registry.get(key);
+      if (!entry) {
+        return '';
+      }
+      const content = host.read(entry.path, 'utf-8') ?? '';
+      const body = stripFrontmatter(content);
+      const bodyHtml = body
+        ? marked.parse(body, { async: false })
+        : '<p><em>No content.</em></p>';
+      return `<div id="${toAnchorId(key)}" class="detail">
+        <h3>${escapeHtml(key)} <a href="#top" class="detail-close">Close ✕</a></h3>
+        <p class="detail-path"><code>${escapeHtml(entry.path)}</code></p>
+        <div class="detail-body">${bodyHtml}</div>
+      </div>`;
+    })
+    .join('\n');
+  return `<section id="artifact-detail-panel">${sections}</section>`;
 }
 
 // The bundled browser build, inlined directly rather than referenced by a
@@ -352,6 +415,7 @@ function buildHtml(params: {
   cardsHtml: string;
   tableHtml: string;
   brokenRefsHtml: string;
+  detailsHtml: string;
   flowchart: string;
   mermaidBundle: string;
 }): string {
@@ -368,7 +432,7 @@ function buildHtml(params: {
 <style>${buildStyles()}</style>
 </head>
 <body>
-<h1>${escapeHtml(params.title)}</h1>
+<h1 id="top">${escapeHtml(params.title)}</h1>
 <p class="generated-at">Generated ${escapeHtml(params.generatedAt)}</p>
 
 <section>
@@ -396,14 +460,18 @@ ${params.cardsHtml}
 
 <section>
 <h2>Artifacts</h2>
+<p>Click a key below, or a node in the graph above, to view its content in place.</p>
 ${params.tableHtml}
 ${params.brokenRefsHtml}
 </section>
+
+${params.detailsHtml}
 
 <script>${params.mermaidBundle}</script>
 <script>
 mermaid.initialize({
   startOnLoad: false,
+  securityLevel: 'loose',
   theme: 'base',
   themeVariables: {
     primaryColor: '${TOKENS.interactive.bg}',
@@ -539,6 +607,7 @@ export default async function (host: Tree, options: Schema) {
       artifactSchema,
     ),
     brokenRefsHtml: buildBrokenRefsSection(inScopeBrokenRefs),
+    detailsHtml: buildArtifactDetails(host, renderedKeys, registry),
     flowchart,
     mermaidBundle: readMermaidBundle(),
   });
