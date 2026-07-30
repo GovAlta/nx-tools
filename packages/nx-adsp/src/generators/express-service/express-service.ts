@@ -124,8 +124,12 @@ export default async function (host: Tree, options: Schema) {
       passport: '^0.7.0',
       'passport-anonymous': '^1.0.1',
       zod: '^3.0.0',
+      // ^0.45.2, not ^0.44.0: CVE-2026-39356 (GHSA-gpj5-g38j-94v9, high) — sql.identifier()/.as()
+      // didn't escape embedded quote delimiters before 0.45.2, allowing SQL injection through
+      // identifier/alias construction built from untrusted input. Fixed upstream in 0.45.2; every
+      // 0.44.x release is affected (0.x caret ranges don't cross the minor).
       ...(normalizedOptions.database === 'postgres'
-        ? { 'drizzle-orm': '^0.44.0', pg: '^8.11.0' }
+        ? { 'drizzle-orm': '^0.45.2', pg: '^8.11.0' }
         : {}),
       ...(normalizedOptions.database === 'mongo' ? { mongoose: '^8.0.0' } : {}),
     },
