@@ -94,6 +94,14 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('readinessProbe');
     expect(manifest).toContain('livenessProbe');
+    // Baseline per-source-IP rate limiting at the router — layered under
+    // whatever cross-cutting network-level rate limiting already exists.
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections',
+    );
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections.rate-http',
+    );
   });
 
   it('can generate deployment for angular', async () => {
@@ -165,6 +173,12 @@ describe('Deployment Generator', () => {
     // injected from the ${APP_NAME}-secrets Secret.
     expect(manifest).toContain('CLIENT_SECRET');
     expect(manifest).toContain('${APP_NAME}-secrets');
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections',
+    );
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections.rate-http',
+    );
   });
 
   it('can generate deployment for dotnet', async () => {
@@ -197,6 +211,12 @@ describe('Deployment Generator', () => {
     const manifest = host.read('.openshift/test/test.yml').toString();
     expect(manifest).toContain('readinessProbe');
     expect(manifest).toContain('livenessProbe');
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections',
+    );
+    expect(manifest).toContain(
+      'haproxy.router.openshift.io/rate-limit-connections.rate-http',
+    );
   });
 
   it('includes DATABASE_URL secretKeyRef and init container for postgres node deployment', async () => {
