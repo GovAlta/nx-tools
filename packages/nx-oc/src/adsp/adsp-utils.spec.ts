@@ -1,4 +1,5 @@
 import { spawnSync } from 'child_process';
+import axios from 'axios';
 import { getAccessToken } from '@abgov/adsp-cli';
 import { isNonInteractive } from '../utils/interactive';
 import {
@@ -6,6 +7,7 @@ import {
   detectAdspEnv,
   detectAdspTenant,
   ensureAdspToken,
+  getAdspCliCiStatus,
 } from './adsp-utils';
 
 jest.mock('child_process', () => ({
@@ -17,10 +19,12 @@ jest.mock('@abgov/adsp-cli', () => ({
   getAccessToken: jest.fn(),
 }));
 jest.mock('../utils/interactive', () => ({ isNonInteractive: jest.fn() }));
+jest.mock('axios');
 
 const mockedGetAccessToken = getAccessToken as jest.Mock;
 const mockedSpawnSync = spawnSync as jest.Mock;
 const mockedIsNonInteractive = isNonInteractive as jest.Mock;
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('adspProjectTags', () => {
   it('always includes the env tag', () => {
@@ -150,5 +154,64 @@ describe('ensureAdspToken', () => {
     ).rejects.toThrow();
 
     expect(process.env.ADSP_TENANT_REALM).toBeUndefined();
+  });
+});
+
+describe('getAdspCliCiStatus', () => {
+  beforeEach(() => {
+    mockedAxios.get.mockReset();
+    mockedAxios.put.mockReset();
+  });
+
+  it('reports not found when no adsp-cli-ci client exists in the realm', async () => {
+    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+
+    const status = await getAdspCliCiStatus(
+      'https://access.example.com',
+      'my-realm',
+      'tok',
+    );
+
+    expect(status).toEqual({ found: false, enabled: false });
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+  });
+
+  it('reports disabled without ever fetching a secret or enabling it', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [{ id: 'uuid-1', clientId: 'adsp-cli-ci', enabled: false }],
+    });
+
+    const status = await getAdspCliCiStatus(
+      'https://access.example.com',
+      'my-realm',
+      'tok',
+    );
+
+    expect(status).toEqual({ found: true, enabled: false });
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+  });
+
+  it('fetches and returns the secret when enabled', async () => {
+    mockedAxios.get
+      .mockResolvedValueOnce({
+        data: [{ id: 'uuid-1', clientId: 'adsp-cli-ci', enabled: true }],
+      })
+      .mockResolvedValueOnce({ data: { type: 'secret', value: 'shh' } });
+
+    const status = await getAdspCliCiStatus(
+      'https://access.example.com',
+      'my-realm',
+      'tok',
+    );
+
+    expect(status).toEqual({ found: true, enabled: true, secret: 'shh' });
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      2,
+      'https://access.example.com/auth/admin/realms/my-realm/clients/uuid-1/client-secret',
+      { headers: { Authorization: 'Bearer tok' } },
+    );
+    expect(mockedAxios.put).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,57 @@
       "type": "boolean",
       "description": "Additionally scaffold the self-dispatching GitHub Actions iteration loop (.github/workflows/agent-delivery-iteration.yml, its harness/task-identification scripts, and a learnings.md header) — for driving the same skills autonomously across many iterations. Omit this for skills-only usage driven by a human or an orchestrating tool.",
       "default": false
+    },
+    "provisionSecrets": {
+      "type": "boolean",
+      "description": "Best-effort, non-interactive provisioning of the scaffolded workflow's GitHub repo secrets/variables (OPENSHIFT_SERVER, OPENSHIFT_TOKEN, OPENSHIFT_NAMESPACE, ADSP_ENV, ADSP_TENANT_NAME, ADSP_TENANT_REALM, ADSP_CLIENT_ID, ADSP_CLIENT_SECRET) — derives what it can from already-generated project state plus live oc/gh/ADSP calls, uses an explicit --openshift*/--adsp* option verbatim when one is given, and reports anything it couldn't determine as a warning with the exact manual next step. Never overwrites a secret/variable that already exists on the repo unless --overwriteExisting is also passed. Has no effect unless --githubActions is also true. Requires @abgov/nx-oc.",
+      "default": false
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope --provisionSecrets's project-derived values (OPENSHIFT_NAMESPACE, ADSP_ENV, ADSP_TENANT_NAME) to this project's own sandbox target/tags. Omit to auto-detect across every project in the workspace instead — works when exactly one project, or several with consistent values, are found; reported as undetermined and ambiguous otherwise."
+    },
+    "openshiftServer": {
+      "type": "string",
+      "description": "Explicit OPENSHIFT_SERVER value for --provisionSecrets — used verbatim, skipping the oc-based lookup."
+    },
+    "openshiftToken": {
+      "type": "string",
+      "description": "Explicit OPENSHIFT_TOKEN value for --provisionSecrets — used verbatim, skipping the oc-based lookup."
+    },
+    "openshiftNamespace": {
+      "type": "string",
+      "description": "Explicit OPENSHIFT_NAMESPACE value for --provisionSecrets — used verbatim, skipping the project-derived lookup."
+    },
+    "adspEnv": {
+      "type": "string",
+      "enum": ["dev", "test", "prod"],
+      "description": "Explicit ADSP_ENV value for --provisionSecrets — used verbatim, skipping the project-tag-derived lookup."
+    },
+    "adspTenantName": {
+      "type": "string",
+      "description": "Explicit ADSP_TENANT_NAME value for --provisionSecrets — used verbatim, skipping the project-tag-derived lookup."
+    },
+    "adspTenantRealm": {
+      "type": "string",
+      "description": "Explicit ADSP_TENANT_REALM value for --provisionSecrets — used verbatim, skipping the live tenant-service lookup."
+    },
+    "adspClientSecret": {
+      "type": "string",
+      "description": "Explicit ADSP_CLIENT_SECRET value for --provisionSecrets — used verbatim, skipping the Keycloak admin lookup. ADSP_CLIENT_ID has no equivalent option — it's always the fixed adsp-cli-ci client ID, never something to override."
+    },
+    "maxIterations": {
+      "type": "number",
+      "description": "Explicit MAX_ITERATIONS value for --provisionSecrets to write as a repo variable. Optional either way — the workflow already defaults to 6 when this variable is unset, so omitting this is not reported as undetermined."
+    },
+    "accessToken": {
+      "type": "string",
+      "description": "Pre-obtained ADSP admin-scoped access token for --provisionSecrets's ADSP_TENANT_REALM/ADSP_CLIENT_SECRET lookups — skips any adsp-cli login attempt entirely, matching the --accessToken option every nx-adsp app/service generator already exposes."
+    },
+    "overwriteExisting": {
+      "type": "boolean",
+      "description": "Allow --provisionSecrets to overwrite a secret/variable that already exists on the repo. Default is to always leave an existing one unchanged and report it as such, regardless of whether the new value would come from an explicit option, a derived value, or the adsp-cli-ci constant.",
+      "default": false
     }
   },
   "additionalProperties": false

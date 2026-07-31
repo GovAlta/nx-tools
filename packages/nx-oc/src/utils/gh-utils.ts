@@ -84,6 +84,28 @@ export function setGhVariable(
   }
 }
 
+// Existing-secret/-variable names, so a caller can decide not to overwrite one that's already
+// set — GitHub never exposes a secret's *value* once set (by design), so presence is the only
+// thing checkable either way. Deliberately throws rather than returning [] on failure: an empty
+// result is indistinguishable from "genuinely nothing set yet", and a caller using it to decide
+// whether a write is safe must never treat "couldn't check" the same as "confirmed absent" — that
+// would make an overwrite-guard fail open exactly when it matters most.
+export function listGhSecretNames(repo: string): string[] {
+  const raw = execFileSync('gh', ['secret', 'list', '--repo', repo, '--json', 'name'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  }).toString();
+  return JSON.parse(raw).map((s: { name: string }) => s.name);
+}
+
+export function listGhVariableNames(repo: string): string[] {
+  const raw = execFileSync(
+    'gh',
+    ['variable', 'list', '--repo', repo, '--json', 'name'],
+    { stdio: ['pipe', 'pipe', 'pipe'] },
+  ).toString();
+  return JSON.parse(raw).map((v: { name: string }) => v.name);
+}
+
 // Prompts (masked) for a GitHub PAT. Returns undefined if the prompt is
 // cancelled or left empty. Callers that already hold a PAT (e.g. the pipeline
 // generator prompting once for several steps) pass it through and skip this.
