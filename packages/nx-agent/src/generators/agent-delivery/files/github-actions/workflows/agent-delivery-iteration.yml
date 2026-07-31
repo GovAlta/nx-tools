@@ -58,6 +58,11 @@ permissions:
 
 env:
   MAX_ITERATIONS: ${{ vars.MAX_ITERATIONS || '6' }}
+  # Nx wraps every `nx run <project>:<target>` in a collapsible ::group::/::endgroup:: block
+  # whenever it detects GITHUB_ACTIONS -- one more fold per task, on top of this workflow's own
+  # step-level ones, for output that's already scoped to one bounded iteration. Purely local log
+  # formatting (no Nx Cloud connection or telemetry involved); this just skips it.
+  NX_SKIP_LOG_GROUPING: 'true'
 
 jobs:
   iterate:
