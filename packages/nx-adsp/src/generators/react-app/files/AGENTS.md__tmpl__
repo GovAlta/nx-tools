@@ -64,14 +64,15 @@ from `@abgov/react-components` over those components:
 import { GoabButton, GoabAppHeader, GoabButtonGroup } from '@abgov/react-components';
 ```
 
-**Events**: GoA React components use `onGoab*` handlers (not standard React synthetic
-events); the payload is on `e.detail`:
+**Events**: GoA React components use plain `onClick`/`onChange` handlers, not the
+`onGoab*`/`e.detail` pattern some other GoA framework wrappers use. `onChange` receives its
+detail object directly as the callback's sole argument — never wrapped in a synthetic event:
 
 ```tsx
-<GoabButton onGoabClick={handleSave}>Save</GoabButton>
-<GoabInput onGoabChange={(e) => setValue(e.detail.value)} />
-<GoabDropdown onGoabChange={(e) => setSelected(e.detail.value)} />
-<GoabCheckbox onGoabChange={(e) => setChecked(e.detail.checked)} />
+<GoabButton onClick={handleSave}>Save</GoabButton>
+<GoabInput onChange={(detail) => setValue(detail.value)} />
+<GoabDropdown onChange={(detail) => setSelected(detail.value)} />
+<GoabCheckbox onChange={(detail) => setChecked(detail.checked)} />
 ```
 
 Event `detail` shapes vary by component — check the component's gallery page or the
