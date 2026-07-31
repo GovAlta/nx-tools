@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentFeature",
+  "title": "Add a feature",
+  "description": "Creates one file for a feature request under project-docs/features/, with a project-docs-ancestors frontmatter list and a free-text body describing the capability wanted and why. This is how new work enters the DDDD workflow — Discover decomposes it into a service-description/requirement. Bootstraps the features/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The canonical name of the feature (e.g. \"Submit Minor Collision Report\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What capability is wanted?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this feature to a specific project's project-docs/features/ instead of the workspace root — prefer this whenever the feature already has a natural code home; only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this feature relates to — e.g. an existing service-description, if this extends an initiative that already exists. Omit entirely for a brand-new initiative with nothing yet to reference. Each path must already exist; a backward reference only makes sense pointing at something already established."
+    },
+    "resolves": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing open-question/blocker artifacts this feature resolves. Recorded distinctly from projectDocsAncestors (though also added there, so lineage traversal sees it as an ancestor too) so project-docs-lineage can report the resolution as such rather than mistaking any ancestor reference for one."
+    }
+  },
+  "required": ["title"],
+  "additionalProperties": false
+}
