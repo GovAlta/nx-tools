@@ -6,6 +6,7 @@ import {
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { mergeManagedSection } from '../../utils/agents-md';
+import { provisionGithubActionsSecrets } from './provision-github-secrets';
 import { Schema } from './schema';
 
 const FILES_DIR = join(__dirname, 'files');
@@ -97,4 +98,9 @@ export default async function (host: Tree, options: Schema) {
   }
 
   mergeManagedSection(host, AGENTS_MD_SECTION_ID, readGuidance());
+
+  // Last, and independent of everything above: file scaffolding always succeeds regardless of
+  // what live oc/gh/ADSP calls this finds. No-ops entirely unless both --githubActions and
+  // --provisionSecrets are set — see provision-github-secrets.ts's own header for the full design.
+  await provisionGithubActionsSecrets(host, options);
 }

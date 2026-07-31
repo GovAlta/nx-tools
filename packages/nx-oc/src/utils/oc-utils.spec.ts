@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'child_process';
 import { mocked } from 'jest-mock';
 import {
   ensureOcLogin,
+  isOcLoggedIn,
   runOcCommand,
   getOcServerUrl,
   getSaToken,
@@ -77,6 +78,44 @@ describe('runOcCommand', () => {
     const result = runOcCommand('start-build', ['my-pipeline']);
     expect(result.success).toBe(false);
     expect(result.stdout).toBeUndefined();
+  });
+});
+
+describe('isOcLoggedIn', () => {
+  beforeEach(() => {
+    mockedExecFileSync.mockReset();
+    mockedSpawnSync.mockReset();
+  });
+
+  it('returns true when already logged in, without ever spawning an interactive login', () => {
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockReturnValueOnce(Buffer.from('developer')); // oc whoami
+
+    expect(isOcLoggedIn()).toBe(true);
+    expect(mockedSpawnSync).not.toHaveBeenCalled();
+  });
+
+  it('returns false, not throw, when oc is not installed', () => {
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('oc: command not found');
+    });
+
+    expect(isOcLoggedIn()).toBe(false);
+    expect(mockedSpawnSync).not.toHaveBeenCalled();
+  });
+
+  it('returns false, without ever spawning an interactive login, when not logged in', () => {
+    mockedExecFileSync.mockReturnValueOnce(
+      Buffer.from('Client Version: 4.14.0'),
+    ); // oc version --client
+    mockedExecFileSync.mockImplementationOnce(() => {
+      throw new Error('not logged in');
+    }); // oc whoami
+
+    expect(isOcLoggedIn()).toBe(false);
+    expect(mockedSpawnSync).not.toHaveBeenCalled();
   });
 });
 

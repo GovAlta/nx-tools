@@ -15,8 +15,14 @@
     "yaml": "~2.9.0"
   },
   "peerDependencies": {
+    "@abgov/nx-oc": "^13.0.0-0",
     "@nx/devkit": "^23.0.0",
     "tslib": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@abgov/nx-oc": {
+      "optional": true
+    }
   },
   "generators": "./generators.json",
   "scripts": {}

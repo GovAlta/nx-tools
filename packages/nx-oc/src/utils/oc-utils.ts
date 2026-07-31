@@ -190,6 +190,19 @@ export function runOcCommand(
   }
 }
 
+// Same preflight checks as ensureOcLogin's own opening two try/catches, but never falls through
+// to an interactive `oc login --web` — for a caller that needs to know login status without
+// risking a block in a non-interactive run (ensureOcLogin itself is right for every other case).
+export function isOcLoggedIn(): boolean {
+  try {
+    execFileSync('oc', ['version', '--client'], { stdio: 'pipe' });
+    execFileSync('oc', ['whoami'], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function ensureOcLogin(): void {
   try {
     execFileSync('oc', ['version', '--client'], { stdio: 'pipe' });

@@ -1,6 +1,12 @@
 import { execFileSync, execSync } from 'child_process';
 import { mocked } from 'jest-mock';
-import { activeAccountScopes, checkGhCli, setGhSecret } from './gh-utils';
+import {
+  activeAccountScopes,
+  checkGhCli,
+  listGhSecretNames,
+  listGhVariableNames,
+  setGhSecret,
+} from './gh-utils';
 
 jest.mock('child_process');
 const mockedExecFileSync = mocked(execFileSync);
@@ -97,5 +103,51 @@ describe('setGhSecret', () => {
     expect(setGhSecret('OPENSHIFT_TOKEN', 'tok', 'GovAlta/nx-tools')).toBe(
       false,
     );
+  });
+});
+
+describe('listGhSecretNames', () => {
+  beforeEach(() => mockedExecFileSync.mockReset());
+
+  it('parses the JSON name list', () => {
+    mockedExecFileSync.mockReturnValue(
+      Buffer.from(JSON.stringify([{ name: 'A' }, { name: 'B' }])),
+    );
+    expect(listGhSecretNames('GovAlta/nx-tools')).toEqual(['A', 'B']);
+    expect(mockedExecFileSync).toHaveBeenCalledWith(
+      'gh',
+      ['secret', 'list', '--repo', 'GovAlta/nx-tools', '--json', 'name'],
+      expect.objectContaining({ stdio: ['pipe', 'pipe', 'pipe'] }),
+    );
+  });
+
+  it('throws rather than returning [] on failure — a caller deciding whether a write is safe must never treat "could not check" the same as "confirmed absent"', () => {
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('gh: not found');
+    });
+    expect(() => listGhSecretNames('GovAlta/nx-tools')).toThrow();
+  });
+});
+
+describe('listGhVariableNames', () => {
+  beforeEach(() => mockedExecFileSync.mockReset());
+
+  it('parses the JSON name list', () => {
+    mockedExecFileSync.mockReturnValue(
+      Buffer.from(JSON.stringify([{ name: 'X' }])),
+    );
+    expect(listGhVariableNames('GovAlta/nx-tools')).toEqual(['X']);
+    expect(mockedExecFileSync).toHaveBeenCalledWith(
+      'gh',
+      ['variable', 'list', '--repo', 'GovAlta/nx-tools', '--json', 'name'],
+      expect.objectContaining({ stdio: ['pipe', 'pipe', 'pipe'] }),
+    );
+  });
+
+  it('throws on failure, same as listGhSecretNames', () => {
+    mockedExecFileSync.mockImplementation(() => {
+      throw new Error('gh: not found');
+    });
+    expect(() => listGhVariableNames('GovAlta/nx-tools')).toThrow();
   });
 });

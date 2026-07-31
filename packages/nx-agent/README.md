@@ -126,11 +126,11 @@ resolves: []
 
 ### Options
 
-| Option                 | Default                  | Description                                                                                                                              |
-| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `title`                | — (required, positional) | The canonical name of the feature                                                                                                        |
-| `project`              | workspace root           | Scope the feature to a specific project's `project-docs/features/` instead — prefer this whenever it already has a natural code home     |
-| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this feature relates to — repeatable; typically an existing service-description if this extends an initiative that already exists |
+| Option                 | Default                  | Description                                                                                                                                                                                                           |
+| ---------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                | — (required, positional) | The canonical name of the feature                                                                                                                                                                                     |
+| `project`              | workspace root           | Scope the feature to a specific project's `project-docs/features/` instead — prefer this whenever it already has a natural code home                                                                                  |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this feature relates to — repeatable; typically an existing service-description if this extends an initiative that already exists                                         |
 | `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this feature resolves — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such |
 
 Re-adding a feature that already exists throws rather than silently overwriting or duplicating it. A
@@ -161,15 +161,15 @@ resolves: []
 
 ### Options
 
-| Option                 | Default                  | Description                                                                                                                         |
-| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `description`          | — (required, positional) | A short slug for what's wrong                                                                                                        |
-| `project`              | workspace root           | Scope the bug to a specific project's `project-docs/bugs/` instead — prefer this whenever it already has a natural code home         |
-| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this bug relates to, if already known — often genuinely empty until triaged             |
+| Option                 | Default                  | Description                                                                                                                  |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `description`          | — (required, positional) | A short slug for what's wrong                                                                                                |
+| `project`              | workspace root           | Scope the bug to a specific project's `project-docs/bugs/` instead — prefer this whenever it already has a natural code home |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this bug relates to, if already known — often genuinely empty until triaged      |
 
 A bug tracks open/resolved status the same generic way as `open-question`/`blocker`
 (`resolutionStatus.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
-section in the `agent-delivery` output below. Investigating a bug and finding the *spec* itself was
+section in the `agent-delivery` output below. Investigating a bug and finding the _spec_ itself was
 wrong escalates to a real `blocker` against the implicated artifact; filing that blocker does not
 itself resolve the bug — only an `iteration-retrospective --resolves` naming the bug's own path does.
 
@@ -612,14 +612,47 @@ overwrites what's already present.
 
 ### Options
 
-| Option          | Default | Description                                                                                                                                                                                                                                                                                                                                |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `githubActions` | `false` | Additionally scaffold a self-dispatching GitHub Actions iteration loop — `.github/workflows/agent-delivery-iteration.yml`, its harness/task-identification scripts, and a `learnings.md` header — for driving the same skills autonomously across many iterations, instead of a human or an orchestrating tool driving them one at a time. |
+| Option                                                                                                                        | Default | Description                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `githubActions`                                                                                                               | `false` | Additionally scaffold a self-dispatching GitHub Actions iteration loop — `.github/workflows/agent-delivery-iteration.yml`, its harness/task-identification scripts, and a `learnings.md` header — for driving the same skills autonomously across many iterations, instead of a human or an orchestrating tool driving them one at a time. |
+| `provisionSecrets`                                                                                                            | `false` | Best-effort, non-interactive provisioning of the scaffolded workflow's own GitHub repo secrets/variables — see below. No effect unless `githubActions` is also `true`. Requires `@abgov/nx-oc`.                                                                                                                                            |
+| `project`                                                                                                                     | —       | Scope `provisionSecrets`'s project-derived values to one project's own `sandbox` target/tags. Auto-detected across the workspace when omitted.                                                                                                                                                                                             |
+| `openshiftServer`, `openshiftToken`, `openshiftNamespace`, `adspEnv`, `adspTenantName`, `adspTenantRealm`, `adspClientSecret` | —       | Explicit value for the correspondingly-named secret/variable — used verbatim by `provisionSecrets`, skipping derivation entirely for that one. No `adspClientId` option: it's always the fixed `adsp-cli-ci` client ID.                                                                                                                    |
+| `maxIterations`                                                                                                               | —       | Explicit `MAX_ITERATIONS` value for `provisionSecrets` to write. Optional either way — the workflow already defaults to `6` when unset.                                                                                                                                                                                                    |
+| `accessToken`                                                                                                                 | —       | Pre-obtained ADSP admin-scoped access token for `provisionSecrets`'s ADSP lookups — skips any `adsp-cli` login attempt, matching every `nx-adsp` app/service generator's own `--accessToken`.                                                                                                                                              |
+| `overwriteExisting`                                                                                                           | `false` | Let `provisionSecrets` overwrite a secret/variable that already exists on the repo. Default is to always leave an existing one unchanged.                                                                                                                                                                                                  |
 
 ### `--githubActions` setup
 
 The scaffolded workflow needs repo secrets and variables it doesn't set itself: secrets
 `OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `ADSP_CLIENT_ID`, `ADSP_CLIENT_SECRET`; variables `ADSP_ENV`,
 `ADSP_TENANT_NAME`, `ADSP_TENANT_REALM`, `OPENSHIFT_NAMESPACE`, and optionally `MAX_ITERATIONS`
-(defaults to `6`). It also needs the org policy enabling Copilot CLI billed to the organization (for
-the workflow's own `copilot-requests: write` permission to actually authenticate).
+(defaults to `6`).
+
+`--provisionSecrets` automates most of this on a best-effort basis, once at least one app/service
+has been scaffolded (and, for `OPENSHIFT_*`, sandboxed):
+
+```bash
+npx nx g @abgov/nx-agent:agent-delivery --githubActions --provisionSecrets
+```
+
+It derives `OPENSHIFT_NAMESPACE` from a project's own `sandbox` target, `ADSP_ENV`/
+`ADSP_TENANT_NAME` from the tags every app/service generator already writes, `ADSP_TENANT_REALM`
+from a live (re-)resolution of the tenant name, `ADSP_CLIENT_ID` as the fixed `adsp-cli-ci`
+constant, and `ADSP_CLIENT_SECRET` via a Keycloak admin lookup — using an `oc`/`gh` login already
+active on this machine, or an explicit option/`--accessToken` in place of any of them. It **never**
+overwrites a secret/variable that already exists on the repo unless `--overwriteExisting` is also
+passed, and reports anything it couldn't determine as a warning with the exact next step. There's
+no requirement to run this before or after any other generator — see the generator's own
+`provision-github-secrets.ts` header for exactly how each value degrades when the state it'd
+otherwise read doesn't exist yet.
+
+Two things it deliberately never automates, reported as warnings with exact manual steps instead:
+
+- **The tenant's `adsp-cli-ci` Keycloak client being disabled.** It's bootstrapped disabled at
+  tenant creation — a tenant admin has to enable it and generate its secret via the Keycloak admin
+  console (Clients → `adsp-cli-ci` → Settings → enable → Credentials tab → regenerate). This is a
+  real tenant-level decision, not something a generator should do on anyone's behalf.
+- **The org-level Copilot CLI billing policy** — a GitHub org admin console setting, not a repo
+  secret or variable, needed for the workflow's own `copilot-requests: write` permission to
+  actually authenticate.

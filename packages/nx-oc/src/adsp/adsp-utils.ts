@@ -366,3 +366,52 @@ export async function addClientRedirectUris(
     );
   }
 }
+
+const ADSP_CLI_CI_CLIENT_ID = 'adsp-cli-ci';
+
+export interface AdspCliCiStatus {
+  found: boolean;
+  enabled: boolean;
+  // Only populated when found && enabled -- fetching it for a disabled client isn't attempted.
+  secret?: string;
+}
+
+/**
+ * Reports whether the tenant's `adsp-cli-ci` confidential client (bootstrapped disabled at
+ * tenant creation — see @abgov/adsp-cli's own README) exists, is enabled, and if so its current
+ * secret — using the same Keycloak Admin REST surface (and the same class of `adsp-cli-admin`-
+ * scoped token) `addClientRedirectUris`/`nx-adsp`'s `keycloak-admin.ts` already use.
+ *
+ * Deliberately narrow and read-only: never enables the client if it's disabled (a real tenant
+ * decision left to a human) and never regenerates the secret — a caller that finds
+ * `enabled: false` should surface manual next steps, not attempt to fix it here.
+ */
+export async function getAdspCliCiStatus(
+  accessServiceUrl: string,
+  realm: string,
+  accessToken: string,
+): Promise<AdspCliCiStatus> {
+  const base = new URL(`/auth/admin/realms/${realm}/clients`, accessServiceUrl)
+    .href;
+  const authHeader = { Authorization: `Bearer ${accessToken}` };
+
+  const { data: clients } = await axios.get<
+    { id: string; clientId: string; enabled: boolean }[]
+  >(base, {
+    params: { clientId: ADSP_CLI_CI_CLIENT_ID },
+    headers: authHeader,
+  });
+  const client = clients?.[0];
+  if (!client) {
+    return { found: false, enabled: false };
+  }
+  if (!client.enabled) {
+    return { found: true, enabled: false };
+  }
+
+  const { data: secretRepresentation } = await axios.get<{ value: string }>(
+    `${base}/${client.id}/client-secret`,
+    { headers: authHeader },
+  );
+  return { found: true, enabled: true, secret: secretRepresentation.value };
+}
