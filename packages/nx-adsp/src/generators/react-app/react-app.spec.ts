@@ -99,6 +99,20 @@ describe('React App Generator', () => {
     expect(agents).not.toContain('ui-components.alberta.ca');
   }, 30000);
 
+  it('AGENTS.md documents the real onClick/onChange event pattern, not the never-real onGoab*/e.detail one', async () => {
+    // @abgov/react-components has never exposed onGoab*-prefixed handlers or wrapped a
+    // callback's payload in e.detail -- onChange receives its detail object directly. Regression
+    // guard: this doc text drifted from the real API without the generated app code ever being
+    // affected (app.tsx has always used plain onClick), so nothing else would have caught it.
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await generator(host, options);
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).not.toContain('onGoabClick');
+    expect(agents).not.toContain('onGoabChange');
+    expect(agents).not.toMatch(/e\.detail\.(value|checked)/);
+    expect(agents).toContain('onChange={(detail) => setValue(detail.value)}');
+  }, 30000);
+
   it('can add nginx proxy', async () => {
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     await generator(host, {
