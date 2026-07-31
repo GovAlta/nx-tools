@@ -10,10 +10,12 @@ backend track is ready to deploy doesn't wait on its frontend track, and vice ve
 
 ## Steps
 
-1. **Ensure this project's own deploy target exists, if it doesn't already** (skip if already run).
-   For an ADSP web app, that means generating one:
+1. **Provision this project's own deploy target once — never re-run the generator below on a later
+   pass.** For an ADSP web app, check whether `.openshift/<project>/<project>.sandbox.yml` already
+   exists; only if it doesn't, generate one:
    `npx nx g @abgov/nx-oc:sandbox <project> --sandboxProject <namespace> --env <env> --tenant
-   <tenant>`. A different kind of deployable (an npm package, say) usually has something much
+   <tenant>`. This is provisioning, distinct from step 3's actual deploy below — don't conflate the
+   two just because both happen to be named `sandbox`. A different kind of deployable (an npm package, say) usually has something much
    lighter here — confirming a publish workflow already exists — rather than a provisioning
    generator at all. **Pass `--env`/`--tenant` explicitly, matching the tenant actually in use** — this
    generator's own default falls back to whatever the target app was scaffolded against, then to
@@ -41,10 +43,14 @@ backend track is ready to deploy doesn't wait on its frontend track, and vice ve
    for "how do I actually ship this" lives; if none exists yet and this project genuinely needs
    deploying, write it once rather than leave the gap.
 
-3. **Deploy, by running that target.** For sandbox, that's `npx nx run <project>:sandbox` — the
-   same uniform `nx run <project>:<target>` invocation Develop's own Gate already relies on for
-   `test`/`build`/`lint`, just a different target name. Can take several minutes (build, push,
-   import, rollout) — expect it to move to the background rather than blocking the session.
+3. **Deploy, by running that target — every pass that reaches Deploy, unconditionally, with no
+   skip condition of its own.** Unlike step 1's one-time provisioning, this always runs: a
+   provisioned deploy target with nothing new to ship is not a real scenario this skill needs to
+   guard against — reaching Deploy at all means Develop just produced something to ship. For
+   sandbox, that's `npx nx run <project>:sandbox` — the same uniform `nx run <project>:<target>`
+   invocation Develop's own Gate already relies on for `test`/`build`/`lint`, just a different
+   target name. Can take several minutes (build, push, import, rollout) — expect it to move to the
+   background rather than blocking the session.
 
 4. **A failed rollout-status wait doesn't necessarily mean the deploy failed.** A first-time
    deploy can end up with a redundant second rollout racing the first one's database migration —
