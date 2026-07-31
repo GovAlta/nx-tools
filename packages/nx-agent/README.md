@@ -101,6 +101,78 @@ Currently sets up:
 npx nx g @abgov/nx-agent:init --targets=lint,test --base=develop
 ```
 
+## `feature`
+
+How new work enters the DDDD workflow — a raw capability request, written the way it was actually
+asked for. This is the root artifact Discover decomposes into a `service-description`/`requirement`;
+it replaces committing an ad hoc file by hand with no defined shape:
+
+```bash
+npx nx g @abgov/nx-agent:feature "Submit Minor Collision Report"
+```
+
+Creates `project-docs/features/submit-minor-collision-report.md`:
+
+```markdown
+---
+title: Submit Minor Collision Report
+project-docs-ancestors: []
+resolves: []
+---
+
+<!-- What capability is wanted, and why. This is the raw request Discover decomposes into a
+     service-description/requirement -- write it the way it was actually asked for. -->
+```
+
+### Options
+
+| Option                 | Default                  | Description                                                                                                                              |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`                | — (required, positional) | The canonical name of the feature                                                                                                        |
+| `project`              | workspace root           | Scope the feature to a specific project's `project-docs/features/` instead — prefer this whenever it already has a natural code home     |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this feature relates to — repeatable; typically an existing service-description if this extends an initiative that already exists |
+| `resolves`             | none                     | Paths to existing `open-question`/`blocker` artifacts this feature resolves — repeatable; also added to `project-docs-ancestors`, but recorded distinctly so `project-docs-lineage` can report the resolution as such |
+
+Re-adding a feature that already exists throws rather than silently overwriting or duplicating it. A
+`--project-docs-ancestors` path that doesn't resolve to an existing artifact throws the same way,
+before anything is written.
+
+## `bug`
+
+Something already built not behaving as designed, reported from outside the workflow. Unlike
+`blocker`, a bug doesn't assume the design is wrong — most bugs are pure implementation defects — and
+it doesn't always know which artifact (if any) is at fault yet, so `projectDocsAncestors` is
+genuinely optional:
+
+```bash
+npx nx g @abgov/nx-agent:bug "Submit Button Does Nothing On Slow Connections"
+```
+
+Creates `project-docs/bugs/submit-button-does-nothing-on-slow-connections.md`:
+
+```markdown
+---
+project-docs-ancestors: []
+resolves: []
+---
+
+<!-- Observed vs. expected behavior. -->
+```
+
+### Options
+
+| Option                 | Default                  | Description                                                                                                                         |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `description`          | — (required, positional) | A short slug for what's wrong                                                                                                        |
+| `project`              | workspace root           | Scope the bug to a specific project's `project-docs/bugs/` instead — prefer this whenever it already has a natural code home         |
+| `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this bug relates to, if already known — often genuinely empty until triaged             |
+
+A bug tracks open/resolved status the same generic way as `open-question`/`blocker`
+(`resolutionStatus.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
+section in the `agent-delivery` output below. Investigating a bug and finding the *spec* itself was
+wrong escalates to a real `blocker` against the implicated artifact; filing that blocker does not
+itself resolve the bug — only an `iteration-retrospective --resolves` naming the bug's own path does.
+
 ## `domain-term`
 
 Adds one domain term — the ubiquitous language `init`'s guidance asks the agent to use, but gives
@@ -522,3 +594,32 @@ binary directly, not `gh`, so an absent Copilot CLI is never silently auto-downl
 falling back to a deterministic summary computed straight from the same counts shown elsewhere in
 the report when neither is available or `--noSynthesis` is passed. The report always states plainly
 which path produced its summary, rather than varying silently between environments.
+
+## `agent-delivery`
+
+Sets up the Discover/Design/Develop/Deploy (DDDD) workflow: copies the four skill files into
+`.claude/skills/`, plus the `check-example-mapping.mjs` gate script Discover's own skill relies on,
+and appends a short guidance section to `AGENTS.md` pointing at them.
+
+```bash
+npx nx g @abgov/nx-agent:agent-delivery
+npx nx g @abgov/nx-agent:agent-delivery --githubActions   # + a self-dispatching iteration loop
+```
+
+Every copied file is write-if-missing — a team's own edits to a skill file, or to the workflow,
+survive a re-run. Re-running after an upgrade only adds files that weren't there before; it never
+overwrites what's already present.
+
+### Options
+
+| Option          | Default | Description                                                                                                                                                                                                                                                                                                                                |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `githubActions` | `false` | Additionally scaffold a self-dispatching GitHub Actions iteration loop — `.github/workflows/agent-delivery-iteration.yml`, its harness/task-identification scripts, and a `learnings.md` header — for driving the same skills autonomously across many iterations, instead of a human or an orchestrating tool driving them one at a time. |
+
+### `--githubActions` setup
+
+The scaffolded workflow needs repo secrets and variables it doesn't set itself: secrets
+`OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `ADSP_CLIENT_ID`, `ADSP_CLIENT_SECRET`; variables `ADSP_ENV`,
+`ADSP_TENANT_NAME`, `ADSP_TENANT_REALM`, `OPENSHIFT_NAMESPACE`, and optionally `MAX_ITERATIONS`
+(defaults to `6`). It also needs the org policy enabling Copilot CLI billed to the organization (for
+the workflow's own `copilot-requests: write` permission to actually authenticate).

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentAgentDelivery",
+  "title": "Set up the DDDD (Discover/Design/Develop/Deploy) agent-delivery workflow",
+  "description": "Copies the Discover/Design/Develop/Deploy skill files into .claude/skills/, plus the check-example-mapping.mjs gate script, and appends a short guidance section to AGENTS.md pointing at them. Existing files are never overwritten, so a team's own edits survive a re-run. Run again after an upgrade to pick up newly-added files only.",
+  "type": "object",
+  "properties": {
+    "githubActions": {
+      "type": "boolean",
+      "description": "Additionally scaffold the self-dispatching GitHub Actions iteration loop (.github/workflows/agent-delivery-iteration.yml, its harness/task-identification scripts, and a learnings.md header) — for driving the same skills autonomously across many iterations. Omit this for skills-only usage driven by a human or an orchestrating tool.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

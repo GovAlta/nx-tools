@@ -8,6 +8,16 @@
       "schema": "./src/generators/init/schema.json",
       "description": "Sets up recommended AI-agent development tooling for this workspace (currently: a pre-commit affected-check hook and AGENTS.md guidance)."
     },
+    "feature": {
+      "factory": "./src/generators/feature/feature",
+      "schema": "./src/generators/feature/schema.json",
+      "description": "Adds one feature request under project-docs/features/, with a project-docs-ancestors frontmatter list and a free-text body describing the capability wanted. This is how new work enters the DDDD workflow — Discover decomposes it into a service-description/requirement."
+    },
+    "bug": {
+      "factory": "./src/generators/bug/bug",
+      "schema": "./src/generators/bug/schema.json",
+      "description": "Adds one bug report under project-docs/bugs/, with an optional project-docs-ancestors frontmatter list and a free-text body describing observed vs. expected behavior. Not a blocker: raised externally, resolved by a code fix (via an iteration-retrospective's --resolves), not by revising an upstream artifact."
+    },
     "domain-term": {
       "factory": "./src/generators/domain-term/domain-term",
       "schema": "./src/generators/domain-term/schema.json",
@@ -47,6 +57,11 @@
       "factory": "./src/generators/project-docs-report/project-docs-report",
       "schema": "./src/generators/project-docs-report/schema.json",
       "description": "Builds a self-contained HTML status report (lineage graph, open/resolved counts, orphans, broken refs) from the same data as project-docs-lineage. Not committed. Optionally scoped to one project with --project."
+    },
+    "agent-delivery": {
+      "factory": "./src/generators/agent-delivery/agent-delivery",
+      "schema": "./src/generators/agent-delivery/schema.json",
+      "description": "Copies the Discover/Design/Develop/Deploy skill files into .claude/skills/ and appends AGENTS.md guidance pointing at them. Existing files are never overwritten. --githubActions additionally scaffolds a self-dispatching GitHub Actions iteration loop."
     }
   }
 }

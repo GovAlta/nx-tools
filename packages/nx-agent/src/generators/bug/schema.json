@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentBug",
+  "title": "Add a bug",
+  "description": "Creates one file for a bug report under project-docs/bugs/, with a project-docs-ancestors frontmatter list and a free-text body describing observed vs. expected behavior. Bootstraps the bugs/README.md convention doc on first use.",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "A short slug for what's wrong (e.g. \"Submit Button Does Nothing On Slow Connections\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What's wrong?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this bug to a specific project's project-docs/bugs/ instead of the workspace root — prefer this whenever the bug already has a natural code home; only use the workspace root when it genuinely doesn't have one."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this bug relates to, if already known — the requirement or design whose behavior is affected. Often genuinely empty: a bug reported from outside the system frequently doesn't know which artifact (if any) is at fault until triaged. Each path given must already exist."
+    }
+  },
+  "required": ["description"],
+  "additionalProperties": false
+}
