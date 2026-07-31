@@ -75,6 +75,10 @@
         }
       ]
     },
+    "pairedProject": {
+      "type": "string",
+      "description": "Name of an existing backend service project (e.g. an express-service) to derive the nginx/dev-server proxy config from automatically, plus the adsp:proxy-service: tag the sandbox executor reads to pre-create its Service. The project must already exist. --proxy is still available for additional entries this doesn't cover, but can't duplicate the location this derives."
+    },
     "skipAgent": {
       "type": "boolean",
       "description": "Skip the consultAgent interaction and generate base scaffolding only.",

@@ -26,12 +26,8 @@ import {
   fixExpressServiceE2eProject,
 } from '../../utils/quality';
 import initGenerator from '../init/init';
+import { DEFAULT_EXPRESS_SERVICE_PORT as DEFAULT_PORT } from '../../utils/express-service-port';
 import { Schema, NormalizedSchema } from './schema';
-
-// Must match environment.ts.__tmpl__'s own `PORT: num({ default: ... })` —
-// there's no --port option to source this from yet, so it's a second literal
-// kept in sync by convention rather than a single shared value.
-const DEFAULT_PORT = 3333;
 
 async function normalizeOptions(
   host: Tree,

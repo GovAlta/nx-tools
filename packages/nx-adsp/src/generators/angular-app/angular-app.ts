@@ -31,6 +31,7 @@ import {
   writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
+import { resolvePairedProjectProxy } from '../../utils/paired-project';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 async function normalizeOptions(
@@ -43,11 +44,24 @@ async function normalizeOptions(
 
   const adsp = await getAdspConfiguration(host, options);
 
-  const nginxProxies = Array.isArray(options.proxy)
+  const explicitProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
       ? [options.proxy]
       : [];
+  const paired = resolvePairedProjectProxy(host, options.pairedProject);
+  if (
+    paired &&
+    explicitProxies.some((p) => p.location === paired.proxy.location)
+  ) {
+    throw new Error(
+      `--pairedProject already derives a proxy for "${paired.proxy.location}" — remove the ` +
+        `explicit --proxy entry for that location, or give it a different location.`,
+    );
+  }
+  const nginxProxies = paired
+    ? [paired.proxy, ...explicitProxies]
+    : explicitProxies;
 
   return {
     ...options,
@@ -56,6 +70,7 @@ async function normalizeOptions(
     openshiftDirectory,
     adsp,
     nginxProxies,
+    pairedProjectTag: paired?.tag,
   };
 }
 
@@ -216,6 +231,12 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
       ...config.targets.serve.options,
       proxyConfig: `${normalizedOptions.projectRoot}/proxy.conf.json`,
     };
+  }
+
+  // Lets the sandbox generator ensure the paired backend's Service exists before this
+  // frontend's nginx starts — see utils/paired-project.ts for why.
+  if (normalizedOptions.pairedProjectTag) {
+    config.tags = [...(config.tags ?? []), normalizedOptions.pairedProjectTag];
   }
 
   config.tags = [

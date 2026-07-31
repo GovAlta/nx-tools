@@ -212,14 +212,20 @@ Creates a React/Redux frontend application configured for ADSP. Requires `@nx/re
 npx nx g @abgov/nx-adsp:react-app my-app --env dev --tenant my-tenant
 ```
 
-| Option        | Alias | Required | Description                                                                    |
-| ------------- | ----- | -------- | ------------------------------------------------------------------------------ |
-| `name`        | —     | Yes      | Name of the application                                                        |
-| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                     |
-| `tenant`      | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login |
-| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`              |
-| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration               |
-| `proxy`       | —     | No       | Nginx proxy rule(s): `{ location, proxyPass }` or an array of such objects     |
+| Option          | Alias | Required | Description                                                                                                                                                                    |
+| --------------- | ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`          | —     | Yes      | Name of the application                                                                                                                                                        |
+| `env`           | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                                                                                                                     |
+| `tenant`        | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login                                                                                                 |
+| `tenantRealm`   | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                                                                                                              |
+| `accessToken`   | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                               |
+| `pairedProject` | —     | No       | Name of an existing backend service project to derive the nginx/dev-server proxy and the `adsp:proxy-service:` sandbox tag from automatically — the project must already exist |
+| `proxy`         | —     | No       | Nginx proxy rule(s): `{ location, proxyPass }` or an array of such objects — additional entries `--pairedProject` doesn't cover; can't duplicate its location                  |
+
+Running this generator standalone against a backend that's already scaffolded? Pass
+`--pairedProject <backend-project-name>` instead of hand-computing `--proxy` — it derives the same
+`http://<name>:3333/<name>/` convention `mern`/`mean`/`pern`/`pean`/`pevn`/`mevn` already use
+internally, plus the tag `@abgov/nx-oc:sandbox` needs to pre-create the backend's Service.
 
 The generated Playwright e2e project includes an axe-core accessibility check (`a11y.spec.ts`),
 scoped to WCAG 2.1 A/AA, that runs automatically as part of the `e2e` target — no separate command

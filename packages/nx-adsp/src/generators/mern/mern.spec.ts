@@ -48,5 +48,6 @@ describe('MERN Generator', () => {
     expect(host.exists('apps/test-app/nginx.conf')).toBeTruthy();
     const nginxConf = host.read('apps/test-app/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
+    expect(appConfig.tags).toContain('adsp:proxy-service:test-service:3333');
   }, 30000);
 });
