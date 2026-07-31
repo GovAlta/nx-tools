@@ -1,5 +1,9 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import { Tree, readProjectConfiguration } from '@nx/devkit';
+import {
+  Tree,
+  addProjectConfiguration,
+  readProjectConfiguration,
+} from '@nx/devkit';
 
 import * as utils from '@abgov/nx-oc';
 import { environments } from '@abgov/nx-oc';
@@ -158,5 +162,42 @@ describe('angular app generator', () => {
     );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
+  });
+
+  it('derives the nginx/dev proxy and the sandbox tag from --pairedProject alone', async () => {
+    addProjectConfiguration(appTree, 'test-service', {
+      root: 'apps/test-service',
+    });
+    await angularApp(appTree, { ...options, pairedProject: 'test-service' });
+
+    const nginxConf = appTree.read('apps/test/nginx.conf').toString();
+    expect(nginxConf).toContain('http://test-service:3333/test-service/');
+
+    const proxyConf = JSON.parse(
+      appTree.read('apps/test/proxy.conf.json').toString(),
+    );
+    expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
+
+    const config = readProjectConfiguration(appTree, 'test');
+    expect(config.tags).toContain('adsp:proxy-service:test-service:3333');
+  });
+
+  it('throws when --pairedProject names a project that does not exist', async () => {
+    await expect(
+      angularApp(appTree, { ...options, pairedProject: 'no-such-service' }),
+    ).rejects.toThrow();
+  });
+
+  it('throws when --pairedProject and an explicit --proxy collide on the same location', async () => {
+    addProjectConfiguration(appTree, 'test-service', {
+      root: 'apps/test-service',
+    });
+    await expect(
+      angularApp(appTree, {
+        ...options,
+        pairedProject: 'test-service',
+        proxy: { location: '/api/', proxyPass: 'http://other:9000/' },
+      }),
+    ).rejects.toThrow(/already derives a proxy/);
   });
 });

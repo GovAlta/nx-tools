@@ -46,15 +46,13 @@ export default async function (host: Tree, options: Schema) {
     name: serviceName,
     skipAgent: true,
     database: 'mongo',
+    pairedProject: appName,
   });
   await initAngularApp(host, {
     ...normalizedOptions,
     name: appName,
-    proxy: {
-      location: '/api/',
-      proxyPass: `http://${serviceName}:3333/${serviceName}/`,
-    },
     skipAgent: true,
+    pairedProject: serviceName,
   });
 
   if (normalizedOptions.adsp) {

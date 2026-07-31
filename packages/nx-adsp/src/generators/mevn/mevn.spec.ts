@@ -48,6 +48,7 @@ describe('MEVN Generator', () => {
     expect(host.exists('apps/test-app/public/nginx.conf')).toBeTruthy();
     const nginxConf = host.read('apps/test-app/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/');
+    expect(appConfig.tags).toContain('adsp:proxy-service:test-service:3333');
 
     expect(host.exists('apps/test-app/src/App.vue')).toBeTruthy();
     expect(host.exists('apps/test-service/src/db/schema.ts')).toBeFalsy();

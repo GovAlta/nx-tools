@@ -51,10 +51,6 @@ export default async function (host: Tree, options: Schema) {
   await initReactApp(host, {
     ...normalizedOptions,
     name: appName,
-    proxy: {
-      location: '/api/',
-      proxyPass: `http://${serviceName}:3333/${serviceName}/`,
-    },
     skipAgent: true,
     pairedProject: serviceName,
   });

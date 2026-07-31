@@ -11,7 +11,7 @@ export interface Schema {
   proxy?: NginxProxyConfiguration | NginxProxyConfiguration[];
   /** When true, skip the agent interaction. Used by composite generators that run the agent themselves. */
   skipAgent?: boolean;
-  /** Name of the paired backend service project, set by composite generators (pevn, etc.). */
+  /** Name of an existing backend service project to derive the nginx/dev-server proxy and the adsp:proxy-service: sandbox tag from. */
   pairedProject?: string;
 }
 
@@ -21,4 +21,6 @@ export interface NormalizedSchema extends Schema {
   openshiftDirectory: string;
   adsp: AdspConfiguration;
   nginxProxies: NginxProxyConfiguration[];
+  /** The adsp:proxy-service: tag derived from pairedProject, if one was given. */
+  pairedProjectTag?: string;
 }

@@ -1,4 +1,4 @@
-import { readProjectConfiguration } from '@nx/devkit';
+import { addProjectConfiguration, readProjectConfiguration } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
@@ -163,5 +163,45 @@ describe('React App Generator', () => {
     );
     expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
     expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
+  });
+
+  it('derives the nginx/dev proxy and the sandbox tag from --pairedProject alone', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-service', {
+      root: 'apps/test-service',
+    });
+    await generator(host, { ...options, pairedProject: 'test-service' });
+
+    const nginxConf = host.read('apps/test/nginx.conf').toString();
+    expect(nginxConf).toContain('http://test-service:3333/test-service/');
+
+    const proxyConf = JSON.parse(
+      host.read('apps/test/proxy.conf.json').toString(),
+    );
+    expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.tags).toContain('adsp:proxy-service:test-service:3333');
+  });
+
+  it('throws when --pairedProject names a project that does not exist', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    await expect(
+      generator(host, { ...options, pairedProject: 'no-such-service' }),
+    ).rejects.toThrow();
+  });
+
+  it('throws when --pairedProject and an explicit --proxy collide on the same location', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-service', {
+      root: 'apps/test-service',
+    });
+    await expect(
+      generator(host, {
+        ...options,
+        pairedProject: 'test-service',
+        proxy: { location: '/api/', proxyPass: 'http://other:9000/' },
+      }),
+    ).rejects.toThrow(/already derives a proxy/);
   });
 });

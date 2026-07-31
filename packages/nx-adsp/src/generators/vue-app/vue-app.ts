@@ -31,6 +31,7 @@ import {
   writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
+import { resolvePairedProjectProxy } from '../../utils/paired-project';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -44,11 +45,24 @@ async function normalizeOptions(
   const projectRoot = `${getWorkspaceLayout(host).appsDir}/${projectName}`;
   const openshiftDirectory = `.openshift/${projectName}`;
   const adsp = await getAdspConfiguration(host, options);
-  const nginxProxies = Array.isArray(options.proxy)
+  const explicitProxies = Array.isArray(options.proxy)
     ? [...options.proxy]
     : options.proxy
       ? [options.proxy]
       : [];
+  const paired = resolvePairedProjectProxy(host, options.pairedProject);
+  if (
+    paired &&
+    explicitProxies.some((p) => p.location === paired.proxy.location)
+  ) {
+    throw new Error(
+      `--pairedProject already derives a proxy for "${paired.proxy.location}" — remove the ` +
+        `explicit --proxy entry for that location, or give it a different location.`,
+    );
+  }
+  const nginxProxies = paired
+    ? [paired.proxy, ...explicitProxies]
+    : explicitProxies;
   return {
     ...options,
     projectName,
@@ -56,6 +70,7 @@ async function normalizeOptions(
     openshiftDirectory,
     adsp,
     nginxProxies,
+    pairedProjectTag: paired?.tag,
   };
 }
 
@@ -207,28 +222,10 @@ export default async function (host: Tree, options: Schema) {
     };
   }
 
-  // Record the paired backend (name + port) so the sandbox generator can ensure
-  // its Service exists before this frontend's nginx starts — nginx resolves
-  // proxy_pass upstreams at startup, so a missing Service would crashloop the
-  // pod. Only the Service is needed (for DNS), not the backend's deployment.
-  if (normalizedOptions.pairedProject) {
-    const pairedService = names(normalizedOptions.pairedProject).fileName;
-    const proxy = normalizedOptions.nginxProxies.find((p) => {
-      try {
-        return new URL(p.proxyPass).hostname === pairedService;
-      } catch {
-        return false;
-      }
-    });
-    let port = 3333;
-    if (proxy) {
-      const url = new URL(proxy.proxyPass);
-      port = Number(url.port) || (url.protocol === 'https:' ? 443 : 80);
-    }
-    config.tags = [
-      ...(config.tags ?? []),
-      `adsp:proxy-service:${pairedService}:${port}`,
-    ];
+  // Lets the sandbox generator ensure the paired backend's Service exists before this
+  // frontend's nginx starts — see utils/paired-project.ts for why.
+  if (normalizedOptions.pairedProjectTag) {
+    config.tags = [...(config.tags ?? []), normalizedOptions.pairedProjectTag];
   }
 
   config.tags = [
