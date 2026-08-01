@@ -201,6 +201,23 @@ composite generator.
 
 ## Adding a view
 
+**Check whether a generator already covers this view before hand-authoring one.** Each
+retrofits into this project directly — file(s), route(s), and the shared component it's
+built on, all in one step:
+
+| If the view is... | Use | Built on |
+|---|---|---|
+| A single record's detail page (loading/error, optional status badge, back button) | `nx g @abgov/nx-adsp:vue-detail-view` | `RecordDetailShell` |
+| A staff-facing, paginated/sortable/filterable list | `nx g @abgov/nx-adsp:vue-workspace-view` | `WorkspaceTable` |
+| A simple admin list + create/update edit screen (no pagination) | `nx g @abgov/nx-adsp:vue-admin-crud` | `WorkspaceTable` |
+| A multi-step submission flow (route-per-step, review, confirmation) | `nx g @abgov/nx-adsp:vue-intake-view` | `Stepper`, `StepErrorSummary` |
+
+Run `nx g @abgov/nx-adsp:<generator> --help` for its full option list (each takes a
+`--fields`/`--columns`/`--steps` JSON-string spec, not a CLI array flag — see the
+generator's own schema description for why). Only hand-author a view when none of these
+match, or once a generator's output needs customization it doesn't cover — its own comments
+mark what's meant to be edited.
+
 1. Create `src/views/MyFeatureView.vue` as a `<script setup>` SFC. **Don't add your
    own page margins/centering** — every view renders inside `AppLayout`'s gutter, so
    any top-level tag (`<div>`, `<section>`, …) is already centered and padded.
