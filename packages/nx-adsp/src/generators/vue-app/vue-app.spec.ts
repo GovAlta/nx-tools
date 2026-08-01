@@ -116,15 +116,16 @@ describe('Vue App Generator', () => {
   it('wraps views in a shared AppLayout gutter (not a bare tag selector)', async () => {
     await generator(host, options);
 
-    // Shared layout component provides the content gutter for every view.
-    expect(host.exists('apps/test/src/components/AppLayout.vue')).toBeTruthy();
-    const layout = host
-      .read('apps/test/src/components/AppLayout.vue')
-      .toString();
+    // Layout is a pattern component in the shared lib, not copied into the app.
+    const layoutPath = 'libs/vue-components/src/lib/patterns/AppLayout.vue';
+    expect(host.exists(layoutPath)).toBeTruthy();
+    const layout = host.read(layoutPath).toString();
     // Three named width variants, token-driven padding.
     expect(layout).toContain('form-content');
     expect(layout).toContain('wide-content');
     expect(layout).toContain('--goa-space');
+    // Skip-to-main-content link for keyboard/screen-reader users.
+    expect(layout).toContain('href="#main-content"');
 
     // App.vue uses AppLayout and no longer relies on the `main > section` gutter
     // (which silently failed when a view's top-level tag wasn't <section>).
@@ -137,7 +138,7 @@ describe('Vue App Generator', () => {
     await generator(host, options);
 
     // Wrappers live in a shared workspace lib, not copied into the app.
-    const base = 'libs/vue-components/src/lib';
+    const primitives = 'libs/vue-components/src/lib/primitives';
     for (const name of [
       'GoabInput',
       'GoabTextarea',
@@ -147,12 +148,12 @@ describe('Vue App Generator', () => {
       'GoabButton',
       'GoabModal',
     ]) {
-      expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
+      expect(host.exists(`${primitives}/${name}.vue`)).toBeTruthy();
     }
     expect(host.exists('apps/test/src/components/goa')).toBeFalsy();
 
     // Real v-model wiring: bind :value and read the new value off the GoA event.
-    const input = host.read(`${base}/GoabInput.vue`).toString();
+    const input = host.read(`${primitives}/GoabInput.vue`).toString();
     expect(input).toContain('defineModel');
     expect(input).toContain('.detail.value');
 
@@ -161,6 +162,25 @@ describe('Vue App Generator', () => {
     expect(vite).toContain('nxViteTsPaths');
     const agents = host.read('apps/test/AGENTS.md').toString();
     expect(agents).toContain('/vue-components');
+  }, 30000);
+
+  it('provisions the shared app-shell pattern components and App.vue imports them', async () => {
+    await generator(host, options);
+
+    const patterns = 'libs/vue-components/src/lib/patterns';
+    for (const name of [
+      'AppLayout',
+      'AppHeader',
+      'AppFooter',
+      'SessionExpiredBanner',
+    ]) {
+      expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
+    }
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain("import { AppHeader, AppLayout, AppFooter } from '@proj/vue-components';");
+    expect(app).toContain('<AppHeader heading="test">');
+    expect(app).toContain('<AppFooter />');
   }, 30000);
 
   it('inits Keycloak with no hidden iframes so init never hangs', async () => {
@@ -255,11 +275,18 @@ describe('Vue App Generator', () => {
     // goa-app-header (v2) only renders content placed in a named slot — GoA's
     // own design system docs put account/sign-in actions in "utilities" (vs.
     // "navigation" for nav links). A bare child with no slot attribute
-    // renders nothing, silently dropping the sign-in button. Regression
-    // guard for exactly that gap.
+    // renders nothing, silently dropping the sign-in button. AppHeader (the
+    // shared pattern component) owns the native `slot="utilities"` div; App.vue
+    // just feeds its named Vue slot. Regression guard for exactly that gap,
+    // now spanning both files since AppHeader was extracted out of App.vue.
     await generator(host, options);
+    const appHeader = host
+      .read('libs/vue-components/src/lib/patterns/AppHeader.vue')
+      .toString();
+    expect(appHeader).toMatch(/<div[^>]*slot="utilities"[^>]*>[\s\S]*<slot name="utilities"/);
+
     const app = host.read('apps/test/src/App.vue').toString();
-    expect(app).toMatch(/<div slot="utilities">[\s\S]*<goa-button-group/);
+    expect(app).toMatch(/<template #utilities>[\s\S]*<goa-button-group/);
   }, 30000);
 
   it('removes the @nx/vue demo scaffold and ships a passing App test', async () => {

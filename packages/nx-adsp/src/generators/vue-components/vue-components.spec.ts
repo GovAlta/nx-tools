@@ -23,7 +23,7 @@ describe('Vue Components Generator', () => {
     const config = readProjectConfiguration(host, 'vue-components');
     expect(config.root).toBe('libs/vue-components');
 
-    const base = 'libs/vue-components/src/lib';
+    const primitives = 'libs/vue-components/src/lib/primitives';
     for (const name of [
       'GoabInput',
       'GoabTextarea',
@@ -33,10 +33,21 @@ describe('Vue Components Generator', () => {
       'GoabButton',
       'GoabModal',
     ]) {
-      expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
+      expect(host.exists(`${primitives}/${name}.vue`)).toBeTruthy();
+    }
+    // Permanent app-shell pattern components live alongside the interim wrappers.
+    const patterns = 'libs/vue-components/src/lib/patterns';
+    for (const name of [
+      'AppLayout',
+      'AppHeader',
+      'AppFooter',
+      'SessionExpiredBanner',
+    ]) {
+      expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
     }
     const index = host.read('libs/vue-components/src/index.ts').toString();
     expect(index).toContain('export { default as GoabInput }');
+    expect(index).toContain('export { default as AppLayout }');
     expect(index).toContain('@abgov/vue-components'); // interim marker
 
     // Ships a spec so the vitest test target isn't empty (vitest exits non-zero
@@ -79,7 +90,7 @@ describe('Vue Components Generator', () => {
     await generator(host);
     await expect(generator(host)).resolves.not.toThrow();
     expect(
-      host.exists('libs/vue-components/src/lib/GoabInput.vue'),
+      host.exists('libs/vue-components/src/lib/primitives/GoabInput.vue'),
     ).toBeTruthy();
   }, 30000);
 

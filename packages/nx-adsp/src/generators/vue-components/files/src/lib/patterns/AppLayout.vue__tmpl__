@@ -14,6 +14,7 @@ withDefaults(defineProps<{ variant?: 'page' | 'wide' | 'form' }>(), {
 </script>
 
 <template>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <main id="main-content">
     <div :class="`${variant}-content`">
       <slot />
@@ -22,6 +23,22 @@ withDefaults(defineProps<{ variant?: 'page' | 'wide' | 'form' }>(), {
 </template>
 
 <style scoped>
+/* Visually hidden until focused (e.g. via Tab from the top of the page) — lets
+   keyboard/screen-reader users jump past the header straight to the content. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--goa-space-s, 0.5rem) var(--goa-space-m, 1rem);
+  background: var(--goa-color-interactive-default, #0070c4);
+  color: #fff;
+}
+
+.skip-link:focus {
+  left: var(--goa-space-m, 1rem);
+}
+
 .page-content,
 .wide-content,
 .form-content {

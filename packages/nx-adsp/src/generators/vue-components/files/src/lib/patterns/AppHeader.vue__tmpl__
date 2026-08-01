@@ -1,0 +1,19 @@
+<script setup lang="ts">
+import { useSlots } from 'vue';
+
+defineProps<{ heading: string }>();
+const slots = useSlots();
+</script>
+
+<template>
+  <goa-microsite-header type="alpha" />
+  <goa-app-header url="/" :heading="heading">
+    <!-- goa-app-header only renders content placed in a named slot — the
+         "utilities" slot is where GoA's own design system docs put
+         account/sign-in actions (as opposed to "navigation" for nav links).
+         A bare child with no slot attribute renders nothing. -->
+    <div v-if="slots.utilities" slot="utilities">
+      <slot name="utilities" />
+    </div>
+  </goa-app-header>
+</template>
