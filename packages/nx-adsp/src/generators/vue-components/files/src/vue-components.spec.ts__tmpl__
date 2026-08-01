@@ -28,6 +28,8 @@ describe('vue-components', () => {
       'SessionExpiredBanner',
       'RecordDetailShell',
       'WorkspaceTable',
+      'Stepper',
+      'StepErrorSummary',
     ]) {
       expect(lib[name as keyof typeof lib]).toBeTruthy();
     }

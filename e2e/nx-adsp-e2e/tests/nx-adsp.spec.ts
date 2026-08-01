@@ -381,6 +381,34 @@ describe('nx-adsp e2e', () => {
     }, 240000);
   });
 
+  describe('vue intake view', () => {
+    it('retrofits a multi-step intake wizard into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-intake-view ${plugin} application --resource=applications --route=/applications --steps='[{"key":"personal-info","label":"Personal information","fields":[{"key":"fullName","label":"Full name"}]},{"key":"contact-info","label":"Contact information","fields":[{"key":"email","label":"Email"}]}]'`,
+      );
+      checkFilesExist(
+        `${plugin}/src/views/PersonalInfoStepView.vue`,
+        `${plugin}/src/views/ContactInfoStepView.vue`,
+        `${plugin}/src/views/ApplicationReviewView.vue`,
+        `${plugin}/src/views/ApplicationConfirmationView.vue`,
+      );
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications/:id/personal-info'");
+      expect(routerTs).toContain("path: '/applications/:id/review'");
+      expect(routerTs).toContain("path: '/applications/:id/confirmation'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(

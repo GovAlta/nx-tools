@@ -75,6 +75,11 @@
       "schema": "./src/generators/vue-admin-crud/schema.json",
       "description": "Generator that adds a simple admin CRUD screen pair (WorkspaceTable list + create/update Edit view) to an existing vue-app project."
     },
+    "vue-intake-view": {
+      "factory": "./src/generators/vue-intake-view/vue-intake-view",
+      "schema": "./src/generators/vue-intake-view/schema.json",
+      "description": "Generator that adds a route-per-step intake wizard (Stepper + a required review/confirmation flow, from a --steps spec) to an existing vue-app project."
+    },
     "mean": {
       "factory": "./src/generators/mean/mean",
       "schema": "./src/generators/mean/schema.json",

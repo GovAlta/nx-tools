@@ -1,0 +1,35 @@
+<script setup lang="ts">
+// Wraps the real, native goa-form-stepper/goa-form-step pair (confirmed via
+// design.alberta.ca/components/form-stepper -- there wasn't one when the spec
+// this is based on was written, hence "nobody used a native GoA stepper"; that
+// gap has since closed, so this wraps the real thing rather than hand-rolling
+// custom step icons/connectors like older reference implementations did).
+//
+// goa-form-step's own status enum is only complete/incomplete/not-started --
+// there's no "current" value, so the caller decides what "current" looks like
+// (typically: incomplete). Its docs also say "Don't use FormStepper for
+// non-sequential navigation" -- this component just re-emits every step's
+// click as `select`; which clicks are actually honoured (e.g. only completed
+// steps, plus a review step) is the consuming view's job, not this one's.
+export interface StepperStep {
+  key: string;
+  label: string;
+  status: 'complete' | 'incomplete' | 'not-started';
+}
+
+const props = defineProps<{ steps: StepperStep[] }>();
+const emit = defineEmits<{ select: [key: string] }>();
+</script>
+
+<template>
+  <goa-form-stepper>
+    <goa-form-step
+      v-for="(step, index) in props.steps"
+      :key="step.key"
+      :text="step.label"
+      :status="step.status"
+      :last="index === props.steps.length - 1"
+      @_click="emit('select', step.key)"
+    />
+  </goa-form-stepper>
+</template>

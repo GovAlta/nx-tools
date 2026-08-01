@@ -1,0 +1,20 @@
+<script setup lang="ts">
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+</script>
+
+<template>
+  <div>
+    <goa-callout type="success" heading="Submitted">
+      <p>
+        Your reference number is <strong>{{ route.params.id }}</strong>. Keep this for your
+        records.
+      </p>
+    </goa-callout>
+
+    <goa-spacer vspacing="m" />
+
+    <p>You'll be notified of any updates. No further action is needed right now.</p>
+  </div>
+</template>
