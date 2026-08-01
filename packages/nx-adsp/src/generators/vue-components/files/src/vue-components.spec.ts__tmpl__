@@ -27,6 +27,7 @@ describe('vue-components', () => {
       'AppSideMenu',
       'SessionExpiredBanner',
       'RecordDetailShell',
+      'WorkspaceTable',
     ]) {
       expect(lib[name as keyof typeof lib]).toBeTruthy();
     }

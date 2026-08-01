@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAdspVueWorkspaceView",
+  "title": "Vue Workspace (List) View",
+  "description": "Generates a staff-facing, paginated list view (WorkspaceTable + a debounced search filter bar) into an existing vue-app project.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "The vue-app project to add the view to.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project should the workspace view be added to?"
+    },
+    "name": {
+      "type": "string",
+      "description": "View name, e.g. 'applications' generates src/views/ApplicationsListView.vue.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "x-prompt": "What should the view be called?"
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource path segment -- the view fetches /api/<resource>?page=&limit=&search=&sortBy=&sortDir=."
+    },
+    "route": {
+      "type": "string",
+      "description": "Route path added to router/index.ts, e.g. /applications."
+    },
+    "columns": {
+      "type": "string",
+      "description": "JSON array of table columns, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\",\"sortable\":true}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\"), sortable?: boolean }. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
+    },
+    "detailRoute": {
+      "type": "string",
+      "description": "If set, each row gets a \"View\" action linking to `${detailRoute}/${row.id}` -- typically a vue-detail-view's route with the :id segment dropped. Omit to leave the actions column for manual customization."
+    },
+    "heading": {
+      "type": "string",
+      "description": "Page heading. Defaults to the view name, title-cased."
+    },
+    "pageSize": {
+      "type": "number",
+      "description": "Rows per page.",
+      "default": 20
+    },
+    "filterable": {
+      "type": "boolean",
+      "description": "Whether to generate a debounced search input above the table.",
+      "default": true
+    },
+    "requiresAuth": {
+      "type": "boolean",
+      "description": "Whether the generated route requires authentication.",
+      "default": true
+    }
+  },
+  "required": ["project", "name", "resource", "route", "columns"],
+  "additionalProperties": false
+}
