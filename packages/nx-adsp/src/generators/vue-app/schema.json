@@ -83,6 +83,12 @@
       "type": "boolean",
       "description": "Skip the consultAgent interaction and generate base scaffolding only.",
       "default": false
+    },
+    "layout": {
+      "type": "string",
+      "description": "Top-level app shell: 'header' is a goa-app-header + hero banner + footer (public-facing). 'internal' is a goa-work-side-menu shell with no header/banner/footer (staff-facing). Both wrap views in the same AppLayout content gutter. Pair two vue-app runs against the same --pairedProject (once each) for a public+internal frontend pairing over one backend.",
+      "enum": ["header", "internal"],
+      "default": "header"
     }
   },
   "required": ["name", "env"],

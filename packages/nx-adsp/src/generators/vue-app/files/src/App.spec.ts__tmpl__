@@ -34,7 +34,32 @@ const router = createRouter({
   history: createMemoryHistory(),
   routes: [{ path: '/', component: { template: '<div />' } }],
 });
+<% if (layout === 'internal') { %>
+describe('App shell (internal / side-menu)', () => {
+  it('shows a Sign in account item when unauthenticated', () => {
+    const wrapper = mount(App, {
+      global: { plugins: [router, createPinia()], stubs: { RouterView: true } },
+    });
+    const item = wrapper.find('goa-work-side-menu-item[label="Sign in"]');
+    expect(item.exists()).toBe(true);
+  });
 
+  it('clicking the account item calls keycloak.login (guards against lost reactivity)', async () => {
+    // Same bug class as the header shell: destructuring useKeycloak() would
+    // freeze `keycloak` at undefined, so login() would be a permanent no-op.
+    const kc = useKeycloak();
+    const wrapper = mount(App, {
+      global: { plugins: [router, createPinia()], stubs: { RouterView: true } },
+    });
+    // AppSideMenu binds @click.prevent directly on goa-work-side-menu-item (not
+    // an underscore-prefixed event, unlike the goa-* form elements) -- trigger
+    // a plain 'click'.
+    const item = wrapper.find('goa-work-side-menu-item[label="Sign in"]');
+    await item.trigger('click');
+    expect(kc.keycloak?.login).toHaveBeenCalled();
+  });
+});
+<% } else { %>
 describe('App shell header', () => {
   it('shows Sign in when unauthenticated', () => {
     const wrapper = mount(App, {
@@ -57,7 +82,7 @@ describe('App shell header', () => {
     expect(kc.keycloak?.login).toHaveBeenCalled();
   });
 });
-
+<% } %>
 describe('App shell session-expired banner', () => {
   it('is hidden until the session store flags an expired session', async () => {
     const pinia = createPinia();

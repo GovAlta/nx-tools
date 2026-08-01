@@ -1,0 +1,96 @@
+<script setup lang="ts">
+// The alternate top-level shell for staff-facing/internal apps (goa-work-side-menu),
+// used instead of AppHeader/AppFooter -- not together with them. Presentational only:
+// unlike the real GovAlta-Pronghorn source this is adapted from, active-route
+// highlighting and navigation are the caller's job (pass `current` on each item,
+// listen for `item-click`) so this component doesn't need vue-router as a dependency.
+interface AppSideMenuItem {
+  label: string;
+  to?: string;
+  icon?: string;
+  badge?: string;
+  current?: boolean;
+}
+
+withDefaults(
+  defineProps<{
+    heading?: string;
+    userName?: string;
+    primaryItems?: AppSideMenuItem[];
+    secondaryItems?: AppSideMenuItem[];
+    accountItems?: AppSideMenuItem[];
+  }>(),
+  {
+    primaryItems: () => [],
+    secondaryItems: () => [],
+    accountItems: () => [],
+  },
+);
+
+const emit = defineEmits<{ itemClick: [item: AppSideMenuItem] }>();
+</script>
+
+<template>
+  <div class="app-side-menu">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <goa-work-side-menu :heading="heading" :user-name="userName">
+      <goa-work-side-menu-item
+        v-for="item in primaryItems"
+        :key="item.label"
+        slot="primary"
+        :icon="item.icon"
+        :label="item.label"
+        :url="item.to"
+        :current="item.current"
+        @click.prevent="emit('itemClick', item)"
+      />
+      <goa-work-side-menu-item
+        v-for="item in secondaryItems"
+        :key="item.label"
+        slot="secondary"
+        :icon="item.icon"
+        :label="item.label"
+        :badge="item.badge"
+        @click.prevent="emit('itemClick', item)"
+      />
+      <goa-work-side-menu-item
+        v-for="item in accountItems"
+        :key="item.label"
+        slot="account"
+        :label="item.label"
+        :url="item.to"
+        @click.prevent="emit('itemClick', item)"
+      />
+    </goa-work-side-menu>
+    <main id="main-content" class="app-side-menu-content">
+      <slot />
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.app-side-menu {
+  min-height: 100vh;
+  display: flex;
+}
+
+.app-side-menu-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--goa-space-s, 0.5rem) var(--goa-space-m, 1rem);
+  background: var(--goa-color-interactive-default, #0070c4);
+  color: #fff;
+}
+
+.skip-link:focus {
+  left: var(--goa-space-m, 1rem);
+}
+</style>

@@ -266,6 +266,19 @@ describe('nx-adsp e2e', () => {
       expect(result.stdout).toContain('Successfully ran target');
     }, 240000);
 
+    // --layout=internal is a distinct EJS branch in App.vue's template, not just
+    // a prop value -- only a real build (real Vue SFC compile) can catch a
+    // template/script error in that branch that tree-content unit tests can't see.
+    it('--layout=internal should generate and build', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent --layout=internal`,
+      );
+      checkFilesExist(`${plugin}/src/App.vue`, `${plugin}/src/stores/session.ts`);
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+
     // vue-app co-generates the shared vue-components wrapper lib. Guard the real
     // out-of-the-box breakages tree-content unit tests can't see.
     // Not exercised here (both need a different workspace flavour than this legacy
@@ -281,6 +294,7 @@ describe('nx-adsp e2e', () => {
         'vue-components/src/index.ts',
         'vue-components/src/lib/primitives/GoabModal.vue',
         'vue-components/src/lib/patterns/AppHeader.vue',
+        'vue-components/src/lib/patterns/AppSideMenu.vue',
         'vue-components/src/vue-components.spec.ts',
       );
 

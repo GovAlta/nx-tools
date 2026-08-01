@@ -41,6 +41,7 @@ describe('Vue Components Generator', () => {
       'AppLayout',
       'AppHeader',
       'AppFooter',
+      'AppSideMenu',
       'SessionExpiredBanner',
     ]) {
       expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
