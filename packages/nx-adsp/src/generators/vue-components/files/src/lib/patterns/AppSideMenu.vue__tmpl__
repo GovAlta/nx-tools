@@ -1,9 +1,20 @@
 <script setup lang="ts">
+import { useSlots } from 'vue';
+
 // The alternate top-level shell for staff-facing/internal apps (goa-work-side-menu),
 // used instead of AppHeader/AppFooter -- not together with them. Presentational only:
 // unlike the real GovAlta-Pronghorn source this is adapted from, active-route
 // highlighting and navigation are the caller's job (pass `current` on each item,
 // listen for `item-click`) so this component doesn't need vue-router as a dependency.
+//
+// The real reference source also has a slim in-content "topbar" row for
+// module-registered header actions (e.g. a notification bell) -- there's no
+// AppHeader/utilities slot in this layout to hold that kind of thing. Exposed
+// here as a plain named slot (`#topbar`), not a module-registration system --
+// that's app-specific plumbing, not something a shared, presentational
+// component should own.
+const slots = useSlots();
+
 interface AppSideMenuItem {
   label: string;
   to?: string;
@@ -63,6 +74,9 @@ const emit = defineEmits<{ itemClick: [item: AppSideMenuItem] }>();
       />
     </goa-work-side-menu>
     <main id="main-content" class="app-side-menu-content">
+      <div v-if="slots.topbar" class="app-side-menu-topbar">
+        <slot name="topbar" />
+      </div>
       <slot />
     </main>
   </div>
@@ -78,6 +92,15 @@ const emit = defineEmits<{ itemClick: [item: AppSideMenuItem] }>();
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+}
+
+.app-side-menu-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--goa-space-s, 0.75rem);
+  padding: var(--goa-space-xs, 0.5rem) var(--goa-space-m, 1rem);
+  border-bottom: 1px solid var(--goa-color-greyscale-100, #f1f1f1);
 }
 
 .skip-link {
