@@ -18,7 +18,8 @@ app has run the matching view generator at least once.
 | Component | Provisioned by |
 |---|---|
 | `RecordDetailShell` | `vue-detail-view` |
-| `WorkspaceTable` | `vue-workspace-view` |
+| `WorkspaceTable` | `vue-workspace-view`, `vue-admin-crud` |
+| `Stepper`, `StepErrorSummary` | `vue-intake-view` |
 
 Don't assume one of these on-demand components exists in a given app — check whether
 its generator has actually been run (e.g. `nx list @abgov/nx-adsp` won't tell you;
