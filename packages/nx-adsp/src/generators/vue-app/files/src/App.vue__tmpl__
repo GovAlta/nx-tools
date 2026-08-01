@@ -64,6 +64,7 @@ function onAccountItemClick() {
     </AppLayout>
   </AppSideMenu>
 <% } else { %>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <AppHeader heading="<%= projectName %>">
     <template #utilities>
       <goa-button-group alignment="end">
@@ -86,13 +87,34 @@ function onAccountItemClick() {
     @dismiss="session.dismiss"
   />
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
-  <AppLayout :variant="contentWidth">
-    <RouterView />
-  </AppLayout>
+  <main id="main-content">
+    <AppLayout :variant="contentWidth">
+      <RouterView />
+    </AppLayout>
+  </main>
   <AppFooter />
 <% } %>
 </template>
 
 <style>
 body { margin: 0; }
+<% if (layout !== 'internal') { %>
+/* Visually hidden until focused (e.g. via Tab from the top of the page) — lets
+   keyboard/screen-reader users jump past the header straight to the content.
+   The internal/side-menu shell has its own scoped copy of this; this layout
+   has no equivalent shell component, so App.vue owns it directly here. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--goa-space-s, 0.5rem) var(--goa-space-m, 1rem);
+  background: var(--goa-color-interactive-default, #0070c4);
+  color: #fff;
+}
+
+.skip-link:focus {
+  left: var(--goa-space-m, 1rem);
+}
+<% } %>
 </style>
