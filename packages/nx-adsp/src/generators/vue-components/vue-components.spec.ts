@@ -44,6 +44,7 @@ describe('Vue Components Generator', () => {
       'AppSideMenu',
       'SessionExpiredBanner',
       'RecordDetailShell',
+      'WorkspaceTable',
     ]) {
       expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
     }

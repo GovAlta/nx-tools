@@ -65,6 +65,11 @@
       "schema": "./src/generators/vue-detail-view/schema.json",
       "description": "Generator that adds a record-detail view (RecordDetailShell + a --fields spec) to an existing vue-app project."
     },
+    "vue-workspace-view": {
+      "factory": "./src/generators/vue-workspace-view/vue-workspace-view",
+      "schema": "./src/generators/vue-workspace-view/schema.json",
+      "description": "Generator that adds a staff-facing, paginated list view (WorkspaceTable + a --columns spec) to an existing vue-app project."
+    },
     "mean": {
       "factory": "./src/generators/mean/mean",
       "schema": "./src/generators/mean/schema.json",

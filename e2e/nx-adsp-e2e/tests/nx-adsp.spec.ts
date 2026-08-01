@@ -335,6 +335,27 @@ describe('nx-adsp e2e', () => {
     }, 240000);
   });
 
+  describe('vue workspace view', () => {
+    it('retrofits a paginated list view into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-workspace-view ${plugin} applications --resource=applications --route=/applications --detailRoute=/applications --columns='[{"key":"status","label":"Status","type":"badge","sortable":true}]'`,
+      );
+      checkFilesExist(`${plugin}/src/views/ApplicationsListView.vue`);
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(

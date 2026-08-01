@@ -1,0 +1,142 @@
+<script setup lang="ts">
+// Chrome for a staff-facing, paginated list: loading/error/empty states, the
+// goa-table itself, and goa-pagination wiring. NOT the filter bar (varies too
+// much per view) and NOT cell/action content -- those are scoped slots so the
+// consuming view can render badges, formatted values, or action buttons per
+// column without this component knowing anything about the domain.
+//
+// No native GoA sortable-header component exists (checked -- there isn't
+// one), so a sortable column header is hand-rolled here using the standard
+// WAI-ARIA "sortable table header" pattern (aria-sort + a real button), not
+// invented from scratch.
+import { useSlots } from 'vue';
+import GoabButton from '../primitives/GoabButton.vue';
+
+interface WorkspaceTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
+withDefaults(
+  defineProps<{
+    columns: WorkspaceTableColumn[];
+    rows: Record<string, unknown>[];
+    rowKey?: string;
+    loading?: boolean;
+    error?: string | null;
+    emptyMessage?: string;
+    page?: number;
+    itemCount?: number;
+    perPageCount?: number;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
+  }>(),
+  {
+    rowKey: 'id',
+    loading: false,
+    error: null,
+    emptyMessage: 'No results found.',
+    perPageCount: 10,
+  },
+);
+
+const emit = defineEmits<{
+  retry: [];
+  pageChange: [page: number];
+  sort: [key: string];
+}>();
+
+const slots = useSlots();
+
+function ariaSort(
+  column: WorkspaceTableColumn,
+  sortBy?: string,
+  sortDir?: 'asc' | 'desc',
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (!column.sortable) return undefined;
+  if (sortBy !== column.key) return 'none';
+  return sortDir === 'desc' ? 'descending' : 'ascending';
+}
+</script>
+
+<template>
+  <div class="workspace-table">
+    <div v-if="loading" aria-label="Loading">
+      <goa-skeleton type="text" size="4" />
+    </div>
+
+    <goa-callout v-else-if="error" type="emergency" heading="Unable to load">
+      <p>{{ error }}</p>
+      <goa-spacer vspacing="s" />
+      <GoabButton type="tertiary" @click="emit('retry')">Retry</GoabButton>
+    </goa-callout>
+
+    <goa-callout v-else-if="rows.length === 0" type="information" heading="No results">
+      <p>{{ emptyMessage }}</p>
+    </goa-callout>
+
+    <template v-else>
+      <goa-table width="100%">
+        <thead>
+          <tr>
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              :aria-sort="ariaSort(column, sortBy, sortDir)"
+            >
+              <button
+                v-if="column.sortable"
+                type="button"
+                class="sort-button"
+                @click="emit('sort', column.key)"
+              >
+                {{ column.label }}
+                <span aria-hidden="true">{{
+                  sortBy === column.key ? (sortDir === 'desc' ? '▼' : '▲') : ''
+                }}</span>
+              </button>
+              <template v-else>{{ column.label }}</template>
+            </th>
+            <th v-if="slots.actions" />
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in rows" :key="String(row[rowKey])">
+            <td v-for="column in columns" :key="column.key">
+              <slot :name="`cell-${column.key}`" :row="row">{{ row[column.key] }}</slot>
+            </td>
+            <td v-if="slots.actions">
+              <slot name="actions" :row="row" />
+            </td>
+          </tr>
+        </tbody>
+      </goa-table>
+
+      <goa-spacer vspacing="l" />
+
+      <goa-pagination
+        v-if="page && itemCount && perPageCount && itemCount > perPageCount"
+        :page-number="page"
+        :item-count="itemCount"
+        :per-page-count="perPageCount"
+        @_change="(e) => emit('pageChange', (e as CustomEvent<{ page: number }>).detail?.page ?? 1)"
+      />
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.sort-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--goa-space-2xs, 0.25rem);
+}
+</style>

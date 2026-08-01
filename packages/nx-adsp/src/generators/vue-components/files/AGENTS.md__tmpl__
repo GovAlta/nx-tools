@@ -7,7 +7,7 @@ app in this workspace imports both instead of carrying its own copy. Generated b
 | Folder | Contains | Lifespan |
 |---|---|---|
 | `src/lib/primitives/` | Thin `v-model`/idiomatic-event wrappers over individual `goa-*` elements (`GoabInput`, `GoabButton`, …) | **Interim** — see below |
-| `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`) | **Permanent** |
+| `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`) | **Permanent** |
 
 > **⚠️ `primitives/` is interim — do not invest in it as permanent.** It exists
 > only because GoA DS has not yet published an official Vue wrapper package. When
@@ -142,7 +142,7 @@ detail); just leave it to fall through from the caller.
 
 A pattern component is app-shell composition — layout, header/footer chrome,
 banners — not a single-element wrapper. Existing examples: `AppLayout`,
-`AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`.
+`AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`.
 
 - It's fine to compose `primitives/` wrappers inside a pattern component (e.g.
   `SessionExpiredBanner` uses `GoabButton`) — import them with a relative path

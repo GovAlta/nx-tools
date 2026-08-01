@@ -1,0 +1,158 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { WorkspaceTable } from '<%= goaImportPath %>';
+
+const columns = [
+<% columns.forEach(function (column) { -%>
+  { key: '<%= column.key %>', label: '<%= column.label %>', sortable: <%= !!column.sortable %> },
+<% }); -%>
+];
+
+// The fetched rows' shape isn't known to this generator -- read fields
+// defensively rather than declaring (and likely getting wrong) a fake interface.
+const rows = ref<Record<string, unknown>[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
+const page = ref(1);
+const itemCount = ref(0);
+const sortBy = ref<string>();
+const sortDir = ref<'asc' | 'desc'>('asc');
+<% if (filterable) { -%>
+const search = ref('');
+let searchDebounce: ReturnType<typeof setTimeout> | undefined;
+<% } -%>
+
+const PAGE_SIZE = <%= pageSize %>;
+
+async function load() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const params = new URLSearchParams({
+      page: String(page.value),
+      limit: String(PAGE_SIZE),
+    });
+<% if (filterable) { -%>
+    if (search.value) params.set('search', search.value);
+<% } -%>
+    if (sortBy.value) {
+      params.set('sortBy', sortBy.value);
+      params.set('sortDir', sortDir.value);
+    }
+    const res = await fetch(`/api/<%= resource %>?${params.toString()}`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    const data = await res.json();
+    // Accept either a bare array or a { results, total } page envelope.
+    rows.value = Array.isArray(data) ? data : (data.results ?? []);
+    itemCount.value = Array.isArray(data) ? data.length : (data.total ?? rows.value.length);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function onPageChange(newPage: number) {
+  page.value = newPage;
+  void load();
+}
+
+function onSort(key: string) {
+  if (sortBy.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortBy.value = key;
+    sortDir.value = 'asc';
+  }
+  page.value = 1;
+  void load();
+}
+<% if (filterable) { -%>
+
+function onSearchInput(e: Event) {
+  search.value = String((e as CustomEvent<{ value?: string }>).detail?.value ?? '');
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    page.value = 1;
+    void load();
+  }, 300);
+}
+<% } -%>
+
+function formatDate(value: unknown): string {
+  if (!value) return '—';
+  try {
+    return new Date(String(value)).toLocaleString('en-CA');
+  } catch {
+    return String(value);
+  }
+}
+
+function formatCurrency(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n);
+}
+</script>
+
+<template>
+  <div>
+    <h1><%= heading %></h1>
+
+    <goa-spacer vspacing="m" />
+<% if (filterable) { -%>
+
+    <goa-input
+      name="search"
+      type="search"
+      :value="search"
+      placeholder="Search..."
+      width="320px"
+      @_change="onSearchInput"
+    />
+
+    <goa-spacer vspacing="l" />
+<% } -%>
+
+    <WorkspaceTable
+      :columns="columns"
+      :rows="rows"
+      :loading="loading"
+      :error="error"
+      :page="page"
+      :item-count="itemCount"
+      :per-page-count="<%= pageSize %>"
+      :sort-by="sortBy"
+      :sort-dir="sortDir"
+      @retry="load"
+      @page-change="onPageChange"
+      @sort="onSort"
+    >
+<% columns.forEach(function (column) { -%>
+<% if (column.type === 'badge') { -%>
+      <template #cell-<%= column.key %>="{ row }">
+        <goa-badge type="information" :content="String(row['<%= column.key %>'] ?? '—')" />
+      </template>
+<% } else if (column.type === 'date') { -%>
+      <template #cell-<%= column.key %>="{ row }">
+        {{ formatDate(row['<%= column.key %>']) }}
+      </template>
+<% } else if (column.type === 'currency') { -%>
+      <template #cell-<%= column.key %>="{ row }">
+        {{ formatCurrency(row['<%= column.key %>']) }}
+      </template>
+<% } -%>
+<% }); -%>
+<% if (detailRoute) { -%>
+      <template #actions="{ row }">
+        <router-link :to="`<%= detailRoute %>/${row.id}`">
+          <goa-button type="tertiary" size="compact">View</goa-button>
+        </router-link>
+      </template>
+<% } -%>
+    </WorkspaceTable>
+  </div>
+</template>
