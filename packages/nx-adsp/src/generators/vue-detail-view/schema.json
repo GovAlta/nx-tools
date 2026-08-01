@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAdspVueDetailView",
+  "title": "Vue Record Detail View",
+  "description": "Generates a record-detail view (loading/error/loaded states, optional status badge, back button) into an existing vue-app project, built on the shared RecordDetailShell pattern component.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "The vue-app project to add the view to.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project should the detail view be added to?"
+    },
+    "name": {
+      "type": "string",
+      "description": "View name, e.g. 'application-detail' generates src/views/ApplicationDetailView.vue.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "x-prompt": "What should the view be called?"
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource path segment -- the view fetches /api/<resource>/:id."
+    },
+    "route": {
+      "type": "string",
+      "description": "Route path added to router/index.ts, e.g. /applications/:id. Must contain a :id param."
+    },
+    "fields": {
+      "type": "string",
+      "description": "JSON array of fields rendered in the record's info list, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\"}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\") }. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
+    },
+    "heading": {
+      "type": "string",
+      "description": "Page heading. Defaults to the view name, title-cased."
+    },
+    "requiresAuth": {
+      "type": "boolean",
+      "description": "Whether the generated route requires authentication.",
+      "default": true
+    }
+  },
+  "required": ["project", "name", "resource", "route", "fields"],
+  "additionalProperties": false
+}

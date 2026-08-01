@@ -1,0 +1,91 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { RecordDetailShell } from '<%= goaImportPath %>';
+
+// The fetched record's shape isn't known to this generator -- read fields
+// defensively rather than declaring (and likely getting wrong) a fake interface.
+const record = ref<Record<string, unknown> | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+const route = useRoute();
+const router = useRouter();
+
+async function load() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const res = await fetch(`/api/<%= resource %>/${route.params.id}`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    record.value = await res.json();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function goBack() {
+  router.back();
+}
+
+function formatDate(value: unknown): string {
+  if (!value) return '—';
+  try {
+    return new Date(String(value)).toLocaleString('en-CA');
+  } catch {
+    return String(value);
+  }
+}
+
+function formatCurrency(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n);
+}
+</script>
+
+<template>
+  <RecordDetailShell
+    heading="<%= heading %>"
+    :loading="loading"
+    :error="error"
+    back-label="Back"
+    @back="goBack"
+    @retry="load"
+  >
+    <dl v-if="record" class="detail-fields">
+<% fields.forEach(function (field) { -%>
+      <dt><%= field.label %></dt>
+      <dd>
+<% if (field.type === 'badge') { -%>
+        <goa-badge type="information" :content="String(record['<%= field.key %>'] ?? '—')" />
+<% } else if (field.type === 'date') { -%>
+        {{ formatDate(record['<%= field.key %>']) }}
+<% } else if (field.type === 'currency') { -%>
+        {{ formatCurrency(record['<%= field.key %>']) }}
+<% } else { -%>
+        {{ record['<%= field.key %>'] ?? '—' }}
+<% } -%>
+      </dd>
+<% }); -%>
+    </dl>
+  </RecordDetailShell>
+</template>
+
+<style scoped>
+.detail-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--goa-space-xs) var(--goa-space-l);
+  margin: 0;
+}
+
+.detail-fields dt {
+  font-weight: 600;
+}
+</style>

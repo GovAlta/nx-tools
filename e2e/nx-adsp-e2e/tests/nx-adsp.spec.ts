@@ -314,6 +314,27 @@ describe('nx-adsp e2e', () => {
     }, 300000);
   });
 
+  describe('vue detail view', () => {
+    it('retrofits a detail view into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-detail-view ${plugin} application-detail --resource=applications --route=/applications/:id --fields='[{"key":"status","label":"Status","type":"badge"}]'`,
+      );
+      checkFilesExist(`${plugin}/src/views/ApplicationDetailView.vue`);
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications/:id'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(
