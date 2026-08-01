@@ -2,7 +2,11 @@
 import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView, useRoute } from 'vue-router';
+<% if (layout === 'internal') { %>
+import { AppLayout, AppSideMenu, SessionExpiredBanner } from '<%= goaImportPath %>';
+<% } else { %>
 import { AppHeader, AppLayout, AppFooter, SessionExpiredBanner } from '<%= goaImportPath %>';
+<% } %>
 import { useSessionStore } from './stores/session';
 
 // Keep the reactive instance — do NOT destructure. useKeycloak() returns a
@@ -15,7 +19,7 @@ const session = useSessionStore();
 // Content width per view, from route meta (default 'page'). Views opt into a
 // different width with `meta: { layout: 'wide' | 'form' }` in the router.
 const route = useRoute();
-const layout = computed(
+const contentWidth = computed(
   () => (route.meta.layout as 'page' | 'wide' | 'form' | undefined) ?? 'page'
 );
 
@@ -26,9 +30,40 @@ function signInAgain() {
   session.dismiss();
   kc.keycloak?.login();
 }
+<% if (layout === 'internal') { %>
+
+// AppSideMenu's account items are presentational -- it doesn't know about
+// Keycloak, it just renders whatever's passed and emits itemClick on click.
+const accountItems = computed(() => [
+  kc.authenticated
+    ? { label: kc.fullName ? `Sign out (${kc.fullName})` : 'Sign out' }
+    : { label: 'Sign in' },
+]);
+
+function onAccountItemClick() {
+  if (kc.authenticated) logout();
+  else login();
+}
+<% } %>
 </script>
 
 <template>
+<% if (layout === 'internal') { %>
+  <AppSideMenu
+    heading="<%= projectName %>"
+    :account-items="accountItems"
+    @item-click="onAccountItemClick"
+  >
+    <SessionExpiredBanner
+      v-model:show="session.expired"
+      @sign-in="signInAgain"
+      @dismiss="session.dismiss"
+    />
+    <AppLayout :variant="contentWidth">
+      <RouterView />
+    </AppLayout>
+  </AppSideMenu>
+<% } else { %>
   <AppHeader heading="<%= projectName %>">
     <template #utilities>
       <goa-button-group alignment="end">
@@ -51,10 +86,11 @@ function signInAgain() {
     @dismiss="session.dismiss"
   />
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
-  <AppLayout :variant="layout">
+  <AppLayout :variant="contentWidth">
     <RouterView />
   </AppLayout>
   <AppFooter />
+<% } %>
 </template>
 
 <style>

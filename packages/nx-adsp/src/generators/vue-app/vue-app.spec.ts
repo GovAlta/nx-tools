@@ -172,6 +172,7 @@ describe('Vue App Generator', () => {
       'AppLayout',
       'AppHeader',
       'AppFooter',
+      'AppSideMenu',
       'SessionExpiredBanner',
     ]) {
       expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
@@ -183,6 +184,35 @@ describe('Vue App Generator', () => {
     );
     expect(app).toContain('<AppHeader heading="test">');
     expect(app).toContain('<AppFooter />');
+  }, 30000);
+
+  it('--layout=internal generates an AppSideMenu shell instead of AppHeader/AppFooter', async () => {
+    await generator(host, { ...options, layout: 'internal' });
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain(
+      "import { AppLayout, AppSideMenu, SessionExpiredBanner } from '@proj/vue-components';",
+    );
+    expect(app).not.toContain('AppHeader');
+    expect(app).not.toContain('AppFooter');
+    expect(app).not.toContain('goa-hero-banner');
+    expect(app).toContain('<AppSideMenu');
+    expect(app).toContain('heading="test"');
+    expect(app).toContain(':account-items="accountItems"');
+    expect(app).toContain('@item-click="onAccountItemClick"');
+    // The content gutter is shared regardless of shell choice.
+    expect(app).toContain('<AppLayout');
+
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('--layout=internal');
+    expect(agents).toContain('AppSideMenu');
+  }, 30000);
+
+  it('defaults --layout to header when omitted', async () => {
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('AppHeader');
+    expect(app).not.toContain('AppSideMenu');
   }, 30000);
 
   it('wires SessionExpiredBanner to a session store fed by onAuthRefreshError (not onAuthLogout)', async () => {

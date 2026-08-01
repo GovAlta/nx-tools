@@ -71,6 +71,7 @@ async function normalizeOptions(
     adsp,
     nginxProxies,
     pairedProjectTag: paired?.tag,
+    layout: options.layout ?? 'header',
   };
 }
 

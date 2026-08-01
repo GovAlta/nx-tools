@@ -13,6 +13,8 @@ export interface Schema {
   skipAgent?: boolean;
   /** Name of an existing backend service project to derive the nginx/dev-server proxy and the adsp:proxy-service: sandbox tag from. */
   pairedProject?: string;
+  /** Top-level app shell: 'header' (default, public-facing) or 'internal' (staff-facing side menu, no header/banner/footer). */
+  layout?: 'header' | 'internal';
 }
 
 export interface NormalizedSchema extends Schema {
