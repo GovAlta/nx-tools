@@ -1,0 +1,16 @@
+import { defineStore } from 'pinia';
+
+// Tracks whether the user's session has expired, surfaced via
+// SessionExpiredBanner in App.vue. Set from main.ts's onAuthRefreshError hook
+// -- see that file for why that hook, not onAuthLogout, is the real signal.
+export const useSessionStore = defineStore('session', {
+  state: () => ({ expired: false }),
+  actions: {
+    markExpired() {
+      this.expired = true;
+    },
+    dismiss() {
+      this.expired = false;
+    },
+  },
+});

@@ -178,9 +178,39 @@ describe('Vue App Generator', () => {
     }
 
     const app = host.read('apps/test/src/App.vue').toString();
-    expect(app).toContain("import { AppHeader, AppLayout, AppFooter } from '@proj/vue-components';");
+    expect(app).toContain(
+      "import { AppHeader, AppLayout, AppFooter, SessionExpiredBanner } from '@proj/vue-components';",
+    );
     expect(app).toContain('<AppHeader heading="test">');
     expect(app).toContain('<AppFooter />');
+  }, 30000);
+
+  it('wires SessionExpiredBanner to a session store fed by onAuthRefreshError (not onAuthLogout)', async () => {
+    await generator(host, options);
+
+    expect(host.exists('apps/test/src/stores/session.ts')).toBeTruthy();
+    const store = host.read('apps/test/src/stores/session.ts').toString();
+    expect(store).toContain("defineStore('session'");
+    expect(store).toContain('markExpired');
+
+    // Strip // comments — main.ts legitimately explains, in prose, why
+    // onAuthLogout is the wrong hook; assert against the actual init code.
+    const mainTsCode = host
+      .read('apps/test/src/main.ts')
+      .toString()
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    expect(mainTsCode).toContain('onAuthRefreshError');
+    // Regression guard: onAuthLogout only fires via the session-status iframe
+    // (disabled here) or Cordova mode — it would never fire in this app.
+    expect(mainTsCode).not.toContain('onAuthLogout');
+    expect(mainTsCode).toContain('useSessionStore(pinia).markExpired()');
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('v-model:show="session.expired"');
+    expect(app).toContain('@sign-in="signInAgain"');
+    expect(app).toContain('@dismiss="session.dismiss"');
   }, 30000);
 
   it('inits Keycloak with no hidden iframes so init never hangs', async () => {

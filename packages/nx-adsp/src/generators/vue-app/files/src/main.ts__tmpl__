@@ -12,10 +12,12 @@ import keycloakPlugin from '@dsb-norge/vue-keycloak-js';
 import App from './App.vue';
 import router from './router';
 import { environment } from './environments/environment';
+import { useSessionStore } from './stores/session';
 
 const app = createApp(App);
+const pinia = createPinia();
 
-app.use(createPinia());
+app.use(pinia);
 app.use(router);
 app.use(keycloakPlugin, {
   config: {
@@ -41,6 +43,13 @@ app.use(keycloakPlugin, {
     pkceMethod: 'S256',
     checkLoginIframe: false,
   },
+  // Not onAuthLogout: keycloak-js only invokes that via the session-status
+  // iframe (disabled above by checkLoginIframe: false) or in Cordova mode --
+  // it would never fire here. The wrapper's own background auto-refresh
+  // (autoRefreshToken, on by default) periodically calls updateToken();
+  // onAuthRefreshError fires when that fails because the refresh token itself
+  // has expired, which is the real, always-on "session expired" signal.
+  onAuthRefreshError: () => useSessionStore(pinia).markExpired(),
 });
 
 app.mount('#app');
