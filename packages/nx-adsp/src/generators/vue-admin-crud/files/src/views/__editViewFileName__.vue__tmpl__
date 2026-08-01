@@ -1,0 +1,136 @@
+<script setup lang="ts">
+import { reactive, ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import { GoabInput, GoabCheckbox } from '<%= goaImportPath %>';
+
+const route = useRoute();
+const router = useRouter();
+const kc = useKeycloak();
+
+const idParam = computed(() => String(route.params.id ?? ''));
+const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
+
+const form = reactive({
+<% fields.forEach(function (field) { -%>
+  <%- field.key %>: <%- field.type === 'checkbox' ? 'false' : "''" %>,
+<% }); -%>
+});
+
+const errors = reactive<Record<string, string | undefined>>({});
+const loading = ref(!isNew.value);
+const saving = ref(false);
+// Separate load vs. save errors -- a save failure must keep the form on
+// screen (with an inline "Save failed" callout), not replace it with the
+// top-level "Unable to load" state a load failure shows instead of the form.
+const loadError = ref<string | null>(null);
+const saveError = ref<string | null>(null);
+const successMessage = ref<string | null>(null);
+
+async function load() {
+  if (isNew.value) return;
+  loading.value = true;
+  loadError.value = null;
+  try {
+    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    const data = await res.json();
+<% fields.forEach(function (field) { -%>
+    if (data['<%= field.key %>'] !== undefined) form.<%= field.key %> = data['<%= field.key %>'];
+<% }); -%>
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function validate(): boolean {
+  let valid = true;
+<% fields.forEach(function (field) { -%>
+<% if (field.type !== 'checkbox' && field.required !== false) { -%>
+  if (!form.<%= field.key %> || !form.<%= field.key %>.trim()) {
+    errors.<%= field.key %> = '<%= field.label %> is required.';
+    valid = false;
+  } else {
+    errors.<%= field.key %> = undefined;
+  }
+<% } -%>
+<% }); -%>
+  return valid;
+}
+
+async function onSubmit() {
+  if (!validate()) return;
+  saving.value = true;
+  saveError.value = null;
+  try {
+    const res = await fetch(
+      isNew.value ? '/api/<%= resource %>' : `/api/<%= resource %>/${idParam.value}`,
+      {
+        method: isNew.value ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to save (${res.status})`);
+    successMessage.value = isNew.value ? '<%= singularLabel %> created.' : '<%= singularLabel %> saved.';
+    setTimeout(() => router.push('<%= route %>'), 600);
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : 'Failed to save.';
+  } finally {
+    saving.value = false;
+  }
+}
+
+function goBack() {
+  router.push('<%= route %>');
+}
+</script>
+
+<template>
+  <div>
+    <h1>{{ isNew ? 'Create <%= singularLabel %>' : 'Edit <%= singularLabel %>' }}</h1>
+
+    <goa-callout v-if="successMessage" type="success" heading="Saved">
+      <p>{{ successMessage }}</p>
+    </goa-callout>
+
+    <div v-else-if="loading" aria-label="Loading">
+      <goa-skeleton type="text" size="3" />
+    </div>
+
+    <goa-callout v-else-if="loadError" type="emergency" heading="Unable to load">
+      <p>{{ loadError }}</p>
+    </goa-callout>
+
+    <form v-else @submit.prevent="onSubmit">
+<% fields.forEach(function (field) { -%>
+<% if (field.type === 'checkbox') { -%>
+      <goa-form-item label="<%= field.label %>">
+        <GoabCheckbox v-model="form.<%= field.key %>" name="<%= field.key %>" text="<%= field.label %>" />
+      </goa-form-item>
+<% } else { -%>
+      <goa-form-item label="<%= field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %> :error="errors.<%= field.key %>">
+        <GoabInput v-model="form.<%= field.key %>" name="<%= field.key %>" type="text" />
+      </goa-form-item>
+<% } -%>
+<% }); -%>
+
+      <goa-callout v-if="saveError" type="emergency" heading="Save failed">
+        <p>{{ saveError }}</p>
+      </goa-callout>
+
+      <goa-spacer vspacing="l" />
+
+      <goa-button-group gap="relaxed">
+        <goa-button v-if="kc.authenticated" type="primary" :disabled="saving || undefined" @_click="onSubmit">
+          {{ isNew ? 'Create <%= singularLabel %>' : 'Save changes' }}
+        </goa-button>
+        <goa-button type="secondary" @_click="goBack">Cancel</goa-button>
+      </goa-button-group>
+    </form>
+  </div>
+</template>

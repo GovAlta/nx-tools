@@ -356,6 +356,31 @@ describe('nx-adsp e2e', () => {
     }, 240000);
   });
 
+  describe('vue admin crud', () => {
+    it('retrofits a list + edit view pair into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-admin-crud ${plugin} regions --resource=regions --route=/regions --fields='[{"key":"name","label":"Name"},{"key":"active","label":"Active","type":"checkbox"}]'`,
+      );
+      checkFilesExist(
+        `${plugin}/src/views/RegionsListView.vue`,
+        `${plugin}/src/views/RegionsEditView.vue`,
+      );
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/regions'");
+      expect(routerTs).toContain("path: '/regions/:id'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
   it('should generate angular app and build', async () => {
     const plugin = uniq('angular-app');
     await runNxCommandAsync(
