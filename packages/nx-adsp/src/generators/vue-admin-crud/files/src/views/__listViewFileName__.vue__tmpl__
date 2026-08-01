@@ -1,0 +1,76 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import { WorkspaceTable } from '<%= goaImportPath %>';
+
+const kc = useKeycloak();
+
+const columns = [
+<% fields.forEach(function (field) { -%>
+  { key: '<%= field.key %>', label: '<%= field.label %>' },
+<% }); -%>
+];
+
+// The fetched rows' shape isn't known to this generator -- read fields
+// defensively rather than declaring (and likely getting wrong) a fake interface.
+const rows = ref<Record<string, unknown>[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+async function load() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const res = await fetch('/api/<%= resource %>');
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    const data = await res.json();
+    // Accept either a bare array or a { results } envelope.
+    rows.value = Array.isArray(data) ? data : (data.results ?? []);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+</script>
+
+<template>
+  <div>
+    <div class="admin-crud-topbar">
+      <h1><%= heading %></h1>
+      <router-link v-if="kc.authenticated" to="<%= route %>/new">
+        <goa-button type="primary">Create <%= singularLabel %></goa-button>
+      </router-link>
+    </div>
+
+    <goa-spacer vspacing="m" />
+
+    <!-- No page/item-count/per-page-count props -- an admin lookup table this
+         small doesn't need WorkspaceTable's pagination. -->
+    <WorkspaceTable :columns="columns" :rows="rows" :loading="loading" :error="error" @retry="load">
+<% fields.forEach(function (field) { -%>
+<% if (field.type === 'checkbox') { -%>
+      <template #cell-<%= field.key %>="{ row }">
+        <goa-badge :type="row['<%= field.key %>'] ? 'success' : 'midtone'" :content="row['<%= field.key %>'] ? 'Yes' : 'No'" />
+      </template>
+<% } -%>
+<% }); -%>
+      <template #actions="{ row }">
+        <router-link :to="`<%= route %>/${row.id}`">
+          <goa-button type="tertiary" size="compact">Edit</goa-button>
+        </router-link>
+      </template>
+    </WorkspaceTable>
+  </div>
+</template>
+
+<style scoped>
+.admin-crud-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--goa-space-m);
+}
+</style>

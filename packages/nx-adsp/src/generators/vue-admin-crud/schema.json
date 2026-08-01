@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAdspVueAdminCrud",
+  "title": "Vue Admin CRUD (List + Edit)",
+  "description": "Generates a simple admin CRUD screen pair (a WorkspaceTable list view with a Create action and per-row Edit, plus a create/update Edit view) into an existing vue-app project. Suited to small lookup-table style admin screens, not large paginated workspaces -- see vue-workspace-view for that.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "The vue-app project to add the views to.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project should the admin CRUD screens be added to?"
+    },
+    "name": {
+      "type": "string",
+      "description": "View name, e.g. 'regions' generates src/views/RegionsListView.vue and src/views/RegionsEditView.vue.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "x-prompt": "What should the views be called?"
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource path segment -- fetches /api/<resource> (list), /api/<resource>/:id (load one), POST /api/<resource> (create), PUT /api/<resource>/:id (update)."
+    },
+    "route": {
+      "type": "string",
+      "description": "List route path added to router/index.ts, e.g. /regions. The edit/create route is added as `${route}/:id` (visiting `${route}/new` creates)."
+    },
+    "fields": {
+      "type": "string",
+      "description": "JSON array of fields, in display/form order -- e.g. '[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"active\",\"label\":\"Active\",\"type\":\"checkbox\"}]'. Each item: { key, label, type?: \"text\"|\"checkbox\" (default \"text\"), required?: boolean (default true for \"text\", ignored for \"checkbox\") }. A plain array is also accepted when this generator is invoked programmatically."
+    },
+    "heading": {
+      "type": "string",
+      "description": "List page heading. Defaults to the view name, title-cased."
+    },
+    "singularLabel": {
+      "type": "string",
+      "description": "Singular label used in \"Create <label>\"/\"Edit <label>\" headings and buttons. Defaults to --heading (override for irregular plurals, e.g. --heading=Regions --singularLabel=Region)."
+    },
+    "requiresAuth": {
+      "type": "boolean",
+      "description": "Whether the generated routes require authentication.",
+      "default": true
+    }
+  },
+  "required": ["project", "name", "resource", "route", "fields"],
+  "additionalProperties": false
+}
