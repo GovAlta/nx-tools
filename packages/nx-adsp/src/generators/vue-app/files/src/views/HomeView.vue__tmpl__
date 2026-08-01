@@ -42,6 +42,10 @@ watch(
 
 <template>
   <section>
+    <% if (layout !== 'internal') { %>
+    <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
+    <goa-spacer vspacing="l" />
+    <% } %>
     <h2>Welcome to <%= projectName %>!</h2>
     <p>Don't panic. Start editing the project to build your digital service.</p>
     <h3>A few things you might want to do next:</h3>
