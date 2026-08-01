@@ -30,8 +30,9 @@ executors read options from `project.json` and do not prompt.
 
 | File | Purpose |
 |------|---------|
-| `src/main.ts` | Entry — registers Pinia, Router, and Keycloak plugin |
-| `src/App.vue` | Shell — `AppHeader` with sign-in/out in its `utilities` slot, hero banner, `<RouterView>` wrapped in `AppLayout`, `AppFooter` |
+| `src/main.ts` | Entry — registers Pinia, Router, and Keycloak plugin (incl. `onAuthRefreshError`, which flags the session store as expired) |
+| `src/App.vue` | Shell — `AppHeader` with sign-in/out in its `utilities` slot, `SessionExpiredBanner`, hero banner, `<RouterView>` wrapped in `AppLayout`, `AppFooter` |
+| `src/stores/session.ts` | Pinia store — `expired` flag behind `SessionExpiredBanner`, set from `main.ts`'s `onAuthRefreshError` hook |
 | `src/router/index.ts` | Routes — `/protected` guarded with `requiresAuth` meta |
 | `src/views/HomeView.vue` | Public page — calls public and private APIs |
 | `src/views/ProtectedView.vue` | Authenticated page — shows user info from token |
@@ -168,7 +169,7 @@ across every Vue app in this workspace — fix or extend a wrapper once in
 | `AppHeader` | `goa-microsite-header` + `goa-app-header`. Takes a `heading` prop; put account/sign-in actions in its `utilities` slot (a bare child with no slot is silently dropped by `goa-app-header`) |
 | `AppLayout` | The content gutter every view renders inside (see the key files table). Also renders the skip-to-main-content link |
 | `AppFooter` | `goa-app-footer` with the standard GoA nav/meta links (Services/Contact/Terms of Use, Privacy/Disclaimer/Accessibility) |
-| `SessionExpiredBanner` | A `v-model:show` banner with `signIn`/`dismiss` emits — available in the shared library, not yet wired into this app's `App.vue`. Wiring it to a real Keycloak session-expiry signal needs an `onAuthLogout` callback added to `main.ts`'s Keycloak plugin config; do that before using it |
+| `SessionExpiredBanner` | A `v-model:show` banner with `signIn`/`dismiss` emits. Bound to the `useSessionStore()` Pinia store (`src/stores/session.ts`), which `main.ts`'s `onAuthRefreshError` hook flips when the refresh token itself has expired |
 
 These are shared across every Vue app in this workspace — fix or extend one once
 in `libs/vue-components/src/lib/patterns/`, the same way as the `Goab*` wrappers.

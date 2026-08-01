@@ -2,13 +2,15 @@
 import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView, useRoute } from 'vue-router';
-import { AppHeader, AppLayout, AppFooter } from '<%= goaImportPath %>';
+import { AppHeader, AppLayout, AppFooter, SessionExpiredBanner } from '<%= goaImportPath %>';
+import { useSessionStore } from './stores/session';
 
 // Keep the reactive instance — do NOT destructure. useKeycloak() returns a
 // readonly(reactive()); destructuring snapshots each field at setup time, so
 // `keycloak` would be frozen at its initial `undefined` (login() a no-op) and
 // `authenticated` would never flip. Access fields on `kc` to stay reactive.
 const kc = useKeycloak();
+const session = useSessionStore();
 
 // Content width per view, from route meta (default 'page'). Views opt into a
 // different width with `meta: { layout: 'wide' | 'form' }` in the router.
@@ -19,6 +21,11 @@ const layout = computed(
 
 function login() { kc.keycloak?.login(); }
 function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin }); }
+
+function signInAgain() {
+  session.dismiss();
+  kc.keycloak?.login();
+}
 </script>
 
 <template>
@@ -38,6 +45,11 @@ function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin })
       </goa-button-group>
     </template>
   </AppHeader>
+  <SessionExpiredBanner
+    v-model:show="session.expired"
+    @sign-in="signInAgain"
+    @dismiss="session.dismiss"
+  />
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
   <AppLayout :variant="layout">
     <RouterView />

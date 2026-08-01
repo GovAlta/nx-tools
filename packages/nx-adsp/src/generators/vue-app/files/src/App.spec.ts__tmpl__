@@ -16,8 +16,10 @@ vi.mock('@dsb-norge/vue-keycloak-js', async () => {
 });
 
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import App from './App.vue';
+import { useSessionStore } from './stores/session';
 
 // App.vue reads useRoute() for the layout-width feature (route.meta.layout,
 // default 'page') — that needs a real router installed via `global.plugins`,
@@ -35,7 +37,9 @@ const router = createRouter({
 
 describe('App shell header', () => {
   it('shows Sign in when unauthenticated', () => {
-    const wrapper = mount(App, { global: { plugins: [router], stubs: { RouterView: true } } });
+    const wrapper = mount(App, {
+      global: { plugins: [router, createPinia()], stubs: { RouterView: true } },
+    });
     const group = wrapper.find('goa-button-group');
     expect(group.exists()).toBe(true);
     expect(group.html()).toContain('Sign in');
@@ -45,9 +49,47 @@ describe('App shell header', () => {
     // The bug: destructuring useKeycloak() froze `keycloak` at undefined, so
     // login() was a permanent no-op. Reactive access must reach the instance.
     const kc = useKeycloak();
-    const wrapper = mount(App, { global: { plugins: [router], stubs: { RouterView: true } } });
+    const wrapper = mount(App, {
+      global: { plugins: [router, createPinia()], stubs: { RouterView: true } },
+    });
     const btn = wrapper.findAll('goa-button').find((b) => b.text().includes('Sign in'));
     await btn?.trigger('_click');
     expect(kc.keycloak?.login).toHaveBeenCalled();
+  });
+});
+
+describe('App shell session-expired banner', () => {
+  it('is hidden until the session store flags an expired session', async () => {
+    const pinia = createPinia();
+    const wrapper = mount(App, {
+      global: { plugins: [router, pinia], stubs: { RouterView: true } },
+    });
+    expect(wrapper.find('.session-expired-banner').exists()).toBe(false);
+
+    useSessionStore(pinia).markExpired();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.session-expired-banner').exists()).toBe(true);
+  });
+
+  it('Sign in on the banner dismisses it and calls keycloak.login', async () => {
+    const kc = useKeycloak();
+    const pinia = createPinia();
+    const wrapper = mount(App, {
+      global: { plugins: [router, pinia], stubs: { RouterView: true } },
+    });
+    useSessionStore(pinia).markExpired();
+    await wrapper.vm.$nextTick();
+
+    // SessionExpiredBanner's "Sign in" is the GoabButton wrapper, which re-exposes
+    // goa-button's `_click` as a plain `click` on itself -- but the underlying DOM
+    // node vue-test-utils sees is still the raw <goa-button>, so trigger `_click`
+    // (same as AppHeader's raw Sign in button above), not `click`.
+    const btn = wrapper
+      .findAll('goa-button')
+      .find((b) => b.text().includes('Sign in') && b.attributes('type') === 'primary');
+    await btn?.trigger('_click');
+
+    expect(kc.keycloak?.login).toHaveBeenCalled();
+    expect(useSessionStore(pinia).expired).toBe(false);
   });
 });

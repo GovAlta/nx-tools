@@ -1,10 +1,12 @@
 <script setup lang="ts">
-// Presentational only — not yet wired to a real Keycloak session-expiry signal
-// by any generator. @dsb-norge/vue-keycloak-js has no reactive "expired" field
-// on the useKeycloak() instance; the closest real hook is the `onAuthLogout`
-// callback configured at plugin-install time in main.ts. Wiring that up is a
-// separate change (new shared reactive state + main.ts plumbing); this
-// component just renders the banner once some caller flips `show`.
+// Presentational only — flipping `show` is the consuming app's job, not this
+// component's. vue-app wires it to its session store's `expired` flag, itself
+// set from main.ts's Keycloak plugin `onAuthRefreshError` hook — NOT
+// `onAuthLogout`, which keycloak-js only fires via the session-status iframe
+// (typically disabled, e.g. via checkLoginIframe: false) or Cordova mode, so
+// it would never fire in a normal web deployment. onAuthRefreshError fires
+// from the wrapper's own background auto-refresh failing because the refresh
+// token itself expired — the real, always-on signal.
 import GoabButton from '../primitives/GoabButton.vue';
 
 const show = defineModel<boolean>('show', { default: false });
