@@ -124,14 +124,21 @@ describe('Vue App Generator', () => {
     expect(layout).toContain('form-content');
     expect(layout).toContain('wide-content');
     expect(layout).toContain('--goa-space');
-    // Skip-to-main-content link for keyboard/screen-reader users.
-    expect(layout).toContain('href="#main-content"');
+    // AppLayout must NOT own the skip-to-main-content landmark itself: it nests
+    // inside AppSideMenu for --layout=internal, which already provides one, and
+    // a second <main id="main-content"> would duplicate the landmark/id.
+    expect(layout).not.toContain('id="main-content"');
+    expect(layout).not.toContain('skip-link');
 
     // App.vue uses AppLayout and no longer relies on the `main > section` gutter
     // (which silently failed when a view's top-level tag wasn't <section>).
+    // For --layout=header (the default), App.vue itself owns the skip-link
+    // landmark instead, since there's no shell component to hold it.
     const app = host.read('apps/test/src/App.vue').toString();
     expect(app).toContain('AppLayout');
     expect(app).not.toContain('main > section');
+    expect(app).toContain('href="#main-content"');
+    expect(app).toContain('id="main-content"');
   });
 
   it('provisions the shared GoA wrapper library and points the app at it', async () => {
@@ -202,6 +209,11 @@ describe('Vue App Generator', () => {
     expect(app).toContain('@item-click="onAccountItemClick"');
     // The content gutter is shared regardless of shell choice.
     expect(app).toContain('<AppLayout');
+    // App.vue itself must not add a second skip-to-main-content landmark —
+    // AppSideMenu (imported, not inlined) already owns the one and only
+    // #main-content for this layout.
+    expect(app).not.toContain('id="main-content"');
+    expect(app).not.toContain('skip-link');
 
     const agents = host.read('apps/test/AGENTS.md').toString();
     expect(agents).toContain('--layout=internal');
