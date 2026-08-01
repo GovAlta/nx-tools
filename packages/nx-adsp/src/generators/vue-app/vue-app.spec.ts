@@ -313,15 +313,33 @@ describe('Vue App Generator', () => {
 
   it('static assets live in public/ so Vite serves them at the referenced URLs', async () => {
     await generator(host, options);
-    // App.vue's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
+    // HomeView's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
     // index.html's favicon.ico are absolute-URL string refs, so they must be in
     // the Vite publicDir (public/) — a src/assets file is not served at /assets.
-    const appVue = host.read('apps/test/src/App.vue').toString();
-    const bannerUrl = appVue.match(/backgroundurl="([^"]+)"/)?.[1];
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    const bannerUrl = homeView.match(/backgroundurl="([^"]+)"/)?.[1];
     expect(bannerUrl).toBe('/assets/banner.jpg');
     expect(host.exists('apps/test/public/assets/banner.jpg')).toBeTruthy();
     expect(host.exists('apps/test/src/assets/banner.jpg')).toBeFalsy();
     expect(host.exists('apps/test/public/favicon.ico')).toBeTruthy();
+  }, 30000);
+
+  it('the hero banner is home-page content, not part of the persistent app shell', async () => {
+    // Real GovAlta-Pronghorn source (both the canonical template and an
+    // independently-evolved production app) puts goa-hero-banner only inside
+    // HomeView -- never in App.vue/AppLayout -- so it shows once on the
+    // landing page, not repeated on every interior route.
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).not.toContain('goa-hero-banner');
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).toContain('goa-hero-banner');
+  }, 30000);
+
+  it('--layout=internal has no hero banner anywhere, including on HomeView', async () => {
+    await generator(host, { ...options, layout: 'internal' });
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).not.toContain('goa-hero-banner');
   }, 30000);
 
   it('vite.config.ts marks goa-* elements as custom elements', async () => {

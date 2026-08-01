@@ -86,7 +86,6 @@ function onAccountItemClick() {
     @sign-in="signInAgain"
     @dismiss="session.dismiss"
   />
-  <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
   <main id="main-content">
     <AppLayout :variant="contentWidth">
       <RouterView />

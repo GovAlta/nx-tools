@@ -34,11 +34,15 @@ executors read options from `project.json` and do not prompt.
 <% if (layout === 'internal') { %>
 | `src/App.vue` | Shell — `AppSideMenu` (side-menu shell, Sign in/out as an account item), `SessionExpiredBanner`, `<RouterView>` wrapped in `AppLayout` |
 <% } else { %>
-| `src/App.vue` | Shell — `AppHeader` with sign-in/out in its `utilities` slot, `SessionExpiredBanner`, hero banner, `<RouterView>` wrapped in `AppLayout`, `AppFooter` |
+| `src/App.vue` | Shell — `AppHeader` with sign-in/out in its `utilities` slot, `SessionExpiredBanner`, `<RouterView>` wrapped in `AppLayout`, `AppFooter` |
 <% } %>
 | `src/stores/session.ts` | Pinia store — `expired` flag behind `SessionExpiredBanner`, set from `main.ts`'s `onAuthRefreshError` hook |
 | `src/router/index.ts` | Routes — `/protected` guarded with `requiresAuth` meta |
+<% if (layout === 'internal') { %>
 | `src/views/HomeView.vue` | Public page — calls public and private APIs |
+<% } else { %>
+| `src/views/HomeView.vue` | Public page — hero banner (page content, not app-shell — real GoA services show it once on the landing page, not on every route) + calls public and private APIs |
+<% } %>
 | `src/views/ProtectedView.vue` | Authenticated page — shows user info from token |
 | `src/environments/environment.ts` | Access URL, realm, client ID — pre-set from ADSP tenant |
 | `vite.config.ts` | Vite config — `isCustomElement` marks `goa-*` as web components |
