@@ -172,7 +172,7 @@ from **`<%= goaImportPath %>`**, not hand-rolled markup:
 
 | Component | Purpose |
 |---|---|
-| `AppSideMenu` | `goa-work-side-menu`. Takes `heading`/`primaryItems`/`secondaryItems`/`accountItems` props (each item: `{ label, to?, icon?, badge?, current? }`) and emits `itemClick` — it doesn't know about routing or auth, so `App.vue` computes `current`/handles the click itself. `App.vue` currently only populates `accountItems` (a single Sign in/out item); add real nav items to `primaryItems`/`secondaryItems` as routes are added. Also owns the skip-to-main-content landmark for this layout — `AppLayout` deliberately doesn't duplicate it |
+| `AppSideMenu` | `goa-work-side-menu`. Takes `heading`/`primaryItems`/`secondaryItems`/`accountItems` props (each item: `{ label, to?, icon?, badge?, current? }`) and emits `itemClick` — it doesn't know about routing or auth, so `App.vue` computes `current`/handles the click itself. `App.vue` currently only populates `accountItems` (a single Sign in/out item); add real nav items to `primaryItems`/`secondaryItems` as routes are added. Also owns the skip-to-main-content landmark for this layout — `AppLayout` deliberately doesn't duplicate it. Also takes an optional `#topbar` slot — a slim row above the routed content, for something like a notification bell; only renders when given content, unused by default |
 | `AppLayout` | The content gutter every view renders inside (see the key files table) |
 | `SessionExpiredBanner` | A `v-model:show` banner with `signIn`/`dismiss` emits. Bound to the `useSessionStore()` Pinia store (`src/stores/session.ts`), which `main.ts`'s `onAuthRefreshError` hook flips when the refresh token itself has expired |
 

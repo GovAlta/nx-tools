@@ -76,6 +76,19 @@ describe('Vue Components Generator', () => {
     expect(agents).toContain('defineModel<boolean>');
   }, 30000);
 
+  it('AppSideMenu exposes an optional #topbar slot for header-action-style content', async () => {
+    await generator(host);
+
+    const sideMenu = host
+      .read('libs/vue-components/src/lib/patterns/AppSideMenu.vue')
+      .toString();
+    // Named slot, only rendered when actually given content -- no empty bar
+    // shows by default, matching the "unused by default" doc claim.
+    expect(sideMenu).toContain('<slot name="topbar" />');
+    expect(sideMenu).toContain('v-if="slots.topbar"');
+    expect(sideMenu).toContain('useSlots');
+  }, 30000);
+
   it('disables vue/no-deprecated-slot-attribute in flat config too, not just .eslintrc.json', async () => {
     // useFlatConfig() (from @nx/eslint) treats a root flat-config file's
     // presence as authoritative, regardless of the installed ESLint version —
