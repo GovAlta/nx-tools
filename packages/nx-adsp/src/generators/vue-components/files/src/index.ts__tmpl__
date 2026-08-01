@@ -1,12 +1,23 @@
-// GoA Design System Vue wrappers — INTERIM shared library.
-// These add v-model / idiomatic events over the framework-agnostic goa-* custom
-// elements. Remove this library and import from @abgov/vue-components once GoA DS
-// publishes it (see the repo's UX view-patterns spec, foundational gap #2) — the
-// component names/props are intended to match, so it should be a scope swap.
-export { default as GoabInput } from './lib/GoabInput.vue';
-export { default as GoabTextarea } from './lib/GoabTextarea.vue';
-export { default as GoabDropdown } from './lib/GoabDropdown.vue';
-export { default as GoabCheckbox } from './lib/GoabCheckbox.vue';
-export { default as GoabRadioGroup } from './lib/GoabRadioGroup.vue';
-export { default as GoabButton } from './lib/GoabButton.vue';
-export { default as GoabModal } from './lib/GoabModal.vue';
+// GoA Design System Vue wrappers, shared across every Vue app in this workspace.
+//
+// primitives/ — thin v-model/idiomatic-event wrappers over individual goa-*
+// elements. INTERIM: once GoA DS publishes an official @abgov/vue-components,
+// delete these files and repoint imports at it — names/props are kept
+// matching, so it's a scope swap, not a rewrite.
+//
+// patterns/ — composite, app-shell components (layout, header, footer, ...).
+// PERMANENT: these have no equivalent in an official design-system package
+// (that's app-shell composition, not a design-system primitive) and are not
+// deleted when primitives/ is.
+export { default as GoabInput } from './lib/primitives/GoabInput.vue';
+export { default as GoabTextarea } from './lib/primitives/GoabTextarea.vue';
+export { default as GoabDropdown } from './lib/primitives/GoabDropdown.vue';
+export { default as GoabCheckbox } from './lib/primitives/GoabCheckbox.vue';
+export { default as GoabRadioGroup } from './lib/primitives/GoabRadioGroup.vue';
+export { default as GoabButton } from './lib/primitives/GoabButton.vue';
+export { default as GoabModal } from './lib/primitives/GoabModal.vue';
+
+export { default as AppLayout } from './lib/patterns/AppLayout.vue';
+export { default as AppHeader } from './lib/patterns/AppHeader.vue';
+export { default as AppFooter } from './lib/patterns/AppFooter.vue';
+export { default as SessionExpiredBanner } from './lib/patterns/SessionExpiredBanner.vue';

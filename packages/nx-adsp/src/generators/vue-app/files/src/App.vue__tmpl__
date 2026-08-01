@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView, useRoute } from 'vue-router';
-import AppLayout from './components/AppLayout.vue';
+import { AppHeader, AppLayout, AppFooter } from '<%= goaImportPath %>';
 
 // Keep the reactive instance — do NOT destructure. useKeycloak() returns a
 // readonly(reactive()); destructuring snapshots each field at setup time, so
@@ -22,13 +22,8 @@ function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin })
 </script>
 
 <template>
-  <goa-microsite-header type="alpha" />
-  <goa-app-header url="/" heading="<%= projectName %>">
-    <!-- goa-app-header only renders content placed in a named slot — the
-         "utilities" slot is where GoA's own design system docs put
-         account/sign-in actions (as opposed to "navigation" for nav links).
-         A bare child with no slot attribute renders nothing. -->
-    <div slot="utilities">
+  <AppHeader heading="<%= projectName %>">
+    <template #utilities>
       <goa-button-group alignment="end">
         <span v-if="kc.authenticated && kc.fullName">{{ kc.fullName }}</span>
         <!-- Gate on !authenticated only, never on `ready`: with no load-time SSO
@@ -41,12 +36,13 @@ function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin })
           Sign out
         </goa-button>
       </goa-button-group>
-    </div>
-  </goa-app-header>
+    </template>
+  </AppHeader>
   <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
   <AppLayout :variant="layout">
     <RouterView />
   </AppLayout>
+  <AppFooter />
 </template>
 
 <style>

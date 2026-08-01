@@ -31,8 +31,7 @@ executors read options from `project.json` and do not prompt.
 | File | Purpose |
 |------|---------|
 | `src/main.ts` | Entry — registers Pinia, Router, and Keycloak plugin |
-| `src/App.vue` | Shell — nav header with sign-in/out, hero banner, `<RouterView>` wrapped in `AppLayout` |
-| `src/components/AppLayout.vue` | Shared content gutter (centered, max-width, token padding). Every view lands inside it — no per-view spacing to add. Width via route meta `layout` |
+| `src/App.vue` | Shell — `AppHeader` with sign-in/out in its `utilities` slot, hero banner, `<RouterView>` wrapped in `AppLayout`, `AppFooter` |
 | `src/router/index.ts` | Routes — `/protected` guarded with `requiresAuth` meta |
 | `src/views/HomeView.vue` | Public page — calls public and private APIs |
 | `src/views/ProtectedView.vue` | Authenticated page — shows user info from token |
@@ -151,10 +150,28 @@ the design system supports still works. For components without a wrapper, use th
 across every Vue app in this workspace — fix or extend a wrapper once in
 `libs/vue-components` (or run `nx g @abgov/nx-adsp:vue-components` to restore it).
 
-> **Interim:** these wrappers are a stopgap until GoA DS ships an official
-> `@abgov/vue-components`. When it lands, delete the `vue-components` lib and
-> repoint imports at that package — the names/props are intended to match, so
-> it's a scope swap.
+> **Interim:** these wrappers (`libs/vue-components/src/lib/primitives/`) are a
+> stopgap until GoA DS ships an official `@abgov/vue-components`. When it lands,
+> delete `primitives/` and repoint imports at that package — the names/props are
+> intended to match, so it's a scope swap. This does **not** apply to the
+> `AppHeader`/`AppLayout`/`AppFooter`/`SessionExpiredBanner` shell components
+> below — those live in the same library's `patterns/` folder and are permanent
+> (app-shell composition has no equivalent in a design-system package).
+
+### App shell components
+
+`App.vue` is built from four shared components imported from
+**`<%= goaImportPath %>`**, not hand-rolled markup:
+
+| Component | Purpose |
+|---|---|
+| `AppHeader` | `goa-microsite-header` + `goa-app-header`. Takes a `heading` prop; put account/sign-in actions in its `utilities` slot (a bare child with no slot is silently dropped by `goa-app-header`) |
+| `AppLayout` | The content gutter every view renders inside (see the key files table). Also renders the skip-to-main-content link |
+| `AppFooter` | `goa-app-footer` with the standard GoA nav/meta links (Services/Contact/Terms of Use, Privacy/Disclaimer/Accessibility) |
+| `SessionExpiredBanner` | A `v-model:show` banner with `signIn`/`dismiss` emits — available in the shared library, not yet wired into this app's `App.vue`. Wiring it to a real Keycloak session-expiry signal needs an `onAuthLogout` callback added to `main.ts`'s Keycloak plugin config; do that before using it |
+
+These are shared across every Vue app in this workspace — fix or extend one once
+in `libs/vue-components/src/lib/patterns/`, the same way as the `Goab*` wrappers.
 
 ## Adding a view
 

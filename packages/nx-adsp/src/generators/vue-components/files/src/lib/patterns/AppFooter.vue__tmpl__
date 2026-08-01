@@ -1,0 +1,14 @@
+<template>
+  <goa-app-footer>
+    <goa-app-footer-nav-section slot="nav" heading="Resources">
+      <a href="https://alberta.ca/services.aspx">Services</a>
+      <a href="https://alberta.ca/contact.aspx">Contact</a>
+      <a href="https://alberta.ca/terms-of-use.aspx">Terms of Use</a>
+    </goa-app-footer-nav-section>
+    <goa-app-footer-meta-section slot="meta">
+      <a href="https://alberta.ca/security-and-privacy.aspx">Privacy</a>
+      <a href="https://alberta.ca/disclaimer.aspx">Disclaimer</a>
+      <a href="https://alberta.ca/accessibility.aspx">Accessibility</a>
+    </goa-app-footer-meta-section>
+  </goa-app-footer>
+</template>

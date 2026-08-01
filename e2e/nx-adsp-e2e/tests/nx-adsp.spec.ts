@@ -279,7 +279,8 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(
         'vue-components/src/index.ts',
-        'vue-components/src/lib/GoabModal.vue',
+        'vue-components/src/lib/primitives/GoabModal.vue',
+        'vue-components/src/lib/patterns/AppHeader.vue',
         'vue-components/src/vue-components.spec.ts',
       );
 
