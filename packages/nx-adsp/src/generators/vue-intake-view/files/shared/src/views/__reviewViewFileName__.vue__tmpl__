@@ -1,0 +1,121 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { GoabCheckbox } from '<%= goaImportPath %>';
+
+const route = useRoute();
+const router = useRouter();
+
+const idParam = computed(() => String(route.params.id ?? ''));
+
+// The fetched record's shape isn't known to this generator -- read fields
+// defensively rather than declaring (and likely getting wrong) a fake interface.
+const record = ref<Record<string, unknown> | null>(null);
+const loading = ref(true);
+const loadError = ref<string | null>(null);
+const declared = ref(false);
+const submitting = ref(false);
+const submitError = ref<string | null>(null);
+
+async function load() {
+  loading.value = true;
+  loadError.value = null;
+  try {
+    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    record.value = await res.json();
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function editStep(key: string) {
+  router.push(`<%= route %>/${idParam.value}/${key}`);
+}
+
+async function onSubmit() {
+  if (!declared.value) return;
+  submitting.value = true;
+  submitError.value = null;
+  try {
+    const res = await fetch(`/api/<%= resource %>/${idParam.value}/submit`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`Failed to submit (${res.status})`);
+    router.push(`<%= route %>/${idParam.value}/confirmation`);
+  } catch (e) {
+    submitError.value = e instanceof Error ? e.message : 'Failed to submit.';
+  } finally {
+    submitting.value = false;
+  }
+}
+</script>
+
+<template>
+  <div>
+    <h1>Review your <%= baseName %></h1>
+
+    <div v-if="loading" aria-label="Loading">
+      <goa-skeleton type="text" size="3" />
+    </div>
+
+    <goa-callout v-else-if="loadError" type="emergency" heading="Unable to load">
+      <p>{{ loadError }}</p>
+    </goa-callout>
+
+    <template v-else-if="record">
+<% steps.forEach(function (step) { -%>
+      <goa-container accent="thin">
+        <div class="review-section-header">
+          <h2><%- step.label %></h2>
+          <goa-button type="tertiary" size="compact" @_click="editStep('<%- step.key %>')">
+            Edit
+          </goa-button>
+        </div>
+        <dl>
+<% step.fields.forEach(function (field) { -%>
+          <dt><%- field.label %></dt>
+          <dd>{{ record['<%- field.key %>'] ?? '—' }}</dd>
+<% }); -%>
+        </dl>
+      </goa-container>
+      <goa-spacer vspacing="m" />
+<% }); -%>
+
+      <GoabCheckbox
+        v-model="declared"
+        name="declaration"
+        text="I confirm the information above is accurate and complete."
+      />
+
+      <goa-callout v-if="submitError" type="emergency" heading="Submit failed">
+        <p>{{ submitError }}</p>
+      </goa-callout>
+
+      <goa-spacer vspacing="l" />
+
+      <goa-button-group gap="relaxed">
+        <goa-button
+          type="primary"
+          :disabled="!declared || submitting || undefined"
+          @_click="onSubmit"
+        >
+          Submit
+        </goa-button>
+      </goa-button-group>
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.review-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--goa-space-m);
+}
+</style>

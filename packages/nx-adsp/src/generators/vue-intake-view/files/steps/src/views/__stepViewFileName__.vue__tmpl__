@@ -1,0 +1,162 @@
+<script setup lang="ts">
+import { reactive, ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Stepper, StepErrorSummary, GoabInput } from '<%= goaImportPath %>';
+
+const STEPS = [
+<% stepperSteps.forEach(function (step) { -%>
+  { key: '<%- step.key %>', label: '<%- step.label %>' },
+<% }); -%>
+];
+
+const route = useRoute();
+const router = useRouter();
+
+const idParam = computed(() => String(route.params.id ?? ''));
+const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
+
+const form = reactive({
+<% stepFields.forEach(function (field) { -%>
+  <%- field.key %>: '',
+<% }); -%>
+});
+
+const errors = ref<{ message: string; anchor?: string }[]>([]);
+const completedSteps = ref<string[]>([]);
+const loading = ref(!isNew.value);
+const saving = ref(false);
+const loadError = ref<string | null>(null);
+const saveError = ref<string | null>(null);
+
+// completedSteps drives the stepper's status per step. This assumes the API
+// persists and returns a `completedSteps: string[]` field on the resource --
+// document that contract if your backend doesn't have it yet.
+const stepperSteps = computed(() =>
+  STEPS.map((step) => ({
+    key: step.key,
+    label: step.label,
+    status: completedSteps.value.includes(step.key)
+      ? ('complete' as const)
+      : step.key === '<%- stepKey %>'
+        ? ('incomplete' as const)
+        : ('not-started' as const),
+  })),
+);
+
+async function load() {
+  if (isNew.value) return;
+  loading.value = true;
+  loadError.value = null;
+  try {
+    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    const data = await res.json();
+    completedSteps.value = Array.isArray(data.completedSteps) ? data.completedSteps : [];
+<% stepFields.forEach(function (field) { -%>
+    if (data['<%- field.key %>'] !== undefined) form.<%- field.key %> = data['<%- field.key %>'];
+<% }); -%>
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Failed to load.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function validate(): boolean {
+  const found: { message: string; anchor?: string }[] = [];
+<% stepFields.forEach(function (field) { -%>
+<% if (field.required !== false) { -%>
+  if (!form.<%- field.key %> || !form.<%- field.key %>.trim()) {
+    found.push({ message: '<%- field.label %> is required.', anchor: '#field-<%- field.key %>' });
+  }
+<% } -%>
+<% }); -%>
+  errors.value = found;
+  return found.length === 0;
+}
+
+// goa-form-stepper's own docs say not to use it for non-sequential navigation
+// -- only already-complete steps and the review step are honoured here, not
+// an arbitrary future step.
+function onStepperSelect(key: string) {
+  if (key === '<%- stepKey %>') return;
+  if (completedSteps.value.includes(key) || key === 'review') {
+    router.push(`<%= route %>/${idParam.value}/${key}`);
+  }
+}
+
+async function onSaveAndContinue() {
+  if (!validate()) return;
+  saving.value = true;
+  saveError.value = null;
+  try {
+    const body = {
+      ...form,
+      completedSteps: [...new Set([...completedSteps.value, '<%- stepKey %>'])],
+    };
+    const res = await fetch(
+      isNew.value ? '/api/<%= resource %>' : `/api/<%= resource %>/${idParam.value}`,
+      {
+        method: isNew.value ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) throw new Error(`Failed to save (${res.status})`);
+    const saved = await res.json();
+    const nextId = isNew.value ? saved.id : idParam.value;
+    router.push(`<%= route %>/${nextId}/<%- nextStepKey %>`);
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : 'Failed to save.';
+  } finally {
+    saving.value = false;
+  }
+}
+
+function goBack() {
+  router.back();
+}
+</script>
+
+<template>
+  <div>
+    <Stepper :steps="stepperSteps" @select="onStepperSelect" />
+
+    <goa-spacer vspacing="l" />
+
+    <h1><%- stepLabel %></h1>
+
+    <div v-if="loading" aria-label="Loading">
+      <goa-skeleton type="text" size="3" />
+    </div>
+
+    <goa-callout v-else-if="loadError" type="emergency" heading="Unable to load">
+      <p>{{ loadError }}</p>
+    </goa-callout>
+
+    <template v-else>
+      <StepErrorSummary :errors="errors" />
+
+<% stepFields.forEach(function (field) { -%>
+      <goa-form-item id="field-<%- field.key %>" label="<%- field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %>>
+        <GoabInput v-model="form.<%- field.key %>" name="<%- field.key %>" type="text" />
+      </goa-form-item>
+<% }); -%>
+
+      <goa-callout v-if="saveError" type="emergency" heading="Save failed">
+        <p>{{ saveError }}</p>
+      </goa-callout>
+
+      <goa-spacer vspacing="l" />
+
+      <goa-button-group gap="relaxed">
+        <goa-button type="primary" :disabled="saving || undefined" @_click="onSaveAndContinue">
+          Save and continue
+        </goa-button>
+        <goa-button type="secondary" @_click="goBack">Back</goa-button>
+      </goa-button-group>
+    </template>
+  </div>
+</template>

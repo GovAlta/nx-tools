@@ -24,3 +24,5 @@ export { default as AppSideMenu } from './lib/patterns/AppSideMenu.vue';
 export { default as SessionExpiredBanner } from './lib/patterns/SessionExpiredBanner.vue';
 export { default as RecordDetailShell } from './lib/patterns/RecordDetailShell.vue';
 export { default as WorkspaceTable } from './lib/patterns/WorkspaceTable.vue';
+export { default as Stepper } from './lib/patterns/Stepper.vue';
+export { default as StepErrorSummary } from './lib/patterns/StepErrorSummary.vue';
