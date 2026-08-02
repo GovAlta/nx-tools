@@ -93,6 +93,9 @@ oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
 - **Pod `CrashLoopBackOff`** — `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>`.<% if (appType === 'node' && database && database !== 'none') { %>
   For the DB migration, also check the init container:
   `oc logs -n <%= sandboxProject %> <pod> -c <%= projectName %>-migrate`.<% } %>
+- **Stale migration state on a shared Postgres instance** — if a table or migration record predates
+  this deploy by more than a few minutes, it's leftover state from prior exploration, not a bug in
+  this deploy. Check `created_at` in `drizzle.__drizzle_migrations`; drop stale entries and redeploy.
 <% if (appType === 'frontend') { %>- **Sign-in returns `Invalid redirect_uri`** — the sandbox Route wasn't
   registered on the Keycloak public client (the generator does this when it can
   resolve the cluster ingress domain). Add `https://<%= projectName %>-<%= sandboxProject %>.<ingress-domain>/*`

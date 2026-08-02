@@ -52,18 +52,9 @@ backend track is ready to deploy doesn't wait on its frontend track, and vice ve
    target name. Can take several minutes (build, push, import, rollout) — expect it to move to the
    background rather than blocking the session.
 
-4. **A failed rollout-status wait doesn't necessarily mean the deploy failed.** A first-time
-   deploy can end up with a redundant second rollout racing the first one's database migration —
-   one pod healthy, a second stuck `Init:CrashLoopBackOff` on a migration "already exists" error.
-   `oc rollout status` then times out even though the service is actually up. Check `oc get pods
-   -n <namespace> -l name=<project>` and `curl` the route's `/health` before assuming the deploy
-   is broken. If it's this pattern: `oc scale deployment/<project> --replicas=0`, wait for pods to
-   clear, `--replicas=1` for one clean single-pod rollout.
-
-5. **A shared sandbox Postgres instance can carry stale state from unrelated prior exploration.**
-   If a table/migration record predates this deploy by more than a few minutes (check `created_at`
-   in `drizzle.__drizzle_migrations`), it's stale data, not this deploy's bug. Drop it and redeploy
-   clean.
+4. **A failed rollout-status wait doesn't always mean the deploy failed** — stale Postgres
+   migration state is a common false positive. Consult `.openshift/<project>/SANDBOX.md`'s
+   troubleshooting section for diagnosis and fix commands.
 
 ## Sandbox is the default; graduating to a real pipeline is a separate, deliberate step
 

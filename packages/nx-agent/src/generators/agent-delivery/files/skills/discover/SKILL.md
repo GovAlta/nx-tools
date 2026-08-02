@@ -1,7 +1,7 @@
 ---
 name: discover
 description: Frame a feature request into a service description and requirements with IDs seeded at birth. Two modes — intake (decompose a features:<slug> artifact) and refinement (example-map one requirement to closure) — same skill, branches on what it's given.
-allowed-tools: Read, Write, Bash, Grep, Glob
+allowed-tools: Read, Write, Bash, Grep, Glob, Task
 argument-hint: "<feature slug to decompose, or a requirement slug to refine>"
 ---
 
@@ -158,13 +158,14 @@ These check different things:
 
 ### Independent review
 
-Run every time a requirement finishes refinement, not just founding ones. Dispatch one isolated
-reviewer subagent via `Task`, giving it *only* the finished requirement file and its
-service-description ancestor — never this pass's own notes, reasoning, or the raw input. Ask it
-exactly two things:
+Run every time a requirement finishes refinement, not just founding ones. Give the reviewer only
+the finished requirement and its service-description ancestor — not this pass's notes, reasoning,
+or raw input. Ask it:
 
 1. Does the service description imply a rule this requirement doesn't cover?
-2. Is any Example technically Given/When/Then-shaped but still too vague to actually test against?
+2. Is any example Given/When/Then-shaped but testing the wrong behavior — or vague enough that "pass" and "fail" would be indistinguishable in a real test run?
+3. Does the requirement bundle two distinct behaviors that should be separate requirements?
+4. Are there security, privacy, or authorization implications not surfaced as rules or open questions?
 
 Always advisory — report its findings alongside the gate checks, plain language, before ending
 the skill.
