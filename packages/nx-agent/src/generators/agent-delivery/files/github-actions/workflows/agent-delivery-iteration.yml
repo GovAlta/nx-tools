@@ -29,6 +29,10 @@ on:
         description: Iteration number to resume at -- set only by the loop's own self-dispatch; leave blank to start fresh
         required: false
         type: string
+      artifact_scope:
+        description: Comma-separated project-docs paths from the first commit on this branch -- set only by the loop's own self-dispatch; blank on first push (derived automatically)
+        required: false
+        type: string
 
 concurrency:
   # Deliberately workspace-wide, not per-branch (no `${{ github.ref }}`): Deploy's own target
@@ -133,6 +137,23 @@ jobs:
         # the job outright.
         run: npx nx g @abgov/nx-agent:project-docs-lineage || true
 
+      - name: Resolve artifact scope
+        id: scope
+        # inputs.artifact_scope only ever has a value on the loop's own self-dispatch -- blank on
+        # a push-triggered run, where it's derived from the first commit on this branch instead.
+        # Forwarded unchanged across every self-dispatch so task-identification sees the same scope.
+        run: |
+          scope="${{ inputs.artifact_scope }}"
+          if [[ -z "$scope" ]]; then
+            first_sha=$(git log --reverse --format="%H" "origin/main..HEAD" 2>/dev/null | head -1)
+            if [[ -n "$first_sha" ]]; then
+              scope=$(git diff-tree --no-commit-id -r --name-only "$first_sha" \
+                | grep '^project-docs/' | paste -sd ',' - || true)
+            fi
+          fi
+          echo "ARTIFACT_SCOPE=${scope}" >> "$GITHUB_ENV"
+          echo "artifact_scope=${scope}" >> "$GITHUB_OUTPUT"
+
       - name: Identify next task
         id: readiness
         run: node scripts/task-identification.mjs
@@ -164,11 +185,11 @@ jobs:
           SUMMARY: ${{ steps.readiness.outputs.summary }}
         run: echo "$SUMMARY"
 
-      - name: Ensure completion PR exists
+      - name: Ensure completion PR exists (max-iterations cap reached)
         # SUMMARY comes from a flow's own generated text -- routed through env: rather than
         # interpolated directly into the script's command text, so untrusted content can't get
         # re-parsed as shell syntax (see the script's own header for how it's used).
-        if: steps.readiness.outputs.ready != 'true' || env.STOP_REASON == 'max-iterations'
+        if: env.STOP_REASON == 'max-iterations'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUMMARY: ${{ steps.readiness.outputs.summary }}
