@@ -136,14 +136,19 @@ npx nx g @abgov/nx-agent:project-docs-lineage --dry-run
 - **`unscoped`** (an artifact missing one of its kind's expected ancestors) blocks the
   Design→Develop transition — advisory while still mid-pass.
 
-### Independent review — vocabulary drift, every domain model
+### Independent review — every pass
 
-Run every time a domain model is created or revised, not just founding ones. Dispatch one isolated
-reviewer subagent via `Task`, giving it *only* the domain model and the existing domain-term files
-it should be consistent with — never this pass's own reasoning. Ask it: does the model use an
-established term inconsistently with its definition, or silently redefine one? Does it lean on a
-recurring concept in prose that should be its own domain term instead? Always advisory — act on a
-real finding by fixing the inconsistency or adding the missing term, don't just log it.
+Give the reviewer only the requirement, domain model, domain-term files, and any UX/API designs
+produced this pass — not this pass's own reasoning. Ask it:
+
+1. Does the domain model use an established term inconsistently with its definition, or lean on a recurring concept in prose that should be its own domain term instead?
+2. Does every rule in the requirement have a corresponding endpoint or screen in the UX/API design?
+3. Is the API design consistent with existing API designs in the workspace (naming, status codes, auth patterns)?
+4. Are auth and authorization requirements explicitly addressed, or silently assumed?
+5. Does the API design actually satisfy what the UX design says its screens need?
+
+Always advisory — act on a real finding by fixing the inconsistency or missing coverage, don't
+just log it.
 
 ### Commit before ending this skill
 

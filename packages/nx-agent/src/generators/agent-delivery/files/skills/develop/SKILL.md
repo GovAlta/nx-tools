@@ -1,6 +1,6 @@
 ---
 name: develop
-description: Implement an api-design/ux-design against real code, following the project's own generated recipe (its own AGENTS.md — the exact steps vary by stack), with a project-docs-ancestors code comment tying every new file back to the design it implements. Runs an inline gate battery — audit, secret scan, build, test, always blocking — plus an isolated code-review subagent, every pass, advisory.
+description: Implement an api-design/ux-design against real code, following the project's own generated recipe (its own AGENTS.md — the exact steps vary by stack), with a project-docs-ancestors code comment tying every new file back to the design it implements. Runs an inline gate battery — audit, secret scan, build, test, always blocking — plus an independent code review, every pass, advisory.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 argument-hint: "<api-design or ux-design slug to implement>"
 ---
@@ -29,10 +29,8 @@ argument-hint: "<api-design or ux-design slug to implement>"
 
 ## Bug fixing
 
-A `bugs:<slug>` is not a design gap — it's something already built not behaving as designed,
-reported from outside the workflow rather than raised internally by a stage that already has a
-target artifact to name (that's what `blocker` is for; see Discover's "Open questions and
-blockers"). Investigate and fix directly, without a new Design pass:
+A `bugs:<slug>` is an as-built behavior defect, not a design gap — investigate and fix directly,
+no Design pass needed:
 
 1. **Read the bug's own body** (observed vs. expected behavior) and, if `project-docs-ancestors`
    names one, the requirement/design it's already believed to implicate. If it names none, find
@@ -48,10 +46,8 @@ blockers"). Investigate and fix directly, without a new Design pass:
 4. **Escalate to a real `blocker` only if the spec itself is wrong** — the design never covered this
    case, or covered it incorrectly. Run `nx g @abgov/nx-agent:blocker "<what's wrong>"
    --projectDocsAncestors=<implicated artifact> --projectDocsAncestors=<this bug, for traceability>`
-   (blocker accepts more than one ancestor), then fix the artifact for real, the same as any other
-   blocker. **This does not resolve the bug** — `resolutionStatus` reads a `resolves:` field, not an
-   ancestor reference, so the bug stays `open` until step 5 actually closes it, even once the
-   blocker itself is resolved.
+   (blocker accepts more than one ancestor), then fix the artifact for real before continuing.
+   The bug stays `open` until step 5 resolves it — the blocker being resolved doesn't close the bug.
 5. **Resolve the bug once the fix (code-only or design-plus-code) is verified**: run
    `nx g @abgov/nx-agent:iteration-retrospective "<title>" --projectDocsAncestors <path> [...]
    --resolves=<this bug's path>` at Deploy, naming it the same way any other resolution is recorded
@@ -124,24 +120,14 @@ blocking status depends on whether this project has a CI backstop yet — see be
   (see Deploy's Gate — the same `e2e` target, not a separate one, once
   `global-setup.ts`/`global-teardown.ts` guard on `BASE_URL`).
 
-  **Whether a failure here blocks this pass from ending depends on whether anything else would
-  actually catch a regression.** Check whether `.openshift/<project>/<project>.yml` exists (written
-  by `@abgov/nx-oc:deployment`, distinct from `sandbox`'s own `<project>.sandbox.yml` — see Deploy's
-  "Sandbox is the default" section) — that's the per-project signal for whether this resource has
-  graduated to the real, multi-environment pipeline, whose own generated CI already runs this exact
-  e2e target as a real gate before anything merges.
-  - **Not graduated yet (sandbox-only, the default)**: blocking, no exception — there's no other
-    check that will ever run this suite, so skipping it here means skipping it entirely.
-  - **Already graduated**: advisory — still run it (a slow feedback loop beats none, and catching a
-    real break here is cheaper than catching it in CI), but a failure doesn't have to hold up ending
-    this pass on its own. Say so explicitly if committing past a failing e2e run this way, so it's a
-    stated decision, not a silently skipped check — and don't let this become the default reason to
-    stop running it locally at all; CI is a backstop for what a fast local loop missed, not a
-    replacement for checking your own work before pushing it.
-  - Either way, a large/slow e2e suite doesn't need a full untargeted run for every small edit
-    within a pass: start `nx serve`/equivalent once in the background, run the spec directly against
-    it (or scoped to just the rule(s) this edit touches, e.g. Playwright's own `--grep`) for fast
-    in-pass iteration, and reserve one full, untargeted run as the actual check this Gate refers to.
+  **Blocking status depends on graduation.** `.openshift/<project>/<project>.yml` (written by
+  `@abgov/nx-oc:deployment`) signals the project is in the real pipeline, whose CI already runs
+  this as a hard gate before merging.
+  - **Not graduated (sandbox-only, the default)**: blocking — nothing else will ever run this suite.
+  - **Graduated**: advisory — still run it, but a failure doesn't have to hold up ending the pass;
+    say so explicitly when committing past one.
+  - Either way: scope early in-pass runs to just the rule(s) touched (Playwright `--grep`, jest
+    `--testNamePattern`); reserve a full untargeted run for this Gate.
 - **Unit-test coverage** is a real, additional guard — check the project's own `jest.config.cts`
   for `coverageThreshold`; if `collectCoverage` is on but no `coverageReporters` prints a summary
   by default, make it visible, not just enforced.
@@ -154,7 +140,7 @@ blocking status depends on whether this project has a CI backstop yet — see be
 
 ### Independent code review — every pass
 
-Dispatch one isolated reviewer subagent via `Task`, giving it *only* the api-design/ux-design, the
+Give the reviewer only the api-design/ux-design, the
 domain terms it should be consistent with, and the new/changed code — never this pass's own
 reasoning. Ask it: does the code use a term inconsistently with the domain vocabulary (naming
 included — a generic implementation-layer word standing in for a domain noun is drift too)? Is
