@@ -224,17 +224,49 @@ for (const path of mdFilesIn('project-docs/requirements')) {
   }
 }
 
-// --- Branch-nature filtering -----------------------------------------------------------------
+// --- Branch-nature + artifact-scope filtering ------------------------------------------------
 
 // fix/** branches are scoped to resolving something already flagged wrong (a broken reference or
-// open blocker/question), never to starting new work. feature/** branches, and anything run
-// outside that naming convention, get the unfiltered signal set.
+// open blocker/question), never to starting new work.
+//
+// ARTIFACT_SCOPE narrows eligible signals further: the workflow's "Resolve artifact scope" step
+// derives a comma-separated list of project-docs/ paths from the first commit on the branch and
+// forwards it unchanged across every self-dispatched iteration. When set, only signals whose
+// artifact is the same as, or a descendant of, those initial artifacts are eligible -- preventing
+// the loop from drifting to unrelated work across iterations.
 const branchName = process.env.GITHUB_REF_NAME ?? '';
 const isFixBranch = branchName.startsWith('fix/');
 const RESOLUTION_PREFIXES = ['broken:', 'open:'];
+
+const scopedPaths = (process.env.ARTIFACT_SCOPE ?? '').split(',').filter(Boolean);
+const scopedKeys = new Set(
+  scopedPaths
+    .map((p) => Object.keys(registry).find((k) => registry[k].path === p))
+    .filter(Boolean),
+);
+
+function isInArtifactScope(signalKey) {
+  if (scopedKeys.size === 0) return true; // no scope → unfiltered
+  // Signal keys look like 'open:features:x', 'unrefined:requirements:x', etc. -- the artifact
+  // registry key is everything after the first colon-prefix segment.
+  const artifactKey = signalKey.includes(':') ? signalKey.replace(/^[^:]+:/, '') : signalKey;
+  function ancestorInScope(key, visited = new Set()) {
+    if (visited.has(key)) return false;
+    visited.add(key);
+    if (scopedKeys.has(key)) return true;
+    for (const anc of registry[key]?.ancestorRefs ?? []) {
+      if (ancestorInScope(anc, visited)) return true;
+    }
+    return false;
+  }
+  return ancestorInScope(artifactKey);
+}
+
 const eligibleSignals = isFixBranch
-  ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
-  : signals;
+  ? signals.filter(
+      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s.key),
+    )
+  : signals.filter((s) => isInArtifactScope(s.key));
 const excludedCount = signals.length - eligibleSignals.length;
 
 // --- Non-progress detection -------------------------------------------------------------------
@@ -285,11 +317,18 @@ fresh, and follow each one's own selection logic (Discover's "which mode," Desig
 siblings," Develop's "which artifact") to decide what to actually do. If that logic points at
 something other than this hint, follow the skill, not the hint.`;
 
+  const scopeNote =
+    scopedPaths.length > 0
+      ? `\nThis run is scoped to the artifact(s) introduced in the first commit on this branch:\n` +
+        scopedPaths.map((p) => `  - ${p}`).join('\n') +
+        `\nDon't pick up unrelated signals even if they appear ready -- file them separately.\n`
+      : '';
+
   const branchScopeNote = isFixBranch
     ? `\nThis is a fix/** branch: stay scoped to resolving the signal below. Don't pick up an
 unrelated requirement or start new Discover/Design work even if you notice it along the way --
-file it as its own blocker/open-question instead, for a feature/** branch to pick up later.\n`
-    : '';
+file it as its own blocker/open-question instead, for a feature/** branch to pick up later.${scopeNote}`
+    : scopeNote;
 
   return `You are GitHub Copilot CLI, working in this Nx workspace as one continuous session for one ddd (Discover/Design/Develop/Deploy) iteration.
 ${branchScopeNote}
@@ -354,7 +393,7 @@ function emit({ ready, signals, stalled: stalledFlag, promptOverride, excludedCo
     : top
       ? `${signals.length} signal(s) found; top: ${top.reason}`
       : excludedCount > 0
-        ? `Nothing left to resolve on this branch (${excludedCount} other signal(s) exist but would start new work — not eligible on a fix/** branch).`
+        ? `Nothing eligible on this branch (${excludedCount} other signal(s) exist but are out of scope — filtered by branch type or artifact scope).`
         : 'No plausible next ddd action found — every requirement is refined, designed, implemented, and deployed, with no unresolved open-question/blocker.';
 
   console.log(JSON.stringify({ ready, stalled: !!stalledFlag, signals, summary }, null, 2));

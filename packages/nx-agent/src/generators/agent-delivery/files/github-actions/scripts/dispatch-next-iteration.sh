@@ -7,4 +7,5 @@ set -euo pipefail
 NEXT_ITERATION="$(( "${ITERATION:?}" + 1 ))"
 echo "[agent-delivery-iteration] dispatching iteration $NEXT_ITERATION on ${GITHUB_REF_NAME:?}"
 gh workflow run "${WORKFLOW_FILE:-agent-delivery-iteration.yml}" --repo "${GITHUB_REPOSITORY:?}" --ref "${GITHUB_REF_NAME:?}" \
-  -f iteration="$NEXT_ITERATION"
+  -f iteration="$NEXT_ITERATION" \
+  -f artifact_scope="${ARTIFACT_SCOPE:-}"
