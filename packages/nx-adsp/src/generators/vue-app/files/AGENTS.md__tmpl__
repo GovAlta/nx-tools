@@ -273,15 +273,59 @@ mark what's meant to be edited.
 
 ## Backend API calls (proxy setup)
 
-Use relative `/api/` paths — they route through Vite's dev proxy and nginx in production:
+Use relative `/api/` paths — they route through Vite's dev proxy and nginx in production.
+
+**Use `useApi()` for all API calls.** `apiFetch` automatically refreshes the token and adds
+`Authorization: Bearer` when the user is authenticated — you never need to do it at each
+call site.
 
 ```typescript
-// ✓ correct
-const res = await fetch('/api/v1/my-resource');
+import { useApi } from '../composables/useApi'
 
-// ✗ wrong — bypasses proxy, won't work in production
-const res = await fetch('http://localhost:3333/my-service/v1/my-resource');
+const { apiFetch } = useApi()
+
+// ✓ Any route — adds the token when authenticated, skips it when not
+const res = await apiFetch('/api/v1/my-resource')
+
+// ✓ With a request body
+const res = await apiFetch('/api/v1/my-resource', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+})
+
+// ✗ Wrong path — bypasses proxy, won't work in production
+const res = await fetch('http://localhost:3333/<%= pairedProject || 'my-service' %>/v1/my-resource')
 ```
+
+**Most routes require authentication.** The service mounts `/v1` with the anonymous passport
+strategy, so a bare request without a token reaches the router — but business routes also
+gate on `tenant` auth and will 401. `apiFetch` handles this automatically when signed in.
+
+**React to auth state for calls that require the user to be signed in.** Keycloak settles
+asynchronously; watch `kc.authenticated` rather than reading it once on mount:
+
+```typescript
+import { watch } from 'vue'
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js'
+import { useApi } from '../composables/useApi'
+
+const kc = useKeycloak()
+const { apiFetch } = useApi()
+
+watch(
+  () => kc.authenticated,
+  async (authenticated) => {
+    if (!authenticated) return
+    const res = await apiFetch('/api/v1/my-resource')
+    // ...
+  },
+  { immediate: true },
+)
+```
+
+`apiFetch` adds the token only when `kc.authenticated` is true — the watch ensures
+you call it only after auth has settled, not speculatively on mount.
 
 ## Testing
 
