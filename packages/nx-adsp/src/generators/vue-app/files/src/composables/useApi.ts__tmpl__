@@ -1,0 +1,21 @@
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js'
+
+export function useApi() {
+  // Keep the reactive instance — do NOT destructure: `authenticated` and `keycloak`
+  // are plain values inside a reactive object and only populate asynchronously once
+  // Keycloak settles. Reading `kc.authenticated` at call time (inside apiFetch)
+  // always gets the current value; a destructured snapshot would freeze at setup time.
+  const kc = useKeycloak()
+
+  async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    if (kc.authenticated) {
+      await kc.keycloak?.updateToken(30)
+      const headers = new Headers(init.headers)
+      headers.set('Authorization', `Bearer ${kc.keycloak?.token}`)
+      return fetch(url, { ...init, headers })
+    }
+    return fetch(url, init)
+  }
+
+  return { apiFetch }
+}

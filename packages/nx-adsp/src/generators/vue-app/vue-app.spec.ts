@@ -297,6 +297,23 @@ describe('Vue App Generator', () => {
     expect(app).toContain('kc.keycloak?.login()');
   }, 30000);
 
+  it('generates a useApi composable that handles token refresh and auth headers', async () => {
+    await generator(host, options);
+    expect(host.exists('apps/test/src/composables/useApi.ts')).toBeTruthy();
+    const useApi = host.read('apps/test/src/composables/useApi.ts').toString();
+    // Token refresh and auth header injection are encapsulated here, not at each call site.
+    expect(useApi).toContain('updateToken');
+    expect(useApi).toContain('Authorization');
+    expect(useApi).toContain('apiFetch');
+
+    // HomeView delegates to the composable — raw token wiring must not leak into views.
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).toContain('useApi');
+    expect(homeView).toContain('apiFetch');
+    expect(homeView).not.toContain('updateToken');
+    expect(homeView).not.toContain('Authorization');
+  }, 30000);
+
   it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {
     await generator(host, options);
     // Vite's entry is <projectRoot>/index.html, not src/index.html — a template
