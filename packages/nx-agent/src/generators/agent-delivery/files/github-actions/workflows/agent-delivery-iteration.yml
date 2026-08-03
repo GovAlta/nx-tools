@@ -30,7 +30,11 @@ on:
         required: false
         type: string
       artifact_scope:
-        description: Comma-separated project-docs paths from the first commit on this branch -- set only by the loop's own self-dispatch; blank on first push (derived automatically)
+        description: >-
+          Comma-separated project-docs paths scoping this run to a specific set of artifacts.
+          Set to '*' to run across all available work with no artifact filtering (open scope).
+          Leave blank to auto-derive scope from the first commit on this branch (push-triggered
+          or manual); forwarded unchanged by the loop's own self-dispatch on subsequent iterations.
         required: false
         type: string
 
@@ -139,11 +143,16 @@ jobs:
 
       - name: Resolve artifact scope
         id: scope
-        # inputs.artifact_scope only ever has a value on the loop's own self-dispatch -- blank on
-        # a push-triggered run, where it's derived from the first commit on this branch instead.
-        # Forwarded unchanged across every self-dispatch so task-identification sees the same scope.
+        # Three cases:
+        #   '*'       -- explicit open scope; no derivation, task-identification runs unfiltered.
+        #   non-empty -- forwarded unchanged from a prior self-dispatch; no re-derivation.
+        #   blank     -- first push or manual trigger with no scope; derived from the first commit.
+        # inputs.artifact_scope is moved to an env var before the script runs to avoid shell
+        # injection — a direct ${{ }} expression in a run: body is a command-injection vector.
+        env:
+          ARTIFACT_SCOPE_INPUT: ${{ inputs.artifact_scope }}
         run: |
-          scope="${{ inputs.artifact_scope }}"
+          scope="$ARTIFACT_SCOPE_INPUT"
           if [[ -z "$scope" ]]; then
             first_sha=$(git log --reverse --format="%H" "origin/main..HEAD" 2>/dev/null | head -1)
             if [[ -n "$first_sha" ]]; then
