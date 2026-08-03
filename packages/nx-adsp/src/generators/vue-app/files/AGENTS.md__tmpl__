@@ -176,7 +176,7 @@ from **`<%= goaImportPath %>`**, not hand-rolled markup:
 
 | Component | Purpose |
 |---|---|
-| `AppSideMenu` | `goa-work-side-menu`. Takes `heading`/`primaryItems`/`secondaryItems`/`accountItems` props (each item: `{ label, to?, icon?, badge?, current? }`) and emits `itemClick` — it doesn't know about routing or auth, so `App.vue` computes `current`/handles the click itself. `App.vue` currently only populates `accountItems` (a single Sign in/out item); add real nav items to `primaryItems`/`secondaryItems` as routes are added. Also owns the skip-to-main-content landmark for this layout — `AppLayout` deliberately doesn't duplicate it. Also takes an optional `#topbar` slot — a slim row above the routed content, for something like a notification bell; only renders when given content, unused by default |
+| `AppSideMenu` | `goa-work-side-menu`. Takes `heading`/`primaryItems`/`secondaryItems`/`accountItems` props (each item: `{ label, to?, icon?, badge?, current? }`) and emits `itemClick` — it doesn't know about routing or auth, so `App.vue` computes `current`/handles the click itself. `App.vue` currently only populates `accountItems` (a single Sign in/out item); add real nav items to `primaryItems`/`secondaryItems` as routes are added. **`icon` is effectively required** — `goa-work-side-menu-item` renders a blank item without it; use a GoA icon name (see [design.alberta.ca/components/icons](https://design.alberta.ca/components/icons)). Also owns the skip-to-main-content landmark for this layout — `AppLayout` deliberately doesn't duplicate it. Also takes an optional `#topbar` slot — a slim row above the routed content, for something like a notification bell; only renders when given content, unused by default |
 | `AppLayout` | The content gutter every view renders inside (see the key files table) |
 | `SessionExpiredBanner` | A `v-model:show` banner with `signIn`/`dismiss` emits. Bound to the `useSessionStore()` Pinia store (`src/stores/session.ts`), which `main.ts`'s `onAuthRefreshError` hook flips when the refresh token itself has expired |
 
@@ -248,9 +248,10 @@ mark what's meant to be edited.
    const route = useRoute();    // already in the generated App.vue
    const router = useRouter();
 
+   // Icon names come from the GoA icon set: design.alberta.ca/components/icons
    const primaryItems = computed(() => [
-     { label: 'Home',       to: '/',           current: route.path === '/' },
-     { label: 'My Feature', to: '/my-feature', current: route.path.startsWith('/my-feature') },
+     { label: 'Home',       to: '/',           icon: 'home',  current: route.path === '/' },
+     { label: 'My Feature', to: '/my-feature', icon: 'list',  current: route.path.startsWith('/my-feature') },
    ]);
 
    function onItemClick(item: { to?: string }) {
@@ -280,7 +281,7 @@ Use relative `/api/` paths — they route through Vite's dev proxy and nginx in 
 call site.
 
 ```typescript
-import { useApi } from '../composables/useApi'
+import { useApi } from '../composables/useApi' // adjust depth for nested components (../../…)
 
 const { apiFetch } = useApi()
 
@@ -317,8 +318,13 @@ watch(
   () => kc.authenticated,
   async (authenticated) => {
     if (!authenticated) return
-    const res = await apiFetch('/api/v1/my-resource')
-    // ...
+    try {
+      const res = await apiFetch('/api/v1/my-resource')
+      // ...
+    } catch {
+      // apiFetch rejects on network error or if the refresh token expired;
+      // the SessionExpiredBanner handles the latter via onAuthRefreshError.
+    }
   },
   { immediate: true },
 )
