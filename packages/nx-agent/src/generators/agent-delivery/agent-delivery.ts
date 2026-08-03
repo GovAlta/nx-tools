@@ -81,8 +81,11 @@ function addGithubActionsFiles(host: Tree): void {
   );
 }
 
-function readGuidance(): string {
-  return readFileSync(join(FILES_DIR, 'AGENTS.guidance.md'), 'utf-8').trim();
+function readGuidance(githubActions: boolean): string {
+  const skills = readFileSync(join(FILES_DIR, 'AGENTS.guidance.md'), 'utf-8').trim();
+  if (!githubActions) return skills;
+  const harness = readFileSync(join(FILES_DIR, 'AGENTS.ci-harness.md'), 'utf-8').trim();
+  return `${skills}\n\n${harness}`;
 }
 
 export default async function (host: Tree, options: Schema) {
@@ -97,7 +100,7 @@ export default async function (host: Tree, options: Schema) {
     addGithubActionsFiles(host);
   }
 
-  mergeManagedSection(host, AGENTS_MD_SECTION_ID, readGuidance());
+  mergeManagedSection(host, AGENTS_MD_SECTION_ID, readGuidance(options.githubActions ?? false));
 
   // Last, and independent of everything above: file scaffolding always succeeds regardless of
   // what live oc/gh/ADSP calls this finds. No-ops entirely unless both --githubActions and
