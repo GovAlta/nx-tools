@@ -1,0 +1,28 @@
+<script setup lang="ts">
+// Presentational only — flipping `show` is the consuming app's job, not this
+// component's. vue-app wires it to its session store's `expired` flag, itself
+// set from main.ts's Keycloak plugin `onAuthRefreshError` hook — NOT
+// `onAuthLogout`, which keycloak-js only fires via the session-status iframe
+// (typically disabled, e.g. via checkLoginIframe: false) or Cordova mode, so
+// it would never fire in a normal web deployment. onAuthRefreshError fires
+// from the wrapper's own background auto-refresh failing because the refresh
+// token itself expired — the real, always-on signal.
+import GoabButton from '../primitives/GoabButton.vue';
+
+const show = defineModel<boolean>('show', { default: false });
+const emit = defineEmits<{ signIn: []; dismiss: [] }>();
+</script>
+
+<template>
+  <div v-if="show" class="session-expired-banner">
+    <goa-callout type="emergency" heading="Session expired">
+      <p>Your session has expired. Sign in again to continue.</p>
+      <goa-spacer vspacing="s" />
+      <goa-button-group gap="relaxed">
+        <GoabButton type="primary" @click="emit('signIn')">Sign in</GoabButton>
+        <GoabButton type="tertiary" @click="emit('dismiss')">Dismiss</GoabButton>
+      </goa-button-group>
+    </goa-callout>
+    <goa-spacer vspacing="m" />
+  </div>
+</template>

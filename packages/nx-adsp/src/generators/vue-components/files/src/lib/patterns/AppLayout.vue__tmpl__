@@ -8,17 +8,21 @@
 //   meta: { layout: 'form' }   // single-column forms      → 640px
 //   (default)                  // general content          → 1000px
 //   meta: { layout: 'wide' }   // data-heavy pages / tables → 1200px
+//
+// Deliberately not a landmark/skip-target itself: this component nests inside
+// AppSideMenu for --layout=internal, which already provides one, and a second
+// copy would duplicate the anchor screen readers/keyboard nav jump to. The
+// top-level shell (App.vue for --layout=header, AppSideMenu for --layout=internal)
+// owns that landmark instead.
 withDefaults(defineProps<{ variant?: 'page' | 'wide' | 'form' }>(), {
   variant: 'page',
 });
 </script>
 
 <template>
-  <main id="main-content">
-    <div :class="`${variant}-content`">
-      <slot />
-    </div>
-  </main>
+  <div :class="`${variant}-content`">
+    <slot />
+  </div>
 </template>
 
 <style scoped>

@@ -224,18 +224,89 @@ for (const path of mdFilesIn('project-docs/requirements')) {
   }
 }
 
-// --- Branch-nature filtering -----------------------------------------------------------------
+// --- Branch-nature + artifact-scope filtering ------------------------------------------------
 
 // fix/** branches are scoped to resolving something already flagged wrong (a broken reference or
-// open blocker/question), never to starting new work. feature/** branches, and anything run
-// outside that naming convention, get the unfiltered signal set.
+// open blocker/question), never to starting new work.
+//
+// ARTIFACT_SCOPE narrows eligible signals further: set to '*' to run across all available work
+// (open scope), or to a comma-separated list of project-docs/ paths derived from the first commit
+// on the branch (forwarded unchanged across every self-dispatched iteration). When set to a path
+// list, only signals whose artifact is the same as, or a descendant of, those initial artifacts
+// are eligible -- preventing the loop from drifting to unrelated work across iterations.
 const branchName = process.env.GITHUB_REF_NAME ?? '';
 const isFixBranch = branchName.startsWith('fix/');
 const RESOLUTION_PREFIXES = ['broken:', 'open:'];
+
+// '*' is an explicit opt-in to open scope — no artifact filtering at all, not the same as
+// "first commit touched no project-docs files." When set, scopedKeys stays empty (so
+// isInArtifactScope returns true for everything), but the composePrompt note is explicit.
+const rawScope = process.env.ARTIFACT_SCOPE ?? '';
+const openScope = rawScope === '*';
+const scopedPaths = openScope ? [] : rawScope.split(',').filter(Boolean);
+const scopedKeys = new Set(
+  scopedPaths
+    .map((p) => Object.keys(registry).find((k) => registry[k].path === p))
+    .filter(Boolean),
+);
+
+// Warn if paths were specified but none resolved — this means the scope is silently inoperative.
+// Common cause: a file was renamed since the first commit ran, or a path is not yet in the registry.
+if (scopedPaths.length > 0 && scopedKeys.size === 0) {
+  console.warn(
+    `[task-identification] WARNING: ARTIFACT_SCOPE is set [${scopedPaths.join(', ')}] but none of ` +
+    `these paths resolved to a registry key — running unfiltered. ` +
+    `Check whether the scoped files were renamed or are not yet registered in project-docs/.`,
+  );
+}
+
+function isInArtifactScope(signalKey) {
+  if (scopedKeys.size === 0) return true; // open scope (*), no scope derived, or unresolvable paths → unfiltered
+  // Signal keys look like 'open:features:x', 'unrefined:requirements:x', etc. -- the artifact
+  // registry key is everything after the first colon-prefix segment.
+  const artifactKey = signalKey.includes(':') ? signalKey.replace(/^[^:]+:/, '') : signalKey;
+  function ancestorInScope(key, visited = new Set()) {
+    if (visited.has(key)) return false;
+    visited.add(key);
+    if (scopedKeys.has(key)) return true;
+    for (const anc of registry[key]?.ancestorRefs ?? []) {
+      if (ancestorInScope(anc, visited)) return true;
+    }
+    return false;
+  }
+  return ancestorInScope(artifactKey);
+}
+
 const eligibleSignals = isFixBranch
-  ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
-  : signals;
+  ? signals.filter(
+      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s.key),
+    )
+  : signals.filter((s) => isInArtifactScope(s.key));
 const excludedCount = signals.length - eligibleSignals.length;
+
+// Diagnostic breakdown — computed only when filtering produced nothing, so the log doesn't
+// just say "nothing to do" when the real answer is "scope and branch type disagree."
+let noEligibleNote = null;
+if (eligibleSignals.length === 0 && signals.length > 0) {
+  const inScope = scopedKeys.size > 0 ? signals.filter((s) => isInArtifactScope(s.key)) : signals;
+  const inBranchType = isFixBranch
+    ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
+    : signals;
+  if (isFixBranch && scopedKeys.size > 0) {
+    // Both filters active — name the intersection explicitly.
+    const inBoth = inScope.filter((s) => inBranchType.includes(s));
+    noEligibleNote =
+      `fix/** branch (broken:/open: only) AND artifact scope [${scopedPaths.join(', ')}]: ` +
+      `${inScope.length} signal(s) in scope, ${inBranchType.length} resolution-type total, ` +
+      `${inBoth.length} satisfy both — no eligible signals on this branch.`;
+  } else if (scopedKeys.size > 0) {
+    noEligibleNote =
+      `artifact scope [${scopedPaths.join(', ')}] matches ${inScope.length} of ${signals.length} signal(s) — nothing in scope yet.`;
+  } else if (isFixBranch) {
+    noEligibleNote =
+      `fix/** branch restricts to broken:/open: signals only — ${inBranchType.length} such signal(s) currently exist.`;
+  }
+}
 
 // --- Non-progress detection -------------------------------------------------------------------
 
@@ -285,11 +356,19 @@ fresh, and follow each one's own selection logic (Discover's "which mode," Desig
 siblings," Develop's "which artifact") to decide what to actually do. If that logic points at
 something other than this hint, follow the skill, not the hint.`;
 
+  const scopeNote = openScope
+    ? `\nThis run is in open scope (explicitly requested) — all available artifacts are eligible, not just those from the first commit.\n`
+    : scopedPaths.length > 0
+      ? `\nThis run is scoped to the artifact(s) introduced in the first commit on this branch:\n` +
+        scopedPaths.map((p) => `  - ${p}`).join('\n') +
+        `\nDon't pick up unrelated signals even if they appear ready -- file them separately.\n`
+      : '';
+
   const branchScopeNote = isFixBranch
     ? `\nThis is a fix/** branch: stay scoped to resolving the signal below. Don't pick up an
 unrelated requirement or start new Discover/Design work even if you notice it along the way --
-file it as its own blocker/open-question instead, for a feature/** branch to pick up later.\n`
-    : '';
+file it as its own blocker/open-question instead, for a feature/** branch to pick up later.${scopeNote}`
+    : scopeNote;
 
   return `You are GitHub Copilot CLI, working in this Nx workspace as one continuous session for one ddd (Discover/Design/Develop/Deploy) iteration.
 ${branchScopeNote}
@@ -347,15 +426,17 @@ Discover/Design/Develop/Deploy session would hit, not particular to this CI envi
 Stop once you've done the above. Do not push — the workflow pushes once, after this session ends.`;
 }
 
-function emit({ ready, signals, stalled: stalledFlag, promptOverride, excludedCount = 0 }) {
+function emit({ ready, signals, stalled: stalledFlag, promptOverride, excludedCount = 0, noEligibleNote = null }) {
   const top = signals[0];
   const summary = stalledFlag
     ? `Stalled: "${top?.key}" has repeated ${STALL_THRESHOLD}+ times with no lineage-graph movement — stopping rather than looping uninformatively.`
     : top
       ? `${signals.length} signal(s) found; top: ${top.reason}`
-      : excludedCount > 0
-        ? `Nothing left to resolve on this branch (${excludedCount} other signal(s) exist but would start new work — not eligible on a fix/** branch).`
-        : 'No plausible next ddd action found — every requirement is refined, designed, implemented, and deployed, with no unresolved open-question/blocker.';
+      : noEligibleNote
+        ? `Nothing eligible on this branch — ${noEligibleNote}`
+        : excludedCount > 0
+          ? `Nothing eligible on this branch (${excludedCount} other signal(s) exist but are out of scope — filtered by branch type or artifact scope).`
+          : 'No plausible next ddd action found — every requirement is refined, designed, implemented, and deployed, with no unresolved open-question/blocker.';
 
   console.log(JSON.stringify({ ready, stalled: !!stalledFlag, signals, summary }, null, 2));
 
@@ -379,4 +460,4 @@ function emit({ ready, signals, stalled: stalledFlag, promptOverride, excludedCo
   );
 }
 
-emit({ ready, signals: eligibleSignals, stalled, excludedCount });
+emit({ ready, signals: eligibleSignals, stalled, excludedCount, noEligibleNote });

@@ -116,28 +116,36 @@ describe('Vue App Generator', () => {
   it('wraps views in a shared AppLayout gutter (not a bare tag selector)', async () => {
     await generator(host, options);
 
-    // Shared layout component provides the content gutter for every view.
-    expect(host.exists('apps/test/src/components/AppLayout.vue')).toBeTruthy();
-    const layout = host
-      .read('apps/test/src/components/AppLayout.vue')
-      .toString();
+    // Layout is a pattern component in the shared lib, not copied into the app.
+    const layoutPath = 'libs/vue-components/src/lib/patterns/AppLayout.vue';
+    expect(host.exists(layoutPath)).toBeTruthy();
+    const layout = host.read(layoutPath).toString();
     // Three named width variants, token-driven padding.
     expect(layout).toContain('form-content');
     expect(layout).toContain('wide-content');
     expect(layout).toContain('--goa-space');
+    // AppLayout must NOT own the skip-to-main-content landmark itself: it nests
+    // inside AppSideMenu for --layout=internal, which already provides one, and
+    // a second <main id="main-content"> would duplicate the landmark/id.
+    expect(layout).not.toContain('id="main-content"');
+    expect(layout).not.toContain('skip-link');
 
     // App.vue uses AppLayout and no longer relies on the `main > section` gutter
     // (which silently failed when a view's top-level tag wasn't <section>).
+    // For --layout=header (the default), App.vue itself owns the skip-link
+    // landmark instead, since there's no shell component to hold it.
     const app = host.read('apps/test/src/App.vue').toString();
     expect(app).toContain('AppLayout');
     expect(app).not.toContain('main > section');
+    expect(app).toContain('href="#main-content"');
+    expect(app).toContain('id="main-content"');
   });
 
   it('provisions the shared GoA wrapper library and points the app at it', async () => {
     await generator(host, options);
 
     // Wrappers live in a shared workspace lib, not copied into the app.
-    const base = 'libs/vue-components/src/lib';
+    const primitives = 'libs/vue-components/src/lib/primitives';
     for (const name of [
       'GoabInput',
       'GoabTextarea',
@@ -147,12 +155,12 @@ describe('Vue App Generator', () => {
       'GoabButton',
       'GoabModal',
     ]) {
-      expect(host.exists(`${base}/${name}.vue`)).toBeTruthy();
+      expect(host.exists(`${primitives}/${name}.vue`)).toBeTruthy();
     }
     expect(host.exists('apps/test/src/components/goa')).toBeFalsy();
 
     // Real v-model wiring: bind :value and read the new value off the GoA event.
-    const input = host.read(`${base}/GoabInput.vue`).toString();
+    const input = host.read(`${primitives}/GoabInput.vue`).toString();
     expect(input).toContain('defineModel');
     expect(input).toContain('.detail.value');
 
@@ -161,6 +169,90 @@ describe('Vue App Generator', () => {
     expect(vite).toContain('nxViteTsPaths');
     const agents = host.read('apps/test/AGENTS.md').toString();
     expect(agents).toContain('/vue-components');
+  }, 30000);
+
+  it('provisions the shared app-shell pattern components and App.vue imports them', async () => {
+    await generator(host, options);
+
+    const patterns = 'libs/vue-components/src/lib/patterns';
+    for (const name of [
+      'AppLayout',
+      'AppHeader',
+      'AppFooter',
+      'AppSideMenu',
+      'SessionExpiredBanner',
+    ]) {
+      expect(host.exists(`${patterns}/${name}.vue`)).toBeTruthy();
+    }
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain(
+      "import { AppHeader, AppLayout, AppFooter, SessionExpiredBanner } from '@proj/vue-components';",
+    );
+    expect(app).toContain('<AppHeader heading="test">');
+    expect(app).toContain('<AppFooter />');
+  }, 30000);
+
+  it('--layout=internal generates an AppSideMenu shell instead of AppHeader/AppFooter', async () => {
+    await generator(host, { ...options, layout: 'internal' });
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain(
+      "import { AppLayout, AppSideMenu, SessionExpiredBanner } from '@proj/vue-components';",
+    );
+    expect(app).not.toContain('AppHeader');
+    expect(app).not.toContain('AppFooter');
+    expect(app).not.toContain('goa-hero-banner');
+    expect(app).toContain('<AppSideMenu');
+    expect(app).toContain('heading="test"');
+    expect(app).toContain(':account-items="accountItems"');
+    expect(app).toContain('@item-click="onAccountItemClick"');
+    // The content gutter is shared regardless of shell choice.
+    expect(app).toContain('<AppLayout');
+    // App.vue itself must not add a second skip-to-main-content landmark —
+    // AppSideMenu (imported, not inlined) already owns the one and only
+    // #main-content for this layout.
+    expect(app).not.toContain('id="main-content"');
+    expect(app).not.toContain('skip-link');
+
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('--layout=internal');
+    expect(agents).toContain('AppSideMenu');
+  }, 30000);
+
+  it('defaults --layout to header when omitted', async () => {
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('AppHeader');
+    expect(app).not.toContain('AppSideMenu');
+  }, 30000);
+
+  it('wires SessionExpiredBanner to a session store fed by onAuthRefreshError (not onAuthLogout)', async () => {
+    await generator(host, options);
+
+    expect(host.exists('apps/test/src/stores/session.ts')).toBeTruthy();
+    const store = host.read('apps/test/src/stores/session.ts').toString();
+    expect(store).toContain("defineStore('session'");
+    expect(store).toContain('markExpired');
+
+    // Strip // comments — main.ts legitimately explains, in prose, why
+    // onAuthLogout is the wrong hook; assert against the actual init code.
+    const mainTsCode = host
+      .read('apps/test/src/main.ts')
+      .toString()
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    expect(mainTsCode).toContain('onAuthRefreshError');
+    // Regression guard: onAuthLogout only fires via the session-status iframe
+    // (disabled here) or Cordova mode — it would never fire in this app.
+    expect(mainTsCode).not.toContain('onAuthLogout');
+    expect(mainTsCode).toContain('useSessionStore(pinia).markExpired()');
+
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('v-model:show="session.expired"');
+    expect(app).toContain('@sign-in="signInAgain"');
+    expect(app).toContain('@dismiss="session.dismiss"');
   }, 30000);
 
   it('inits Keycloak with no hidden iframes so init never hangs', async () => {
@@ -205,6 +297,23 @@ describe('Vue App Generator', () => {
     expect(app).toContain('kc.keycloak?.login()');
   }, 30000);
 
+  it('generates a useApi composable that handles token refresh and auth headers', async () => {
+    await generator(host, options);
+    expect(host.exists('apps/test/src/composables/useApi.ts')).toBeTruthy();
+    const useApi = host.read('apps/test/src/composables/useApi.ts').toString();
+    // Token refresh and auth header injection are encapsulated here, not at each call site.
+    expect(useApi).toContain('updateToken');
+    expect(useApi).toContain('Authorization');
+    expect(useApi).toContain('apiFetch');
+
+    // HomeView delegates to the composable — raw token wiring must not leak into views.
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).toContain('useApi');
+    expect(homeView).toContain('apiFetch');
+    expect(homeView).not.toContain('updateToken');
+    expect(homeView).not.toContain('Authorization');
+  }, 30000);
+
   it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {
     await generator(host, options);
     // Vite's entry is <projectRoot>/index.html, not src/index.html — a template
@@ -221,15 +330,33 @@ describe('Vue App Generator', () => {
 
   it('static assets live in public/ so Vite serves them at the referenced URLs', async () => {
     await generator(host, options);
-    // App.vue's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
+    // HomeView's <goa-hero-banner backgroundurl="/assets/banner.jpg"> and
     // index.html's favicon.ico are absolute-URL string refs, so they must be in
     // the Vite publicDir (public/) — a src/assets file is not served at /assets.
-    const appVue = host.read('apps/test/src/App.vue').toString();
-    const bannerUrl = appVue.match(/backgroundurl="([^"]+)"/)?.[1];
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    const bannerUrl = homeView.match(/backgroundurl="([^"]+)"/)?.[1];
     expect(bannerUrl).toBe('/assets/banner.jpg');
     expect(host.exists('apps/test/public/assets/banner.jpg')).toBeTruthy();
     expect(host.exists('apps/test/src/assets/banner.jpg')).toBeFalsy();
     expect(host.exists('apps/test/public/favicon.ico')).toBeTruthy();
+  }, 30000);
+
+  it('the hero banner is home-page content, not part of the persistent app shell', async () => {
+    // Real GovAlta-Pronghorn source (both the canonical template and an
+    // independently-evolved production app) puts goa-hero-banner only inside
+    // HomeView -- never in App.vue/AppLayout -- so it shows once on the
+    // landing page, not repeated on every interior route.
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).not.toContain('goa-hero-banner');
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).toContain('goa-hero-banner');
+  }, 30000);
+
+  it('--layout=internal has no hero banner anywhere, including on HomeView', async () => {
+    await generator(host, { ...options, layout: 'internal' });
+    const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
+    expect(homeView).not.toContain('goa-hero-banner');
   }, 30000);
 
   it('vite.config.ts marks goa-* elements as custom elements', async () => {
@@ -255,11 +382,18 @@ describe('Vue App Generator', () => {
     // goa-app-header (v2) only renders content placed in a named slot — GoA's
     // own design system docs put account/sign-in actions in "utilities" (vs.
     // "navigation" for nav links). A bare child with no slot attribute
-    // renders nothing, silently dropping the sign-in button. Regression
-    // guard for exactly that gap.
+    // renders nothing, silently dropping the sign-in button. AppHeader (the
+    // shared pattern component) owns the native `slot="utilities"` div; App.vue
+    // just feeds its named Vue slot. Regression guard for exactly that gap,
+    // now spanning both files since AppHeader was extracted out of App.vue.
     await generator(host, options);
+    const appHeader = host
+      .read('libs/vue-components/src/lib/patterns/AppHeader.vue')
+      .toString();
+    expect(appHeader).toMatch(/<div[^>]*slot="utilities"[^>]*>[\s\S]*<slot name="utilities"/);
+
     const app = host.read('apps/test/src/App.vue').toString();
-    expect(app).toMatch(/<div slot="utilities">[\s\S]*<goa-button-group/);
+    expect(app).toMatch(/<template #utilities>[\s\S]*<goa-button-group/);
   }, 30000);
 
   it('removes the @nx/vue demo scaffold and ships a passing App test', async () => {

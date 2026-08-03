@@ -1,0 +1,26 @@
+<script setup lang="ts">
+// Hand-rolled, not a wrapper -- checked the real, currently-installed
+// @abgov/web-components (grepped the compiled index.js for "error-summary"):
+// no such element exists, only CSS tokens for error *styling* on other
+// components (input, checkbox, radio, ...). Built from goa-callout instead,
+// matching the standard error-summary a11y pattern (a list of links jumping to
+// each invalid field) rather than inventing something with no real precedent.
+export interface StepError {
+  message: string;
+  /** e.g. '#field-email' -- an id on the invalid field's goa-form-item. */
+  anchor?: string;
+}
+
+defineProps<{ errors: StepError[] }>();
+</script>
+
+<template>
+  <goa-callout v-if="errors.length" type="emergency" heading="There is a problem">
+    <ul>
+      <li v-for="(error, index) in errors" :key="index">
+        <a v-if="error.anchor" :href="error.anchor">{{ error.message }}</a>
+        <span v-else>{{ error.message }}</span>
+      </li>
+    </ul>
+  </goa-callout>
+</template>

@@ -71,6 +71,7 @@ async function normalizeOptions(
     adsp,
     nginxProxies,
     pairedProjectTag: paired?.tag,
+    layout: options.layout ?? 'header',
   };
 }
 
@@ -184,6 +185,9 @@ export default async function (host: Tree, options: Schema) {
     'src/app/App.spec.ts',
     'src/app/NxWelcome.vue',
     'src/components/HelloWorld.vue',
+    // AppLayout now lives in the shared vue-components lib (patterns/) —
+    // remove a stale copy from an app scaffolded before that move.
+    'src/components/AppLayout.vue',
     'src/views/AboutView.vue',
     'vite.config.mts',
   ]) {

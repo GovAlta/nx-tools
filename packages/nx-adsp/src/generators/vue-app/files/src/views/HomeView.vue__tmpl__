@@ -1,47 +1,50 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
+import { ref, onMounted, watch } from 'vue'
+import { useKeycloak } from '@dsb-norge/vue-keycloak-js'
+import { useApi } from '../composables/useApi'
 
 // Keep the reactive instance — do NOT destructure (see App.vue): a destructured
-// `authenticated`/`keycloak` freezes at its setup-time value, so the private
-// fetch below would never see the user sign in and the bearer token stays undefined.
-const kc = useKeycloak();
-const publicResource = ref('Not retrieved — is the backend service running?');
-const privateResource = ref('Not retrieved — sign in first.');
+// `authenticated` freezes at its setup-time value, so the watch below would never
+// see the user sign in and apiFetch would always skip the token.
+const kc = useKeycloak()
+const { apiFetch } = useApi()
+const publicResource = ref('Not retrieved — is the backend service running?')
+const privateResource = ref('Not retrieved — sign in first.')
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/v1/public');
-    const data = await res.json();
-    publicResource.value = data.message;
+    const res = await apiFetch('/api/v1/public')
+    const data = await res.json()
+    publicResource.value = data.message
   } catch {
-    publicResource.value = 'Error loading public resource.';
+    publicResource.value = 'Error loading public resource.'
   }
-});
+})
 
 // React to authentication (which settles asynchronously and may flip after mount,
 // e.g. on return from the login redirect) rather than reading it once on mount.
 watch(
   () => kc.authenticated,
   async (authenticated) => {
-    if (!authenticated) return;
+    if (!authenticated) return
     try {
-      await kc.keycloak?.updateToken(30);
-      const res = await fetch('/api/v1/private', {
-        headers: { Authorization: `Bearer ${kc.keycloak?.token}` },
-      });
-      const data = await res.json();
-      privateResource.value = data.message;
+      const res = await apiFetch('/api/v1/private')
+      const data = await res.json()
+      privateResource.value = data.message
     } catch {
-      privateResource.value = 'Error loading private resource.';
+      privateResource.value = 'Error loading private resource.'
     }
   },
-  { immediate: true }
-);
+  { immediate: true },
+)
 </script>
 
 <template>
   <section>
+    <% if (layout !== 'internal') { %>
+    <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
+    <goa-spacer vspacing="l" />
+    <% } %>
     <h2>Welcome to <%= projectName %>!</h2>
     <p>Don't panic. Start editing the project to build your digital service.</p>
     <h3>A few things you might want to do next:</h3>

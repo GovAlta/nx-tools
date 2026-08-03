@@ -266,6 +266,19 @@ describe('nx-adsp e2e', () => {
       expect(result.stdout).toContain('Successfully ran target');
     }, 240000);
 
+    // --layout=internal is a distinct EJS branch in App.vue's template, not just
+    // a prop value -- only a real build (real Vue SFC compile) can catch a
+    // template/script error in that branch that tree-content unit tests can't see.
+    it('--layout=internal should generate and build', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent --layout=internal`,
+      );
+      checkFilesExist(`${plugin}/src/App.vue`, `${plugin}/src/stores/session.ts`);
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+
     // vue-app co-generates the shared vue-components wrapper lib. Guard the real
     // out-of-the-box breakages tree-content unit tests can't see.
     // Not exercised here (both need a different workspace flavour than this legacy
@@ -279,7 +292,9 @@ describe('nx-adsp e2e', () => {
       );
       checkFilesExist(
         'vue-components/src/index.ts',
-        'vue-components/src/lib/GoabModal.vue',
+        'vue-components/src/lib/primitives/GoabModal.vue',
+        'vue-components/src/lib/patterns/AppHeader.vue',
+        'vue-components/src/lib/patterns/AppSideMenu.vue',
         'vue-components/src/vue-components.spec.ts',
       );
 
@@ -297,6 +312,101 @@ describe('nx-adsp e2e', () => {
       );
       expect(eslintrc).toContain('"vue/no-deprecated-slot-attribute": "off"');
     }, 300000);
+  });
+
+  describe('vue detail view', () => {
+    it('retrofits a detail view into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-detail-view ${plugin} application-detail --resource=applications --route=/applications/:id --fields='[{"key":"status","label":"Status","type":"badge"}]'`,
+      );
+      checkFilesExist(`${plugin}/src/views/ApplicationDetailView.vue`);
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications/:id'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
+  describe('vue workspace view', () => {
+    it('retrofits a paginated list view into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-workspace-view ${plugin} applications --resource=applications --route=/applications --detailRoute=/applications --columns='[{"key":"status","label":"Status","type":"badge","sortable":true}]'`,
+      );
+      checkFilesExist(`${plugin}/src/views/ApplicationsListView.vue`);
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
+  describe('vue admin crud', () => {
+    it('retrofits a list + edit view pair into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-admin-crud ${plugin} regions --resource=regions --route=/regions --fields='[{"key":"name","label":"Name"},{"key":"active","label":"Active","type":"checkbox"}]'`,
+      );
+      checkFilesExist(
+        `${plugin}/src/views/RegionsListView.vue`,
+        `${plugin}/src/views/RegionsEditView.vue`,
+      );
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/regions'");
+      expect(routerTs).toContain("path: '/regions/:id'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
+  });
+
+  describe('vue intake view', () => {
+    it('retrofits a multi-step intake wizard into an existing vue-app and builds', async () => {
+      const plugin = uniq('vue-app');
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-app ${plugin} dev --tenant=test --accessToken=mock-token --skipAgent`,
+      );
+      await runNxCommandAsync(
+        `generate @abgov/nx-adsp:vue-intake-view ${plugin} application --resource=applications --route=/applications --steps='[{"key":"personal-info","label":"Personal information","fields":[{"key":"fullName","label":"Full name"}]},{"key":"contact-info","label":"Contact information","fields":[{"key":"email","label":"Email"}]}]'`,
+      );
+      checkFilesExist(
+        `${plugin}/src/views/PersonalInfoStepView.vue`,
+        `${plugin}/src/views/ContactInfoStepView.vue`,
+        `${plugin}/src/views/ApplicationReviewView.vue`,
+        `${plugin}/src/views/ApplicationConfirmationView.vue`,
+      );
+      const routerTs = readFileSync(
+        join(tmpProjPath(), `${plugin}/src/router/index.ts`),
+        'utf-8',
+      );
+      expect(routerTs).toContain("path: '/applications/:id/personal-info'");
+      expect(routerTs).toContain("path: '/applications/:id/review'");
+      expect(routerTs).toContain("path: '/applications/:id/confirmation'");
+
+      const result = await runNxCommandAsync(`build ${plugin}`);
+      expect(result.stdout).toContain('Successfully ran target');
+    }, 240000);
   });
 
   it('should generate angular app and build', async () => {

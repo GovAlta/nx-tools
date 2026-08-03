@@ -263,10 +263,14 @@ export default async function runExecutor(
         };
       });
     for (const { name, port } of proxyServices) {
+      // Always label with deployment-mode=sandbox so the teardown target's selector
+      // (-l app=<name>,deployment-mode=sandbox) can clean up the stub when the backend
+      // was never deployed (and oc apply never ran to reconcile the Service itself).
       run(
         `Ensure paired Service ${name}`,
         `oc get service ${name} -n ${sandboxProject} >/dev/null 2>&1 || ` +
-          `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}`,
+          `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}; ` +
+          `oc label service ${name} deployment-mode=sandbox -n ${sandboxProject} --overwrite`,
         cwd,
       );
     }

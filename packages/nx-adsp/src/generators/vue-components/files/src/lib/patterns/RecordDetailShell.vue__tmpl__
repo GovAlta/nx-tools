@@ -1,0 +1,75 @@
+<script setup lang="ts">
+// Chrome for a single-record detail page: heading + optional back button and
+// status badge, loading/error states. NOT the field list or action bar --
+// those vary too much between real detail pages (confirmed across multiple
+// independent GovAlta apps) to genericize; the default slot renders whatever
+// the consuming view needs once the record has loaded.
+import GoabButton from '../primitives/GoabButton.vue';
+
+withDefaults(
+  defineProps<{
+    heading: string;
+    loading?: boolean;
+    error?: string | null;
+    backLabel?: string;
+    statusBadge?: {
+      type: 'success' | 'emergency' | 'information' | 'important' | 'midtone';
+      content: string;
+    };
+  }>(),
+  {
+    loading: false,
+    error: null,
+  },
+);
+
+const emit = defineEmits<{ back: []; retry: [] }>();
+</script>
+
+<template>
+  <div class="record-detail-shell">
+    <div class="record-detail-shell-header">
+      <h1>{{ heading }}</h1>
+      <div class="record-detail-shell-header-actions">
+        <goa-badge v-if="statusBadge" :type="statusBadge.type" :content="statusBadge.content" />
+        <GoabButton v-if="backLabel" type="tertiary" leadingicon="arrow-back" @click="emit('back')">
+          {{ backLabel }}
+        </GoabButton>
+      </div>
+    </div>
+
+    <div v-if="loading" aria-label="Loading">
+      <goa-skeleton type="text" size="4" />
+    </div>
+
+    <goa-callout v-else-if="error" type="emergency" heading="Unable to load">
+      <p>{{ error }}</p>
+      <goa-spacer vspacing="s" />
+      <GoabButton type="tertiary" @click="emit('retry')">Retry</GoabButton>
+    </goa-callout>
+
+    <template v-else>
+      <slot />
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.record-detail-shell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--goa-space-m);
+  margin-bottom: var(--goa-space-m);
+}
+
+.record-detail-shell-header h1 {
+  margin: 0;
+}
+
+.record-detail-shell-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--goa-space-m);
+}
+</style>

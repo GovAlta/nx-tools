@@ -2,33 +2,71 @@
 import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { RouterView, useRoute } from 'vue-router';
-import AppLayout from './components/AppLayout.vue';
+<% if (layout === 'internal') { %>
+import { AppLayout, AppSideMenu, SessionExpiredBanner } from '<%= goaImportPath %>';
+<% } else { %>
+import { AppHeader, AppLayout, AppFooter, SessionExpiredBanner } from '<%= goaImportPath %>';
+<% } %>
+import { useSessionStore } from './stores/session';
 
 // Keep the reactive instance — do NOT destructure. useKeycloak() returns a
 // readonly(reactive()); destructuring snapshots each field at setup time, so
 // `keycloak` would be frozen at its initial `undefined` (login() a no-op) and
 // `authenticated` would never flip. Access fields on `kc` to stay reactive.
 const kc = useKeycloak();
+const session = useSessionStore();
 
 // Content width per view, from route meta (default 'page'). Views opt into a
 // different width with `meta: { layout: 'wide' | 'form' }` in the router.
 const route = useRoute();
-const layout = computed(
+const contentWidth = computed(
   () => (route.meta.layout as 'page' | 'wide' | 'form' | undefined) ?? 'page'
 );
 
 function login() { kc.keycloak?.login(); }
 function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin }); }
+
+function signInAgain() {
+  session.dismiss();
+  kc.keycloak?.login();
+}
+<% if (layout === 'internal') { %>
+
+// AppSideMenu's account items are presentational -- it doesn't know about
+// Keycloak, it just renders whatever's passed and emits itemClick on click.
+const accountItems = computed(() => [
+  kc.authenticated
+    ? { label: kc.fullName ? `Sign out (${kc.fullName})` : 'Sign out' }
+    : { label: 'Sign in' },
+]);
+
+function onAccountItemClick() {
+  if (kc.authenticated) logout();
+  else login();
+}
+<% } %>
 </script>
 
 <template>
-  <goa-microsite-header type="alpha" />
-  <goa-app-header url="/" heading="<%= projectName %>">
-    <!-- goa-app-header only renders content placed in a named slot — the
-         "utilities" slot is where GoA's own design system docs put
-         account/sign-in actions (as opposed to "navigation" for nav links).
-         A bare child with no slot attribute renders nothing. -->
-    <div slot="utilities">
+<% if (layout === 'internal') { %>
+  <AppSideMenu
+    heading="<%= projectName %>"
+    :account-items="accountItems"
+    @item-click="onAccountItemClick"
+  >
+    <SessionExpiredBanner
+      v-model:show="session.expired"
+      @sign-in="signInAgain"
+      @dismiss="session.dismiss"
+    />
+    <AppLayout :variant="contentWidth">
+      <RouterView />
+    </AppLayout>
+  </AppSideMenu>
+<% } else { %>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <AppHeader heading="<%= projectName %>">
+    <template #utilities>
       <goa-button-group alignment="end">
         <span v-if="kc.authenticated && kc.fullName">{{ kc.fullName }}</span>
         <!-- Gate on !authenticated only, never on `ready`: with no load-time SSO
@@ -41,14 +79,41 @@ function logout() { kc.keycloak?.logout({ redirectUri: window.location.origin })
           Sign out
         </goa-button>
       </goa-button-group>
-    </div>
-  </goa-app-header>
-  <goa-hero-banner heading="<%= projectName %>" backgroundurl="/assets/banner.jpg" />
-  <AppLayout :variant="layout">
-    <RouterView />
-  </AppLayout>
+    </template>
+  </AppHeader>
+  <SessionExpiredBanner
+    v-model:show="session.expired"
+    @sign-in="signInAgain"
+    @dismiss="session.dismiss"
+  />
+  <main id="main-content">
+    <AppLayout :variant="contentWidth">
+      <RouterView />
+    </AppLayout>
+  </main>
+  <AppFooter />
+<% } %>
 </template>
 
 <style>
 body { margin: 0; }
+<% if (layout !== 'internal') { %>
+/* Visually hidden until focused (e.g. via Tab from the top of the page) — lets
+   keyboard/screen-reader users jump past the header straight to the content.
+   The internal/side-menu shell has its own scoped copy of this; this layout
+   has no equivalent shell component, so App.vue owns it directly here. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--goa-space-s, 0.5rem) var(--goa-space-m, 1rem);
+  background: var(--goa-color-interactive-default, #0070c4);
+  color: #fff;
+}
+
+.skip-link:focus {
+  left: var(--goa-space-m, 1rem);
+}
+<% } %>
 </style>

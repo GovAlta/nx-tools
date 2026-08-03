@@ -32,18 +32,19 @@ Always run `nx g @abgov/nx-adsp:init` right after installing — see [`init`](#i
 
 Some generators require additional peer dependencies:
 
-| Generator                       | Required peer dependency                |
-| ------------------------------- | --------------------------------------- |
-| `react-app`                     | `@nx/react`                             |
-| `angular-app`                   | `@nx/angular`                           |
-| `vue-app`                       | `@nx/vue`                               |
-| `dotnet-service`                | `@nx-dotnet/core`                       |
-| `react-dotnet`                  | `@nx/react`, `@nx-dotnet/core`          |
-| `express-service`               | `@nx/node`                              |
-| `mern`, `pern`                  | `@nx/react`, `@nx/node`                 |
-| `mean`, `pean`                  | `@nx/angular`, `@nx/node`               |
-| `mevn`, `pevn`                  | `@nx/vue`, `@nx/node`                   |
-| `react-form`, `react-task-list` | existing React project in the workspace |
+| Generator                                                                    | Required peer dependency                    |
+| ---------------------------------------------------------------------------- | ------------------------------------------- |
+| `react-app`                                                                  | `@nx/react`                                 |
+| `angular-app`                                                                | `@nx/angular`                               |
+| `vue-app`                                                                    | `@nx/vue`                                   |
+| `dotnet-service`                                                             | `@nx-dotnet/core`                           |
+| `react-dotnet`                                                               | `@nx/react`, `@nx-dotnet/core`              |
+| `express-service`                                                            | `@nx/node`                                  |
+| `mern`, `pern`                                                               | `@nx/react`, `@nx/node`                     |
+| `mean`, `pean`                                                               | `@nx/angular`, `@nx/node`                   |
+| `mevn`, `pevn`                                                               | `@nx/vue`, `@nx/node`                       |
+| `react-form`, `react-task-list`                                              | existing React project in the workspace     |
+| `vue-detail-view`, `vue-workspace-view`, `vue-admin-crud`, `vue-intake-view` | existing `vue-app` project in the workspace |
 
 ## Generators
 
@@ -253,7 +254,100 @@ Creates a Vue 3 frontend application configured for ADSP, using GoA web componen
 npx nx g @abgov/nx-adsp:vue-app my-app --env dev --tenant my-tenant
 ```
 
-Accepts the same options as `react-app` (including `--proxy` and `--serviceClientId`).
+Accepts the same options as `react-app` (including `--proxy` and `--serviceClientId`), plus:
+
+| Option   | Required | Description                                                                                                                                                                                                                                                                                            |
+| -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `layout` | No       | Top-level app shell: `header` (default) is a `goa-app-header` + hero banner + footer (public-facing); `internal` is a `goa-work-side-menu` shell with no header/banner/footer (staff-facing). Pair two runs against the same `--pairedProject` for a public+internal frontend pairing over one backend |
+
+Every generated app provisions a shared `vue-components` library — `Goab*` `v-model` wrappers over the design system plus reusable app-shell pattern components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`) — see the generated app's own `AGENTS.md` for the full contract. Four more generators retrofit common view shapes into an existing `vue-app` project; see below.
+
+---
+
+### vue-detail-view
+
+Adds a record-detail view (loading/error/loaded states, optional status badge, back button) to an existing `vue-app` project, built on the shared `RecordDetailShell` pattern component.
+
+```bash
+npx nx g @abgov/nx-adsp:vue-detail-view my-app --name=application-detail --resource=applications --route=/applications/:id --fields='[{"key":"status","label":"Status","type":"badge"}]'
+```
+
+| Option         | Required | Description                                                                                                                                                              |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                                 |
+| `name`         | Yes      | View name, e.g. `application-detail` generates `src/views/ApplicationDetailView.vue`                                                                                     |
+| `resource`     | Yes      | API resource path segment — the view fetches `/api/<resource>/:id`                                                                                                       |
+| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications/:id`. Must contain a `:id` param                                                                              |
+| `fields`       | Yes      | JSON array of fields rendered in the record's info list, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge" }` (a JSON string — see note below) |
+| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                                     |
+| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                                  |
+
+---
+
+### vue-workspace-view
+
+Adds a staff-facing, paginated list view (a debounced search filter bar + sortable columns) to an existing `vue-app` project, built on the shared `WorkspaceTable` pattern component.
+
+```bash
+npx nx g @abgov/nx-adsp:vue-workspace-view my-app --name=applications --resource=applications --route=/applications --detailRoute=/applications --columns='[{"key":"status","label":"Status","type":"badge","sortable":true}]'
+```
+
+| Option         | Required | Description                                                                                                                                             |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                |
+| `name`         | Yes      | View name, e.g. `applications` generates `src/views/ApplicationsListView.vue`                                                                           |
+| `resource`     | Yes      | API resource path segment — fetches `/api/<resource>?page=&limit=&search=&sortBy=&sortDir=`                                                             |
+| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications`                                                                                             |
+| `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable? }` (a JSON string — see note below) |
+| `detailRoute`  | No       | If set, each row gets a "View" action linking to `${detailRoute}/${row.id}` — typically a `vue-detail-view`'s route with the `:id` segment dropped      |
+| `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                        |
+| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                    |
+| `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                         |
+| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                 |
+
+---
+
+### vue-admin-crud
+
+Adds a simple admin CRUD screen pair (a `WorkspaceTable` list view with a Create action and per-row Edit, plus a create/update Edit view) to an existing `vue-app` project — suited to small lookup-table style admin screens, not large paginated workspaces (see `vue-workspace-view` for that).
+
+```bash
+npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions --route=/regions --fields='[{"key":"name","label":"Name"},{"key":"active","label":"Active","type":"checkbox"}]'
+```
+
+| Option          | Required | Description                                                                                                                                                         |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`       | Yes      | The `vue-app` project to add the views to                                                                                                                           |
+| `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                             |
+| `resource`      | Yes      | API resource path segment — fetches `/api/<resource>` (list), `/api/<resource>/:id` (load one), `POST /api/<resource>` (create), `PUT /api/<resource>/:id` (update) |
+| `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `${route}/:id` (visiting `${route}/new` creates)                     |
+| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"checkbox", required? }` (a JSON string — see note below)                                |
+| `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                           |
+| `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                               |
+| `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                             |
+
+---
+
+### vue-intake-view
+
+Adds a route-per-step intake wizard (`Stepper` + `StepErrorSummary`, a required read-only review step, and a confirmation page) to an existing `vue-app` project. Cross-step state is server-persisted — each step PUTs/POSTs to `/api/<resource>/:id` and refetches on mount, so there's no client-side draft caching. Every field is currently a plain text input.
+
+```bash
+npx nx g @abgov/nx-adsp:vue-intake-view my-app --name=application --resource=applications --route=/applications --steps='[{"key":"personal-info","label":"Personal information","fields":[{"key":"fullName","label":"Full name"}]}]'
+```
+
+| Option         | Required | Description                                                                                                                                                                   |
+| -------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`      | Yes      | The `vue-app` project to add the views to                                                                                                                                     |
+| `name`         | Yes      | Base name for the generated views, e.g. `application` generates `<Step>StepView.vue` per step plus `ApplicationReviewView.vue`/`ApplicationConfirmationView.vue`              |
+| `resource`     | Yes      | API resource path segment. Each step fetches/saves `/api/<resource>/:id`; the review step's Submit posts `/api/<resource>/:id/submit`                                         |
+| `route`        | Yes      | Base route, e.g. `/applications`. Steps become `/applications/:id/<step-key>`, plus `/review` and `/confirmation`. Start a new intake at `/applications/new/<first-step-key>` |
+| `steps`        | Yes      | JSON array of steps, in order: `{ key, label, fields: [{ key, label, required? }] }` (a JSON string — see note below)                                                         |
+| `requiresAuth` | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                                       |
+
+---
+
+> **Note on JSON-string options (`fields`/`columns`/`steps`):** Nx's own CLI arg coercion only supports comma-separated primitive lists for `array`-typed schema options, not JSON — a JSON string is the only CLI syntax that survives it, so these options are declared as `string` and parsed internally. A plain array also works when the generator is invoked programmatically, bypassing CLI parsing entirely.
 
 ---
 

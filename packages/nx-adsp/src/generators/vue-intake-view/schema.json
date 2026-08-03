@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAdspVueIntakeView",
+  "title": "Vue Multi-Step Intake View",
+  "description": "Generates a route-per-step intake wizard (Stepper + StepErrorSummary, a required read-only review step, and a confirmation page) into an existing vue-app project. Cross-step state is server-persisted -- each step PUTs/POSTs to /api/<resource>/:id and refetches on mount; there's no client-side draft caching.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "The vue-app project to add the views to.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "Which project should the intake view be added to?"
+    },
+    "name": {
+      "type": "string",
+      "description": "Base name for the generated views, e.g. 'application' generates <Step>StepView.vue per step plus ApplicationReviewView.vue and ApplicationConfirmationView.vue.",
+      "$default": {
+        "$source": "argv",
+        "index": 1
+      },
+      "x-prompt": "What should the intake flow be called?"
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource path segment. Each step fetches/saves /api/<resource>/:id; the review step's Submit posts /api/<resource>/:id/submit."
+    },
+    "route": {
+      "type": "string",
+      "description": "Base route, e.g. /applications. Steps become /applications/:id/<step-key>, plus /applications/:id/review and /applications/:id/confirmation. Start a new intake at /applications/new/<first-step-key>."
+    },
+    "steps": {
+      "type": "string",
+      "description": "JSON array of steps, in order -- e.g. '[{\"key\":\"personal-info\",\"label\":\"Personal information\",\"fields\":[{\"key\":\"fullName\",\"label\":\"Full name\"}]}]'. Each item: { key, label, fields: [{ key, label, required?: boolean (default true) }] }. A plain array is also accepted when this generator is invoked programmatically. Every field is currently a plain text input -- see the generated AGENTS.md note for other field types."
+    },
+    "requiresAuth": {
+      "type": "boolean",
+      "description": "Whether the generated routes require authentication.",
+      "default": true
+    }
+  },
+  "required": ["project", "name", "resource", "route", "steps"],
+  "additionalProperties": false
+}

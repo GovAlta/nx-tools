@@ -60,6 +60,26 @@
       "description": "Ensures the shared GoA Vue wrapper library (interim). Invoked by vue-app; runnable directly to repair.",
       "hidden": true
     },
+    "vue-detail-view": {
+      "factory": "./src/generators/vue-detail-view/vue-detail-view",
+      "schema": "./src/generators/vue-detail-view/schema.json",
+      "description": "Generator that adds a record-detail view (RecordDetailShell + a --fields spec) to an existing vue-app project."
+    },
+    "vue-workspace-view": {
+      "factory": "./src/generators/vue-workspace-view/vue-workspace-view",
+      "schema": "./src/generators/vue-workspace-view/schema.json",
+      "description": "Generator that adds a staff-facing, paginated list view (WorkspaceTable + a --columns spec) to an existing vue-app project."
+    },
+    "vue-admin-crud": {
+      "factory": "./src/generators/vue-admin-crud/vue-admin-crud",
+      "schema": "./src/generators/vue-admin-crud/schema.json",
+      "description": "Generator that adds a simple admin CRUD screen pair (WorkspaceTable list + create/update Edit view) to an existing vue-app project."
+    },
+    "vue-intake-view": {
+      "factory": "./src/generators/vue-intake-view/vue-intake-view",
+      "schema": "./src/generators/vue-intake-view/schema.json",
+      "description": "Generator that adds a route-per-step intake wizard (Stepper + a required review/confirmation flow, from a --steps spec) to an existing vue-app project."
+    },
     "mean": {
       "factory": "./src/generators/mean/mean",
       "schema": "./src/generators/mean/schema.json",
