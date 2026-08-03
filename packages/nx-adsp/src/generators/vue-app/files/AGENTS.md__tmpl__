@@ -234,7 +234,42 @@ mark what's meant to be edited.
    { path: '/queue', component: () => import('../views/QueueView.vue'), meta: { layout: 'wide' } }
    { path: '/apply', component: () => import('../views/ApplyView.vue'), meta: { layout: 'form' } }
    ```
-3. Add a nav link to `src/App.vue` if needed
+3. **For the `internal` layout: add a nav link to `src/App.vue`.** The generated shell only
+   populates `accountItems`; primary navigation lives in `primaryItems` (or `secondaryItems`).
+   `AppSideMenu` is purely presentational — it doesn't know about routing, so `App.vue` owns
+   `current` detection and the `itemClick` handler:
+
+   ```typescript
+   // In <script setup>:
+   import { computed } from 'vue';
+   import { RouterView, useRoute, useRouter } from 'vue-router';
+   // ...existing imports...
+
+   const route = useRoute();    // already in the generated App.vue
+   const router = useRouter();
+
+   const primaryItems = computed(() => [
+     { label: 'Home',       to: '/',           current: route.path === '/' },
+     { label: 'My Feature', to: '/my-feature', current: route.path.startsWith('/my-feature') },
+   ]);
+
+   function onItemClick(item: { to?: string }) {
+     if (item.to) router.push(item.to);
+   }
+   ```
+
+   ```html
+   <!-- In <template>, add :primary-items and @item-click to <AppSideMenu>: -->
+   <AppSideMenu
+     heading="..."
+     :primary-items="primaryItems"
+     :account-items="accountItems"
+     @item-click="onItemClick"
+   >
+   ```
+
+   The `header` layout has no side menu — add route-level breadcrumbs or a secondary nav
+   directly inside the view component instead.
 
 ## Backend API calls (proxy setup)
 
