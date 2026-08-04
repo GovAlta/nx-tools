@@ -6,5 +6,9 @@
   {
     "key": "none",
     "lineageFingerprint": "{\"brokenRefs\":[],\"orphans\":[],\"unscoped\":[],\"resolutionStatus\":{\"open\":[],\"resolved\":[]}}"
+  },
+  {
+    "key": "unprocessed-feature:features:develop-skill-lineage-plan-step",
+    "lineageFingerprint": "{\"brokenRefs\":[],\"orphans\":[\"features:develop-skill-lineage-plan-step\"],\"unscoped\":[],\"resolutionStatus\":{\"open\":[],\"resolved\":[]}}"
   }
 ]
