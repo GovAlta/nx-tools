@@ -3,6 +3,9 @@
     "expectedAncestorTypes": [],
     "tracksResolution": true
   },
+  "features": {
+    "expectedAncestorTypes": []
+  },
   "iteration-retrospectives": {
     "expectedAncestorTypes": [],
     "terminal": true
