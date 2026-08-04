@@ -18,11 +18,8 @@ name: Agent Delivery Iteration (Copilot CLI)
 # self-dispatch -- any other push (starting the branch, or a human pushing mid-sequence) resets to
 # iteration 1 by construction. That's intentional: a human push means supervised, ongoing work,
 # not a runaway loop, so it earns a fresh MAX_ITERATIONS budget.
+# Disabled: Copilot CLI is not yet enabled in this org. Re-add the push trigger below to activate.
 on:
-  push:
-    branches:
-      - "fix/**"
-      - "feature/**"
   workflow_dispatch:
     inputs:
       iteration:
