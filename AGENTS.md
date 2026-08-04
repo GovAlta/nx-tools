@@ -84,6 +84,31 @@ export default async function (host: Tree, options: Schema) {
 
 New generators must be registered in the package's `generators.json`.
 
+### Recipe: add a generator
+
+1. Create `packages/[plugin]/src/generators/[name]/` with `schema.json`, `schema.d.ts`,
+   `[name].ts`, `[name].spec.ts`, and a `files/` directory if templates are needed.
+2. Define options in `schema.json` (with `x-prompt` for interactive use) and mirror them in
+   `schema.d.ts` as `Schema` and `NormalizedSchema`.
+3. Implement the generator body following the standard pattern above:
+   `normalizeOptions → addFiles → updateProjectConfiguration → formatFiles`.
+4. Register the generator in `packages/[plugin]/generators.json`.
+5. Export any public API symbols from `packages/[plugin]/src/index.ts`.
+6. Write unit tests in `[name].spec.ts` using `createTreeWithEmptyWorkspace({ layout: 'apps-libs' })`.
+
+**Gate for this repo**: `nx-agent` has no e2e project — the gate is unit tests + build + lint only:
+```
+npx nx test nx-agent
+npx nx build nx-agent
+npx nx lint nx-agent
+npx secretlint <changed files>
+npm audit --audit-level=high
+npx nx g @abgov/nx-agent:project-docs-lineage
+```
+For `nx-adsp` and `nx-oc`, their e2e projects (`nx-adsp-e2e`, `nx-oc-e2e`) exist and are blocking
+(neither has an `.openshift/` graduation signal, so the develop skill's permanent-blocking default
+applies).
+
 ---
 
 ## Executor Anatomy
@@ -100,6 +125,19 @@ schema.d.ts       # TypeScript interface: Schema
 New executors must be registered in `packages/nx-oc/executors.json`. `nx-oc` ships two:
 `apply` (wraps `oc apply`) and `sandbox` (local-podman-build deploy — see **Sandbox
 deployment** below).
+
+### Recipe: add an executor
+
+1. Create `packages/nx-oc/src/executors/[name]/` with `schema.json`, `schema.d.ts`,
+   `[name].ts`, and `[name].spec.ts`.
+2. Define options in `schema.json` and mirror them in `schema.d.ts` as `Schema`.
+3. Implement: `export default async function (options: Schema, context: ExecutorContext): Promise<{ success: boolean }>`.
+4. Register the executor in `packages/nx-oc/executors.json`.
+5. Export any public API symbols from `packages/nx-oc/src/index.ts`.
+6. Write unit tests mocking `child_process` `execSync` and asserting the command sequence.
+
+**Gate**: same as the generator recipe above, substituting `nx-oc` for `nx-agent`. `nx-oc-e2e`
+exists and is blocking.
 
 ### Migrations
 
@@ -514,3 +552,73 @@ explicitly (e.g. `RISK_ACCEPTED: <why>`) rather than silently suppressing it.
 a test that encodes the same misunderstanding as the code it's testing will pass without
 verifying anything real.
 <!-- /nx-agent:managed:agent-guidance -->
+
+<!-- nx-agent:managed:agent-delivery -->
+## DDDD workflow
+
+This workspace uses the Discover/Design/Develop/Deploy (DDDD) workflow for tactical,
+requirement-at-a-time delivery. Before picking up new work, check `project-docs/` state (run
+`npx nx g @abgov/nx-agent:project-docs-lineage --dry-run` to see open questions, blockers, and
+what's still undesigned/undeveloped/undeployed) rather than guessing what's next.
+
+New work enters the loop through two generators, not by hand-authoring a file:
+
+- `npx nx g @abgov/nx-agent:feature "<title>"` — a new capability request, for Discover to decompose.
+- `npx nx g @abgov/nx-agent:bug "<what's wrong>"` — something already built misbehaving, for Develop
+  to investigate and fix directly (no new Design pass unless investigation finds the spec itself
+  was wrong).
+
+- `.claude/skills/discover/SKILL.md` — decompose a `feature` artifact into requirements with IDs
+  seeded at birth, or example-map one requirement to closure.
+- `.claude/skills/design/SKILL.md` — turn a requirement into a domain model and (when there's a
+  consumer) a UX/API design.
+- `.claude/skills/develop/SKILL.md` — implement a design, or fix a `bug`, with an inline gate
+  battery.
+- `.claude/skills/deploy/SKILL.md` — provision this project's own deploy target and re-run the
+  design's behavior specs against the live result.
+
+Read the relevant skill file fresh each time — don't recall its content from memory, it may have
+been edited since. Each skill names its own gate and commit convention; follow them rather than
+inventing new ones.
+
+### Deploy in this repo
+
+This repo has no sandbox or OpenShift deploy target. The deploy target for every package is
+`npx semantic-release --dry-run` — run this to confirm the release CI would succeed and that
+the commit type will trigger a version bump. Provisioning means confirming
+`.github/workflows/release-ci.yml` exists; there is no generator to run. The actual publish is
+CI-automated on push to `main` or `beta` — never agent-run.
+
+## CI harness
+
+`.github/workflows/agent-delivery-iteration.yml` drives the DDDD loop automatically. On each
+push to a `feature/**` or `fix/**` branch it identifies the highest-priority signal, runs a
+Copilot CLI agent session to advance it, then self-dispatches the next iteration until nothing
+is left or the `MAX_ITERATIONS` cap is hit.
+
+### Branch conventions
+
+| Branch prefix | Signal types eligible | Typical use |
+|---|---|---|
+| `feature/**` | All (discover → design → develop → deploy) | Advancing a new capability from a `features:` artifact through to Deploy |
+| `fix/**` | Resolution only (`broken:` and `open:`) | Resolving a specific blocker, open question, or broken reference |
+
+Both branch types derive artifact scope from the first commit (see below). The `fix/**`
+restriction is enforced independently of scope — a scoped fix branch only sees resolution
+signals within its scoped artifacts; a `feature/**` branch sees all signal types within scope.
+
+### Artifact scope
+
+Controls which artifacts' signals are eligible each iteration. Set via the `artifact_scope`
+input on the GitHub Actions manual dispatch UI, or left blank to auto-derive on first push.
+
+| Value | Behaviour |
+|---|---|
+| Blank | Scope derived from the project-docs files the branch's first commit touched. Forwarded unchanged to all subsequent iterations — the first commit's scope is stable for the life of the branch. |
+| `project-docs/features/my-feature.md` (or a comma-separated list of paths) | Explicit scope: only signals whose artifact is, or descends from, the named artifact(s). Use this on a manual trigger when you want to re-run the loop focused on a specific artifact without relying on the first commit having touched it. |
+| `*` | Open scope. No artifact filtering: the agent picks the globally highest-priority signal. Use for a broad sweep of the whole backlog. |
+
+When task-identification finds no eligible signals after filtering it emits a diagnostic naming
+which filter(s) fired and how many signals each matched, so a human or agent debugging a stalled
+loop can tell whether the branch type, artifact scope, or their combination is the constraint.
+<!-- /nx-agent:managed:agent-delivery -->

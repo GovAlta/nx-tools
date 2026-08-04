@@ -1,0 +1,233 @@
+name: Agent Delivery Iteration (Copilot CLI)
+
+# Self-dispatching harness: one bounded `copilot -p` session per iteration, repeated until a
+# flow's own task-identification script finds nothing left to do. Steps are labeled HARNESS (same
+# for any flow) or FLOW-SPECIFIC (this flow's own setup/task-identification script -- swap
+# scripts/task-identification.mjs and these steps to point the harness at a different flow; a
+# second flow gets its own workflow file, reusing run-agent-delivery-iteration.sh unchanged).
+#
+# Push to a fix/** or feature/** branch starts a sequence; each iteration self-redispatches via
+# `gh workflow run` once its own commits land and a fresh readiness check (right here, in the same
+# already-provisioned job, not a whole new one) confirms real work remains -- do-while, not
+# while-do, so a run that happens to finish everything doesn't need an entire fresh job just to
+# discover that. The self-dispatch uses `workflow_dispatch` specifically because GITHUB_TOKEN-
+# authored pushes (this harness's own commits) don't retrigger `push`-event workflows -- a GitHub
+# anti-recursion protection that workflow_dispatch is exempt from, given `actions: write` below.
+#
+# A push event carries no inputs, so `iteration` only ever has a value on the loop's own
+# self-dispatch -- any other push (starting the branch, or a human pushing mid-sequence) resets to
+# iteration 1 by construction. That's intentional: a human push means supervised, ongoing work,
+# not a runaway loop, so it earns a fresh MAX_ITERATIONS budget.
+on:
+  push:
+    branches:
+      - "fix/**"
+      - "feature/**"
+  workflow_dispatch:
+    inputs:
+      iteration:
+        description: Iteration number to resume at -- set only by the loop's own self-dispatch; leave blank to start fresh
+        required: false
+        type: string
+      artifact_scope:
+        description: >-
+          Comma-separated project-docs paths scoping this run to a specific set of artifacts.
+          Set to '*' to run across all available work with no artifact filtering (open scope).
+          Leave blank to auto-derive scope from the first commit on this branch (push-triggered
+          or manual); forwarded unchanged by the loop's own self-dispatch on subsequent iterations.
+        required: false
+        type: string
+
+concurrency:
+  # Deliberately workspace-wide, not per-branch (no `${{ github.ref }}`): Deploy's own target
+  # (`nx-oc:sandbox`) is one static namespace+app pair with no per-branch parameterization -- two
+  # branches' loops reaching Deploy at the same time would race the same Route/ImageStream/rollout.
+  # A shared group serializes every branch's entire iteration, not just Deploy, since which stage a
+  # given iteration reaches isn't known until task-identification runs, well after this key is
+  # evaluated -- the one lever GitHub Actions gives us here is workflow-wide, not per-step.
+  group: agent-delivery-iteration
+  cancel-in-progress: false
+  # Without this, the group only ever keeps one running + one pending run -- a third branch's push
+  # arriving while both slots are full silently cancels whatever was pending instead of queueing
+  # behind it. `queue: max` keeps every trigger queued in order rather than dropping any of them.
+  queue: max
+
+permissions:
+  # run-agent-delivery-iteration.sh's own push needs this; Copilot's own step only adds/commits.
+  contents: write
+  copilot-requests: write
+  pull-requests: write
+  # Needed for the self-dispatch (gh workflow run) that starts the next iteration.
+  actions: write
+  # Deliberately not granted: workflows: write -- a GitHub anti-self-escalation control. A change
+  # to this workflow file itself needs that permission and stays a human action.
+
+env:
+  MAX_ITERATIONS: ${{ vars.MAX_ITERATIONS || '6' }}
+  # Nx wraps every `nx run <project>:<target>` in a collapsible ::group::/::endgroup:: block
+  # whenever it detects GITHUB_ACTIONS -- one more fold per task, on top of this workflow's own
+  # step-level ones, for output that's already scoped to one bounded iteration. Purely local log
+  # formatting (no Nx Cloud connection or telemetry involved); this just skips it.
+  NX_SKIP_LOG_GROUPING: 'true'
+
+jobs:
+  iterate:
+    runs-on: ubuntu-latest
+    # Bounds a genuinely stuck copilot -p call (default job timeout is 6 hours) without cutting
+    # off a session doing real, multi-stage work.
+    timeout-minutes: 45
+    steps:
+      # ---- HARNESS: workspace setup -- identical for any flow on this pattern ----
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      # ---- HARNESS: register whatever MCP servers this workspace happens to have configured --
+      # generic behavior, the *content* of .mcp.json (if any) is what varies per workspace/flow ----
+      - name: Register MCP servers with Copilot CLI
+        run: bash scripts/register-mcp-servers.sh
+
+      # ---- HARNESS: iteration-sequence bookkeeping -- identical for any flow ----
+      - name: Resolve iteration sequence
+        id: iterations
+        # inputs.iteration only ever has a value on the loop's own self-dispatch (see the `on:`
+        # block above) -- blank on a push-triggered run, by design, so it starts fresh at 1.
+        run: |
+          iteration="${{ inputs.iteration }}"
+          echo "iteration=${iteration:-1}" >> "$GITHUB_OUTPUT"
+          echo "Iteration ${iteration:-1} on ${{ github.ref_name }}"
+
+      # ---- FLOW-SPECIFIC: task identification is the flow's one required plug-in point. See
+      # scripts/task-identification.mjs's own header for the ready/stalled/summary/prompt
+      # contract it must satisfy. ----
+      - name: Refresh project-docs lineage graph
+        # `|| true`: a broken reference makes this throw; task identification treats a missing
+        # lineage.json as its own top-priority signal, so let that surface it instead of failing
+        # the job outright.
+        run: npx nx g @abgov/nx-agent:project-docs-lineage || true
+
+      - name: Resolve artifact scope
+        id: scope
+        # Three cases:
+        #   '*'       -- explicit open scope; no derivation, task-identification runs unfiltered.
+        #   non-empty -- forwarded unchanged from a prior self-dispatch; no re-derivation.
+        #   blank     -- first push or manual trigger with no scope; derived from the first commit.
+        # inputs.artifact_scope is moved to an env var before the script runs to avoid shell
+        # injection — a direct ${{ }} expression in a run: body is a command-injection vector.
+        env:
+          ARTIFACT_SCOPE_INPUT: ${{ inputs.artifact_scope }}
+        run: |
+          scope="$ARTIFACT_SCOPE_INPUT"
+          if [[ -z "$scope" ]]; then
+            first_sha=$(git log --reverse --format="%H" "origin/main..HEAD" 2>/dev/null | head -1)
+            if [[ -n "$first_sha" ]]; then
+              scope=$(git diff-tree --no-commit-id -r --name-only "$first_sha" \
+                | grep '^project-docs/' | paste -sd ',' - || true)
+            fi
+          fi
+          echo "ARTIFACT_SCOPE=${scope}" >> "$GITHUB_ENV"
+          echo "artifact_scope=${scope}" >> "$GITHUB_OUTPUT"
+
+      - name: Identify next task
+        id: readiness
+        run: node scripts/task-identification.mjs
+
+      # ---- FLOW-SPECIFIC: history.json is stall-detection state that task identification reads
+      # back on the *next* run's fresh checkout -- without committing it, every run starts from an
+      # empty history and `stalled` could never become true. ----
+      - name: Persist stall-detection history
+        run: |
+          git config user.name "agent-delivery-iteration[bot]"
+          git config user.email "agent-delivery-iteration[bot]@users.noreply.github.com"
+          git add .github/agent-delivery-iteration/history.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(agent-delivery-iteration): update stall-detection history"
+            git push origin HEAD:"${{ github.ref_name }}"
+          fi
+
+      # ---- HARNESS: circuit breaker + stop/continue handling -- identical for any flow, driven
+      # entirely by the "Identify next task" step's ready/summary/prompt outputs above ----
+      - name: Max-iterations circuit breaker
+        if: steps.readiness.outputs.ready == 'true' && fromJSON(steps.iterations.outputs.iteration) >= fromJSON(env.MAX_ITERATIONS)
+        run: |
+          echo "Reached MAX_ITERATIONS=${{ env.MAX_ITERATIONS }} on ${{ github.ref_name }} -- stopping. Push another commit for a fresh budget, or raise the MAX_ITERATIONS repo variable if the cap is too low."
+          echo "STOP_REASON=max-iterations" >> "$GITHUB_ENV"
+
+      - name: No work remains
+        if: steps.readiness.outputs.ready != 'true'
+        env:
+          SUMMARY: ${{ steps.readiness.outputs.summary }}
+        run: echo "$SUMMARY"
+
+      - name: Ensure completion PR exists (max-iterations cap reached)
+        # SUMMARY comes from a flow's own generated text -- routed through env: rather than
+        # interpolated directly into the script's command text, so untrusted content can't get
+        # re-parsed as shell syntax (see the script's own header for how it's used).
+        if: env.STOP_REASON == 'max-iterations'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY: ${{ steps.readiness.outputs.summary }}
+        run: bash scripts/ensure-completion-pr.sh
+
+      # ---- HARNESS: run the one bounded session for this iteration -- run-agent-delivery-
+      # iteration.sh is entirely generic; the env below splits into a HARNESS half and a
+      # FLOW-SPECIFIC half (this flow's own secrets/vars for Deploy) ----
+      - name: Run one flow iteration
+        id: iteration
+        if: steps.readiness.outputs.ready == 'true' && env.STOP_REASON != 'max-iterations'
+        env:
+          # HARNESS
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_FILE: agent-delivery-iteration.yml
+          ITERATION: ${{ steps.iterations.outputs.iteration }}
+          PROMPT: ${{ steps.readiness.outputs.prompt }}
+        run: bash scripts/run-agent-delivery-iteration.sh "$PROMPT"
+
+      # ---- FLOW-SPECIFIC: re-check readiness immediately after this iteration's own commits
+      # land, in this same job -- everything is already installed, so this costs almost nothing
+      # compared to a whole fresh job whose only purpose might turn out to be discovering there's
+      # nothing left. PEEK_ONLY skips stall-detection bookkeeping (see the script's own comment):
+      # this is a same-run recheck, not a new dispatched iteration to record history for. ----
+      - name: Refresh project-docs lineage graph (after this iteration)
+        if: steps.iteration.outputs.made_commits == 'true'
+        run: npx nx g @abgov/nx-agent:project-docs-lineage || true
+
+      - name: Identify next task (after this iteration)
+        id: readiness_after
+        if: steps.iteration.outputs.made_commits == 'true'
+        env:
+          PEEK_ONLY: 'true'
+        run: node scripts/task-identification.mjs
+
+      # ---- HARNESS: continue only if real, confirmed work remains; otherwise this run is the
+      # last one and closes itself out below rather than dispatching a job that would just
+      # rediscover that ----
+      - name: Dispatch next iteration
+        if: steps.iteration.outputs.made_commits == 'true' && steps.readiness_after.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_FILE: agent-delivery-iteration.yml
+          ITERATION: ${{ steps.iterations.outputs.iteration }}
+        run: bash scripts/dispatch-next-iteration.sh
+
+      - name: Ensure completion PR exists (after this iteration)
+        if: steps.iteration.outputs.made_commits == 'true' && steps.readiness_after.outputs.ready != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY: ${{ steps.readiness_after.outputs.summary }}
+        run: bash scripts/ensure-completion-pr.sh
