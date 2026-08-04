@@ -120,6 +120,11 @@ If a live-only failure traces back to a real gap in the design itself (not share
 missing credential), run `nx g @abgov/nx-agent:blocker "<what's wrong>"
 --projectDocsAncestors=<path>` naming it rather than working around it at the deploy step.
 
+For an npm package published via CI: deployment success is `npx semantic-release --dry-run`
+completing without errors, confirming the release workflow (`.github/workflows/release-ci.yml`)
+exists and the commit type will trigger a version bump. The behavior re-run does not apply — the
+actual publish is CI-automated on merge, not agent-run.
+
 ### Iteration close-out — write this once the gate above concludes, whether it passed cleanly or is blocked
 
 Run `nx g @abgov/nx-agent:iteration-retrospective "<title>" --projectDocsAncestors <path>
