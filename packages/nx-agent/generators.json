@@ -18,6 +18,11 @@
       "schema": "./src/generators/bug/schema.json",
       "description": "Adds one bug report under project-docs/bugs/, with an optional project-docs-ancestors frontmatter list and a free-text body describing observed vs. expected behavior. Not a blocker: raised externally, resolved by a code fix (via an iteration-retrospective's --resolves), not by revising an upstream artifact."
     },
+    "requirement": {
+      "factory": "./src/generators/requirement/requirement",
+      "schema": "./src/generators/requirement/schema.json",
+      "description": "Adds one requirement under project-docs/requirements/, with the correct empty frontmatter shape (title, id, rules, questions, project-docs-ancestors) and an auto-assigned collision-free req-NNN id."
+    },
     "domain-term": {
       "factory": "./src/generators/domain-term/domain-term",
       "schema": "./src/generators/domain-term/schema.json",
