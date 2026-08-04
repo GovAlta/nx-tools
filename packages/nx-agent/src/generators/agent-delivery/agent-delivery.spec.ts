@@ -86,6 +86,20 @@ describe('nx-agent agent-delivery generator', () => {
     expect(taskIdentification).not.toContain('is not. If you reach Deploy');
   });
 
+  it('task-identification does not push a none key on no-work runs', async () => {
+    await generator(host, { githubActions: true });
+
+    // The template must guard the history write behind `if (topSignal)` — a
+    // bare `topSignal?.key ?? 'none'` push causes a spurious history.json
+    // commit on every no-work run and corrupts stall detection when a real
+    // signal recurs across a no-work gap.
+    const taskIdentification = host
+      .read('scripts/task-identification.mjs')
+      .toString();
+    expect(taskIdentification).not.toContain("?? 'none'");
+    expect(taskIdentification).toContain('if (topSignal)');
+  });
+
   it('never overwrites a file a team has already edited', async () => {
     await generator(host, { githubActions: true });
 

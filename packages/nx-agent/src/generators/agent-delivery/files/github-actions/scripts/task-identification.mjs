@@ -329,10 +329,15 @@ if (process.env.PEEK_ONLY !== 'true') {
     }
   }
 
-  const lineageFingerprint = JSON.stringify(violations);
-  history.push({ key: topSignal?.key ?? 'none', lineageFingerprint });
-  history = history.slice(-HISTORY_KEEP);
-  writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');
+  // Only record history when there is a real eligible signal — no-work runs have
+  // nothing to stall on, and 'none' entries corrupt the stall-detection window when
+  // a real signal recurs across a no-work gap.
+  if (topSignal) {
+    const lineageFingerprint = JSON.stringify(violations);
+    history.push({ key: topSignal.key, lineageFingerprint });
+    history = history.slice(-HISTORY_KEEP);
+    writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');
+  }
 
   if (topSignal && history.length >= STALL_THRESHOLD) {
     const recent = history.slice(-STALL_THRESHOLD);
