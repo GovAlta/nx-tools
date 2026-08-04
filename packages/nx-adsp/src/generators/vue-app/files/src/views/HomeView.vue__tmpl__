@@ -3,9 +3,9 @@ import { ref, onMounted, watch } from 'vue'
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js'
 import { useApi } from '../composables/useApi'
 
-// Keep the reactive instance — do NOT destructure (see App.vue): a destructured
-// `authenticated` freezes at its setup-time value, so the watch below would never
-// see the user sign in and apiFetch would always skip the token.
+// Keep the useKeycloak() result as an object — do NOT destructure it (see App.vue):
+// its fields are plain values in a reactive object and freeze at setup-time undefined
+// when extracted. `apiFetch` from useApi() is a plain function and is fine to destructure.
 const kc = useKeycloak()
 const { apiFetch } = useApi()
 const publicResource = ref('Not retrieved — is the backend service running?')

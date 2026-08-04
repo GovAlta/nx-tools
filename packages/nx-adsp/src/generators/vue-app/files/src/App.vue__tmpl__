@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
-import { RouterView, useRoute } from 'vue-router';
+import { RouterView, useRoute<% if (layout === 'internal') { %>, useRouter<% } %> } from 'vue-router';
 <% if (layout === 'internal') { %>
 import { AppLayout, AppSideMenu, SessionExpiredBanner } from '<%= goaImportPath %>';
 <% } else { %>
@@ -32,16 +32,21 @@ function signInAgain() {
 }
 <% if (layout === 'internal') { %>
 
-// AppSideMenu's account items are presentational -- it doesn't know about
-// Keycloak, it just renders whatever's passed and emits itemClick on click.
+// AppSideMenu's items are presentational — it doesn't know about Keycloak or
+// routing; it just renders whatever's passed and emits itemClick on click.
 const accountItems = computed(() => [
   kc.authenticated
     ? { label: kc.fullName ? `Sign out (${kc.fullName})` : 'Sign out' }
     : { label: 'Sign in' },
 ]);
 
-function onAccountItemClick() {
-  if (kc.authenticated) logout();
+const router = useRouter();
+
+// AppSideMenu emits one itemClick for ALL slots (primary, secondary, account).
+// Items with `to` are nav items — route. Items without are account actions — sign in/out.
+function onItemClick(item: { to?: string }) {
+  if (item.to) router.push(item.to);
+  else if (kc.authenticated) logout();
   else login();
 }
 <% } %>
@@ -52,7 +57,7 @@ function onAccountItemClick() {
   <AppSideMenu
     heading="<%= projectName %>"
     :account-items="accountItems"
-    @item-click="onAccountItemClick"
+    @item-click="onItemClick"
   >
     <SessionExpiredBanner
       v-model:show="session.expired"
