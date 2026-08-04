@@ -314,6 +314,18 @@ describe('Vue App Generator', () => {
     expect(homeView).not.toContain('Authorization');
   }, 30000);
 
+  it('router guard waits for Keycloak readiness before making auth decisions', async () => {
+    await generator(host, options);
+    const router = host.read('apps/test/src/router/index.ts').toString();
+    // Returning `true` when !kc.ready lets unauthenticated direct-URL loads through
+    // to protected routes before Keycloak has finished init. The guard must block
+    // and wait (async watch) instead of allowing.
+    expect(router).toContain('async');
+    expect(router).toContain('kc.ready');
+    expect(router).not.toMatch(/if\s*\(!kc\.ready\)\s*return\s*true/);
+    expect(router).toContain('watch');
+  }, 30000);
+
   it('index.html is at the Vite entry root and its mount target matches main.ts', async () => {
     await generator(host, options);
     // Vite's entry is <projectRoot>/index.html, not src/index.html — a template

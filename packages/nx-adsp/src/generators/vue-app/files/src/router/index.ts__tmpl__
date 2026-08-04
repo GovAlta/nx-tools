@@ -1,3 +1,4 @@
+import { watch } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import HomeView from '../views/HomeView.vue';
@@ -14,12 +15,23 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta.requiresAuth) {
     // Read fields off the reactive instance (don't destructure) — consistent with
     // the views and safe if this ever moves out of the per-navigation callback.
     const kc = useKeycloak();
-    if (!kc.ready) return true;
+    if (!kc.ready) {
+      // Keycloak init is async and may not have settled before the initial navigation
+      // fires (app.mount() triggers navigation synchronously). Block and wait rather
+      // than allowing through — a direct-URL load to a protected route would otherwise
+      // render the page unauthenticated with no login redirect.
+      await new Promise<void>((resolve) => {
+        const stop = watch(
+          () => kc.ready,
+          (ready) => { if (ready) { stop(); resolve() } },
+        )
+      })
+    }
     if (!kc.authenticated) {
       kc.keycloak?.login({ redirectUri: window.location.origin + to.fullPath });
       return false;

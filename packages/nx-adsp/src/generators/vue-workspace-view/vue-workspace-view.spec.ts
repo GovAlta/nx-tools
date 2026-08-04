@@ -99,7 +99,7 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain(
       "{ key: 'lastSaved', label: 'Last saved', sortable: true }",
     );
-    expect(view).toContain('fetch(`/api/applications?${params.toString()}`)');
+    expect(view).toContain('apiFetch(`/api/applications?${params.toString()}`)');
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(row['status'] ?? '—')\" />",
     );

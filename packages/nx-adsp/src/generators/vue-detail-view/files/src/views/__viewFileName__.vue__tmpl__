@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { RecordDetailShell } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
 
 // The fetched record's shape isn't known to this generator -- read fields
 // defensively rather than declaring (and likely getting wrong) a fake interface.
@@ -11,12 +12,13 @@ const error = ref<string | null>(null);
 
 const route = useRoute();
 const router = useRouter();
+const { apiFetch } = useApi();
 
 async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const res = await fetch(`/api/<%= resource %>/${route.params.id}`);
+    const res = await apiFetch(`/api/<%= resource %>/${route.params.id}`);
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     record.value = await res.json();
   } catch (e) {

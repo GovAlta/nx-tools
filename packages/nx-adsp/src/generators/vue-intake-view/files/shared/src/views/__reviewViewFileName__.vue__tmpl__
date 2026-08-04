@@ -2,9 +2,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { GoabCheckbox } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
+const { apiFetch } = useApi();
 
 const idParam = computed(() => String(route.params.id ?? ''));
 
@@ -21,7 +23,7 @@ async function load() {
   loading.value = true;
   loadError.value = null;
   try {
-    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    const res = await apiFetch(`/api/<%= resource %>/${idParam.value}`);
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     record.value = await res.json();
   } catch (e) {
@@ -42,7 +44,7 @@ async function onSubmit() {
   submitting.value = true;
   submitError.value = null;
   try {
-    const res = await fetch(`/api/<%= resource %>/${idParam.value}/submit`, {
+    const res = await apiFetch(`/api/<%= resource %>/${idParam.value}/submit`, {
       method: 'POST',
     });
     if (!res.ok) throw new Error(`Failed to submit (${res.status})`);

@@ -123,7 +123,7 @@ describe('Vue Intake View Generator', () => {
     expect(review).toContain("record['fullName'] ?? '—'");
     expect(review).toContain("record['email'] ?? '—'");
     expect(review).toContain(':disabled="!declared || submitting || undefined"');
-    expect(review).toContain("fetch(`/api/applications/${idParam.value}/submit`");
+    expect(review).toContain("apiFetch(`/api/applications/${idParam.value}/submit`");
     expect(review).toContain('/applications/${idParam.value}/confirmation');
   }, 30000);
 

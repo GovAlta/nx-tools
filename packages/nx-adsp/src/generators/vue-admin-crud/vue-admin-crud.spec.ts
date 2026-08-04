@@ -61,7 +61,7 @@ describe('Vue Admin CRUD Generator', () => {
       .read('apps/test/src/views/RegionsListView.vue')
       .toString();
     expect(view).toContain('<h1>Regions</h1>');
-    expect(view).toContain("fetch('/api/regions')");
+    expect(view).toContain("apiFetch('/api/regions')");
     expect(view).toContain("import { WorkspaceTable } from '@proj/vue-components';");
     expect(view).toContain('<WorkspaceTable');
     // No pagination props bound -- this is the "reused without its pagination/
@@ -92,7 +92,7 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).not.toContain('errors.active');
     expect(view).toContain("method: isNew.value ? 'POST' : 'PUT'");
     expect(view).toContain("isNew.value ? '/api/regions'");
-    expect(view).toContain('fetch(`/api/regions/${idParam.value}`');
+    expect(view).toContain('apiFetch(`/api/regions/${idParam.value}`');
     expect(view).toContain("router.push('/regions')");
     expect(view).toContain('Create Regions');
     expect(view).toContain('Edit Regions');

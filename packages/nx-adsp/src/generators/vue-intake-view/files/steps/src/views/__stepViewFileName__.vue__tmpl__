@@ -2,6 +2,7 @@
 import { reactive, ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Stepper, StepErrorSummary, GoabInput } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
 
 const STEPS = [
 <% stepperSteps.forEach(function (step) { -%>
@@ -11,6 +12,7 @@ const STEPS = [
 
 const route = useRoute();
 const router = useRouter();
+const { apiFetch } = useApi();
 
 const idParam = computed(() => String(route.params.id ?? ''));
 const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
@@ -48,7 +50,7 @@ async function load() {
   loading.value = true;
   loadError.value = null;
   try {
-    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    const res = await apiFetch(`/api/<%= resource %>/${idParam.value}`);
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     const data = await res.json();
     completedSteps.value = Array.isArray(data.completedSteps) ? data.completedSteps : [];
@@ -96,7 +98,7 @@ async function onSaveAndContinue() {
       ...form,
       completedSteps: [...new Set([...completedSteps.value, '<%- stepKey %>'])],
     };
-    const res = await fetch(
+    const res = await apiFetch(
       isNew.value ? '/api/<%= resource %>' : `/api/<%= resource %>/${idParam.value}`,
       {
         method: isNew.value ? 'POST' : 'PUT',
