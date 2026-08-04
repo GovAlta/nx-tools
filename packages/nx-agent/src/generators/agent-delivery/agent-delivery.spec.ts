@@ -1,5 +1,9 @@
 import { Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
+import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import generator from './agent-delivery';
 
 const SKILL_PATHS = [
@@ -84,6 +88,45 @@ describe('nx-agent agent-delivery generator', () => {
     // runner (route unreachable from that runner) must not ship as if it
     // were universally true.
     expect(taskIdentification).not.toContain('is not. If you reach Deploy');
+  });
+
+  it('task-identification does not write history.json when no signals exist', async () => {
+    await generator(host, { githubActions: true });
+
+    const script = host.read('scripts/task-identification.mjs').toString();
+    const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-test-'));
+    try {
+      writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
+      symlinkSync(join(process.cwd(), 'node_modules'), join(tmpDir, 'node_modules'));
+
+      mkdirSync(join(tmpDir, '.nx-agent'));
+      writeFileSync(
+        join(tmpDir, '.nx-agent', 'lineage.json'),
+        JSON.stringify({
+          registry: {},
+          index: {},
+          violations: {
+            brokenRefs: [],
+            unscoped: [],
+            orphans: [],
+            resolutionStatus: { open: [], resolved: [] },
+          },
+        }),
+      );
+
+      const outputFile = join(tmpDir, 'github-output');
+      writeFileSync(outputFile, '');
+      execSync('node task-identification.mjs', {
+        cwd: tmpDir,
+        env: { ...process.env, GITHUB_OUTPUT: outputFile, GITHUB_REF_NAME: 'feature/test' },
+      });
+
+      expect(
+        existsSync(join(tmpDir, '.github', 'agent-delivery-iteration', 'history.json')),
+      ).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true });
+    }
   });
 
   it('never overwrites a file a team has already edited', async () => {

@@ -1,0 +1,10 @@
+{
+  "bugs": {
+    "expectedAncestorTypes": [],
+    "tracksResolution": true
+  },
+  "iteration-retrospectives": {
+    "expectedAncestorTypes": [],
+    "terminal": true
+  }
+}
