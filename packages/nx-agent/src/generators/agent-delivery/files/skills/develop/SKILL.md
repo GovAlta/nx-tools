@@ -3,6 +3,7 @@ name: develop
 description: Implement an api-design/ux-design against real code, following the project's own generated recipe (its own AGENTS.md — the exact steps vary by stack), with a project-docs-ancestors code comment tying every new file back to the design it implements. Runs an inline gate battery — audit, secret scan, build, test, always blocking — plus an independent code review, every pass, advisory.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 argument-hint: "<api-design or ux-design slug to implement>"
+project-docs-ancestors: [skill-designs:develop-skill-lineage-plan-step]
 ---
 
 ## Which artifact
@@ -60,7 +61,10 @@ no Design pass needed:
    run `npx nx g @abgov/nx-agent:project-docs-lineage` (without `--dry-run`) and read
    `.nx-agent/lineage.json`'s `index` entry for that domain-model (or its bounded-context ancestor)
    to see what other code already exists building on the same domain concepts — a sibling resource
-   may have already implemented shared logic this pass should reuse.
+   may have already implemented shared logic this pass should reuse. Before moving on, state your
+   implementation plan in one short block: which sibling resources you found and will reuse, what
+   you are implementing fresh, and which domain invariants belong in the service vs. orchestration
+   layer. This makes the lineage read a commitment, not a note.
 
 2. **Follow the project's own recipe end to end** — check its `AGENTS.md` for its exact "Recipe:
    add a resource"/"Adding a new route" section (naming varies by stack — an `express-service`'s
@@ -140,14 +144,14 @@ blocking status depends on whether this project has a CI backstop yet — see be
 
 ### Independent code review — every pass
 
-Give the reviewer only the api-design/ux-design, the
-domain terms it should be consistent with, and the new/changed code — never this pass's own
-reasoning. Ask it: does the code use a term inconsistently with the domain vocabulary (naming
-included — a generic implementation-layer word standing in for a domain noun is drift too)? Is
-anything more elaborate than the design calls for? Is anything unclear? Does the code implement
-everything the design specifies, and nothing it doesn't? Always advisory — act on a real finding
-by fixing it or by updating the design doc when the code's approach is the better one, don't just
-log it.
+Give the reviewer the api-design/ux-design, the domain terms it should be consistent with, the
+implementation plan from step 1, and the new/changed code — never this pass's own reasoning.
+Ask it: does the code match what the plan said it would reuse and build fresh? Does the code use
+a term inconsistently with the domain vocabulary (naming included — a generic implementation-layer
+word standing in for a domain noun is drift too)? Is anything more elaborate than the design calls
+for? Is anything unclear? Does the code implement everything the design specifies, and nothing it
+doesn't? Always advisory — act on a real finding by fixing it or by updating the design doc when
+the code's approach is the better one, don't just log it.
 
 ### Commit before ending this skill
 

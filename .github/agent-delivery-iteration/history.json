@@ -6,5 +6,13 @@
   {
     "key": "none",
     "lineageFingerprint": "{\"brokenRefs\":[],\"orphans\":[],\"unscoped\":[],\"resolutionStatus\":{\"open\":[],\"resolved\":[]}}"
+  },
+  {
+    "key": "unprocessed-feature:features:develop-skill-lineage-plan-step",
+    "lineageFingerprint": "{\"brokenRefs\":[],\"orphans\":[\"features:develop-skill-lineage-plan-step\"],\"unscoped\":[],\"resolutionStatus\":{\"open\":[],\"resolved\":[]}}"
+  },
+  {
+    "key": "undesigned-design:domain-models:develop-skill-commitment-pattern",
+    "lineageFingerprint": "{\"brokenRefs\":[],\"orphans\":[],\"unscoped\":[],\"resolutionStatus\":{\"open\":[],\"resolved\":[]}}"
   }
 ]

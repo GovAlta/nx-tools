@@ -3,6 +3,27 @@
     "expectedAncestorTypes": [],
     "tracksResolution": true
   },
+  "features": {
+    "expectedAncestorTypes": []
+  },
+  "service-descriptions": {
+    "expectedAncestorTypes": ["features"]
+  },
+  "requirements": {
+    "expectedAncestorTypes": ["service-descriptions"]
+  },
+  "bounded-contexts": {
+    "expectedAncestorTypes": []
+  },
+  "domain-terms": {
+    "expectedAncestorTypes": ["bounded-contexts"]
+  },
+  "domain-models": {
+    "expectedAncestorTypes": ["bounded-contexts", "domain-terms"]
+  },
+  "skill-designs": {
+    "expectedAncestorTypes": ["domain-models"]
+  },
   "iteration-retrospectives": {
     "expectedAncestorTypes": [],
     "terminal": true
