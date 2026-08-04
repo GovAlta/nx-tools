@@ -6,6 +6,12 @@
   "features": {
     "expectedAncestorTypes": []
   },
+  "service-descriptions": {
+    "expectedAncestorTypes": ["features"]
+  },
+  "requirements": {
+    "expectedAncestorTypes": ["service-descriptions"]
+  },
   "iteration-retrospectives": {
     "expectedAncestorTypes": [],
     "terminal": true
