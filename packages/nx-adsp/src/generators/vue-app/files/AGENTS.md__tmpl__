@@ -236,31 +236,22 @@ mark what's meant to be edited.
    ```
 3. **For the `internal` layout: add a nav link to `src/App.vue`.** The generated shell only
    populates `accountItems`; primary navigation lives in `primaryItems` (or `secondaryItems`).
-   `AppSideMenu` is purely presentational — it doesn't know about routing, so `App.vue` owns
-   `current` detection and the `itemClick` handler:
+   `AppSideMenu` emits one `itemClick` for all slots — the generated `onItemClick` already
+   dispatches by `item.to`: items with a `to` route, items without sign in/out. Add only
+   `primaryItems`:
 
    ```typescript
-   // In <script setup>:
-   import { computed } from 'vue';
-   import { RouterView, useRoute, useRouter } from 'vue-router';
-   // ...existing imports...
-
-   const route = useRoute();    // already in the generated App.vue
-   const router = useRouter();
-
-   // Icon names come from the GoA icon set: design.alberta.ca/components/icons
+   // In <script setup> — route, router, and onItemClick are already in the generated App.vue:
+   // Icon names from the GoA icon set: design.alberta.ca/components/icons
    const primaryItems = computed(() => [
-     { label: 'Home',       to: '/',           icon: 'home',  current: route.path === '/' },
-     { label: 'My Feature', to: '/my-feature', icon: 'list',  current: route.path.startsWith('/my-feature') },
-   ]);
-
-   function onItemClick(item: { to?: string }) {
-     if (item.to) router.push(item.to);
-   }
+     { label: 'Home',       to: '/',           icon: 'home', current: route.path === '/' },
+     { label: 'My Feature', to: '/my-feature', icon: 'list', current: route.path.startsWith('/my-feature') },
+   ])
    ```
 
    ```html
-   <!-- In <template>, add :primary-items and @item-click to <AppSideMenu>: -->
+   <!-- In <template>, add :primary-items to <AppSideMenu>
+        (@item-click="onItemClick" is already wired in the generated shell): -->
    <AppSideMenu
      heading="..."
      :primary-items="primaryItems"

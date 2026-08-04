@@ -206,7 +206,7 @@ describe('Vue App Generator', () => {
     expect(app).toContain('<AppSideMenu');
     expect(app).toContain('heading="test"');
     expect(app).toContain(':account-items="accountItems"');
-    expect(app).toContain('@item-click="onAccountItemClick"');
+    expect(app).toContain('@item-click="onItemClick"');
     // The content gutter is shared regardless of shell choice.
     expect(app).toContain('<AppLayout');
     // App.vue itself must not add a second skip-to-main-content landmark —
@@ -351,6 +351,21 @@ describe('Vue App Generator', () => {
     expect(app).not.toContain('goa-hero-banner');
     const homeView = host.read('apps/test/src/views/HomeView.vue').toString();
     expect(homeView).toContain('goa-hero-banner');
+  }, 30000);
+
+  it('--layout=internal App.vue uses a unified onItemClick that routes nav items and signs in/out for account items', async () => {
+    // AppSideMenu emits one itemClick for all slots. A dedicated onAccountItemClick breaks
+    // once primaryItems are added — primary nav clicks fire login()/logout() instead of routing.
+    // The generated handler must dispatch by item.to.
+    await generator(host, { ...options, layout: 'internal' });
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).toContain('onItemClick');
+    expect(app).toContain('router.push');
+    expect(app).not.toContain('onAccountItemClick');
+    // Routing branch: items with `to` navigate
+    expect(app).toContain('item.to');
+    // Auth branch: items without `to` fall through to sign-in/out
+    expect(app).toContain('kc.authenticated');
   }, 30000);
 
   it('--layout=internal has no hero banner anywhere, including on HomeView', async () => {
