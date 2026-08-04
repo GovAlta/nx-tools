@@ -5,10 +5,9 @@ allowed-tools: Read, Write, Bash, Grep, Glob, Task
 argument-hint: "<feature slug to decompose, or a requirement slug to refine>"
 ---
 
-`feature`/`open-question`/`blocker` have real generators (`nx g @abgov/nx-agent:feature`/
-`:open-question`/`:blocker`) — use them, don't hand-author. `service-description`/`requirement`
-still don't have one; write them by hand in the shape below, matching `domain-term`/
-`bounded-context`'s own conventions. All four live under `project-docs/`.
+`feature`/`open-question`/`blocker`/`requirement` have real generators (`nx g @abgov/nx-agent:feature`/
+`:open-question`/`:blocker`/`:requirement`) — use them, don't hand-author. `service-description`
+still doesn't; write it by hand in the shape below. All five live under `project-docs/`.
 
 `bug` also has a real generator (`nx g @abgov/nx-agent:bug`), but this skill never processes one
 directly — an open bug routes straight to Develop (investigate against the existing spec, fix,
@@ -59,35 +58,26 @@ verify), not through Discover's intake/refinement modes below.
    `project-docs-ancestors` too (never overwrite the list) — the same convention every other
    artifact type already uses for "built from more than one source," not a bespoke field.
 
-4. For each concern that's a genuine, scoped candidate requirement, write it under
-   `project-docs/requirements/<slug>.md` (slug from a short descriptive title):
+4. For each concern that's a genuine, scoped candidate requirement, run:
 
-   ```yaml
-   ---
-   title: <short descriptive title>
-   id: req-<NNN>
-   project-docs-ancestors: [service-descriptions:<service-slug>, features:<feature-slug>]
-   rules: []
-   questions: []
-   ---
+   ```
+   nx g @abgov/nx-agent:requirement "<title>" \
+     --projectDocsAncestors=project-docs/service-descriptions/<service-slug>.md,project-docs/features/<feature-slug>.md
    ```
 
+   The generator assigns the next unused `req-NNN` id automatically (scanning existing files),
+   writes the correct empty frontmatter shape (`title`, `id`, `project-docs-ancestors`,
+   `resolves: []`, `rules: []`, `questions: []`), and registers `requirements` in
+   `artifact-schema.json` on first use — nothing to do by hand.
+
    The `features:<feature-slug>` ancestor is provenance — which feature request this requirement
-   was actually decomposed from — additional to, not instead of, the service-description ancestor;
-   `requirements`'s own `expectedAncestorTypes` (below) still only requires the latter.
+   was decomposed from — additional to, not instead of, the service-description ancestor.
 
-   Rules/examples/questions live in frontmatter as structured YAML, not markdown body bullets.
-   Leave `rules: []` empty here — intake seeds the requirement; refinement (below) example-maps it.
-
-   `id` is a human-facing sequential label only — the graph key is the file's slug. Pick the next
-   unused `req-NNN` by checking existing files under `project-docs/requirements/`.
+   `id` is a human-facing sequential label only — the graph key is the file's slug.
 
    Top-level `questions` is for anything that doesn't attach to one rule (e.g. "who is authorized
    to review a submission" — a property of the whole requirement). Each rule has its own
    `examples`/`questions` for points specific to that rule.
-
-   Register once (on the first requirement written): `"requirements": { "expectedAncestorTypes":
-   ["service-descriptions"] }` in `project-docs/artifact-schema.json`.
 
 5. For anything from step 2 that *isn't* a clean requirement yet — a decision nobody's made, a
    dependency outside this work — don't drop it and don't force it into a requirement seed

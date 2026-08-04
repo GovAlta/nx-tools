@@ -1,3 +1,4 @@
+// project-docs-ancestors: domain-models:lineage-graph-metadata
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { addProjectConfiguration, Tree } from '@nx/devkit';
 import {
@@ -6,6 +7,7 @@ import {
   computeViolations,
   extractCommentAncestorRefs,
   extractFrontmatterAncestorRefs,
+  extractFrontmatterMetadata,
   getAncestors,
   getDescendants,
   parseAncestorRef,
@@ -188,6 +190,64 @@ describe('extractCommentAncestorRefs', () => {
   });
 });
 
+describe('extractFrontmatterMetadata', () => {
+  it('returns all non-structural fields verbatim', () => {
+    const content = [
+      '---',
+      'title: Create evaluation matrix',
+      'id: req-001',
+      'rules: []',
+      'questions: []',
+      'project-docs-ancestors: [service-descriptions:some-service]',
+      'resolves: []',
+      '---',
+    ].join('\n');
+    expect(extractFrontmatterMetadata(content)).toEqual({
+      title: 'Create evaluation matrix',
+      id: 'req-001',
+      rules: [],
+      questions: [],
+    });
+  });
+
+  it('excludes project-docs-ancestors and resolves (structural fields)', () => {
+    const content = [
+      '---',
+      'project-docs-ancestors: [service-descriptions:some-service]',
+      'resolves: [open-questions:a-question]',
+      '---',
+    ].join('\n');
+    expect(extractFrontmatterMetadata(content)).toEqual({});
+  });
+
+  it('returns {} when there is no frontmatter block', () => {
+    expect(extractFrontmatterMetadata('just some markdown body')).toEqual({});
+  });
+
+  it('returns {} and does not throw when the frontmatter YAML is malformed', () => {
+    const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
+    expect(() => extractFrontmatterMetadata(content)).not.toThrow();
+    expect(extractFrontmatterMetadata(content)).toEqual({});
+  });
+
+  it('passes structured values through verbatim — arrays and nested objects unchanged', () => {
+    const content = [
+      '---',
+      'id: req-007',
+      'rules:',
+      '  - rule: first rule',
+      '  - rule: second rule',
+      'questions: []',
+      '---',
+    ].join('\n');
+    const meta = extractFrontmatterMetadata(content);
+    expect(Array.isArray(meta['rules'])).toBe(true);
+    expect((meta['rules'] as unknown[]).length).toBe(2);
+    expect(meta['questions']).toEqual([]);
+    expect(meta['id']).toBe('req-007');
+  });
+});
+
 describe('resolveRefFromPath', () => {
   let host: Tree;
 
@@ -253,6 +313,130 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
 
   beforeEach(() => {
     host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+  });
+
+  it('registry entry includes non-structural frontmatter as metadata', () => {
+    host.write(
+      'project-docs/requirements/create-matrix.md',
+      [
+        '---',
+        'title: Create matrix',
+        'id: req-001',
+        'rules: []',
+        'project-docs-ancestors: [service-descriptions:some-service]',
+        'resolves: []',
+        '---',
+      ].join('\n'),
+    );
+
+    const registry = buildRegistry(host);
+    const entry = registry.get('requirements:create-matrix');
+
+    expect(entry).toBeDefined();
+    expect(entry!.metadata).toEqual({ title: 'Create matrix', id: 'req-001', rules: [] });
+  });
+
+  it('registry entry metadata is {} for an artifact with no frontmatter', () => {
+    host.write('project-docs/domain-terms/bare.md', 'no frontmatter here');
+
+    const registry = buildRegistry(host);
+    const entry = registry.get('domain-terms:bare');
+
+    expect(entry).toBeDefined();
+    expect(entry!.metadata).toEqual({});
+  });
+
+  it('index entry for a registered artifact includes the descendant artifact own metadata', () => {
+    host.write(
+      'project-docs/requirements/req-with-meta.md',
+      [
+        '---',
+        'title: A requirement',
+        'id: req-002',
+        'rules: []',
+        'project-docs-ancestors: []',
+        'resolves: []',
+        '---',
+      ].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [requirements:req-with-meta]',
+        '---',
+      ].join('\n'),
+    );
+
+    const registry = buildRegistry(host);
+    const index = buildIndex(host, registry);
+    // The index entry for requirements:req-with-meta lists domain-models:m as a
+    // descendant. That entry's metadata is domain-models:m's own metadata —
+    // not requirements:req-with-meta's.
+    const descendants = index.get('requirements:req-with-meta') ?? [];
+    const artifactEntry = descendants.find((e) => e.type === 'domain-models');
+
+    expect(artifactEntry).toBeDefined();
+    expect(artifactEntry!.metadata).toEqual({ name: 'M' });
+  });
+
+  it('index entry for a plain source file has no metadata property', () => {
+    host.write(
+      'project-docs/domain-terms/x.md',
+      ['---', 'term: X', '---'].join('\n'),
+    );
+    host.write(
+      'apps/test/src/main.ts',
+      '// project-docs-ancestors: domain-terms:x\nexport {};',
+    );
+
+    const registry = buildRegistry(host);
+    const index = buildIndex(host, registry);
+    const descendants = index.get('domain-terms:x') ?? [];
+    const sourceFileEntry = descendants.find(
+      (e) => e.file === 'apps/test/src/main.ts',
+    );
+
+    expect(sourceFileEntry).toBeDefined();
+    expect(sourceFileEntry!.metadata).toBeUndefined();
+    expect(JSON.stringify(sourceFileEntry)).not.toContain('metadata');
+  });
+
+  it('index entry metadata is deeply equal to the registry entry metadata for the same artifact', () => {
+    host.write(
+      'project-docs/requirements/r.md',
+      [
+        '---',
+        'title: Some req',
+        'id: req-003',
+        'rules: []',
+        'project-docs-ancestors: []',
+        'resolves: []',
+        '---',
+      ].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-models/dm.md',
+      [
+        '---',
+        'name: DM',
+        'project-docs-ancestors: [requirements:r]',
+        '---',
+      ].join('\n'),
+    );
+
+    const registry = buildRegistry(host);
+    const index = buildIndex(host, registry);
+
+    // domain-models:dm is a descendant of requirements:r.
+    // The index entry for dm has metadata equal to registry.get('domain-models:dm').metadata.
+    const registryMetaForDM = registry.get('domain-models:dm')!.metadata;
+    const indexDescendants = index.get('requirements:r') ?? [];
+    const domainModelEntry = indexDescendants.find((e) => e.type === 'domain-models');
+
+    expect(domainModelEntry).toBeDefined();
+    expect(domainModelEntry!.metadata).toEqual(registryMetaForDM);
   });
 
   it('finds a correctly-resolved reference with no violations', () => {
@@ -853,6 +1037,42 @@ describe('getDescendants', () => {
 
     expect(entry.file).toBe('apps/a/src/main.ts');
     expect(entry.type).toBeUndefined();
+  });
+
+  it('includes metadata on a descendant that is itself a registered artifact', () => {
+    host.write(
+      'project-docs/domain-terms/b.md',
+      ['---', 'term: B', 'aliases: []', '---'].join('\n'),
+    );
+    host.write(
+      'project-docs/bounded-contexts/c.md',
+      [
+        '---',
+        'name: C',
+        'project-docs-ancestors: [domain-terms:b]',
+        '---',
+      ].join('\n'),
+    );
+
+    const [entry] = getDescendants(host, 'domain-terms:b');
+
+    expect(entry.metadata).toEqual({ name: 'C' });
+  });
+
+  it('does not include metadata on a descendant that is a plain source file', () => {
+    host.write(
+      'project-docs/domain-terms/b.md',
+      ['---', 'term: B', '---'].join('\n'),
+    );
+    host.write(
+      'apps/a/src/main.ts',
+      '// project-docs-ancestors: domain-terms:b\nexport {};',
+    );
+
+    const [entry] = getDescendants(host, 'domain-terms:b');
+
+    expect(entry.file).toBe('apps/a/src/main.ts');
+    expect(entry.metadata).toBeUndefined();
   });
 
   it('defaults to direct referrers only (depth 1)', () => {

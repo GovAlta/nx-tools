@@ -45,7 +45,45 @@ export function refKey(
   return `${prefix}${ref.type}${suffix}`;
 }
 
-const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
+const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/
+
+// The closed set of frontmatter fields the graph already models as structural
+// relationships — excluded from Artifact Metadata so the metadata map never
+// duplicates what the registry's own ancestorRefs/resolves fields already
+// carry. Adding a new structural field requires an explicit, named change here;
+// it never happens implicitly.
+const STRUCTURAL_FRONTMATTER_FIELDS = new Set([
+  'project-docs-ancestors',
+  'resolves',
+])
+
+// Returns all frontmatter fields that are not structural (i.e. not already
+// modelled by the registry's ancestorRefs/resolves). Values are verbatim —
+// no normalisation, no inference, no type coercion. A malformed or absent
+// frontmatter block returns {} rather than throwing, matching the defensive
+// posture of extractFrontmatterField.
+export function extractFrontmatterMetadata(
+  content: string,
+): Record<string, unknown> {
+  const block = FRONTMATTER_BLOCK.exec(content)
+  if (!block) return {}
+  let frontmatter: unknown
+  try {
+    frontmatter = yaml.parse(block[1])
+  } catch {
+    return {}
+  }
+  if (!frontmatter || typeof frontmatter !== 'object') return {}
+  const metadata: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(
+    frontmatter as Record<string, unknown>,
+  )) {
+    if (!STRUCTURAL_FRONTMATTER_FIELDS.has(key)) {
+      metadata[key] = value
+    }
+  }
+  return metadata
+}
 
 // Real YAML parsing, not hand-rolled per-shape regexes — frontmatter is YAML,
 // and a reference-list field is a normal YAML sequence that can legally be
@@ -200,6 +238,10 @@ export interface RegistryEntry {
   // just build on — a strict subset of ancestorRefs, since a resolved ref is
   // also written there for traversal. See computeViolations' resolutionStatus.
   resolves: string[];
+  // All non-structural frontmatter fields, verbatim. Never undefined — an
+  // artifact with no parseable frontmatter block has metadata: {}. Excludes
+  // project-docs-ancestors and resolves (already in ancestorRefs/resolves).
+  metadata: Record<string, unknown>;
 }
 
 export type Registry = Map<string, RegistryEntry>;
@@ -210,6 +252,10 @@ export interface DescendantEntry {
   // a registered project-docs artifact (a plain source file that merely
   // references one in a comment has no type of its own).
   type?: string;
+  // Artifact Metadata from the registry entry for this file — present only
+  // when `type` is defined. Sourced directly from the already-computed
+  // registry in the same pass; no second file read is performed.
+  metadata?: Record<string, unknown>;
 }
 
 export type Index = Map<string, DescendantEntry[]>;
@@ -315,6 +361,7 @@ function registerArtifact(
     path,
     ancestorRefs: extractFrontmatterAncestorRefs(content),
     resolves: extractFrontmatterField(content, 'resolves'),
+    metadata: extractFrontmatterMetadata(content),
   });
 }
 
@@ -351,7 +398,11 @@ export function buildIndex(
       }
       const key = refKey(parsed);
       const entries = index.get(key) ?? [];
-      entries.push({ file, type });
+      entries.push({
+        file,
+        type,
+        ...(type ? { metadata: registry.get(descendantKey!)!.metadata } : {}),
+      });
       index.set(key, entries);
     }
   }
