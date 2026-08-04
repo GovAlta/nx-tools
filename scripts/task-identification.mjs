@@ -329,10 +329,12 @@ if (process.env.PEEK_ONLY !== 'true') {
     }
   }
 
-  const lineageFingerprint = JSON.stringify(violations);
-  history.push({ key: topSignal?.key ?? 'none', lineageFingerprint });
-  history = history.slice(-HISTORY_KEEP);
-  writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');
+  if (topSignal) {
+    const lineageFingerprint = JSON.stringify(violations);
+    history.push({ key: topSignal.key, lineageFingerprint });
+    history = history.slice(-HISTORY_KEEP);
+    writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');
+  }
 
   if (topSignal && history.length >= STALL_THRESHOLD) {
     const recent = history.slice(-STALL_THRESHOLD);
