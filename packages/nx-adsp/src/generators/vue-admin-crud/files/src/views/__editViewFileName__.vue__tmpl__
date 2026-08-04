@@ -3,10 +3,12 @@ import { reactive, ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { GoabInput, GoabCheckbox } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
 const kc = useKeycloak();
+const { apiFetch } = useApi();
 
 const idParam = computed(() => String(route.params.id ?? ''));
 const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
@@ -32,7 +34,7 @@ async function load() {
   loading.value = true;
   loadError.value = null;
   try {
-    const res = await fetch(`/api/<%= resource %>/${idParam.value}`);
+    const res = await apiFetch(`/api/<%= resource %>/${idParam.value}`);
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     const data = await res.json();
 <% fields.forEach(function (field) { -%>
@@ -67,7 +69,7 @@ async function onSubmit() {
   saving.value = true;
   saveError.value = null;
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       isNew.value ? '/api/<%= resource %>' : `/api/<%= resource %>/${idParam.value}`,
       {
         method: isNew.value ? 'POST' : 'PUT',

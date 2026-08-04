@@ -97,7 +97,7 @@ describe('Vue Detail View Generator', () => {
       .read('apps/test/src/views/ApplicationDetailView.vue')
       .toString();
     expect(view).toContain('heading="Application Detail"');
-    expect(view).toContain("fetch(`/api/applications/${route.params.id}`)");
+    expect(view).toContain("apiFetch(`/api/applications/${route.params.id}`)");
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(record['status'] ?? '—')\" />",
     );

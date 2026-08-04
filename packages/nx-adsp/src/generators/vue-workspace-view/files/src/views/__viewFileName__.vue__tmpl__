@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { WorkspaceTable } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
+
+const { apiFetch } = useApi();
 
 const columns = [
 <% columns.forEach(function (column) { -%>
@@ -39,7 +42,7 @@ async function load() {
       params.set('sortBy', sortBy.value);
       params.set('sortDir', sortDir.value);
     }
-    const res = await fetch(`/api/<%= resource %>?${params.toString()}`);
+    const res = await apiFetch(`/api/<%= resource %>?${params.toString()}`);
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     const data = await res.json();
     // Accept either a bare array or a { results, total } page envelope.

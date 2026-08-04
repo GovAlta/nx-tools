@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { WorkspaceTable } from '<%= goaImportPath %>';
+import { useApi } from '../composables/useApi';
 
 const kc = useKeycloak();
+const { apiFetch } = useApi();
 
 const columns = [
 <% fields.forEach(function (field) { -%>
@@ -21,7 +23,7 @@ async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const res = await fetch('/api/<%= resource %>');
+    const res = await apiFetch('/api/<%= resource %>');
     if (!res.ok) throw new Error(`Failed to load (${res.status})`);
     const data = await res.json();
     // Accept either a bare array or a { results } envelope.
