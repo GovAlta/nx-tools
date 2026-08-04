@@ -39,11 +39,20 @@ function stripFrontmatter(content: string): string {
   return content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
 }
 
+function extractFrontmatterYaml(content: string): string {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  return match ? match[1].trim() : '';
+}
+
 // A registry key's own format (<project>/type:id) is already constrained in
 // practice, but this is the one place it becomes an HTML id/URL fragment, so
 // swap anything outside that safe set defensively rather than assume.
 function toAnchorId(key: string): string {
   return `artifact-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
+function toDisplayName(slug: string): string {
+  return slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
 // Curated, hand-copied subset of @abgov/design-tokens@2.12.0's dist/tokens.css
@@ -75,30 +84,173 @@ function buildStyles(): string {
       color: ${TOKENS.textDefault};
       background: ${TOKENS.backgroundSubtle};
       margin: 0;
-      padding: 2rem;
+      padding: 0;
       line-height: 1.5;
     }
-    h1, h2 { color: ${TOKENS.brand}; }
-    h1 { font-size: 2rem; margin-bottom: 0.25rem; }
-    h2 { font-size: 1.25rem; margin-top: 0; }
-    .generated-at { color: ${TOKENS.textMuted}; font-size: 0.875rem; margin-top: 0; }
-    section {
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
       background: ${TOKENS.background};
+      border-bottom: 1px solid ${TOKENS.border};
+      padding: 0.75rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .app-title {
+      font-weight: 700;
+      color: ${TOKENS.brand};
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    .app-meta { font-size: 0.8125rem; color: ${TOKENS.textMuted}; }
+    .app-date { font-size: 0.8125rem; color: ${TOKENS.textMuted}; margin-left: auto; }
+    .app-main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+    .panel[hidden] { display: none !important; }
+    .home-section { margin-bottom: 2.5rem; }
+    .home-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${TOKENS.textMuted};
+      margin: 0 0 1rem;
+    }
+    .home-type-group { margin-bottom: 1.5rem; }
+    .home-type-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${TOKENS.textMuted};
+      margin-bottom: 0.5rem;
+    }
+    .card-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .root-card {
+      display: block;
+      flex: 1 1 180px;
+      max-width: 260px;
       border: 1px solid ${TOKENS.border};
       border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      max-width: 960px;
+      padding: 1rem;
+      text-decoration: none;
+      color: ${TOKENS.textDefault};
+      background: ${TOKENS.background};
+      transition: border-color 0.15s;
     }
-    .cards { display: flex; flex-wrap: wrap; gap: 1rem; }
-    .card {
-      flex: 1 1 160px;
+    .root-card:hover { border-color: ${TOKENS.brand}; }
+    .rc-type {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: ${TOKENS.textMuted};
+      margin-bottom: 0.25rem;
+    }
+    .rc-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: ${TOKENS.textDefault};
+    }
+    .rc-meta { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: ${TOKENS.textMuted}; }
+    .rc-children { font-size: 0.75rem; color: ${TOKENS.textMuted}; }
+    .rc-slug { font-size: 0.6875rem; color: ${TOKENS.textMuted}; font-family: monospace; margin-bottom: 0.375rem; }
+    .panel-back { font-size: 0.875rem; color: ${TOKENS.textMuted}; margin-bottom: 1.5rem; }
+    .panel-back a { color: ${TOKENS.brand}; text-decoration: none; }
+    .context-note {
+      background: ${TOKENS.backgroundSubtle};
       border: 1px solid ${TOKENS.border};
       border-radius: 6px;
-      padding: 1rem;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      color: ${TOKENS.textMuted};
+      margin-bottom: 1.5rem;
     }
-    .card .count { font-size: 2rem; font-weight: 700; }
-    .card .label { color: ${TOKENS.textMuted}; font-size: 0.875rem; }
+    .artifact-type {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${TOKENS.textMuted};
+      margin-bottom: 0.25rem;
+    }
+    .artifact-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: ${TOKENS.textDefault};
+      margin: 0 0 0.375rem;
+      line-height: 1.2;
+    }
+    .artifact-slug { font-size: 0.8125rem; color: ${TOKENS.textMuted}; font-family: monospace; margin-bottom: 0.25rem; }
+    .artifact-path { font-size: 0.8125rem; color: ${TOKENS.textMuted}; margin-bottom: 1.5rem; }
+    .fm-details { border: 1px solid ${TOKENS.border}; border-radius: 6px; margin-bottom: 1.5rem; overflow: hidden; }
+    .fm-details > summary { padding: 0.625rem 0.875rem; font-size: 0.8125rem; color: ${TOKENS.textMuted}; cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 0.375rem; }
+    .fm-details > summary::before { content: "▶"; font-size: 0.5625rem; }
+    .fm-details[open] > summary::before { content: "▼"; }
+    .fm-pre { margin: 0; padding: 1rem 1.25rem; background: ${TOKENS.backgroundSubtle}; border-top: 1px solid ${TOKENS.border}; font-size: 0.8125rem; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; color: ${TOKENS.textDefault}; }
+    .artifact-body {
+      line-height: 1.7;
+      border-top: 1px solid ${TOKENS.border};
+      padding-top: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .artifact-body :first-child { margin-top: 0; }
+    .related-grid { display: flex; flex-direction: column; gap: 2rem; border-top: 1px solid ${TOKENS.border}; padding-top: 2rem; }
+    .related-section h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: ${TOKENS.textMuted};
+      margin: 0 0 0.75rem;
+    }
+    .related-count { font-weight: 400; font-size: 0.75rem; color: ${TOKENS.textMuted}; }
+    .mini-card-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .mini-card {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      border: 1px solid ${TOKENS.border};
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      text-decoration: none;
+      color: ${TOKENS.textDefault};
+      background: ${TOKENS.backgroundSubtle};
+      min-width: 120px;
+    }
+    .mini-card:hover { border-color: ${TOKENS.brand}; background: ${TOKENS.background}; }
+    .mc-type { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.04em; color: ${TOKENS.textMuted}; }
+    .mc-name { font-size: 0.875rem; font-weight: 600; }
+    .mc-slug { font-size: 0.6875rem; color: ${TOKENS.textMuted}; font-family: monospace; }
+    .mc-meta { font-size: 0.75rem; color: ${TOKENS.textMuted}; display: flex; align-items: center; gap: 0.375rem; margin-top: 0.125rem; }
+    .mc-children { font-size: 0.75rem; color: ${TOKENS.textMuted}; }
+    .mini-card-grid.compact .mini-card { min-width: 0; flex-direction: row; align-items: center; gap: 0.5rem; }
+    .mini-card-grid.compact .mc-type { display: none; }
+    .mini-card-grid.compact .mc-slug { display: none; }
+    .overview-details {
+      border: 1px solid ${TOKENS.border};
+      border-radius: 8px;
+      margin-top: 2.5rem;
+      overflow: hidden;
+    }
+    .overview-details > summary {
+      padding: 0.875rem 1.25rem;
+      font-size: 0.875rem;
+      color: ${TOKENS.textMuted};
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .overview-details > summary::before { content: "\\25B6"; font-size: 0.625rem; color: ${TOKENS.textMuted}; }
+    .overview-details[open] > summary::before { content: "\\25BC"; }
+    .overview-body { padding: 0 1.25rem 1.5rem; border-top: 1px solid ${TOKENS.border}; }
+    .overview-section { margin-top: 1.5rem; }
+    .overview-section h2 { font-size: 1rem; font-weight: 600; color: ${TOKENS.brand}; margin: 0 0 1rem; }
+    .overview-section h3 { font-size: 0.875rem; font-weight: 600; color: ${TOKENS.textDefault}; margin: 1rem 0 0.5rem; }
     .badge {
       display: inline-block;
       border-radius: 999px;
@@ -112,25 +264,47 @@ function buildStyles(): string {
     .badge-terminal { background: ${TOKENS.background}; border: 1px solid ${TOKENS.textMuted}; color: ${TOKENS.textMuted}; }
     .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.875rem; color: ${TOKENS.textMuted}; margin-top: 0.75rem; }
     .legend-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; margin-right: 0.375rem; vertical-align: middle; }
+    .mermaid { text-align: center; overflow: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid ${TOKENS.border}; }
     th { color: ${TOKENS.textMuted}; font-weight: 600; }
-    .synthesis-note { color: ${TOKENS.textMuted}; font-size: 0.8125rem; font-style: italic; }
-    .mermaid { text-align: center; }
-    .detail {
-      display: none;
-      background: ${TOKENS.background};
-      border: 1px solid ${TOKENS.interactive.border};
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      max-width: 960px;
+    .type-group { margin-bottom: 1.5rem; }
+    .type-group:last-child { margin-bottom: 0; }
+    .type-heading {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: ${TOKENS.textDefault};
+      margin: 0 0 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .detail:target { display: block; }
-    .detail h3 { margin-top: 0; color: ${TOKENS.brand}; }
-    .detail-close { float: right; font-size: 0.875rem; font-weight: 400; }
-    .detail-path { color: ${TOKENS.textMuted}; font-size: 0.8125rem; }
-    .detail-body :first-child { margin-top: 0; }
+    .type-note {
+      font-size: 0.75rem;
+      color: ${TOKENS.textMuted};
+      font-weight: 400;
+      font-style: italic;
+    }
+    .type-count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      background: ${TOKENS.backgroundSubtle};
+      border: 1px solid ${TOKENS.border};
+      border-radius: 999px;
+      padding: 0.0625rem 0.5rem;
+      color: ${TOKENS.textMuted};
+      font-weight: 400;
+    }
+    .synthesis-note { color: ${TOKENS.textMuted}; font-size: 0.8125rem; font-style: italic; }
+    .cards { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .card {
+      flex: 1 1 160px;
+      border: 1px solid ${TOKENS.border};
+      border-radius: 6px;
+      padding: 1rem;
+    }
+    .card .count { font-size: 2rem; font-weight: 700; }
+    .card .label { color: ${TOKENS.textMuted}; font-size: 0.875rem; }
   `;
 }
 
@@ -145,6 +319,62 @@ function sanitizeLabel(label: string): string {
   // than rejecting it (key format is already regex-constrained in practice,
   // so this is a defensive fallback, not the expected case).
   return label.replace(/"/g, "'").replace(/\n/g, ' ');
+}
+
+// Returns observed artifact types in process-flow order: foundational types
+// (those with no expectedAncestorTypes in the schema) appear first, then
+// types that depend on them, with terminal types deferred to the end of
+// each topological wave. Types not registered in the schema are appended
+// alphabetically after schema-known types.
+function topoSortTypes(
+  artifactSchema: ArtifactSchema,
+  observedTypes: string[],
+): string[] {
+  const known = observedTypes.filter((t) => t in artifactSchema);
+  const unknown = observedTypes
+    .filter((t) => !(t in artifactSchema))
+    .sort((a, b) => a.localeCompare(b));
+
+  // Build successor map: ancestor type → set of types that list it as an
+  // expectedAncestorType (so ancestor comes before its successors).
+  const successors = new Map<string, Set<string>>();
+  const inDegree = new Map<string, number>();
+  for (const t of known) {
+    successors.set(t, new Set());
+    inDegree.set(t, 0);
+  }
+  for (const t of known) {
+    for (const ancestor of artifactSchema[t]?.expectedAncestorTypes ?? []) {
+      if (!successors.has(ancestor)) continue;
+      successors.get(ancestor)!.add(t);
+      inDegree.set(t, (inDegree.get(t) ?? 0) + 1);
+    }
+  }
+
+  // Kahn's algorithm — within each wave, non-terminal types before terminal.
+  const queue = known.filter((t) => (inDegree.get(t) ?? 0) === 0);
+  const sorted: string[] = [];
+  while (queue.length > 0) {
+    queue.sort((a, b) => {
+      const aT = !!artifactSchema[a]?.terminal;
+      const bT = !!artifactSchema[b]?.terminal;
+      if (aT !== bT) return aT ? 1 : -1;
+      return a.localeCompare(b);
+    });
+    const t = queue.shift()!;
+    sorted.push(t);
+    for (const s of successors.get(t) ?? []) {
+      const deg = (inDegree.get(s) ?? 1) - 1;
+      inDegree.set(s, deg);
+      if (deg === 0) queue.push(s);
+    }
+  }
+
+  // Append any cycle victims (unusual but defensive), then schema-unknown types.
+  const remaining = known
+    .filter((t) => !sorted.includes(t))
+    .sort((a, b) => a.localeCompare(b));
+  return [...sorted, ...remaining, ...unknown];
 }
 
 // One node per rendered key (in-scope + context), one edge per ancestor
@@ -318,7 +548,12 @@ function statusBadge(
   return '';
 }
 
-function buildTable(
+// Groups in-scope artifacts by type in process-flow order (topological sort
+// of expectedAncestorTypes from the artifact schema — foundational types
+// first, terminal types last). Each type gets a heading with its schema
+// annotations and artifact count. Artifacts without a parseable type are
+// collected in a trailing "(untyped)" group.
+function buildArtifactList(
   inScopeKeys: string[],
   registry: Registry,
   resolvedSet: Set<string>,
@@ -326,23 +561,75 @@ function buildTable(
   orphanSet: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
-  const rows = [...inScopeKeys]
-    .sort()
-    .map((key) => {
-      const entry = registry.get(key);
-      const type = parseAncestorRef(key)?.type ?? '';
-      return `<tr>
+  const byType = new Map<string, string[]>();
+  const untypedKeys: string[] = [];
+  for (const key of inScopeKeys) {
+    const type = parseAncestorRef(key)?.type;
+    if (!type) {
+      untypedKeys.push(key);
+    } else {
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(key);
+    }
+  }
+
+  const sortedTypes = topoSortTypes(artifactSchema, [...byType.keys()]);
+  const sections: string[] = [];
+
+  for (const type of sortedTypes) {
+    const keys = byType.get(type);
+    if (!keys || keys.length === 0) continue;
+    keys.sort();
+
+    const typeSchema = artifactSchema[type];
+    const typeNote = typeSchema?.terminal
+      ? ' <span class="type-note">terminal</span>'
+      : typeSchema?.tracksResolution
+        ? ' <span class="type-note">tracks resolution</span>'
+        : '';
+
+    const rows = keys
+      .map((key) => {
+        const entry = registry.get(key);
+        return `<tr>
         <td><a href="#${toAnchorId(key)}">${escapeHtml(key)}</a></td>
-        <td>${escapeHtml(type)}</td>
         <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
         <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
       </tr>`;
-    })
-    .join('');
-  return `<table>
-    <thead><tr><th>Key</th><th>Type</th><th>Ancestors</th><th>Status</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+      })
+      .join('');
+
+    sections.push(`<div class="type-group">
+    <h3 class="type-heading">${escapeHtml(type)}${typeNote}<span class="type-count">${keys.length}</span></h3>
+    <table>
+      <thead><tr><th>Artifact</th><th>Ancestors</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`);
+  }
+
+  if (untypedKeys.length > 0) {
+    untypedKeys.sort();
+    const rows = untypedKeys
+      .map((key) => {
+        const entry = registry.get(key);
+        return `<tr>
+        <td><a href="#${toAnchorId(key)}">${escapeHtml(key)}</a></td>
+        <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
+        <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
+      </tr>`;
+      })
+      .join('');
+    sections.push(`<div class="type-group">
+    <h3 class="type-heading">(untyped)<span class="type-count">${untypedKeys.length}</span></h3>
+    <table>
+      <thead><tr><th>Key</th><th>Ancestors</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`);
+  }
+
+  return sections.join('\n');
 }
 
 function buildBrokenRefsSection(brokenRefs: Violations['brokenRefs']): string {
@@ -356,38 +643,6 @@ function buildBrokenRefsSection(brokenRefs: Violations['brokenRefs']): string {
     )
     .join('');
   return `<h2>Broken references</h2><ul>${items}</ul>`;
-}
-
-// One hidden <div> per rendered node (in-scope + context, matching the
-// graph), each targetable by the `click`/table-link anchors above.
-// `:target` — not JS — toggles visibility: navigating to #artifact-<id>
-// both scrolls to and reveals that one div, and only ever matches one at a
-// time, so this needs nothing beyond plain CSS to behave like a "page" for
-// each artifact while staying inside the one self-contained HTML file.
-function buildArtifactDetails(
-  host: Tree,
-  renderedKeys: string[],
-  registry: Registry,
-): string {
-  const sections = renderedKeys
-    .map((key) => {
-      const entry = registry.get(key);
-      if (!entry) {
-        return '';
-      }
-      const content = host.read(entry.path, 'utf-8') ?? '';
-      const body = stripFrontmatter(content);
-      const bodyHtml = body
-        ? marked.parse(body, { async: false })
-        : '<p><em>No content.</em></p>';
-      return `<div id="${toAnchorId(key)}" class="detail">
-        <h3>${escapeHtml(key)} <a href="#top" class="detail-close">Close ✕</a></h3>
-        <p class="detail-path"><code>${escapeHtml(entry.path)}</code></p>
-        <div class="detail-body">${bodyHtml}</div>
-      </div>`;
-    })
-    .join('\n');
-  return `<section id="artifact-detail-panel">${sections}</section>`;
 }
 
 // The bundled browser build, inlined directly rather than referenced by a
@@ -407,23 +662,382 @@ function readMermaidBundle(): string {
   return bundle.replace(/<\/script/gi, '<\\/script');
 }
 
+// Builds a map from each key → list of in-scope keys that cite it as an
+// ancestor. Context keys and broken refs may appear as map keys (parents),
+// but only in-scope keys ever appear as values (children).
+function buildChildrenMap(
+  registry: Registry,
+  inScopeSet: Set<string>,
+): Map<string, string[]> {
+  const childrenMap = new Map<string, string[]>();
+  for (const key of inScopeSet) {
+    const entry = registry.get(key);
+    if (!entry) continue;
+    for (const rawRef of entry.ancestorRefs) {
+      const parsed = parseAncestorRef(rawRef);
+      if (!parsed) continue;
+      const parentKey = refKey(parsed);
+      if (!childrenMap.has(parentKey)) childrenMap.set(parentKey, []);
+      childrenMap.get(parentKey)!.push(key);
+    }
+  }
+  return childrenMap;
+}
+
+function miniCard(
+  key: string,
+  registry: Registry,
+  childrenMap: Map<string, string[]>,
+  resolvedSet: Set<string>,
+  openSet: Set<string>,
+  orphanSet: Set<string>,
+  artifactSchema: ArtifactSchema,
+): string {
+  const parsed = parseAncestorRef(key);
+  const type = parsed?.type ?? '';
+  const id = parsed?.id ?? '';
+  const name = id || type;
+  const children = childrenMap.get(key) ?? [];
+  const childCountHtml =
+    children.length > 0
+      ? `<span class="mc-children">${children.length} child${children.length === 1 ? '' : 'ren'}</span>`
+      : '';
+  const badge = statusBadge(
+    key,
+    resolvedSet,
+    openSet,
+    orphanSet,
+    artifactSchema,
+  );
+  return `<a class="mini-card" href="#${toAnchorId(key)}"><span class="mc-type">${escapeHtml(toDisplayName(type))}</span><span class="mc-name">${escapeHtml(toDisplayName(name))}</span><span class="mc-slug">${escapeHtml(name)}</span><span class="mc-meta">${badge}${childCountHtml}</span></a>`;
+}
+
+function buildHomePanel(params: {
+  inScopeKeys: string[];
+  inScopeSet: Set<string>;
+  registry: Registry;
+  childrenMap: Map<string, string[]>;
+  resolvedSet: Set<string>;
+  openSet: Set<string>;
+  orphanSet: Set<string>;
+  artifactSchema: ArtifactSchema;
+  synthesis: SynthesisResult;
+  synthesisNote: string;
+  cardsHtml: string;
+  artifactsHtml: string;
+  flowchart: string;
+  brokenRefsHtml: string;
+}): string {
+  // Root keys: in-scope keys whose ancestorRefs all point outside inScopeSet
+  const rootKeys = params.inScopeKeys.filter((key) => {
+    const entry = params.registry.get(key);
+    if (!entry) return true;
+    return !entry.ancestorRefs.some((rawRef) => {
+      const parsed = parseAncestorRef(rawRef);
+      if (!parsed) return false;
+      return params.inScopeSet.has(refKey(parsed));
+    });
+  });
+
+  const initiatingRoots = rootKeys.filter(
+    (key) => !isTerminalKey(key, params.artifactSchema),
+  );
+  const terminatingRoots = rootKeys.filter((key) =>
+    isTerminalKey(key, params.artifactSchema),
+  );
+
+  // Group initiating roots by type in topo order
+  const byType = new Map<string, string[]>();
+  for (const key of initiatingRoots) {
+    const type = parseAncestorRef(key)?.type ?? '(untyped)';
+    if (!byType.has(type)) byType.set(type, []);
+    byType.get(type)!.push(key);
+  }
+  const sortedTypes = topoSortTypes(params.artifactSchema, [...byType.keys()]);
+
+  const typeGroupsHtml = sortedTypes
+    .map((type) => {
+      const keys = byType.get(type);
+      if (!keys || keys.length === 0) return '';
+      const cardsHtml = keys
+        .map((key) => {
+          const parsed = parseAncestorRef(key);
+          const id = parsed?.id ?? '';
+          const name = id || type;
+          const badge = statusBadge(
+            key,
+            params.resolvedSet,
+            params.openSet,
+            params.orphanSet,
+            params.artifactSchema,
+          );
+          const children = params.childrenMap.get(key) ?? [];
+          const childText =
+            children.length > 0
+              ? `<span class="rc-children">${children.length} child${children.length === 1 ? '' : 'ren'}</span>`
+              : '';
+          return `<a class="root-card" href="#${toAnchorId(key)}"><div class="rc-type">${escapeHtml(toDisplayName(type))}</div><div class="rc-name">${escapeHtml(toDisplayName(name))}</div><div class="rc-slug">${escapeHtml(name)}</div><div class="rc-meta">${badge}${childText}</div></a>`;
+        })
+        .join('');
+      return `<div class="home-type-group"><div class="home-type-label">${escapeHtml(toDisplayName(type))}</div><div class="card-grid">${cardsHtml}</div></div>`;
+    })
+    .join('');
+
+  const startingPointsHtml = `<div class="home-section">
+  <h2>Starting points</h2>
+  ${typeGroupsHtml || '<p>No root artifacts found.</p>'}
+</div>`;
+
+  let closedOutHtml = '';
+  if (terminatingRoots.length > 0) {
+    const terminatingCardsHtml = terminatingRoots
+      .map((key) => {
+        const parsed = parseAncestorRef(key);
+        const type = parsed?.type ?? '';
+        const id = parsed?.id ?? '';
+        const name = id || type;
+        const badge = statusBadge(
+          key,
+          params.resolvedSet,
+          params.openSet,
+          params.orphanSet,
+          params.artifactSchema,
+        );
+        return `<a class="root-card" href="#${toAnchorId(key)}"><div class="rc-type">${escapeHtml(toDisplayName(type))}</div><div class="rc-name">${escapeHtml(toDisplayName(name))}</div><div class="rc-slug">${escapeHtml(name)}</div><div class="rc-meta">${badge}</div></a>`;
+      })
+      .join('');
+    closedOutHtml = `<div class="home-section">
+  <h2>Closed out</h2>
+  <div class="card-grid">${terminatingCardsHtml}</div>
+</div>`;
+  }
+
+  const legendHtml = `<div class="legend">
+<span><span class="legend-swatch" style="background:${TOKENS.success.bg};border:1px solid ${TOKENS.success.border}"></span>Resolved</span>
+<span><span class="legend-swatch" style="background:${TOKENS.important.bg};border:1px solid ${TOKENS.important.border}"></span>Open</span>
+<span><span class="legend-swatch" style="background:${TOKENS.interactive.bg};border:1px solid ${TOKENS.interactive.border}"></span>Orphaned</span>
+<span><span class="legend-swatch" style="background:${TOKENS.background};border:1px solid ${TOKENS.textMuted}"></span>Closed out (terminal)</span>
+<span><span class="legend-swatch" style="background:${TOKENS.backgroundSubtle};border:1px dashed ${TOKENS.textMuted}"></span>Context (out of scope)</span>
+</div>`;
+
+  const overviewHtml = `<details class="overview-details">
+  <summary>Full overview (graph, table, synthesis)</summary>
+  <div class="overview-body">
+    <div class="overview-section">
+      <h2>Summary</h2>
+      <p>${escapeHtml(params.synthesis.text)}</p>
+      ${params.synthesisNote}
+    </div>
+    <div class="overview-section">
+      <h2>Status</h2>
+      ${params.cardsHtml}
+    </div>
+    <div class="overview-section">
+      <h2>Lineage graph</h2>
+      <pre class="mermaid">${escapeHtml(params.flowchart)}</pre>
+      ${legendHtml}
+    </div>
+    <div class="overview-section">
+      <h2>Artifacts</h2>
+      <p>Organized by type in process-flow order. Click an artifact or a graph node to view its content.</p>
+      ${params.artifactsHtml}
+      ${params.brokenRefsHtml}
+    </div>
+  </div>
+</details>`;
+
+  return `<div id="home" class="panel" hidden>
+${startingPointsHtml}
+${closedOutHtml}
+${overviewHtml}
+</div>`;
+}
+
+// One panel per rendered key (in-scope + context). Each panel is hidden until
+// the JS navigation shows it in response to a hash change. Context-key panels
+// include a note indicating they are outside the current scope.
+function buildArtifactDetails(
+  host: Tree,
+  renderedKeys: string[],
+  registry: Registry,
+  childrenMap: Map<string, string[]>,
+  inScopeSet: Set<string>,
+  resolvedSet: Set<string>,
+  openSet: Set<string>,
+  orphanSet: Set<string>,
+  artifactSchema: ArtifactSchema,
+): string {
+  return renderedKeys
+    .map((key) => {
+      const entry = registry.get(key);
+      if (!entry) return '';
+
+      const parsed = parseAncestorRef(key);
+      const type = parsed?.type ?? '';
+      const id = parsed?.id ?? '';
+      const title = id || key;
+
+      // Back nav: home link + parent links for ancestors in the registry
+      const parentLinks = (entry.ancestorRefs ?? [])
+        .filter((rawRef) => {
+          const p = parseAncestorRef(rawRef);
+          return p && registry.has(refKey(p));
+        })
+        .map((rawRef) => {
+          const p = parseAncestorRef(rawRef)!;
+          const parentKey = refKey(p);
+          const parentDisplay = toDisplayName(p.id || p.type);
+          return ` · <a href="#${toAnchorId(parentKey)}">${escapeHtml(parentDisplay)}</a>`;
+        })
+        .join('');
+
+      const contextNote = !inScopeSet.has(key)
+        ? `<div class="context-note">This artifact is outside the current scope — shown as context for in-scope descendants.</div>`
+        : '';
+
+      const content = host.read(entry.path, 'utf-8') ?? '';
+      const body = stripFrontmatter(content);
+      const fmYaml = extractFrontmatterYaml(content);
+      const bodyHtml = body ? (marked.parse(body, { async: false }) as string) : '';
+      const fmHtml = fmYaml
+        ? `<details class="fm-details"${!body ? ' open' : ''}><summary>Frontmatter</summary><pre class="fm-pre">${escapeHtml(fmYaml)}</pre></details>`
+        : '';
+
+      const badge = statusBadge(
+        key,
+        resolvedSet,
+        openSet,
+        orphanSet,
+        artifactSchema,
+      );
+
+      // Related: ancestors in registry, in-scope children, in-scope peers
+      const ancestorKeys = (entry.ancestorRefs ?? [])
+        .filter((rawRef) => {
+          const p = parseAncestorRef(rawRef);
+          return p && registry.has(refKey(p));
+        })
+        .map((rawRef) => refKey(parseAncestorRef(rawRef)!));
+
+      const childKeys = (childrenMap.get(key) ?? []).filter((k) =>
+        inScopeSet.has(k),
+      );
+
+      // Peers share a parent: same type + at least one common in-scope ancestor.
+      // Root artifacts (no in-scope ancestors) are peers with other roots of the same type.
+      const myAncestorSet = new Set(
+        (entry.ancestorRefs ?? [])
+          .map((rawRef) => {
+            const p = parseAncestorRef(rawRef);
+            return p ? refKey(p) : null;
+          })
+          .filter((k): k is string => k !== null && inScopeSet.has(k)),
+      );
+
+      const peerKeys = [...inScopeSet].filter((k) => {
+        if (k === key) return false;
+        const otherEntry = registry.get(k);
+        if (!otherEntry) return false;
+        if (myAncestorSet.size === 0) {
+          return !(otherEntry.ancestorRefs ?? []).some((rawRef) => {
+            const ap = parseAncestorRef(rawRef);
+            return ap && inScopeSet.has(refKey(ap));
+          });
+        }
+        return (otherEntry.ancestorRefs ?? []).some((rawRef) => {
+          const ap = parseAncestorRef(rawRef);
+          return ap && myAncestorSet.has(refKey(ap));
+        });
+      });
+
+      const relatedSections: string[] = [];
+
+      if (ancestorKeys.length > 0) {
+        const cards = ancestorKeys
+          .map((k) =>
+            miniCard(
+              k,
+              registry,
+              childrenMap,
+              resolvedSet,
+              openSet,
+              orphanSet,
+              artifactSchema,
+            ),
+          )
+          .join('');
+        relatedSections.push(
+          `<div class="related-section"><h2>Ancestors</h2><div class="mini-card-grid">${cards}</div></div>`,
+        );
+      }
+
+      if (childKeys.length > 0) {
+        const cards = childKeys
+          .map((k) =>
+            miniCard(
+              k,
+              registry,
+              childrenMap,
+              resolvedSet,
+              openSet,
+              orphanSet,
+              artifactSchema,
+            ),
+          )
+          .join('');
+        relatedSections.push(
+          `<div class="related-section"><h2>Builds on this <span class="related-count">(${childKeys.length})</span></h2><div class="mini-card-grid">${cards}</div></div>`,
+        );
+      }
+
+      if (peerKeys.length > 0) {
+        const cards = peerKeys
+          .map((k) =>
+            miniCard(
+              k,
+              registry,
+              childrenMap,
+              resolvedSet,
+              openSet,
+              orphanSet,
+              artifactSchema,
+            ),
+          )
+          .join('');
+        relatedSections.push(
+          `<div class="related-section"><h2>Also under same parent <span class="related-count">(${peerKeys.length})</span></h2><div class="mini-card-grid compact">${cards}</div></div>`,
+        );
+      }
+
+      const relatedHtml =
+        relatedSections.length > 0
+          ? `<div class="related-grid">${relatedSections.join('\n')}</div>`
+          : '';
+
+      return `<div id="${toAnchorId(key)}" class="panel" hidden>
+  <div class="panel-back"><a href="#home">← Home</a>${parentLinks}</div>
+  ${contextNote}
+  <div class="artifact-type">${escapeHtml(toDisplayName(type))}</div>
+  <h1 class="artifact-title">${escapeHtml(toDisplayName(title))} ${badge}</h1>
+  <div class="artifact-slug">${escapeHtml(key)}</div>
+  <p class="artifact-path"><code>${escapeHtml(entry.path)}</code></p>
+  ${fmHtml}
+  ${bodyHtml ? `<div class="artifact-body">${bodyHtml}</div>` : ''}
+  ${relatedHtml}
+</div>`;
+    })
+    .join('\n');
+}
+
 function buildHtml(params: {
   title: string;
   generatedAt: string;
-  synthesis: SynthesisResult;
   counts: StatusCounts;
-  cardsHtml: string;
-  tableHtml: string;
-  brokenRefsHtml: string;
-  detailsHtml: string;
-  flowchart: string;
+  homePanelHtml: string;
+  detailPanelsHtml: string;
   mermaidBundle: string;
 }): string {
-  const synthesisNote =
-    params.synthesis.source === 'deterministic'
-      ? '<p class="synthesis-note">LLM synthesis unavailable in this environment — showing computed summary.</p>'
-      : `<p class="synthesis-note">Synthesized via ${params.synthesis.source === 'claude' ? 'the claude CLI' : 'gh copilot'}.</p>`;
-
+  const totalLabel = `${params.counts.totalArtifacts} artifact${params.counts.totalArtifacts === 1 ? '' : 's'}`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -432,56 +1046,48 @@ function buildHtml(params: {
 <style>${buildStyles()}</style>
 </head>
 <body>
-<h1 id="top">${escapeHtml(params.title)}</h1>
-<p class="generated-at">Generated ${escapeHtml(params.generatedAt)}</p>
-
-<section>
-<h2>Summary</h2>
-<p>${escapeHtml(params.synthesis.text)}</p>
-${synthesisNote}
-</section>
-
-<section>
-<h2>Status</h2>
-${params.cardsHtml}
-</section>
-
-<section>
-<h2>Lineage graph</h2>
-<pre class="mermaid">${escapeHtml(params.flowchart)}</pre>
-<div class="legend">
-<span><span class="legend-swatch" style="background:${TOKENS.success.bg};border:1px solid ${TOKENS.success.border}"></span>Resolved</span>
-<span><span class="legend-swatch" style="background:${TOKENS.important.bg};border:1px solid ${TOKENS.important.border}"></span>Open</span>
-<span><span class="legend-swatch" style="background:${TOKENS.interactive.bg};border:1px solid ${TOKENS.interactive.border}"></span>Orphaned</span>
-<span><span class="legend-swatch" style="background:${TOKENS.background};border:1px solid ${TOKENS.textMuted}"></span>Closed out (terminal)</span>
-<span><span class="legend-swatch" style="background:${TOKENS.backgroundSubtle};border:1px dashed ${TOKENS.textMuted}"></span>Context (out of scope)</span>
-</div>
-</section>
-
-<section>
-<h2>Artifacts</h2>
-<p>Click a key below, or a node in the graph above, to view its content in place.</p>
-${params.tableHtml}
-${params.brokenRefsHtml}
-</section>
-
-${params.detailsHtml}
-
+<header class="app-header">
+  <a href="#home" class="app-title">${escapeHtml(params.title)}</a>
+  <span class="app-meta">${totalLabel} · ${params.counts.open} open</span>
+  <span class="app-date">${escapeHtml(params.generatedAt)}</span>
+</header>
+<main class="app-main">
+${params.homePanelHtml}
+${params.detailPanelsHtml}
+</main>
 <script>${params.mermaidBundle}</script>
 <script>
-mermaid.initialize({
-  startOnLoad: false,
-  securityLevel: 'loose',
-  theme: 'base',
-  themeVariables: {
-    primaryColor: '${TOKENS.interactive.bg}',
-    primaryTextColor: '${TOKENS.textDefault}',
-    primaryBorderColor: '${TOKENS.interactive.border}',
-    lineColor: '${TOKENS.textMuted}',
-    fontFamily: '${TOKENS.fontFamily}',
-  },
-});
-mermaid.run();
+(function() {
+  function show(id) {
+    document.querySelectorAll('.panel').forEach(function(p) { p.hidden = true; });
+    var el = document.getElementById(id) || document.getElementById('home');
+    if (el) el.hidden = false;
+    window.scrollTo(0, 0);
+  }
+  function fromHash() { show((location.hash || '').replace(/^#/, '')); }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '${TOKENS.interactive.bg}',
+      primaryTextColor: '${TOKENS.textDefault}',
+      primaryBorderColor: '${TOKENS.interactive.border}',
+      lineColor: '${TOKENS.textMuted}',
+      fontFamily: '${TOKENS.fontFamily}',
+    },
+  });
+  var overview = document.querySelector('.overview-details');
+  if (overview) {
+    overview.addEventListener('toggle', function() {
+      if (!overview.open || overview.dataset.done) return;
+      overview.dataset.done = '1';
+      mermaid.run();
+    });
+  }
+})();
 </script>
 </body>
 </html>`;
@@ -580,9 +1186,52 @@ export default async function (host: Tree, options: Schema) {
     !!options.noSynthesis,
   );
 
+  const synthesisNote =
+    synthesis.source === 'deterministic'
+      ? '<p class="synthesis-note">LLM synthesis unavailable in this environment — showing computed summary.</p>'
+      : `<p class="synthesis-note">Synthesized via ${synthesis.source === 'claude' ? 'the claude CLI' : 'gh copilot'}.</p>`;
+
   const flowchart = buildMermaidFlowchart(
     registry,
     renderedKeys,
+    inScopeSet,
+    resolvedKeySet,
+    openKeySet,
+    orphanKeySet,
+    artifactSchema,
+  );
+
+  const childrenMap = buildChildrenMap(registry, inScopeSet);
+
+  const homePanelHtml = buildHomePanel({
+    inScopeKeys,
+    inScopeSet,
+    registry,
+    childrenMap,
+    resolvedSet: resolvedKeySet,
+    openSet: openKeySet,
+    orphanSet: orphanKeySet,
+    artifactSchema,
+    synthesis,
+    synthesisNote,
+    cardsHtml: buildSummaryCards(counts),
+    artifactsHtml: buildArtifactList(
+      inScopeKeys,
+      registry,
+      resolvedKeySet,
+      openKeySet,
+      orphanKeySet,
+      artifactSchema,
+    ),
+    flowchart,
+    brokenRefsHtml: buildBrokenRefsSection(inScopeBrokenRefs),
+  });
+
+  const detailPanelsHtml = buildArtifactDetails(
+    host,
+    renderedKeys,
+    registry,
+    childrenMap,
     inScopeSet,
     resolvedKeySet,
     openKeySet,
@@ -595,20 +1244,9 @@ export default async function (host: Tree, options: Schema) {
       ? `Project docs report — ${options.project}`
       : 'Project docs report',
     generatedAt: new Date().toISOString(),
-    synthesis,
     counts,
-    cardsHtml: buildSummaryCards(counts),
-    tableHtml: buildTable(
-      inScopeKeys,
-      registry,
-      resolvedKeySet,
-      openKeySet,
-      orphanKeySet,
-      artifactSchema,
-    ),
-    brokenRefsHtml: buildBrokenRefsSection(inScopeBrokenRefs),
-    detailsHtml: buildArtifactDetails(host, renderedKeys, registry),
-    flowchart,
+    homePanelHtml,
+    detailPanelsHtml,
     mermaidBundle: readMermaidBundle(),
   });
 
