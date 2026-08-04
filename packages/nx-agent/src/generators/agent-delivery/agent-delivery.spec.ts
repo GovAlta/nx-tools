@@ -1,5 +1,9 @@
 import { Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
+import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import generator from './agent-delivery';
 
 const SKILL_PATHS = [
@@ -86,18 +90,43 @@ describe('nx-agent agent-delivery generator', () => {
     expect(taskIdentification).not.toContain('is not. If you reach Deploy');
   });
 
-  it('task-identification does not push a none key on no-work runs', async () => {
+  it('task-identification does not write history.json when no signals exist', async () => {
     await generator(host, { githubActions: true });
 
-    // The template must guard the history write behind `if (topSignal)` — a
-    // bare `topSignal?.key ?? 'none'` push causes a spurious history.json
-    // commit on every no-work run and corrupts stall detection when a real
-    // signal recurs across a no-work gap.
-    const taskIdentification = host
-      .read('scripts/task-identification.mjs')
-      .toString();
-    expect(taskIdentification).not.toContain("?? 'none'");
-    expect(taskIdentification).toContain('if (topSignal)');
+    const script = host.read('scripts/task-identification.mjs').toString();
+    const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-test-'));
+    try {
+      writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
+      symlinkSync(join(process.cwd(), 'node_modules'), join(tmpDir, 'node_modules'));
+
+      mkdirSync(join(tmpDir, '.nx-agent'));
+      writeFileSync(
+        join(tmpDir, '.nx-agent', 'lineage.json'),
+        JSON.stringify({
+          registry: {},
+          index: {},
+          violations: {
+            brokenRefs: [],
+            unscoped: [],
+            orphans: [],
+            resolutionStatus: { open: [], resolved: [] },
+          },
+        }),
+      );
+
+      const outputFile = join(tmpDir, 'github-output');
+      writeFileSync(outputFile, '');
+      execSync('node task-identification.mjs', {
+        cwd: tmpDir,
+        env: { ...process.env, GITHUB_OUTPUT: outputFile, GITHUB_REF_NAME: 'feature/test' },
+      });
+
+      expect(
+        existsSync(join(tmpDir, '.github', 'agent-delivery-iteration', 'history.json')),
+      ).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true });
+    }
   });
 
   it('never overwrites a file a team has already edited', async () => {
