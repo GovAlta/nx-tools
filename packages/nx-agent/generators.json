@@ -28,6 +28,11 @@
       "schema": "./src/generators/domain-term/schema.json",
       "description": "Adds one domain term under project-docs/domain-terms/, with structured frontmatter and a free-text definition."
     },
+    "product-brief": {
+      "factory": "./src/generators/product-brief/product-brief",
+      "schema": "./src/generators/product-brief/schema.json",
+      "description": "Adds one product brief under project-docs/product-briefs/, with structured frontmatter (capability, audience, known-platforms, questions) and a free-text body. Persistent positioning artifact — create once, reference and extend directly thereafter."
+    },
     "bounded-context": {
       "factory": "./src/generators/bounded-context/bounded-context",
       "schema": "./src/generators/bounded-context/schema.json",

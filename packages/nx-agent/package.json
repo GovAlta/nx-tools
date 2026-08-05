@@ -25,5 +25,8 @@
     }
   },
   "generators": "./generators.json",
+  "nx-migrations": {
+    "migrations": "./migrations.json"
+  },
   "scripts": {}
 }

@@ -1,6 +1,6 @@
 ---
 title: implement non-structural frontmatter metadata in lineage graph registry and index entries
-project-docs-ancestors: [features:include-non-structural-frontmatter-metadata-in-lineage-graph-registry-and-index-entries, service-descriptions:lineage-graph, requirements:lineage-registry-entry-carries-non-structural-frontmatter-metadata, requirements:lineage-index-entry-carries-optional-frontmatter-metadata-for-registered-artifact-descendants, requirements:requirement-generator-scaffolds-correct-shape-with-collision-free-id-assignment, domain-models:lineage-graph-metadata, bounded-contexts:lineage-graph, domain-terms:artifact-metadata]
+project-docs-ancestors: [features:include-non-structural-frontmatter-metadata-in-lineage-graph-registry-and-index-entries, product-briefs:lineage-graph, requirements:lineage-registry-entry-carries-non-structural-frontmatter-metadata, requirements:lineage-index-entry-carries-optional-frontmatter-metadata-for-registered-artifact-descendants, requirements:requirement-generator-scaffolds-correct-shape-with-collision-free-id-assignment, domain-models:lineage-graph-metadata, bounded-contexts:lineage-graph, domain-terms:artifact-metadata]
 resolves: []
 ---
 

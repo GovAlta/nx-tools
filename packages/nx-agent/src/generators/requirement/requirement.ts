@@ -84,7 +84,7 @@ export default async function (host: Tree, options: Schema) {
 
   const readmeContent = readFileSync(README_TEMPLATE_PATH, 'utf-8');
   ensureReadme(host, containerDir, readmeContent);
-  ensureArtifactSchemaEntry(host, 'requirements', ['service-descriptions']);
+  ensureArtifactSchemaEntry(host, 'requirements', ['product-briefs']);
 
   const content = [
     '---',

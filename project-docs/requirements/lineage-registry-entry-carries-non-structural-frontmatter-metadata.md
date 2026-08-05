@@ -2,7 +2,7 @@
 title: Lineage registry entry carries non-structural frontmatter metadata
 id: req-002
 project-docs-ancestors:
-  - service-descriptions:lineage-graph
+  - product-briefs:lineage-graph
   - features:include-non-structural-frontmatter-metadata-in-lineage-graph-registry-and-index-entries
 rules:
   - rule: every RegistryEntry includes all non-structural frontmatter fields verbatim under a metadata property

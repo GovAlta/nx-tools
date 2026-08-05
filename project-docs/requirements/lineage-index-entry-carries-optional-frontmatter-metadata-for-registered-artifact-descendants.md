@@ -2,7 +2,7 @@
 title: Lineage index entry carries optional frontmatter metadata for registered-artifact descendants
 id: req-003
 project-docs-ancestors:
-  - service-descriptions:lineage-graph
+  - product-briefs:lineage-graph
   - features:include-non-structural-frontmatter-metadata-in-lineage-graph-registry-and-index-entries
 rules:
   - rule: a DescendantEntry that corresponds to a registered artifact includes its metadata from the registry
