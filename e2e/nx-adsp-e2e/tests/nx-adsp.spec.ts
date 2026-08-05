@@ -306,11 +306,15 @@ describe('nx-adsp e2e', () => {
       // Guards GoabModal's native goa-modal `slot` against vue/no-deprecated-slot-
       // attribute (whose --fix rewrites it into a build-crashing form). Asserted on
       // the generated eslint config rather than by running lint (see above).
-      const eslintrc = readFileSync(
-        join(tmpProjPath(), 'vue-components/.eslintrc.json'),
+      // @nx/eslint 23.1+ defaults to flat config when no root eslint config
+      // exists, so check whichever file the workspace's ESLint mode produced.
+      const eslintFlatPath = join(tmpProjPath(), 'vue-components/eslint.config.mjs');
+      const eslintLegacyPath = join(tmpProjPath(), 'vue-components/.eslintrc.json');
+      const eslintContent = readFileSync(
+        existsSync(eslintFlatPath) ? eslintFlatPath : eslintLegacyPath,
         'utf-8',
       );
-      expect(eslintrc).toContain('"vue/no-deprecated-slot-attribute": "off"');
+      expect(eslintContent).toContain('"vue/no-deprecated-slot-attribute": "off"');
     }, 300000);
   });
 

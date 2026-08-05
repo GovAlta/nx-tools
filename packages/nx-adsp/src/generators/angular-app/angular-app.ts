@@ -25,6 +25,7 @@ import {
   installPackagesTask,
   names,
   offsetFromRoot,
+  readJson,
   readProjectConfiguration,
   Tree,
   updateProjectConfiguration,
@@ -145,6 +146,24 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
     directory: normalizedOptions.projectRoot,
     skipFormat: true,
   });
+
+  // TypeScript 6 defaults noUncheckedSideEffectImports to true, which causes
+  // TS2882 on side-effect imports in test-setup.ts (zone.js/dist/zone-testing,
+  // jest-preset-angular, @angular/localize/init). Pin false in tsconfig.base.json
+  // so the generated Angular workspace compiles without needing the nx migrate
+  // TS6 migration to have been run in the consuming workspace first.
+  if (host.exists('tsconfig.base.json')) {
+    const rootTsconfig = readJson(host, 'tsconfig.base.json')
+    if (rootTsconfig.compilerOptions?.noUncheckedSideEffectImports === undefined) {
+      writeJson(host, 'tsconfig.base.json', {
+        ...rootTsconfig,
+        compilerOptions: {
+          ...rootTsconfig.compilerOptions,
+          noUncheckedSideEffectImports: false,
+        },
+      })
+    }
+  }
 
   // Let the Playwright e2e target the deployed URL (BASE_URL) in CI instead of
   // always starting a local dev server — see the nx-oc pipeline's e2e jobs.
