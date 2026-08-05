@@ -1,5 +1,5 @@
 ---
-title: develop skill: require implementation plan commitment before first write
+title: "develop skill: require implementation plan commitment before first write"
 project-docs-ancestors: []
 resolves: []
 ---
