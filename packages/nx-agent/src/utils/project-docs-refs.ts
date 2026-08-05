@@ -64,13 +64,17 @@ const STRUCTURAL_FRONTMATTER_FIELDS = new Set([
 // posture of extractFrontmatterField.
 export function extractFrontmatterMetadata(
   content: string,
+  sourcePath?: string,
 ): Record<string, unknown> {
   const block = FRONTMATTER_BLOCK.exec(content)
   if (!block) return {}
   let frontmatter: unknown
   try {
     frontmatter = yaml.parse(block[1])
-  } catch {
+  } catch (e) {
+    console.warn(
+      `[project-docs] YAML parse error${sourcePath ? ` in ${sourcePath}` : ''}: ${e instanceof Error ? e.message : String(e)}`,
+    )
     return {}
   }
   if (!frontmatter || typeof frontmatter !== 'object') return {}
@@ -97,6 +101,7 @@ export function extractFrontmatterMetadata(
 export function extractFrontmatterField(
   content: string,
   field: string,
+  sourcePath?: string,
 ): string[] {
   const block = FRONTMATTER_BLOCK.exec(content);
   if (!block) {
@@ -106,7 +111,10 @@ export function extractFrontmatterField(
   let frontmatter: unknown;
   try {
     frontmatter = yaml.parse(block[1]);
-  } catch {
+  } catch (e) {
+    console.warn(
+      `[project-docs] YAML parse error${sourcePath ? ` in ${sourcePath}` : ''}: ${e instanceof Error ? e.message : String(e)}`,
+    )
     return [];
   }
 
@@ -129,9 +137,12 @@ export function extractFrontmatterField(
 // index buildIndex uses for orphans/brokenRefs, and getAncestors at depth 1)
 // already shares, makes the invariant true unconditionally instead of only
 // for generator-produced content.
-export function extractFrontmatterAncestorRefs(content: string): string[] {
-  const ancestors = extractFrontmatterField(content, 'project-docs-ancestors');
-  const resolves = extractFrontmatterField(content, 'resolves');
+export function extractFrontmatterAncestorRefs(
+  content: string,
+  sourcePath?: string,
+): string[] {
+  const ancestors = extractFrontmatterField(content, 'project-docs-ancestors', sourcePath);
+  const resolves = extractFrontmatterField(content, 'resolves', sourcePath);
   return [...new Set([...ancestors, ...resolves])];
 }
 
@@ -359,9 +370,9 @@ function registerArtifact(
   const content = host.read(path, 'utf-8') ?? '';
   registry.set(key, {
     path,
-    ancestorRefs: extractFrontmatterAncestorRefs(content),
-    resolves: extractFrontmatterField(content, 'resolves'),
-    metadata: extractFrontmatterMetadata(content),
+    ancestorRefs: extractFrontmatterAncestorRefs(content, path),
+    resolves: extractFrontmatterField(content, 'resolves', path),
+    metadata: extractFrontmatterMetadata(content, path),
   });
 }
 
