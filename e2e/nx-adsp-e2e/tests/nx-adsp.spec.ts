@@ -314,7 +314,7 @@ describe('nx-adsp e2e', () => {
         existsSync(eslintFlatPath) ? eslintFlatPath : eslintLegacyPath,
         'utf-8',
       );
-      expect(eslintContent).toContain('"vue/no-deprecated-slot-attribute": "off"');
+      expect(eslintContent).toMatch(/["']vue\/no-deprecated-slot-attribute["']:\s*["']off["']/);
     }, 300000);
   });
 
