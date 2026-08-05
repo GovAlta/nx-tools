@@ -137,7 +137,20 @@ describe('extractFrontmatterAncestorRefs', () => {
 
   it('returns an empty array rather than throwing on malformed YAML', () => {
     const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect(extractFrontmatterAncestorRefs(content)).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[project-docs] YAML parse error'));
+    warn.mockRestore();
+  });
+
+  it('includes the source path in the YAML parse warning when provided', () => {
+    const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    extractFrontmatterAncestorRefs(content, 'project-docs/features/my-feature.md');
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('project-docs/features/my-feature.md'),
+    );
+    warn.mockRestore();
   });
 
   it('returns an empty array when the key is present but not a list', () => {
@@ -224,10 +237,22 @@ describe('extractFrontmatterMetadata', () => {
     expect(extractFrontmatterMetadata('just some markdown body')).toEqual({});
   });
 
-  it('returns {} and does not throw when the frontmatter YAML is malformed', () => {
+  it('returns {} and warns when the frontmatter YAML is malformed', () => {
     const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
-    expect(() => extractFrontmatterMetadata(content)).not.toThrow();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect(extractFrontmatterMetadata(content)).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[project-docs] YAML parse error'));
+    warn.mockRestore();
+  });
+
+  it('includes the source path in the YAML parse warning when provided', () => {
+    const content = ['---', 'not: [valid: yaml: at all', '---'].join('\n');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    extractFrontmatterMetadata(content, 'project-docs/specs/my-spec.md');
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('project-docs/specs/my-spec.md'),
+    );
+    warn.mockRestore();
   });
 
   it('passes structured values through verbatim — arrays and nested objects unchanged', () => {
