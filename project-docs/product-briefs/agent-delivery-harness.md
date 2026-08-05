@@ -1,5 +1,5 @@
 ---
-service: Agent Delivery Harness
+capability: Agent Delivery Harness
 audience: [AI coding agents operating a DDDD workflow]
 known-platforms: []
 questions: []

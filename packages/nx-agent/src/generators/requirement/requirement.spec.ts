@@ -101,14 +101,14 @@ describe('nx-agent requirement generator', () => {
 
   it('resolves --projectDocsAncestors paths into the canonical reference', async () => {
     host.write(
-      'project-docs/service-descriptions/candidate-evaluation.md',
-      ['---', 'service: Candidate Evaluation', '---'].join('\n'),
+      'project-docs/product-briefs/candidate-evaluation.md',
+      ['---', 'capability: Candidate Evaluation', '---'].join('\n'),
     );
 
     await generator(host, {
       title: 'Create evaluation matrix',
       projectDocsAncestors: [
-        'project-docs/service-descriptions/candidate-evaluation.md',
+        'project-docs/product-briefs/candidate-evaluation.md',
       ],
     });
 
@@ -116,7 +116,7 @@ describe('nx-agent requirement generator', () => {
       .read('project-docs/requirements/create-evaluation-matrix.md')
       .toString();
     expect(content).toContain(
-      'project-docs-ancestors: [service-descriptions:candidate-evaluation]',
+      'project-docs-ancestors: [product-briefs:candidate-evaluation]',
     );
   });
 
@@ -125,7 +125,7 @@ describe('nx-agent requirement generator', () => {
       generator(host, {
         title: 'Create evaluation matrix',
         projectDocsAncestors: [
-          'project-docs/service-descriptions/does-not-exist.md',
+          'project-docs/product-briefs/does-not-exist.md',
         ],
       }),
     ).rejects.toThrow(/not found/);
@@ -160,11 +160,11 @@ describe('nx-agent requirement generator', () => {
     expect(readmeAfter).toBe(readmeBefore);
   });
 
-  it('registers requirements with expectedAncestorTypes service-descriptions in artifact-schema.json', async () => {
+  it('registers requirements with expectedAncestorTypes product-briefs in artifact-schema.json', async () => {
     await generator(host, { title: 'Create matrix' });
 
     expect(readArtifactSchema(host)).toMatchObject({
-      requirements: { expectedAncestorTypes: ['service-descriptions'] },
+      requirements: { expectedAncestorTypes: ['product-briefs'] },
     });
   });
 
@@ -173,7 +173,7 @@ describe('nx-agent requirement generator', () => {
     host.write(
       'project-docs/artifact-schema.json',
       JSON.stringify({
-        requirements: { expectedAncestorTypes: ['service-descriptions'] },
+        requirements: { expectedAncestorTypes: ['product-briefs'] },
         'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
       }),
     );

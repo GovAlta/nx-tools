@@ -2,7 +2,7 @@
 title: Requirement generator scaffolds correct shape with collision-free ID assignment
 id: req-004
 project-docs-ancestors:
-  - service-descriptions:lineage-graph
+  - product-briefs:lineage-graph
   - features:include-non-structural-frontmatter-metadata-in-lineage-graph-registry-and-index-entries
 rules:
   - rule: the generator creates project-docs/requirements/<slug>.md with the correct empty frontmatter shape
@@ -29,7 +29,7 @@ rules:
     examples:
       - "Given: artifact-schema.json does not yet have a requirements entry;
          When: the requirement generator runs for the first time;
-         Then: artifact-schema.json gains requirements with expectedAncestorTypes: ['service-descriptions']"
+         Then: artifact-schema.json gains requirements with expectedAncestorTypes: ['product-briefs']"
       - "Given: artifact-schema.json already has a requirements entry;
          When: the requirement generator runs;
          Then: the existing entry is unchanged (merge-only behaviour)"

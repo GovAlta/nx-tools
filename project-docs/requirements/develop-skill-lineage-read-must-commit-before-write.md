@@ -2,7 +2,7 @@
 title: "develop skill: lineage read must commit before first write"
 id: req-001
 project-docs-ancestors:
-  - service-descriptions:agent-delivery-harness
+  - product-briefs:agent-delivery-harness
   - features:develop-skill-lineage-plan-step
 rules:
   - rule: step 1 requires a stated implementation plan before any code is written

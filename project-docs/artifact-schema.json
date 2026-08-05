@@ -6,11 +6,11 @@
   "features": {
     "expectedAncestorTypes": []
   },
-  "service-descriptions": {
+  "product-briefs": {
     "expectedAncestorTypes": ["features"]
   },
   "requirements": {
-    "expectedAncestorTypes": ["service-descriptions"]
+    "expectedAncestorTypes": ["product-briefs"]
   },
   "bounded-contexts": {
     "expectedAncestorTypes": []

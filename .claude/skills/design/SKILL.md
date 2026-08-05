@@ -21,12 +21,12 @@ scope here.
 
 ## Steps
 
-1. **Read the requirement** (and its service-description ancestor) this pass is designing
+1. **Read the requirement** (and its product-brief ancestor) this pass is designing
    against.
 
 2. **Bounded context** — if this requirement's initiative doesn't have one yet:
    `npx nx g @abgov/nx-agent:bounded-context "<Name>"`. Fill in the generated placeholder: what's
-   inside the boundary, and what's explicitly outside it — the service-description's own scope
+   inside the boundary, and what's explicitly outside it — the product brief's own scope
    statements usually go straight into the "outside" half.
 
 3. **Domain terms** — one per concept the requirement's Rules actually use precisely and
@@ -79,7 +79,7 @@ scope here.
    (`- a` / `- b` per line) — never a multi-line `[...]` block. Rewrite to block-style by hand if
    it got reformatted wrong, then re-run the gate below.
 
-5. **Check for an existing capability before designing a new one.** Read the service-description's
+5. **Check for an existing capability before designing a new one.** Read the product brief's
    `known-platforms`. For each named platform, check whether it already covers what this
    requirement needs (a connected MCP server if one exists, or the platform's docs otherwise)
    before assuming a bespoke design is needed. **If no MCP server exists yet for a named platform,

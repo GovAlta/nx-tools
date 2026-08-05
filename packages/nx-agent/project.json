@@ -47,6 +47,11 @@
             "input": "./packages/nx-agent",
             "glob": "generators.json",
             "output": "."
+          },
+          {
+            "input": "./packages/nx-agent",
+            "glob": "migrations.json",
+            "output": "."
           }
         ]
       }

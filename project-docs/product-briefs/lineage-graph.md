@@ -1,5 +1,5 @@
 ---
-service: Lineage Graph
+capability: Lineage Graph
 audience: [AI coding agents navigating the DDDD workflow, nx-agent generator implementations]
 known-platforms: [nx-agent]
 questions: []
@@ -17,6 +17,6 @@ The graph allows agents and generators to navigate the artifact graph without wa
 but not content questions (what does a given artifact contain), forcing a second round of file
 reads whenever content is needed.
 
-Outside the boundary: the business domain being described (requirements, service-descriptions,
+Outside the boundary: the business domain being described (requirements, product briefs,
 domain models), the DDDD skill files themselves, and the OpenShift/ADSP infrastructure consuming
 projects deploy to.

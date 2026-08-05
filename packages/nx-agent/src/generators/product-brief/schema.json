@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentProductBrief",
+  "title": "Add a product brief",
+  "description": "Creates one file for a product brief under project-docs/product-briefs/, with structured frontmatter (capability, audience, known-platforms, questions) and a free-text body. Bootstraps the product-briefs/README.md on first use. Create-once: edit it directly for subsequent updates.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The canonical name of the capability this brief describes (e.g. \"Lineage Graph\").",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What is this capability called?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this product brief to a specific project's project-docs/product-briefs/ instead of the workspace root."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/ artifacts this brief derives from (normally the feature(s) that founded it). Each path must already exist."
+    },
+    "resolves": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing open-question/blocker artifacts this brief resolves."
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

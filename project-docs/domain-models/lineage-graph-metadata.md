@@ -117,10 +117,10 @@ questions: []
 ```
 
 **`artifact-schema.json` registration**: calls `ensureArtifactSchemaEntry(host, 'requirements',
-['service-descriptions'])` — merge-only, idempotent, same call every generator makes on first use.
-The `service-descriptions` parent type is correct: every requirement must trace back to a
-service-description (see `artifact-schema.json`'s own `requirements` entry, and the Discover
-intake convention that seeds each requirement with a service-description ancestor).
+['product-briefs'])` — merge-only, idempotent, same call every generator makes on first use.
+The `product-briefs` parent type is correct: every requirement must trace back to a
+product brief (see `artifact-schema.json`'s own `requirements` entry, and the Discover
+intake convention that seeds each requirement with a product-brief ancestor).
 
 **Ancestor/resolves path validation**: `projectDocsAncestors` and `resolves` paths are each
 resolved via `resolveRefFromPath` (the same function used by every other generator). This
