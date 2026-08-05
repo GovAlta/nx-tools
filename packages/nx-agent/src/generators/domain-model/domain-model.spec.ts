@@ -3,6 +3,11 @@ import { Tree, addProjectConfiguration } from '@nx/devkit';
 import { readArtifactSchema } from '../../utils/artifact-schema';
 import generator from './domain-model';
 
+jest.mock('@nx/devkit', () => ({
+  ...jest.requireActual('@nx/devkit'),
+  formatFiles: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe('nx-agent domain-model generator', () => {
   let host: Tree;
 

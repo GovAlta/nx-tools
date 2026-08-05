@@ -18,6 +18,9 @@ describe('Vue Components Generator', () => {
   });
 
   it('creates the shared wrapper library with all wrappers and a barrel', async () => {
+    // Simulate a legacy-ESLint workspace so useFlatConfig() returns false and
+    // the generator creates .eslintrc.json rather than eslint.config.mjs.
+    host.write('.eslintrc.json', '{}');
     await generator(host);
 
     const config = readProjectConfiguration(host, 'vue-components');

@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@abgov/adsp-cli": "^1.7.0",
-    "axios": "^1.16.0",
+    "axios": "^1.19.0",
     "enquirer": "^2.3.6",
     "yaml": "~2.9.0"
   },

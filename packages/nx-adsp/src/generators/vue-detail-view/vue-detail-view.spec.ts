@@ -7,6 +7,11 @@ import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import generator from './vue-detail-view';
 import { Schema } from './schema';
 
+jest.mock('@nx/devkit', () => ({
+  ...jest.requireActual('@nx/devkit'),
+  formatFiles: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mirrors the shape vue-app's own template generates -- vue-detail-view retrofits
 // into this file, so the fixture must match what it actually looks for.
 const ROUTER_FIXTURE = `import { createRouter, createWebHistory } from 'vue-router';
