@@ -7,7 +7,7 @@
     "expectedAncestorTypes": []
   },
   "product-briefs": {
-    "expectedAncestorTypes": ["features"]
+    "expectedAncestorTypes": []
   },
   "requirements": {
     "expectedAncestorTypes": ["product-briefs"]

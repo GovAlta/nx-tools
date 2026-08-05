@@ -95,11 +95,11 @@ describe('nx-agent product-brief generator', () => {
     ).toBe(false)
   })
 
-  it('registers its own artifact-schema entry with features as the expected ancestor type', async () => {
+  it('registers its own artifact-schema entry with no required ancestor types', async () => {
     await generator(host, { name: 'Lineage Graph' })
 
     expect(readArtifactSchema(host)).toEqual({
-      'product-briefs': { expectedAncestorTypes: ['features'] },
+      'product-briefs': { expectedAncestorTypes: [] },
     })
   })
 
