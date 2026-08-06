@@ -117,6 +117,7 @@ function ariaSort(
 
       <goa-pagination
         v-if="page && itemCount && perPageCount && itemCount > perPageCount"
+        version="2"
         :page-number="page"
         :item-count="itemCount"
         :per-page-count="perPageCount"

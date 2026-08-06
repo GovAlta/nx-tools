@@ -405,22 +405,31 @@ describe('Vue App Generator', () => {
     expect(app).toContain('goa-button-group');
   }, 30000);
 
-  it('renders the sign-in button in the app header (needs the "utilities" slot)', async () => {
-    // goa-app-header (v2) only renders content placed in a named slot — GoA's
-    // own design system docs put account/sign-in actions in "utilities" (vs.
-    // "navigation" for nav links). A bare child with no slot attribute
-    // renders nothing, silently dropping the sign-in button. AppHeader (the
-    // shared pattern component) owns the native `slot="utilities"` div; App.vue
-    // just feeds its named Vue slot. Regression guard for exactly that gap,
-    // now spanning both files since AppHeader was extracted out of App.vue.
+  it('renders the sign-in button in the app header (needs version="2" and the "utilities" slot)', async () => {
+    // goa-app-header defaults to version="1", which does not render the
+    // utilities area at all — the sign-in button is silently invisible.
+    // version="2" is required. AppHeader (the shared pattern component)
+    // owns both the version attribute and the native slot="utilities" div;
+    // App.vue just feeds its named Vue slot.
     await generator(host, options);
     const appHeader = host
       .read('libs/vue-components/src/lib/patterns/AppHeader.vue')
       .toString();
+    expect(appHeader).toContain('version="2"');
     expect(appHeader).toMatch(/<div[^>]*slot="utilities"[^>]*>[\s\S]*<slot name="utilities"/);
 
     const app = host.read('apps/test/src/App.vue').toString();
     expect(app).toMatch(/<template #utilities>[\s\S]*<goa-button-group/);
+  }, 30000);
+
+  it('WorkspaceTable uses goa-pagination version="2" (compact size; v1 default renders oversized buttons)', async () => {
+    // goa-pagination defaults to version="1" (normal/default size). version="2"
+    // uses compact size, matching the React wrapper which always passes version="2".
+    await generator(host, options);
+    const table = host
+      .read('libs/vue-components/src/lib/patterns/WorkspaceTable.vue')
+      .toString();
+    expect(table).toContain('version="2"');
   }, 30000);
 
   it('removes the @nx/vue demo scaffold and ships a passing App test', async () => {
