@@ -286,13 +286,14 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/.env')).toBeFalsy();
   }, 60000);
 
-  it('does not modify .gitignore for the provisioned secret', async () => {
+  it('ensures .env.local is gitignored when writing the provisioned secret', async () => {
     keycloakAdminMock.ensureServiceClient.mockResolvedValueOnce('super-secret');
     const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
-    const gitignoreBefore = host.read('.gitignore')?.toString() ?? '';
     await generator(host, { ...options, accessToken: 'test-token' });
 
-    expect(host.read('.gitignore')?.toString() ?? '').toBe(gitignoreBefore);
+    const gitignore = host.read('.gitignore')?.toString() ?? '';
+    expect(gitignore).toContain('.env.local');
+    expect(gitignore).toContain('.env.*.local');
   }, 60000);
 
   it('does not overwrite or duplicate an existing CLIENT_SECRET in .env.local', async () => {

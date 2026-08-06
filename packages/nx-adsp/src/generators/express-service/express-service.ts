@@ -248,11 +248,10 @@ export default async function (host: Tree, options: Schema) {
       accessToken,
     );
     if (clientSecret) {
-      // .env.local, not .env: CLIENT_SECRET is a generated, local-only value — the
-      // same tier `nx dev-db` already uses for DATABASE_URL/MONGODB_URI — and
-      // already unconditionally gitignored by create-nx-workspace's default
-      // .gitignore (.env.local, .env.*.local), so no gitignore management is
-      // needed here at all. .env itself is left alone: it holds non-secret,
+      // .env.local, not .env: CLIENT_SECRET is a generated, local-only value —
+      // the same tier `nx dev-db` already uses for DATABASE_URL/MONGODB_URI.
+      // .env.local is gitignored by nx-adsp:init (called above), which this
+      // generator always runs. .env itself is left alone: it holds non-secret,
       // developer-owned config too (KEYCLOAK_ROOT_URL, DIRECTORY_URL, etc.) and
       // shouldn't be blanket-gitignored.
       const envLocalPath = `${normalizedOptions.projectRoot}/.env.local`;
