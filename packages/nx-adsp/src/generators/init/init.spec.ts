@@ -47,6 +47,33 @@ describe('nx-adsp init generator', () => {
     logSpy.mockRestore();
   });
 
+  it('adds .env.local and .env.*.local to .gitignore', async () => {
+    await generator(host);
+
+    const gitignore = host.read('.gitignore').toString();
+    expect(gitignore).toContain('.env.local');
+    expect(gitignore).toContain('.env.*.local');
+  });
+
+  it('does not duplicate .env.local if it is already in .gitignore', async () => {
+    host.write('.gitignore', '.env.local\n.env.*.local\n');
+
+    await generator(host);
+
+    const gitignore = host.read('.gitignore').toString();
+    expect(gitignore.split('.env.local').length - 1).toBe(1);
+  });
+
+  it('appends .env.local to an existing .gitignore that does not have it', async () => {
+    host.write('.gitignore', 'node_modules\ndist\n');
+
+    await generator(host);
+
+    const gitignore = host.read('.gitignore').toString();
+    expect(gitignore).toContain('node_modules');
+    expect(gitignore).toContain('.env.local');
+  });
+
   it('writes shared VS Code settings, standalone', async () => {
     await generator(host);
 
