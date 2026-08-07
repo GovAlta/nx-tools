@@ -98,13 +98,18 @@ objects:
                     name: ${APP_NAME}
               env:
 <% if (sandbox) { %>
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: sandbox-postgres-app
+                      key: username
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: sandbox-postgres-creds
-                      key: POSTGRESQL_ADMIN_PASSWORD
+                      name: sandbox-postgres-app
+                      key: password
                 - name: DATABASE_URL
-                  value: postgresql://postgres:$(POSTGRES_PASSWORD)@sandbox-postgres:5432/<%= projectName %>_sandbox
+                  value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@sandbox-postgres-rw:5432/<%= projectName %>_sandbox
 <% } else { %>
                 - name: DATABASE_URL
                   valueFrom:
@@ -141,13 +146,18 @@ objects:
                       key: CLIENT_SECRET
 <% if (database === 'postgres') { %>
 <% if (sandbox) { %>
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: sandbox-postgres-app
+                      key: username
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: sandbox-postgres-creds
-                      key: POSTGRESQL_ADMIN_PASSWORD
+                      name: sandbox-postgres-app
+                      key: password
                 - name: DATABASE_URL
-                  value: postgresql://postgres:$(POSTGRES_PASSWORD)@sandbox-postgres:5432/<%= projectName %>_sandbox
+                  value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@sandbox-postgres-rw:5432/<%= projectName %>_sandbox
 <% } else { %>
                 # Set via: oc create secret generic ${APP_NAME}-database --from-literal=DATABASE_URL=<connection-string>
                 - name: DATABASE_URL

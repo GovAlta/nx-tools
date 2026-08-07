@@ -1,0 +1,29 @@
+# CloudNativePG Cluster for the sandbox namespace on GoA ARO OpenShift.
+# Applied once per namespace — idempotent via CR reconciliation.
+#
+# Pre-requisites handled automatically by the @abgov/nx-oc:sandbox executor:
+#   1. CNPG operator installed in the cluster (clusters.postgresql.cnpg.io CRD present).
+#   2. restricted-v2 SCC granted to the sandbox-postgres ServiceAccount BEFORE
+#      this manifest is applied — the controller only schedules the first pod if
+#      the SA already has the SCC at first reconcile; granting it after apply
+#      requires a manual reconcile trigger (findings 1 & 3, CNPG sandbox trial).
+#   3. azure-disk quota headroom >= 5 Gi in the namespace (finding 4).
+#
+# The operator auto-creates: primary pod, -rw / -ro / -r Services, PVC,
+# sandbox-postgres-app / -superuser / -ca Secrets, PodDisruptionBudget, SA.
+#
+# DATABASE_URL construction: use the 'username' and 'password' keys from the
+# sandbox-postgres-app Secret together with the sandbox-postgres-rw Service
+# hostname. The 'uri' key points to the bootstrap database (/postgres), not
+# the per-app database — it cannot be used as-is for DATABASE_URL (finding 5).
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: sandbox-postgres
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  storage:
+    size: 5Gi
+    storageClass: azure-disk

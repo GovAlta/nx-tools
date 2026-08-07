@@ -102,7 +102,45 @@ oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
   to the client's valid redirect URIs.
 <% } %>- **Import 409 "object has been modified"** — the `oc tag` reconcile race; the
   executor already retries. If you hit it manually, just re-run the import.
+<% if (database === 'postgres') { %>
+## CloudNativePG notes
 
+The executor probes for the `clusters.postgresql.cnpg.io` CRD at deploy time. If
+the operator is present it runs the CNPG path; if absent it falls back to the plain
+Postgres Deployment (same as `database: postgres`).
+
+**`DATABASE_URL` construction** — the `sandbox-postgres-app` Secret's `uri` key
+points to the bootstrap database (`/postgres`), not the per-app database. Construct
+`DATABASE_URL` from the `username` and `password` keys instead:
+
+```
+postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@sandbox-postgres-rw:5432/<%= projectName %>_sandbox
+```
+
+**Checking CNPG Cluster status** — always use the fully-qualified resource name on
+OpenShift; `oc get cluster` resolves to `clusters.aro.openshift.io` and returns
+Forbidden:
+
+```bash
+oc get clusters.postgresql.cnpg.io sandbox-postgres -n <%= sandboxProject %>
+```
+
+**Forcing a reconcile** — if the Cluster stays `BootstrapPending` after the SCC was
+granted (e.g. after a manual apply before the executor ran):
+
+```bash
+oc annotate clusters.postgresql.cnpg.io sandbox-postgres \
+  cnpg.io/reconcile="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --overwrite -n <%= sandboxProject %>
+```
+
+**azure-disk quota** — each CNPG Cluster creates a 5 Gi PVC. If provisioning fails
+with a quota error, free capacity first:
+
+```bash
+oc get pvc -n <%= sandboxProject %>   # find orphaned claims
+```
+<% } %>
 ## Teardown
 
 ```bash

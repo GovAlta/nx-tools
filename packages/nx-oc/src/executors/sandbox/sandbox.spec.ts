@@ -270,20 +270,131 @@ describe('sandbox executor', () => {
     expect(cmds.some((c) => c.includes('oc rollout restart'))).toBe(true);
   });
 
-  it('provisions Postgres and the per-app database before rollout', async () => {
-    await runExecutor({ ...baseOptions, database: 'postgres' }, context());
-    const cmds = commands();
-    expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(true);
-    expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBe(true);
-    expect(
-      cmds.some((c) => c.includes('createdb -U postgres test_sandbox')),
-    ).toBe(true);
-    const createDbIdx = cmds.findIndex((c) => c.includes('createdb'));
-    const rolloutIdx = cmds.findIndex((c) =>
-      c.includes('rollout status deployment/test'),
-    );
-    expect(createDbIdx).toBeGreaterThanOrEqual(0);
-    expect(createDbIdx).toBeLessThan(rolloutIdx);
+  describe('database: postgres', () => {
+    it('uses the CNPG operator path when the CRD is present', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get crd ')) {
+          return Buffer.from('clusters.postgresql.cnpg.io  2025-01-01T00:00:00Z');
+        }
+        return Buffer.from('');
+      });
+
+      const result = await runExecutor(
+        { ...baseOptions, database: 'postgres' },
+        context(),
+      );
+      expect(result.success).toBe(true);
+
+      const cmds = commands();
+      expect(
+        cmds.some((c) =>
+          c.includes('add-scc-to-user restricted-v2 -z sandbox-postgres'),
+        ),
+      ).toBe(true);
+      expect(cmds.some((c) => c.includes('sandbox-postgres-cnpg.yml'))).toBe(
+        true,
+      );
+      expect(
+        cmds.some((c) =>
+          c.includes('clusters.postgresql.cnpg.io/sandbox-postgres'),
+        ),
+      ).toBe(true);
+      expect(cmds.some((c) => c.includes('test-db.yml'))).toBe(true);
+      // No plain Deployment provisioning or shim resources
+      expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(false);
+      expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBe(false);
+      // Database CR applied before the app rollout
+      const dbCrIdx = cmds.findIndex((c) => c.includes('test-db.yml'));
+      const rolloutIdx = cmds.findIndex((c) =>
+        c.includes('rollout status deployment/test'),
+      );
+      expect(dbCrIdx).toBeGreaterThanOrEqual(0);
+      expect(dbCrIdx).toBeLessThan(rolloutIdx);
+      // SCC grant precedes Cluster apply
+      const sccIdx = cmds.findIndex((c) => c.includes('add-scc-to-user'));
+      const clusterIdx = cmds.findIndex((c) =>
+        c.includes('sandbox-postgres-cnpg.yml'),
+      );
+      expect(sccIdx).toBeLessThan(clusterIdx);
+    });
+
+    it('falls back to plain Postgres Deployment when CRD and cluster are both absent', async () => {
+      const warn = jest
+        .spyOn(logger, 'warn')
+        .mockImplementation(() => undefined);
+      // default mock returns '' for all commands → no CRD, no existing cluster
+
+      const result = await runExecutor(
+        { ...baseOptions, database: 'postgres' },
+        context(),
+      );
+      expect(result.success).toBe(true);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('CloudNativePG'),
+      );
+
+      const cmds = commands();
+      expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(true);
+      expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBe(true);
+      expect(
+        cmds.some((c) => c.includes('createdb -U postgres test_sandbox')),
+      ).toBe(true);
+      // Compatibility shims created so the CNPG-format manifest works
+      expect(cmds.some((c) => c.includes('sandbox-postgres-app'))).toBe(true);
+      expect(cmds.some((c) => c.includes('sandbox-postgres-rw'))).toBe(true);
+      // No CNPG-specific provisioning commands
+      expect(cmds.some((c) => c.includes('add-scc-to-user'))).toBe(false);
+      expect(
+        cmds.some((c) => c.includes('sandbox-postgres-cnpg.yml')),
+      ).toBe(false);
+
+      warn.mockRestore();
+    });
+
+    it('fails fast when a CNPG Cluster exists but the operator CRD is absent', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get crd ')) return Buffer.from(''); // operator down
+        if (cmd.includes('clusters.postgresql.cnpg.io sandbox-postgres')) {
+          return Buffer.from('sandbox-postgres  Cluster  Healthy'); // cluster exists
+        }
+        return Buffer.from('');
+      });
+
+      const result = await runExecutor(
+        { ...baseOptions, database: 'postgres' },
+        context(),
+      );
+      expect(result.success).toBe(false);
+      // Neither CNPG provisioning nor plain Deployment fallback attempted
+      expect(commands().some((c) => c.includes('sandbox-postgres.yml'))).toBe(
+        false,
+      );
+      expect(commands().some((c) => c.includes('add-scc-to-user'))).toBe(false);
+    });
+
+    it('fails fast when azure-disk quota is full', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get crd ')) {
+          return Buffer.from('clusters.postgresql.cnpg.io  2025-01-01T00:00:00Z');
+        }
+        if (
+          cmd.includes('oc describe resourcequota') &&
+          cmd.includes('grep')
+        ) {
+          return Buffer.from(
+            'azure-disk.storageclass.storage.k8s.io/requests.storage  10Gi  10Gi',
+          );
+        }
+        return Buffer.from('');
+      });
+
+      const result = await runExecutor(
+        { ...baseOptions, database: 'postgres' },
+        context(),
+      );
+      expect(result.success).toBe(false);
+      expect(commands().some((c) => c.includes('add-scc-to-user'))).toBe(false);
+    });
   });
 
   it('ensures paired backend Services from proxy-service tags (idempotent)', async () => {

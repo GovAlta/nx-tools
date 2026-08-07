@@ -342,6 +342,17 @@ via the local reference policy. Options include `--database`, `--imageTag`, `--i
 
 Key wiring to preserve when editing:
 
+- **Postgres path — CloudNativePG with plain Deployment fallback**: `database: 'postgres'` probes
+  for the `clusters.postgresql.cnpg.io` CRD (`oc get crd clusters.postgresql.cnpg.io`). If present,
+  it grants `restricted-v2` SCC to the `sandbox-postgres` SA, applies `sandbox-postgres-cnpg.yml`
+  (the shared CNPG Cluster), waits for Ready, then applies the per-app `<project>-db.yml` (CNPG
+  `Database` CR). If the CRD is absent but a CNPG Cluster already exists in the namespace, the
+  executor **fails fast** (one-way door) — don't create a plain Deployment alongside an existing
+  CNPG Cluster. If neither exists, falls back to the plain Deployment and creates
+  `sandbox-postgres-app` Secret and `sandbox-postgres-rw` Service compatibility shims so the
+  app manifest format is identical regardless of path. Always use `clusters.postgresql.cnpg.io`
+  (fully qualified) — `oc get cluster` resolves to `clusters.aro.openshift.io` on GoA ARO.
+  Mongo continues to use a plain Deployment; there is no CNPG path for mongo.
 - **DB auto-detection**: `express-service` records an `adsp:database:<type>` project tag; the
   sandbox generator reads it (falling back to a drizzle `db:migrate` target ⇒ `postgres`), so
   no `--database` flag is needed. Mirrors the `adsp:proxy-service:<name>:<port>` tag that

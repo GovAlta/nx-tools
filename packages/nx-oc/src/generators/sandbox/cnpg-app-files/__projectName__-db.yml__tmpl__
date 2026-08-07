@@ -1,0 +1,19 @@
+# Per-app Database CR for the CloudNativePG Cluster in this sandbox namespace.
+# Applied once per app — idempotent; CNPG re-reconciles on re-apply.
+# Creates the <%= projectName %>_sandbox database in the sandbox-postgres Cluster.
+#
+# After APPLIED: true, set DATABASE_URL using the 'username' and 'password'
+# keys from the sandbox-postgres-app Secret and the -rw Service hostname —
+# the CNPG-generated 'uri' key points to the bootstrap database (/postgres),
+# not this per-app database (finding 5, CNPG sandbox trial):
+#   postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@sandbox-postgres-rw:5432/<%= projectName %>_sandbox
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: <%= projectName %>-sandbox
+spec:
+  cluster:
+    name: sandbox-postgres
+  name: <%= projectName %>_sandbox
+  owner: app

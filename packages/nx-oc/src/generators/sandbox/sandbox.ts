@@ -214,12 +214,30 @@ function addSandboxDoc(host: Tree, options: NormalizedSchema) {
 
 function addDatabaseFiles(host: Tree, options: NormalizedSchema) {
   if (!options.database || options.database === 'none') return;
+  // Always emit the plain-Deployment manifests — used directly for mongo and as
+  // the fallback for postgres when the CNPG operator is absent at runtime.
   generateFiles(
     host,
     path.join(__dirname, 'database-files'),
     './.openshift/sandbox',
     { database: options.database, tmpl: '' },
   );
+  if (options.database === 'postgres') {
+    // Namespace-level CNPG Cluster manifest (shared across apps in the namespace).
+    generateFiles(
+      host,
+      path.join(__dirname, 'cnpg-files'),
+      './.openshift/sandbox',
+      { tmpl: '' },
+    );
+    // Per-app Database CR — creates <projectName>_sandbox in the CNPG Cluster.
+    generateFiles(
+      host,
+      path.join(__dirname, 'cnpg-app-files'),
+      './.openshift/sandbox',
+      { projectName: options.projectName, tmpl: '' },
+    );
+  }
 }
 
 function addSandboxTarget(host: Tree, options: NormalizedSchema) {

@@ -419,10 +419,12 @@ arbitrary UID; it logs `No migrations to apply.` and exits 0 when `drizzle/` is
 empty. The `drizzle/` folder is shipped into the build output as a build asset.
 
 **Sandbox** (`nx run <%= projectName %>:sandbox`) — nothing to set up. The
-sandbox target provisions a shared `sandbox-postgres` instance, creates this
+sandbox target provisions a shared `sandbox-postgres` Postgres instance (via the
+CloudNativePG operator when available, plain Deployment otherwise), creates this
 service's `<%= projectName %>_sandbox` database, and injects `DATABASE_URL`
-(sourced from the `sandbox-postgres-creds` secret) into both the init container
-and the app. If a deploy fails on migrations, read the init container's logs:
+(sourced from the `sandbox-postgres-app` secret — keys `username` and `password`)
+into both the init container and the app. If a deploy fails on migrations, read
+the init container's logs:
 
 ```bash
 oc logs -n <namespace> <pod> -c <%= projectName %>-migrate

@@ -159,7 +159,7 @@ npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --da
 | `project`        | —     | Yes      | Name of the existing Nx project                                                                                                                             |
 | `sandboxProject` | `-s`  | Yes      | OpenShift namespace to deploy the sandbox into (expected to be per-user)                                                                                    |
 | `appType`        | `-t`  | No       | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided.                                              |
-| `database`       | —     | No       | Database type: `postgres`, `mongo`, or `none` (default). A shared containerized instance is deployed to the sandbox namespace.                              |
+| `database`       | —     | No       | Database type: `postgres`, `mongo`, or `none` (default). `postgres` provisions via the **CloudNativePG operator** when the CRD is present and falls back to a plain Deployment otherwise; `mongo` always uses a plain Deployment.                              |
 | `env`            | —     | No       | ADSP environment to target for configuration: `dev` (default), `test`, or `prod`                                                                            |
 | `registry`       | `-r`  | No       | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided. |
 
@@ -173,15 +173,17 @@ The generator adds `sandbox` and `sandbox-teardown` targets to the project and c
 ```
 .openshift/
   ├─ my-app/
-  │   ├─ Dockerfile          ← built locally by the sandbox target (shared with `deployment`)
-  │   └─ my-app.sandbox.yml  ← sandbox deployment manifest (coexists with `deployment`'s my-app.yml)
+  │   ├─ Dockerfile              ← built locally by the sandbox target (shared with `deployment`)
+  │   └─ my-app.sandbox.yml      ← sandbox deployment manifest (coexists with `deployment`'s my-app.yml)
   └─ sandbox/
-      └─ sandbox-postgres.yml  ← shared DB (written once, reused by all apps)
+      ├─ sandbox-postgres.yml         ← plain Deployment fallback (used when CNPG operator absent)
+      ├─ sandbox-postgres-cnpg.yml    ← CNPG Cluster manifest (used when operator present; postgres only)
+      └─ my-app-db.yml                ← CNPG Database CR creating the per-app database (postgres only)
 ```
 
 Running `nx run my-app:sandbox` executes the full loop:
 
-1. Creates the ADSP client Secret (node) and DB credentials Secret on first run; creates the per-app database (postgres). Idempotent.
+1. Creates the ADSP client Secret (node); provisions the database (idempotent): for `postgres`, probes for the `clusters.postgresql.cnpg.io` CRD — if present, grants the CNPG SA the `restricted-v2` SCC, applies the `sandbox-postgres` CNPG Cluster and a per-app `Database` CR; if absent but no CNPG Cluster has ever been created, falls back to a plain Deployment and creates `sandbox-postgres-app`/`sandbox-postgres-rw` compatibility shims so the app manifest works either way; `mongo` always uses a plain Deployment.
 2. `nx build` → `podman build --platform=linux/amd64` → `podman push` to `<registry>/<sandboxProject>-<app>:sandbox`.
 3. Refreshes the `ghcr-pull` Secret from the current `gh` session token.
 4. `oc tag` + `oc import-image --reference-policy=local` — the internal registry serves the image, so pods pull in-cluster (no per-pod pull secret, no node egress).
@@ -195,13 +197,23 @@ Local layer caching makes iteration fast — after the first push, only the chan
 gh api "/orgs/<org>/packages?package_type=container" -q '.[] | select(.repository == null) | .name'
 ```
 
-**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app uses its own database (`<appName>_sandbox`); migrations are applied on deploy by the app's migrate init container. The `azure-disk` storage class is used for the PVC, which is required on GoA ARO.
+**Shared database:** All apps in the same sandbox namespace share one Postgres or MongoDB instance. Each app gets its own database (`<appName>_sandbox`); migrations run on deploy via the app's init container. For Postgres on GoA ARO, the executor uses the **CloudNativePG operator** (a single `sandbox-postgres` Cluster CR, one PVC via the `azure-disk` storage class), with a per-app `Database` CR to declaratively create the database. When the operator is absent the executor falls back to a plain Deployment; both paths leave identical `sandbox-postgres-app` Secret and `sandbox-postgres-rw` Service in the namespace so the app manifest is format-stable regardless of which path ran. **One-way door:** if a CNPG Cluster already exists but the CRD is no longer responding, the executor fails fast rather than creating a conflicting plain Deployment alongside it.
 
-**Teardown:** `nx run my-app:sandbox-teardown` deletes the app's OpenShift resources **and** its GHCR package (best-effort; deleting the package needs `delete:packages`). The shared database and its PVC are left in place — other apps in the namespace may still be using them. To remove the shared database manually:
+**Teardown:** `nx run my-app:sandbox-teardown` deletes the app's OpenShift resources **and** its GHCR package (best-effort; deleting the package needs `delete:packages`). The shared database and its PVC are left in place — other apps in the namespace may still be using them. To remove the shared Postgres manually (CNPG path):
+
+```bash
+# Remove per-app Database CR first
+oc delete -f .openshift/sandbox/my-app-db.yml -n <sandbox-namespace>
+# Then remove the shared Cluster (deletes PVC and all CNPG-managed secrets)
+oc delete -f .openshift/sandbox/sandbox-postgres-cnpg.yml -n <sandbox-namespace>
+```
+
+For the plain Deployment fallback:
 
 ```bash
 oc delete -f .openshift/sandbox/sandbox-postgres.yml -n <sandbox-namespace>
-oc delete secret sandbox-postgres-creds -n <sandbox-namespace>
+oc delete secret sandbox-postgres-creds sandbox-postgres-app -n <sandbox-namespace>
+oc delete service sandbox-postgres-rw -n <sandbox-namespace>
 ```
 
 ---

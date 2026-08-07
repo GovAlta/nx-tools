@@ -228,21 +228,39 @@ describe('Sandbox Generator', () => {
 
     await generator(host, { ...options, database: 'postgres' });
 
+    // Plain Deployment fallback (used when CNPG operator is absent at runtime)
     expect(host.exists('.openshift/sandbox/sandbox-postgres.yml')).toBeTruthy();
-
     const dbManifest = host
       .read('.openshift/sandbox/sandbox-postgres.yml')
       .toString();
     expect(dbManifest).toContain('sandbox-postgres-creds');
 
+    // CNPG Cluster manifest (used when operator is present)
+    expect(
+      host.exists('.openshift/sandbox/sandbox-postgres-cnpg.yml'),
+    ).toBeTruthy();
+    const clusterManifest = host
+      .read('.openshift/sandbox/sandbox-postgres-cnpg.yml')
+      .toString();
+    expect(clusterManifest).toContain('postgresql.cnpg.io/v1');
+    expect(clusterManifest).toContain('kind: Cluster');
+    expect(clusterManifest).toContain('azure-disk');
+
+    // Per-app Database CR
+    expect(host.exists('.openshift/sandbox/test-db.yml')).toBeTruthy();
+    const dbCr = host.read('.openshift/sandbox/test-db.yml').toString();
+    expect(dbCr).toContain('kind: Database');
+    expect(dbCr).toContain('test_sandbox');
+
     const appManifest = host
       .read('.openshift/test/test.sandbox.yml')
       .toString();
-    expect(appManifest).toContain('sandbox-postgres-creds');
+    expect(appManifest).toContain('sandbox-postgres-app');
+    expect(appManifest).toContain('$(POSTGRES_USER)');
     expect(appManifest).toContain('$(POSTGRES_PASSWORD)');
+    expect(appManifest).toContain('sandbox-postgres-rw');
+    expect(appManifest).not.toContain('sandbox-postgres-creds');
 
-    // The database type is passed to the executor, which provisions the shared
-    // instance + per-app database at deploy time.
     const config = readProjectConfiguration(host, 'test');
     expect(config.targets['sandbox'].options.database).toBe('postgres');
   });
