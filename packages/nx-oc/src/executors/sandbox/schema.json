@@ -18,7 +18,7 @@
       "type": "string",
       "enum": ["none", "postgres", "mongo"],
       "default": "none",
-      "description": "Provision a shared sandbox database of this type before deploying."
+      "description": "Provision a shared sandbox database of this type before deploying. 'postgres' uses the CloudNativePG operator when available and falls back to the plain Deployment otherwise."
     },
     "appType": {
       "type": "string",

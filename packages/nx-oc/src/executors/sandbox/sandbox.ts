@@ -209,31 +209,131 @@ export default async function runExecutor(
 
     // ---- shared database provisioning ----
     if (database === 'postgres') {
-      run(
-        'Ensure Postgres credentials',
-        `oc get secret sandbox-postgres-creds -n ${sandboxProject} 2>/dev/null || ` +
-          `oc create secret generic sandbox-postgres-creds ` +
-          `--from-literal=POSTGRESQL_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
-          `-n ${sandboxProject}`,
+      const cnpgAvailable = !!capture(
+        `oc get crd clusters.postgresql.cnpg.io 2>/dev/null`,
         cwd,
       );
-      run(
-        'Deploy shared Postgres',
-        `oc apply -f .openshift/sandbox/sandbox-postgres.yml -n ${sandboxProject}`,
+      // Check for a pre-existing CNPG Cluster regardless of CRD availability —
+      // if one was ever provisioned here we must never fall back to the plain
+      // Deployment, which would create a second postgres alongside it.
+      const cnpgClusterExists = !!capture(
+        `oc get clusters.postgresql.cnpg.io sandbox-postgres -n ${sandboxProject} 2>/dev/null`,
         cwd,
       );
-      // The shared Postgres only creates the admin database; each app needs its
-      // own <app>_sandbox database created before its migrate init container
-      // runs. Wait for Postgres, then create the database idempotently.
-      const dbName = `${projectName}_sandbox`;
-      run(
-        'Create app database',
-        `oc rollout status deployment/sandbox-postgres -n ${sandboxProject} --timeout=180s && ` +
-          `oc exec -n ${sandboxProject} deployment/sandbox-postgres -- ` +
-          `bash -lc "psql -U postgres -tc \\"SELECT 1 FROM pg_database WHERE datname='${dbName}'\\" ` +
-          `| grep -q 1 || createdb -U postgres ${dbName}"`,
-        cwd,
-      );
+
+      if (cnpgAvailable) {
+        // Quota check only matters when provisioning a new cluster — on re-runs
+        // the PVC already exists and is counted in `used`, so used === hard would
+        // be a false positive (finding 4).
+        if (!cnpgClusterExists) {
+          const quotaLine = capture(
+            `oc describe resourcequota -n ${sandboxProject} 2>/dev/null | grep 'azure-disk'`,
+            cwd,
+          );
+          if (quotaLine) {
+            const parts = quotaLine.trim().split(/\s+/);
+            const used = parts[parts.length - 2];
+            const hard = parts[parts.length - 1];
+            if (hard && used && hard === used) {
+              throw new Error(
+                `azure-disk storage quota is full in namespace ${sandboxProject} (${used}/${hard}). ` +
+                  `Free capacity before provisioning the CNPG Cluster: ` +
+                  `\`oc get pvc -n ${sandboxProject}\` to see claims and delete orphaned ones.`,
+              );
+            }
+          }
+        }
+        // Grant restricted-v2 SCC BEFORE applying the Cluster manifest (findings
+        // 1 & 3): the controller only schedules the first pod if the SA already
+        // has the SCC at first reconcile. Granting after apply would leave the
+        // Cluster in BootstrapPending until a manual reconcile trigger.
+        run(
+          'Grant restricted-v2 SCC to CNPG Cluster SA',
+          `oc adm policy add-scc-to-user restricted-v2 -z sandbox-postgres -n ${sandboxProject}`,
+          cwd,
+        );
+        run(
+          'Apply CNPG Cluster',
+          `oc apply -f .openshift/sandbox/sandbox-postgres-cnpg.yml -n ${sandboxProject}`,
+          cwd,
+        );
+        // Use clusters.postgresql.cnpg.io — `oc get cluster` on OpenShift
+        // resolves to clusters.aro.openshift.io and returns Forbidden (finding 6).
+        run(
+          'Wait for CNPG Cluster ready',
+          `oc wait clusters.postgresql.cnpg.io/sandbox-postgres --for=condition=Ready --timeout=300s -n ${sandboxProject}`,
+          cwd,
+        );
+        run(
+          'Apply per-app Database CR',
+          `oc apply -f .openshift/sandbox/${projectName}-db.yml -n ${sandboxProject}`,
+          cwd,
+        );
+      } else if (cnpgClusterExists) {
+        // Operator CRD gone but a Cluster CR still exists — operator may be
+        // temporarily down or uninstalled after provisioning. Falling back to
+        // the plain Deployment would create a second postgres alongside the
+        // existing CNPG Cluster and corrupt the namespace state.
+        throw new Error(
+          `CNPG Cluster 'sandbox-postgres' already exists in ${sandboxProject} but the ` +
+            `clusters.postgresql.cnpg.io CRD is not responding. ` +
+            `The operator may be temporarily unavailable — check its status before re-deploying. ` +
+            `Do not fall back to the plain Deployment while a CNPG Cluster is present.`,
+        );
+      } else {
+        // Safe to use the plain Deployment — no CNPG Cluster has ever been
+        // provisioned in this namespace.
+        logger.warn(
+          `\n[nx-oc] CloudNativePG operator not found in cluster (no clusters.postgresql.cnpg.io CRD). ` +
+            `Falling back to plain Postgres Deployment.`,
+        );
+        run(
+          'Ensure Postgres credentials',
+          `oc get secret sandbox-postgres-creds -n ${sandboxProject} 2>/dev/null || ` +
+            `oc create secret generic sandbox-postgres-creds ` +
+            `--from-literal=POSTGRESQL_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=') ` +
+            `-n ${sandboxProject}`,
+          cwd,
+        );
+        run(
+          'Deploy shared Postgres',
+          `oc apply -f .openshift/sandbox/sandbox-postgres.yml -n ${sandboxProject}`,
+          cwd,
+        );
+        const dbName = `${projectName}_sandbox`;
+        run(
+          'Create app database',
+          `oc rollout status deployment/sandbox-postgres -n ${sandboxProject} --timeout=180s && ` +
+            `oc exec -n ${sandboxProject} deployment/sandbox-postgres -- ` +
+            `bash -lc "psql -U postgres -tc \\"SELECT 1 FROM pg_database WHERE datname='${dbName}'\\" ` +
+            `| grep -q 1 || createdb -U postgres ${dbName}"`,
+          cwd,
+        );
+        // Compatibility shims: create resources in the same shape as the CNPG
+        // operator so the app manifest (sandbox-postgres-app + sandbox-postgres-rw)
+        // resolves correctly whether CNPG or the plain Deployment is running.
+        run(
+          'Ensure sandbox-postgres-app secret',
+          `oc create secret generic sandbox-postgres-app ` +
+            `--from-literal=username=postgres ` +
+            `--from-literal=password="$(oc get secret sandbox-postgres-creds ` +
+            `-n ${sandboxProject} -o go-template='{{.data.POSTGRESQL_ADMIN_PASSWORD | base64decode}}')" ` +
+            `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
+          cwd,
+        );
+        run(
+          'Ensure sandbox-postgres-rw Service alias',
+          `oc get service sandbox-postgres-rw -n ${sandboxProject} 2>/dev/null || ` +
+            `oc create service clusterip sandbox-postgres-rw --tcp=5432:5432 -n ${sandboxProject}`,
+          cwd,
+        );
+        run(
+          'Point sandbox-postgres-rw at plain Deployment pods',
+          `oc patch service sandbox-postgres-rw -n ${sandboxProject} ` +
+            `--type=merge -p '{"spec":{"selector":{"app":"sandbox-postgres"}}}'`,
+          cwd,
+        );
+      }
     } else if (database === 'mongo') {
       run(
         'Ensure MongoDB credentials',

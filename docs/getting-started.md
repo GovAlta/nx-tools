@@ -296,7 +296,7 @@ npx nx run my-app-app:sandbox
 
 Each command:
 
-1. Creates the app's Secrets on first run (ADSP client secret, `sandbox-postgres-creds`) and the per-app database. Idempotent.
+1. Provisions the shared Postgres instance (CloudNativePG operator when present, plain Deployment otherwise), creates the per-app database, and creates the app's ADSP client Secret. Idempotent.
 2. Builds the image locally (`podman build --platform=linux/amd64`) and pushes it to `<registry>/<sandboxProject>-<app>:sandbox` (registry resolved from the git remote on first run, persisted to `nx.json`).
 3. Imports the image into the namespace's imagestream (`reference-policy=local`, so pods pull from the internal registry) and applies the manifest.
 4. Restarts the Deployment and waits for rollout.
@@ -305,7 +305,7 @@ No GitHub push, no CI wait — and local layer caching means only the changed ap
 
 ### Credentials and databases
 
-The shared `sandbox-postgres` instance is deployed once and reused by all apps in the namespace. The generated password is stored in the `sandbox-postgres-creds` Secret — the DB pod and every app pod read it from there at runtime. No credential is hardcoded in any manifest.
+The shared `sandbox-postgres` Postgres instance is deployed once and reused by all apps in the namespace. On GoA ARO, the executor provisions it via the **CloudNativePG operator** (a CNPG `Cluster` CR backed by an `azure-disk` PVC, with per-app `Database` CRs). When the operator is absent it falls back to a plain Deployment. Either way, credentials are exposed as a `sandbox-postgres-app` Secret (keys: `username`, `password`) and the service endpoint is `sandbox-postgres-rw:5432`. No credential is hardcoded in any manifest.
 
 Each app gets its own database within the shared instance (`my-app-service_sandbox`, `my-app-app_sandbox`). Migrations are applied automatically on every deploy by the service's `migrate.js` init container.
 
@@ -317,11 +317,21 @@ To remove a single app from the sandbox namespace without touching the shared da
 npx nx run my-app-service:sandbox-teardown
 ```
 
-This runs `oc delete all,configmap -l app=<name>` against the sandbox namespace, removing every resource the template created. The shared `sandbox-postgres` instance and the `sandbox-postgres-creds` Secret are left in place — other apps in the namespace may still be using them.
+This runs `oc delete all,configmap -l app=<name>` against the sandbox namespace, removing every resource the template created. The shared `sandbox-postgres` instance is left in place — other apps in the namespace may still be using it.
 
-To also remove the shared database and its credentials:
+To also remove the shared database (CNPG path):
+
+```bash
+# Remove per-app Database CRs first
+oc delete -f .openshift/sandbox/my-app-service-db.yml -n my-project-sandbox
+# Then remove the shared Cluster (also deletes the PVC and CNPG-managed secrets)
+oc delete -f .openshift/sandbox/sandbox-postgres-cnpg.yml -n my-project-sandbox
+```
+
+For the plain Deployment fallback:
 
 ```bash
 oc delete -f .openshift/sandbox/sandbox-postgres.yml -n my-project-sandbox
-oc delete secret sandbox-postgres-creds -n my-project-sandbox
+oc delete secret sandbox-postgres-creds sandbox-postgres-app -n my-project-sandbox
+oc delete service sandbox-postgres-rw -n my-project-sandbox
 ```
