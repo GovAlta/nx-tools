@@ -23,4 +23,5 @@ export interface NormalizedSchema extends Schema {
   projectRoot: string;
   adsp: AdspConfiguration;
   database: DatabaseType;
+  pairedProjectTag?: string;
 }

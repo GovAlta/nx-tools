@@ -1,4 +1,4 @@
-import { readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
+import { addProjectConfiguration, readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
@@ -337,5 +337,23 @@ describe('Express Service Generator', () => {
 
     expect(host.exists('apps/test/.env.local')).toBeFalsy();
     expect(host.exists('apps/test/.env')).toBeFalsy();
+  }, 60000);
+
+  it('derives the sandbox tag from --pairedProject and adds it to the project', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-app', { root: 'apps/test-app' });
+    await generator(host, { ...options, pairedProject: 'test-app' });
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.tags).toContain('adsp:paired-frontend:test-app:4200');
+  }, 60000);
+
+  it('surfaces the paired project name in AGENTS.md', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-app', { root: 'apps/test-app' });
+    await generator(host, { ...options, pairedProject: 'test-app' });
+
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('test-app');
   }, 60000);
 });

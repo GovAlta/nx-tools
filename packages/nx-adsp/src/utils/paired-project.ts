@@ -1,5 +1,6 @@
 import { names, readProjectConfiguration, Tree } from '@nx/devkit';
 import { DEFAULT_EXPRESS_SERVICE_PORT } from './express-service-port';
+import { DEFAULT_FRONTEND_APP_PORT } from './frontend-app-port';
 import { NginxProxyConfiguration } from './nginx';
 
 export interface PairedProjectProxy {
@@ -32,5 +33,28 @@ export function resolvePairedProjectProxy(
       proxyPass: `http://${pairedService}:${port}/${pairedService}/`,
     },
     tag: `adsp:proxy-service:${pairedService}:${port}`,
+  };
+}
+
+export interface PairedFrontendApp {
+  tag: string;
+}
+
+// Resolves an express-service's --pairedProject into the `adsp:paired-frontend:<name>:<port>`
+// tag tooling reads to discover which frontend app this service is paired with. Unlike
+// resolvePairedProjectProxy, this does NOT validate that the paired project exists: composite
+// generators (pevn, pern, pean) scaffold express-service first and the frontend second, so the
+// frontend's project configuration is not yet in the tree when this runs. The tag is fully
+// derived from the name alone — no reads from the paired project are required.
+export function resolvePairedFrontendApp(
+  host: Tree,
+  pairedProject: string | undefined,
+): PairedFrontendApp | undefined {
+  if (!pairedProject) {
+    return undefined;
+  }
+  const pairedApp = names(pairedProject).fileName;
+  return {
+    tag: `adsp:paired-frontend:${pairedApp}:${DEFAULT_FRONTEND_APP_PORT}`,
   };
 }
