@@ -132,6 +132,18 @@ describe('ensureAdspToken', () => {
     expect(mockedSpawnSync).not.toHaveBeenCalled();
   });
 
+  it('throws a distinct "missing scope" error when signed in but lacking the requested scope', async () => {
+    mockedGetAccessToken
+      .mockResolvedValueOnce({ status: 'not-authenticated' }) // scoped fetch fails
+      .mockResolvedValueOnce({ status: 'ok', token: 'base-tok' }); // base fetch succeeds
+    mockedIsNonInteractive.mockReturnValue(true);
+
+    await expect(
+      ensureAdspToken({ env: 'test', tenant: 'my-tenant', scopes: ['adsp-cli-admin'] }),
+    ).rejects.toThrow(/missing required scope/);
+    expect(mockedSpawnSync).not.toHaveBeenCalled();
+  });
+
   it('drives an interactive login and retries when the fast path misses', async () => {
     mockedIsNonInteractive.mockReturnValue(false);
     mockedGetAccessToken

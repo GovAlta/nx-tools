@@ -160,6 +160,19 @@ export async function ensureAdspToken(options: {
       ]
         .filter(Boolean)
         .join(' ');
+      // Distinguish "not signed in at all" from "signed in but missing scope":
+      // the error message for the latter is the same corrective action but
+      // a different diagnosis — users who ran `adsp login` without --scope
+      // adsp-cli-admin see "Not signed in" and ignore it, thinking it's wrong.
+      if (scopes.length) {
+        const base = await getAccessToken();
+        if (base.status === 'ok') {
+          throw new Error(
+            `Signed in to ADSP but missing required scope(s): ${scopes.join(', ')}.\n` +
+              `Re-sign in with:\n  ${loginCmd}`,
+          );
+        }
+      }
       throw new Error(
         `Not signed in to ADSP (non-interactive run). Sign in first with:\n  ${loginCmd}\n` +
           'Or, for a CI service account, set ADSP_CLIENT_ID and ADSP_CLIENT_SECRET ' +
