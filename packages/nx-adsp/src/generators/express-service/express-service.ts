@@ -27,6 +27,10 @@ import {
 } from '../../utils/quality';
 import initGenerator from '../init/init';
 import { DEFAULT_EXPRESS_SERVICE_PORT as DEFAULT_PORT } from '../../utils/express-service-port';
+import {
+  applyProxyToExistingFrontend,
+  resolvePairedFrontendApp,
+} from '../../utils/paired-project';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -38,12 +42,15 @@ async function normalizeOptions(
 
   const adsp = await getAdspConfiguration(host, options);
 
+  const pairedFrontend = resolvePairedFrontendApp(host, options.pairedProject);
+
   return {
     ...options,
     projectName,
     projectRoot,
     adsp,
     database: options.database ?? 'none',
+    pairedProjectTag: pairedFrontend?.tag,
   };
 }
 
@@ -147,6 +154,18 @@ export default async function (host: Tree, options: Schema) {
 
   addFiles(host, normalizedOptions);
 
+  // When the frontend already exists (standalone use: backend generated after frontend),
+  // retroactively apply the nginx/dev-proxy wiring that the frontend generator would have
+  // set up if it had been given --pairedProject. Safe to call when the frontend doesn't
+  // exist yet (composite generator ordering) — applyProxyToExistingFrontend returns early.
+  if (normalizedOptions.pairedProject) {
+    applyProxyToExistingFrontend(
+      host,
+      normalizedOptions.pairedProject,
+      normalizedOptions.projectName,
+    );
+  }
+
   addEslintQualityRules(host, normalizedOptions.projectRoot, [
     '**/*.spec.ts',
     '**/*.test.ts',
@@ -224,6 +243,7 @@ export default async function (host: Tree, options: Schema) {
   const dbTag = `adsp:database:${normalizedOptions.database}`;
   const newTags = [
     ...(normalizedOptions.database !== 'none' ? [dbTag] : []),
+    ...(normalizedOptions.pairedProjectTag ? [normalizedOptions.pairedProjectTag] : []),
     ...adspProjectTags(normalizedOptions.env, normalizedOptions.adsp.tenant),
   ].filter((tag) => !(projectConfig.tags ?? []).includes(tag));
   const tags = [...(projectConfig.tags ?? []), ...newTags];

@@ -562,9 +562,24 @@ describe('GET /<%= projectName %>/v1/items', () => {
 
 ## Frontend proxy integration
 
-When this service is paired with a React, Angular, or Vue frontend, the frontend
-proxies `/api/` to `/<%= projectName %>/` on port 3333 in development, and via
-nginx in production. All API routes live under `/<%= projectName %>/v1/`.
+This service has no paired frontend configured yet. All API routes live under
+`/<%= projectName %>/v1/`. To wire up a Vue, React, or Angular frontend's
+nginx proxy (production) and dev-server proxy (development) to this service,
+run either:
+
+```bash
+# Re-run this generator against the existing frontend — preferred when the
+# frontend already exists (both proxy files and the adsp:proxy-service: tag
+# are updated automatically):
+npx nx g @abgov/nx-adsp:express-service <%= projectName %> --pairedProject <frontend-name> --no-interactive
+
+# Or run the frontend generator against its own existing project instead:
+npx nx g @abgov/nx-adsp:vue-app <frontend-name> --pairedProject <%= projectName %> --no-interactive
+# (substitute react-app or angular-app as appropriate)
+```
+
+Both paths produce the same result: the frontend routes `/api/` to
+`/<%= projectName %>/` on port 3333 in dev and via nginx in production.
 <% } %>
 
 ## OpenShift targets

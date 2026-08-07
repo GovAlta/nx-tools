@@ -1,4 +1,4 @@
-import { readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
+import { addProjectConfiguration, readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
@@ -338,4 +338,198 @@ describe('Express Service Generator', () => {
     expect(host.exists('apps/test/.env.local')).toBeFalsy();
     expect(host.exists('apps/test/.env')).toBeFalsy();
   }, 60000);
+
+  it('derives the sandbox tag from --pairedProject and adds it to the project', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-app', { root: 'apps/test-app' });
+    await generator(host, { ...options, pairedProject: 'test-app' });
+
+    const config = readProjectConfiguration(host, 'test');
+    expect(config.tags).toContain('adsp:paired-frontend:test-app:4200');
+  }, 60000);
+
+  it('surfaces the paired project name in AGENTS.md', async () => {
+    const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    addProjectConfiguration(host, 'test-app', { root: 'apps/test-app' });
+    await generator(host, { ...options, pairedProject: 'test-app' });
+
+    const agents = host.read('apps/test/AGENTS.md').toString();
+    expect(agents).toContain('test-app');
+  }, 60000);
+
+  describe('--pairedProject proxy wiring', () => {
+    // Simplified nginx.conf matching the template structure (no proxy entries yet).
+    const NGINX_CONF_NO_PROXY = `events {
+  worker_connections 1024;
+}
+
+http {
+  server {
+    listen 8080;
+
+    location / {
+      try_files $uri /index.html;
+    }
+
+  }
+}
+`;
+
+    it('writes vite.proxy.json and patches serve target and nginx.conf for a Vue frontend', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addProjectConfiguration(host, 'my-vue-app', {
+        root: 'apps/my-vue-app',
+        projectType: 'application',
+        targets: {
+          serve: { executor: '@nx/vite:dev-server', options: { port: 4200 } },
+          build: {
+            executor: '@nx/vite:build',
+            options: { outputPath: 'dist/apps/my-vue-app' },
+          },
+        },
+        tags: ['adsp:scaffold-env:dev'],
+      });
+      host.write('apps/my-vue-app/public/nginx.conf', NGINX_CONF_NO_PROXY);
+
+      await generator(host, { ...options, pairedProject: 'my-vue-app' });
+
+      // Dev proxy file written at the Vue location.
+      expect(host.exists('apps/my-vue-app/vite.proxy.json')).toBeTruthy();
+      const proxyConf = readJson(host, 'apps/my-vue-app/vite.proxy.json');
+      expect(proxyConf['/api/']).toBeDefined();
+      expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
+      expect(proxyConf['/api/'].pathRewrite['^/api/']).toBe('/test/');
+
+      // serve target updated with proxyConfig.
+      const frontendConfig = readProjectConfiguration(host, 'my-vue-app');
+      expect(frontendConfig.targets.serve.options.proxyConfig).toBe(
+        'apps/my-vue-app/vite.proxy.json',
+      );
+
+      // nginx.conf updated with the proxy block.
+      const nginx = host
+        .read('apps/my-vue-app/public/nginx.conf')
+        .toString();
+      expect(nginx).toContain('location /api/');
+      expect(nginx).toContain('proxy_pass http://test:3333/test/');
+
+      // Frontend tagged for the sandbox executor.
+      expect(frontendConfig.tags).toContain('adsp:proxy-service:test:3333');
+    }, 120000);
+
+    it('writes proxy.conf.json, patches serve target, adds nginx asset, and updates nginx.conf for a React frontend', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addProjectConfiguration(host, 'my-react-app', {
+        root: 'apps/my-react-app',
+        projectType: 'application',
+        targets: {
+          serve: {
+            executor: '@nx/webpack:dev-server',
+            options: { port: 4200 },
+          },
+          build: {
+            executor: '@nx/webpack:webpack',
+            options: { outputPath: 'dist/apps/my-react-app', assets: [] },
+          },
+        },
+        tags: ['adsp:scaffold-env:dev'],
+      });
+      host.write('apps/my-react-app/nginx.conf', NGINX_CONF_NO_PROXY);
+
+      await generator(host, { ...options, pairedProject: 'my-react-app' });
+
+      // Dev proxy file written at the React location.
+      expect(host.exists('apps/my-react-app/proxy.conf.json')).toBeTruthy();
+      const proxyConf = readJson(host, 'apps/my-react-app/proxy.conf.json');
+      expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
+
+      // serve target updated.
+      const frontendConfig = readProjectConfiguration(host, 'my-react-app');
+      expect(frontendConfig.targets.serve.options.proxyConfig).toBe(
+        'apps/my-react-app/proxy.conf.json',
+      );
+
+      // nginx.conf at project root updated.
+      const nginx = host.read('apps/my-react-app/nginx.conf').toString();
+      expect(nginx).toContain('location /api/');
+
+      // nginx.conf added as a webpack build asset.
+      const assets = frontendConfig.targets.build.options.assets ?? [];
+      expect(
+        assets.some(
+          (a: unknown) =>
+            typeof a === 'object' &&
+            (a as { glob?: string }).glob === 'nginx.conf' &&
+            (a as { input?: string }).input === 'apps/my-react-app',
+        ),
+      ).toBe(true);
+
+      // Frontend tagged.
+      expect(frontendConfig.tags).toContain('adsp:proxy-service:test:3333');
+    }, 120000);
+
+    it('writes proxy.conf.json, patches serve target, adds nginx asset, and updates nginx.conf for an Angular frontend', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      addProjectConfiguration(host, 'my-angular-app', {
+        root: 'apps/my-angular-app',
+        projectType: 'application',
+        targets: {
+          serve: {
+            executor: '@angular-devkit/build-angular:dev-server',
+            options: { port: 4200 },
+          },
+          build: {
+            executor: '@angular-devkit/build-angular:browser',
+            options: {
+              outputPath: 'dist/apps/my-angular-app',
+              assets: [
+                `apps/my-angular-app/src/silent-check-sso.html`,
+              ],
+            },
+          },
+        },
+        tags: ['adsp:scaffold-env:dev'],
+      });
+      host.write('apps/my-angular-app/nginx.conf', NGINX_CONF_NO_PROXY);
+
+      await generator(host, { ...options, pairedProject: 'my-angular-app' });
+
+      // Dev proxy file written at the root (same path Angular generators use).
+      expect(host.exists('apps/my-angular-app/proxy.conf.json')).toBeTruthy();
+      const proxyConf = readJson(host, 'apps/my-angular-app/proxy.conf.json');
+      expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
+
+      // serve target updated.
+      const frontendConfig = readProjectConfiguration(host, 'my-angular-app');
+      expect(frontendConfig.targets.serve.options.proxyConfig).toBe(
+        'apps/my-angular-app/proxy.conf.json',
+      );
+
+      // nginx.conf at project root updated.
+      const nginx = host.read('apps/my-angular-app/nginx.conf').toString();
+      expect(nginx).toContain('location /api/');
+
+      // nginx.conf added as a build asset.
+      const assets = frontendConfig.targets.build.options.assets ?? [];
+      expect(
+        assets.some(
+          (a: unknown) =>
+            typeof a === 'object' &&
+            (a as { glob?: string }).glob === 'nginx.conf',
+        ),
+      ).toBe(true);
+
+      // Frontend tagged.
+      expect(frontendConfig.tags).toContain('adsp:proxy-service:test:3333');
+    }, 120000);
+
+    it('does not crash when the frontend does not exist yet (composite generator ordering)', async () => {
+      const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+      // No frontend project in the tree — composite generators scaffold
+      // express-service before the frontend.
+      await expect(
+        generator(host, { ...options, pairedProject: 'not-yet-scaffolded' }),
+      ).resolves.toBeDefined();
+    }, 120000);
+  });
 });

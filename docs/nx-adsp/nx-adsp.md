@@ -85,8 +85,18 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `tenant`      | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login      |
 | `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                   |
 | `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                    |
-| `database`    | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
-| `skipAgent`   | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                |
+| `database`      | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
+| `skipAgent`     | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                |
+| `pairedProject` | —     | No       | Name of an existing Vue, React, or Angular frontend to pair with this service — wires its nginx proxy, dev-server proxy file, serve target, and `adsp:proxy-service:` tag automatically |
+
+Running this generator after the frontend is already scaffolded? Pass
+`--pairedProject <frontend-name>` and the generator automatically updates the
+frontend's nginx proxy config, `vite.proxy.json` or `proxy.conf.json`, serve
+target `proxyConfig`, and `adsp:proxy-service:` tag — the same wiring the
+composite generators (`mern`, `mevn`, `pern`, `pean`, `pevn`) apply when they
+run the two generators together. You can also do it the other direction: run the
+frontend generator with `--pairedProject <backend-name>` against an already-scaffolded
+backend (the frontend must already exist for the reverse direction).
 
 When `--database postgres` is selected the generator scaffolds a Drizzle setup — `src/db/schema.ts`, a `db` instance (`src/database.ts`), a standalone migration runner (`src/migrate.ts`, bundled to `migrate.js` for the deploy init container), `drizzle.config.ts`, an idempotent Podman script for a local Postgres container, and Nx targets (`db:generate`, `db:migrate`, `db:migrate:deploy`, `db:studio`, `dev-db`). Drizzle is pure TypeScript with a `node-postgres` driver — no native engine, so it runs cleanly under OpenShift's arbitrary UID. When `--database mongo` is selected it scaffolds a Mongoose connection helper and an equivalent Podman script for a local MongoDB container. See [Database setup](#database-setup) below.
 

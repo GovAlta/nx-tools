@@ -31,7 +31,10 @@ import {
   writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
-import { resolvePairedProjectProxy } from '../../utils/paired-project';
+import {
+  buildDevProxyConf,
+  resolvePairedProjectProxy,
+} from '../../utils/paired-project';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -94,25 +97,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
-    const devProxyConf = options.nginxProxies.reduce(
-      (proxyConf, nginxProxy) => {
-        const upstreamUrl = new URL(nginxProxy.proxyPass);
-        const proxy = {
-          target: `${upstreamUrl.protocol}//localhost${upstreamUrl.port ? ':' + upstreamUrl.port : ''}`,
-          secure: upstreamUrl.protocol === 'https:',
-          changeOrigin: false,
-          pathRewrite: {},
-        };
-        if (upstreamUrl.pathname.length > 1) {
-          proxy.pathRewrite = {
-            [`^${nginxProxy.location}`]: upstreamUrl.pathname,
-          };
-        }
-        return { ...proxyConf, [nginxProxy.location]: proxy };
-      },
-      {},
+    writeJson(
+      host,
+      `${options.projectRoot}/vite.proxy.json`,
+      buildDevProxyConf(options.nginxProxies),
     );
-    writeJson(host, `${options.projectRoot}/vite.proxy.json`, devProxyConf);
   }
   return addProxyConf;
 }

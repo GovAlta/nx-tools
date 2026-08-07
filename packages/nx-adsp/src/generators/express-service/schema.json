@@ -67,6 +67,10 @@
       "type": "boolean",
       "description": "Skip the consultAgent interaction and generate base scaffolding only.",
       "default": false
+    },
+    "pairedProject": {
+      "type": "string",
+      "description": "Name of a frontend app project (vue-app, react-app, or angular-app) to pair with this service. When that frontend already exists in the workspace, the generator automatically wires its nginx proxy config, dev-server proxy file (vite.proxy.json or proxy.conf.json), serve target proxyConfig, and adsp:proxy-service: tag. Set automatically by composite generators (pevn, pern, pean, mern, mean) — also valid standalone when the frontend was scaffolded first."
     }
   },
   "required": ["name", "env"],

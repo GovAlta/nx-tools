@@ -32,7 +32,10 @@ import {
 } from '@nx/devkit';
 import { Linter } from '@nx/eslint';
 import * as path from 'path';
-import { resolvePairedProjectProxy } from '../../utils/paired-project';
+import {
+  buildDevProxyConf,
+  resolvePairedProjectProxy,
+} from '../../utils/paired-project';
 import { NormalizedSchema, Schema } from './schema';
 
 async function normalizeOptions(
@@ -91,37 +94,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
-    // Add a webpack dev server proxy configuration ...
-    // TODO: Is this cleaner to add via template?
-    const devProxyConf = options.nginxProxies.reduce(
-      (proxyConf, nginxProxy) => {
-        const upstreamUrl = new URL(nginxProxy.proxyPass);
-
-        const proxy = {
-          target: `${upstreamUrl.protocol}//localhost${
-            upstreamUrl.port ? ':' + upstreamUrl.port : ''
-          }`,
-          secure: upstreamUrl.protocol === 'https:',
-          changeOrigin: false,
-          pathRewrite: {},
-        };
-
-        // If there is a path on the upstream url, then add a rewrite.
-        if (upstreamUrl.pathname.length > 1) {
-          proxy.pathRewrite = {
-            [`^${nginxProxy.location}`]: upstreamUrl.pathname,
-          };
-        }
-
-        return {
-          ...proxyConf,
-          [nginxProxy.location]: proxy,
-        };
-      },
-      {},
+    writeJson(
+      host,
+      `${options.projectRoot}/proxy.conf.json`,
+      buildDevProxyConf(options.nginxProxies),
     );
-
-    writeJson(host, `${options.projectRoot}/proxy.conf.json`, devProxyConf);
   }
   return addProxyConf;
 }
