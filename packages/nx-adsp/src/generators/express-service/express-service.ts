@@ -27,7 +27,10 @@ import {
 } from '../../utils/quality';
 import initGenerator from '../init/init';
 import { DEFAULT_EXPRESS_SERVICE_PORT as DEFAULT_PORT } from '../../utils/express-service-port';
-import { resolvePairedFrontendApp } from '../../utils/paired-project';
+import {
+  applyProxyToExistingFrontend,
+  resolvePairedFrontendApp,
+} from '../../utils/paired-project';
 import { Schema, NormalizedSchema } from './schema';
 
 async function normalizeOptions(
@@ -150,6 +153,18 @@ export default async function (host: Tree, options: Schema) {
   );
 
   addFiles(host, normalizedOptions);
+
+  // When the frontend already exists (standalone use: backend generated after frontend),
+  // retroactively apply the nginx/dev-proxy wiring that the frontend generator would have
+  // set up if it had been given --pairedProject. Safe to call when the frontend doesn't
+  // exist yet (composite generator ordering) — applyProxyToExistingFrontend returns early.
+  if (normalizedOptions.pairedProject) {
+    applyProxyToExistingFrontend(
+      host,
+      normalizedOptions.pairedProject,
+      normalizedOptions.projectName,
+    );
+  }
 
   addEslintQualityRules(host, normalizedOptions.projectRoot, [
     '**/*.spec.ts',
