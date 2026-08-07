@@ -209,8 +209,11 @@ export default async function runExecutor(
 
     // ---- shared database provisioning ----
     if (database === 'postgres') {
+      // oc get crd is cluster-scoped and returns Forbidden for namespace-admin
+      // users. oc api-resources hits the API discovery endpoint which is
+      // accessible regardless of namespace scope.
       const cnpgAvailable = !!capture(
-        `oc get crd clusters.postgresql.cnpg.io 2>/dev/null`,
+        `oc api-resources --api-group=postgresql.cnpg.io 2>/dev/null | grep -q '^clusters' && echo ok`,
         cwd,
       );
       // Check for a pre-existing CNPG Cluster regardless of CRD availability —

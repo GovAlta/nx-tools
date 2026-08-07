@@ -273,8 +273,8 @@ describe('sandbox executor', () => {
   describe('database: postgres', () => {
     it('uses the CNPG operator path when the CRD is present', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get crd ')) {
-          return Buffer.from('clusters.postgresql.cnpg.io  2025-01-01T00:00:00Z');
+        if (cmd.includes('oc api-resources')) {
+          return Buffer.from('ok');
         }
         return Buffer.from('');
       });
@@ -353,7 +353,7 @@ describe('sandbox executor', () => {
 
     it('fails fast when a CNPG Cluster exists but the operator CRD is absent', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get crd ')) return Buffer.from(''); // operator down
+        if (cmd.includes('oc api-resources')) return Buffer.from(''); // operator down
         if (cmd.includes('clusters.postgresql.cnpg.io sandbox-postgres')) {
           return Buffer.from('sandbox-postgres  Cluster  Healthy'); // cluster exists
         }
@@ -374,8 +374,8 @@ describe('sandbox executor', () => {
 
     it('fails fast when azure-disk quota is full', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get crd ')) {
-          return Buffer.from('clusters.postgresql.cnpg.io  2025-01-01T00:00:00Z');
+        if (cmd.includes('oc api-resources')) {
+          return Buffer.from('ok');
         }
         if (
           cmd.includes('oc describe resourcequota') &&
