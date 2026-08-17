@@ -311,6 +311,31 @@ See `packages/nx-adsp/src/generators/angular-app/angular-app.spec.ts` for the mo
 ADSP environments (dev, test, prod) are defined in
 `packages/nx-oc/src/adsp/environments.ts`.
 
+### nginx and frontend security headers
+
+All three frontend generators (`vue-app`, `react-app`, `angular-app`) produce their
+`nginx.conf` by calling `generateNginxConf()` from
+`packages/nx-adsp/src/utils/nginx.ts` — **not** from a per-generator EJS template.
+Edit that utility to change nginx output across all frontends.
+
+Key wiring to preserve when editing:
+
+- **`add_header` inheritance**: nginx drops **all** parent `add_header` directives the
+  moment a `location` block contains even one `add_header`. The
+  `location = /silent-check-sso.html` block exists solely to omit
+  `X-Frame-Options: DENY` and `frame-ancestors: none` (so Keycloak-js can load
+  the file in a hidden iframe for silent SSO). Because those security headers must
+  be absent there, the block re-declares HSTS, X-Content-Type-Options, and
+  Referrer-Policy explicitly — they would otherwise be silently dropped.
+- **`silentCheckSso` option**: when `true`, the utility emits the
+  `location = /silent-check-sso.html` block (all three frontend generators pass
+  `true`). Do not remove this block or add `X-Frame-Options`/`frame-ancestors`
+  inside it — that would break silent SSO.
+- **`--cors` on `express-service`**: defaults to `true` (adds
+  `Access-Control-Allow-Origin: *` middleware). Composite generators
+  (`pevn`, `pern`, `pean`, `mevn`, `mern`, `mean`) pass `cors: false` because
+  the paired frontend's nginx reverse-proxy makes CORS unnecessary.
+
 ---
 
 ## OpenShift Notes

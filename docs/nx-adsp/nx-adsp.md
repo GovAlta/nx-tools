@@ -87,6 +87,7 @@ npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 | `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                    |
 | `database`      | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
 | `skipAgent`     | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                |
+| `cors`          | —     | No       | Add CORS middleware (`Access-Control-Allow-Origin: *`). Defaults to `true`; set to `false` when the service is paired with a frontend via a same-origin nginx reverse proxy (composite generators do this automatically) |
 | `pairedProject` | —     | No       | Name of an existing Vue, React, or Angular frontend to pair with this service — wires its nginx proxy, dev-server proxy file, serve target, and `adsp:proxy-service:` tag automatically |
 
 Running this generator after the frontend is already scaffolded? Pass
