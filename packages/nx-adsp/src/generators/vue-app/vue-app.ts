@@ -35,6 +35,7 @@ import {
   buildDevProxyConf,
   resolvePairedProjectProxy,
 } from '../../utils/paired-project';
+import { generateNginxConf } from '../../utils/nginx';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -93,6 +94,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     path.join(__dirname, 'files'),
     options.projectRoot,
     templateOptions,
+  );
+
+  host.write(
+    `${options.projectRoot}/public/nginx.conf`,
+    generateNginxConf({ proxyLocations: options.nginxProxies, silentCheckSso: true }),
   );
 
   const addProxyConf = options.nginxProxies.length > 0;

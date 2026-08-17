@@ -255,26 +255,16 @@ describe('Vue App Generator', () => {
     expect(app).toContain('@dismiss="session.dismiss"');
   }, 30000);
 
-  it('inits Keycloak with no hidden iframes so init never hangs', async () => {
+  it('inits Keycloak with checkLoginIframe disabled and silent SSO enabled', async () => {
     await generator(host, options);
-    // Strip // comments — they legitimately reference the disabled iframe options
-    // to explain their absence; assert against the actual init code.
-    const code = host
-      .read('apps/test/src/main.ts')
-      .toString()
-      .split('\n')
-      .filter((l) => !l.trim().startsWith('//'))
-      .join('\n');
-    // keycloak-js's silent-SSO (silentCheckSsoRedirectUri) and login-status
-    // (checkLoginIframe) iframes both wait on an untimed postMessage that hangs
-    // when third-party cookies are blocked, leaving keycloak.login() a no-op. We
-    // disable both and skip the load-time check (empty onLoad) so init settles.
-    expect(code).not.toContain('silentCheckSsoRedirectUri');
+    const code = host.read('apps/test/src/main.ts').toString();
+    // checkLoginIframe: false — disables 5s background polling; session expiry via refresh token is sufficient.
     expect(code).toContain('checkLoginIframe: false');
-    expect(code).toContain("onLoad: ''");
+    // silentCheckSsoRedirectUri — auto-authenticates on load; 3p-cookie probe falls back to a redirect if blocked.
+    expect(code).toContain('silentCheckSsoRedirectUri');
+    expect(code).toContain("onLoad: 'check-sso'");
     expect(code).toContain("pkceMethod: 'S256'");
-    // the now-unused silent-check-sso.html is no longer generated
-    expect(host.exists('apps/test/public/silent-check-sso.html')).toBeFalsy();
+    expect(host.exists('apps/test/public/silent-check-sso.html')).toBeTruthy();
   }, 30000);
 
   it('reads Keycloak fields off the reactive instance without destructuring', async () => {
