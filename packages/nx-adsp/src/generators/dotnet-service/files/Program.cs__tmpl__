@@ -20,31 +20,31 @@ builder.Services.Configure<AdspOptions>(adspConfiguration);
 // 2. Add ADSP components to the service collection.
 builder.Services.AddAdspForService(options =>
 {
-  // 3. Provide configuration of the service.
-  // 3a. Configure basic service information.
-  var serviceId = AdspId.Parse(adspConfiguration.GetValue<string>("ClientId"));
-  options.ServiceId = serviceId;
-  options.DisplayName = "<%= projectName %>";
+    // 3. Provide configuration of the service.
+    // 3a. Configure basic service information.
+    var serviceId = AdspId.Parse(adspConfiguration.GetValue<string>("ClientId"));
+    options.ServiceId = serviceId;
+    options.DisplayName = "<%= projectName %>";
 
-  // 3b. Register configuration definition.
-  options.Configuration = new ConfigurationDefinition<HelloWorldConfiguration>(
-    "Configuration of the hello world sample service.",
-    (tenant, core) => tenant
-  );
-  // Enable / disable socket.io based configuration invalidation.
-  // Include `urn:ads:platform:push-service` audience in access token; e.g use an audience mapper on the associated client.
-  options.EnableConfigurationInvalidation = false;
+    // 3b. Register configuration definition.
+    options.Configuration = new ConfigurationDefinition<HelloWorldConfiguration>(
+      "Configuration of the hello world sample service.",
+      (tenant, core) => tenant
+    );
+    // Enable / disable socket.io based configuration invalidation.
+    // Include `urn:ads:platform:push-service` audience in access token; e.g use an audience mapper on the associated client.
+    options.EnableConfigurationInvalidation = false;
 
-  // 3c. Register service roles.
-  options.Roles = new[] {
+    // 3c. Register service roles.
+    options.Roles = new[] {
     new ServiceRole {
       Role = ServiceRoles.HelloWorlder,
       Description = "Hello worlder role that allows user to post a message to the API."
     }
   };
 
-  // 3d. Register domain events.
-  options.Events = new[] {
+    // 3d. Register domain events.
+    options.Events = new[] {
     new DomainEventDefinition<HelloWorldEvent>(
       HelloWorldEvent.EventName,
       "Signalled when a hello world message is posted to the API."
@@ -62,7 +62,7 @@ app.UseAdsp();
 app.UseAuthorization();
 app.UseAdspMetadata(new AdspMetadataOptions
 {
-  ApiPath = "WeatherForecast"
+    ApiPath = "WeatherForecast"
 });
 
 app.MapControllers();

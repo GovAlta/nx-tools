@@ -10,6 +10,10 @@ import { ApplicationType } from '../generators/deployment/schema';
 export function detectApplicationType(
   config: ProjectConfiguration,
 ): ApplicationType | undefined {
+  if (config.tags?.includes('adsp:type:dotnet')) {
+    return 'dotnet';
+  }
+
   const build = config.targets?.build;
   switch (build?.executor) {
     case '@nx/web:webpack':

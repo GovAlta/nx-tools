@@ -28,6 +28,11 @@
       "type": "string",
       "description": "Access token for retrieving configuration from ADSP APIs.",
       "alias": "at"
+    },
+    "tenant": {
+      "type": "string",
+      "description": "ADSP tenant name. When provided, the realm is looked up anonymously and a single browser login is used instead of the full interactive flow.",
+      "alias": "t"
     }
   },
   "required": ["name", "env"],

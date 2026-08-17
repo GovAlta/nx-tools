@@ -11,7 +11,6 @@
   },
   "peerDependencies": {
     "@abgov/nx-oc": "^13.0.0-0",
-    "@nx-dotnet/core": "^3.0.0",
     "@nx/angular": "^23.0.0",
     "@nx/devkit": "^23.0.0",
     "@nx/eslint": "^23.0.0",
@@ -22,9 +21,6 @@
     "tslib": "^2.0.0"
   },
   "peerDependenciesMeta": {
-    "@nx-dotnet/core": {
-      "optional": true
-    },
     "@nx/angular": {
       "optional": true
     },
