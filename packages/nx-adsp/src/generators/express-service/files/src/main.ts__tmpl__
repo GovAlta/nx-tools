@@ -1,8 +1,8 @@
 import { AdspId, createErrorHandler, initializeService } from '@abgov/adsp-service-sdk';
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import compression from 'compression';
-import cors from 'cors';
-import express from 'express';
+<% if (cors) { %>import cors from 'cors';
+<% } %>import express from 'express';
 import helmet from 'helmet';
 import passport from 'passport';
 import { Strategy as AnonymousStrategy } from 'passport-anonymous';
@@ -42,7 +42,13 @@ async function initializeApp() {
   app.use(compression());
   app.use(helmet());
   app.use(express.json());
-  app.use(cors());
+<% if (cors) { %>  app.use(cors());
+<% } else { %>  // This service is paired with a frontend via a same-origin reverse proxy —
+  // the browser never issues a cross-origin request, so no CORS middleware is
+  // needed. If you later expose this service directly to other origins (e.g. a
+  // platform API consumed by other tenants), add: app.use(cors({ origin: [...] }))
+  // and install the 'cors' and '@types/cors' packages.
+<% } %>
 
   if (environment.TRUSTED_PROXY) {
     app.set('trust proxy', environment.TRUSTED_PROXY);

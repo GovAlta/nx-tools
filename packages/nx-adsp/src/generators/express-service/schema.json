@@ -71,6 +71,11 @@
     "pairedProject": {
       "type": "string",
       "description": "Name of a frontend app project (vue-app, react-app, or angular-app) to pair with this service. When that frontend already exists in the workspace, the generator automatically wires its nginx proxy config, dev-server proxy file (vite.proxy.json or proxy.conf.json), serve target proxyConfig, and adsp:proxy-service: tag. Set automatically by composite generators (pevn, pern, pean, mern, mean) — also valid standalone when the frontend was scaffolded first."
+    },
+    "cors": {
+      "type": "boolean",
+      "description": "When true (default), CORS middleware is added — Access-Control-Allow-Origin: *. Set to false by full-stack composite generators whose service is paired with a frontend via a same-origin reverse proxy.",
+      "default": true
     }
   },
   "required": ["name", "env"],

@@ -16,6 +16,8 @@ export interface Schema {
   database?: DatabaseType;
   /** Name of the paired frontend app project, set by composite generators (pevn, pern, pean, etc.). */
   pairedProject?: string;
+  /** When true (default), CORS middleware is added. Composite generators set this to false. */
+  cors?: boolean;
 }
 
 export interface NormalizedSchema extends Schema {
@@ -24,4 +26,5 @@ export interface NormalizedSchema extends Schema {
   adsp: AdspConfiguration;
   database: DatabaseType;
   pairedProjectTag?: string;
+  cors: boolean;
 }
