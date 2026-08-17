@@ -42,6 +42,7 @@ export default async function (host: Tree, options: Schema) {
     name: serviceName,
     skipAgent: true,
     database: 'postgres',
+    cors: false,
     pairedProject: appName,
   });
   await initVueApp(host, {

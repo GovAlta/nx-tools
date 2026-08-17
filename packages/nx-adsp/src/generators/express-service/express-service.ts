@@ -50,6 +50,7 @@ async function normalizeOptions(
     projectRoot,
     adsp,
     database: options.database ?? 'none',
+    cors: options.cors ?? true,
     pairedProjectTag: pairedFrontend?.tag,
   };
 }
@@ -120,7 +121,7 @@ export default async function (host: Tree, options: Schema) {
       '@abgov/adsp-service-sdk': '^2.23.0',
       '@asteasolutions/zod-to-openapi': '^7.3.4',
       compression: '^1.8.1',
-      cors: '^2.8.5',
+      ...(normalizedOptions.cors ? { cors: '^2.8.5' } : {}),
       dotenv: '^16.4.7',
       envalid: '^8.0.0',
       helmet: '^8.0.0',
@@ -138,7 +139,7 @@ export default async function (host: Tree, options: Schema) {
     },
     {
       '@types/compression': '^1.7.5',
-      '@types/cors': '^2.8.17',
+      ...(normalizedOptions.cors ? { '@types/cors': '^2.8.17' } : {}),
       '@types/passport': '^1.0.16',
       '@types/passport-anonymous': '^1.0.3',
       supertest: '^7.0.0',
