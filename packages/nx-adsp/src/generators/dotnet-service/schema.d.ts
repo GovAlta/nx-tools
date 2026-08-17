@@ -4,6 +4,7 @@ export interface Schema {
   name: string;
   env: EnvironmentName;
   accessToken?: string;
+  tenant?: string;
 }
 
 export interface NormalizedSchema extends Schema {

@@ -3,14 +3,14 @@ import {
   getAdspConfiguration,
   hasDependency,
 } from '@abgov/nx-oc';
-import { default as appGenerator } from '@nx-dotnet/core/src/generators/app/generator';
-import { default as refGenerator } from '@nx-dotnet/core/src/generators/nuget-reference/generator';
 import {
+  addProjectConfiguration,
   generateFiles,
   getWorkspaceLayout,
   installPackagesTask,
   names,
   Tree,
+  updateJson,
 } from '@nx/devkit';
 import * as path from 'path';
 import { Schema, NormalizedSchema } from './schema';
@@ -36,6 +36,7 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   const templateOptions = {
     ...options,
     ...options.adsp,
+    ...names(options.projectName),
     tmpl: '',
   };
   generateFiles(
@@ -46,39 +47,57 @@ function addFiles(host: Tree, options: NormalizedSchema) {
   );
 }
 
+function ensureNuGetConfig(host: Tree) {
+  if (!host.exists('NuGet.Config')) {
+    generateFiles(host, path.join(__dirname, 'nuget-files'), '.', { tmpl: '' })
+  }
+}
+
 export default async function (host: Tree, options: Schema) {
-  if (!hasDependency(host, '@nx-dotnet/core')) {
-    throw new Error('nx-dotnet/core is required to generate dotnet service');
+  if (!hasDependency(host, '@nx/dotnet')) {
+    throw new Error('@nx/dotnet is required to generate dotnet service')
   }
 
-  const normalizedOptions = await normalizeOptions(host, options);
+  const normalizedOptions = await normalizeOptions(host, options)
 
-  await appGenerator(host, {
-    name: normalizedOptions.projectName,
-    template: 'webapi',
-    language: 'C#',
-    testTemplate: 'none',
-    solutionFile: false,
-    skipSwaggerLib: true,
-    pathScheme: 'nx',
-  });
+  addProjectConfiguration(host, normalizedOptions.projectName, {
+    root: normalizedOptions.projectRoot,
+    projectType: 'application',
+    sourceRoot: normalizedOptions.projectRoot,
+    targets: {
+      serve: {
+        executor: 'nx:run-commands',
+        options: {
+          command: 'dotnet run',
+          cwd: normalizedOptions.projectRoot,
+        },
+        configurations: {
+          production: {
+            command: 'dotnet run --configuration Release',
+          },
+        },
+      },
+    },
+    tags: ['adsp:type:dotnet'],
+  })
 
-  await refGenerator(host, {
-    allowVersionMismatch: false,
-    project: normalizedOptions.projectName,
-    packageName: 'Adsp.Sdk',
-    version: '2.*',
-  });
+  updateJson(host, 'nx.json', (json) => {
+    if (!json.plugins?.includes('@nx/dotnet')) {
+      json.plugins = [...(json.plugins ?? []), '@nx/dotnet']
+    }
+    return json
+  })
 
-  addFiles(host, normalizedOptions);
+  ensureNuGetConfig(host)
+  addFiles(host, normalizedOptions)
 
   await deploymentGenerator(host, {
     ...normalizedOptions,
     appType: 'dotnet',
     project: normalizedOptions.projectName,
-  });
+  })
 
   return async () => {
-    installPackagesTask(host);
-  };
+    installPackagesTask(host)
+  }
 }
