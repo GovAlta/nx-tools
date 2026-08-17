@@ -25,23 +25,28 @@ app.use(keycloakPlugin, {
     realm: environment.access.realm,
     clientId: environment.access.client_id,
   },
-  // No load-time SSO check and no hidden iframes. keycloak-js's silent-SSO
-  // (silentCheckSsoRedirectUri) and login-status (checkLoginIframe) iframes both
-  // wait on an untimed postMessage that never arrives when third-party cookies are
-  // blocked (common cross-origin, e.g. behind the ADSP gateway) — init() then
-  // hangs forever, the wrapper never populates its `keycloak` ref, and login()
-  // stays a permanent no-op. So we disable every iframe: checkLoginIframe:false
-  // drops the login-status iframe, omitting silentCheckSsoRedirectUri drops the
-  // silent iframe (that combination also skips the 3p-cookie probe iframe), and an
-  // empty onLoad skips the load-time check entirely — the wrapper requires onLoad
-  // to be a string, and keycloak-js treats a falsy onLoad as "no check". Result:
-  // init settles immediately as anonymous and Sign in redirects on demand. To
-  // auto-detect an existing session where the environment allows it, set
-  // onLoad: 'check-sso' (adds a prompt=none redirect round-trip on every load).
+  // checkLoginIframe: false — disables the login-status iframe that polls Keycloak
+  // every 5 seconds. Two reasons: (1) unnecessary overhead — for GoA apps, refresh-
+  // token expiry (onAuthRefreshError, below) is the reliable session-expiry signal,
+  // and cross-tab logout detection isn't a requirement; (2) checkLoginIframe() has
+  // no individual timeout in keycloak-js — if the login-status iframe stops responding
+  // (partial Keycloak failure after the init probe), it hangs indefinitely. Disabling
+  // it eliminates that failure mode entirely.
+  // Note: keycloak-js always runs a one-time 3p-cookie probe (step1.html, 10s timeout)
+  // before any iframes. When cookies are blocked the probe detects it, disables both
+  // the login iframe and silentCheckSsoRedirectUri, and falls back to a redirect —
+  // so blocked 3p cookies are handled gracefully regardless of this setting.
+  //
+  // silentCheckSsoRedirectUri — on load, keycloak-js opens a hidden iframe pointing
+  // to Keycloak with prompt=none; if an existing session is found the user is auto-
+  // authenticated without a visible redirect. Like checkLoginIframe(), checkSsoSilently()
+  // has no timeout — set silentCheckSsoFallback to false if you need to disable it
+  // when cookies are blocked rather than falling back to a redirect.
   init: {
-    onLoad: '',
+    onLoad: 'check-sso',
     pkceMethod: 'S256',
     checkLoginIframe: false,
+    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
   },
   // Not onAuthLogout: keycloak-js only invokes that via the session-status
   // iframe (disabled above by checkLoginIframe: false) or in Cordova mode --

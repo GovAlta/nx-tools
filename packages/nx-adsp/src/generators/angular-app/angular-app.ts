@@ -36,6 +36,7 @@ import {
   buildDevProxyConf,
   resolvePairedProjectProxy,
 } from '../../utils/paired-project';
+import { generateNginxConf } from '../../utils/nginx';
 import { NormalizedSchema, AngularAppGeneratorSchema } from './schema';
 
 async function normalizeOptions(
@@ -93,6 +94,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     options.projectRoot,
     templateOptions,
   );
+  host.write(
+    `${options.projectRoot}/nginx.conf`,
+    generateNginxConf({ proxyLocations: options.nginxProxies, silentCheckSso: true }),
+  );
+
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
     writeJson(
