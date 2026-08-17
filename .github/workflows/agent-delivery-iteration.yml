@@ -18,8 +18,8 @@ name: Agent Delivery Iteration (Copilot CLI)
 # self-dispatch -- any other push (starting the branch, or a human pushing mid-sequence) resets to
 # iteration 1 by construction. That's intentional: a human push means supervised, ongoing work,
 # not a runaway loop, so it earns a fresh MAX_ITERATIONS budget.
-# Disabled: Copilot CLI is not yet enabled in this org. Re-add the push trigger below to activate.
 on:
+  # Disabled: Copilot CLI is not yet enabled in this org. Re-add the push trigger below to activate.
   workflow_dispatch:
     inputs:
       iteration:
@@ -56,6 +56,8 @@ permissions:
   pull-requests: write
   # Needed for the self-dispatch (gh workflow run) that starts the next iteration.
   actions: write
+  # FLOW-SPECIFIC: this flow's deploy step publishes to GHCR under GITHUB_TOKEN.
+  packages: write
   # Deliberately not granted: workflows: write -- a GitHub anti-self-escalation control. A change
   # to this workflow file itself needs that permission and stays a human action.
 
@@ -91,6 +93,26 @@ jobs:
 
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
+
+      # ---- FLOW-SPECIFIC: Deploy needs a live OpenShift session. A flow with no deploy stage
+      # would drop these two steps. ----
+      - name: Install oc CLI
+        # oc-login (below) doesn't install the CLI itself.
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: "mirror"
+          oc: "latest"
+
+      - name: Log in to OpenShift
+        # Without this, nx-oc's own login helper (called inside the sandbox generator/executor)
+        # falls through to an interactive `oc login --web` browser flow, which hangs on a runner
+        # with no browser. Logging in here first means that check already succeeds downstream.
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          namespace: ${{ vars.OPENSHIFT_NAMESPACE }}
+          insecure_skip_tls_verify: true
 
       # ---- HARNESS: register whatever MCP servers this workspace happens to have configured --
       # generic behavior, the *content* of .mcp.json (if any) is what varies per workspace/flow ----
@@ -192,7 +214,31 @@ jobs:
           WORKFLOW_FILE: agent-delivery-iteration.yml
           ITERATION: ${{ steps.iterations.outputs.iteration }}
           PROMPT: ${{ steps.readiness.outputs.prompt }}
+          # FLOW-SPECIFIC: this flow's deploy stage runs nx-oc:sandbox/adsp-cli.
+          ADSP_CLIENT_ID: ${{ secrets.ADSP_CLIENT_ID }}
+          ADSP_CLIENT_SECRET: ${{ secrets.ADSP_CLIENT_SECRET }}
+          # ADSP_ENV/ADSP_TENANT_NAME steer nx-oc:sandbox's own --env/--tenant defaults;
+          # ADSP_TENANT_REALM steers adsp-cli's separate, non-interactive token fetch -- point all
+          # three at the same tenant, or the two resolution paths can disagree silently.
+          ADSP_ENV: ${{ vars.ADSP_ENV }}
+          ADSP_TENANT_NAME: ${{ vars.ADSP_TENANT_NAME }}
+          ADSP_TENANT_REALM: ${{ vars.ADSP_TENANT_REALM }}
         run: bash scripts/run-agent-delivery-iteration.sh "$PROMPT"
+
+      # ---- HARNESS: handoff — squash any WIP commits into clean conventional ones and write a
+      # structured PR body for human review. Runs as a second bounded copilot session so it can
+      # inspect the diff, reason about commit messages, and produce a useful description without
+      # any hardcoded templates. The workflow and handoff skill are emitted as one atomic unit by
+      # nx-agent:agent-delivery --githubActions, so the skill is always present when this workflow
+      # is. ----
+      - name: Handoff — clean up commits and write PR body
+        if: steps.iteration.outputs.made_commits == 'true'
+        run: |
+          copilot -p "$(cat .claude/skills/handoff/SKILL.md)" \
+            --no-ask-user \
+            --allow-tool=read \
+            --allow-tool=write \
+            --allow-tool=shell
 
       # ---- FLOW-SPECIFIC: re-check readiness immediately after this iteration's own commits
       # land, in this same job -- everything is already installed, so this costs almost nothing

@@ -36,6 +36,7 @@ git config user.name "agent-delivery-iteration[bot]"
 git config user.email "agent-delivery-iteration[bot]@users.noreply.github.com"
 
 BEFORE_HEAD="$(git rev-parse HEAD)"
+echo "before_head=$BEFORE_HEAD" >> "$GITHUB_OUTPUT"
 
 # Push-watcher: runs alongside the copilot -p call below, pushing whenever HEAD moves, so a real,
 # multi-commit session's progress survives even if something later fails, hangs, or the job gets

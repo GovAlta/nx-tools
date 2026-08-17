@@ -228,6 +228,21 @@ jobs:
           ADSP_TENANT_REALM: ${{ vars.ADSP_TENANT_REALM }}
         run: bash scripts/run-agent-delivery-iteration.sh "$PROMPT"
 
+      # ---- HARNESS: handoff — squash any WIP commits into clean conventional ones and write a
+      # structured PR body for human review. Runs as a second bounded copilot session so it can
+      # inspect the diff, reason about commit messages, and produce a useful description without
+      # any hardcoded templates. The workflow and handoff skill are emitted as one atomic unit by
+      # nx-agent:agent-delivery --githubActions, so the skill is always present when this workflow
+      # is. ----
+      - name: Handoff — clean up commits and write PR body
+        if: steps.iteration.outputs.made_commits == 'true'
+        run: |
+          copilot -p "$(cat .claude/skills/handoff/SKILL.md)" \
+            --no-ask-user \
+            --allow-tool=read \
+            --allow-tool=write \
+            --allow-tool=shell
+
       # ---- FLOW-SPECIFIC: re-check readiness immediately after this iteration's own commits
       # land, in this same job -- everything is already installed, so this costs almost nothing
       # compared to a whole fresh job whose only purpose might turn out to be discovering there's

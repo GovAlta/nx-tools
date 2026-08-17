@@ -27,7 +27,16 @@ fi
 
 existing=$(gh pr list --head "$BRANCH_NAME" --base main --json number --jq '.[0].number // empty')
 if [[ -z "$existing" ]]; then
-  body=$(printf 'Automated by the "%s" workflow.\n\n%s\n\nNo auto-merge -- this loop never merges its own work; review and merge by hand when ready.\n' "$WORKFLOW_NAME" "$SUMMARY")
+  # Prefer the structured PR body written by the handoff skill; fall back to the task-
+  # identification summary when the handoff step didn't run or didn't produce a file.
+  PR_BODY_FILE=".github/agent-delivery-iteration/pr-body.md"
+  if [[ -s "$PR_BODY_FILE" ]]; then
+    body=$(printf 'Automated by the "%s" workflow.\n\n%s\n\nNo auto-merge -- this loop never merges its own work; review and merge by hand when ready.\n' \
+      "$WORKFLOW_NAME" "$(cat "$PR_BODY_FILE")")
+  else
+    body=$(printf 'Automated by the "%s" workflow.\n\n%s\n\nNo auto-merge -- this loop never merges its own work; review and merge by hand when ready.\n' \
+      "$WORKFLOW_NAME" "$SUMMARY")
+  fi
   gh pr create --base main --head "$BRANCH_NAME" \
     --title "$WORKFLOW_NAME: $BRANCH_NAME" \
     --body "$body"

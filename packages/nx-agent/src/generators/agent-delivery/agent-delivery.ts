@@ -79,6 +79,16 @@ function addGithubActionsFiles(host: Tree): void {
     join(FILES_DIR, 'github-actions', 'learnings', 'learnings.md'),
     joinPathFragments('.github', 'agent-delivery-iteration', 'learnings.md'),
   );
+  copyIfMissing(
+    host,
+    join(FILES_DIR, 'github-actions', 'learnings', 'gitignore'),
+    joinPathFragments('.github', 'agent-delivery-iteration', '.gitignore'),
+  );
+  copyIfMissing(
+    host,
+    join(FILES_DIR, 'github-actions', 'skills', 'handoff', 'SKILL.md'),
+    joinPathFragments('.claude', 'skills', 'handoff', 'SKILL.md'),
+  );
 }
 
 function readGuidance(githubActions: boolean): string {
