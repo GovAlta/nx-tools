@@ -37,13 +37,13 @@ a bare filename, or similarly uninformative. If every commit is already clean, s
 BOUNDARY=$(git merge-base HEAD origin/main)
 git fetch origin
 git reset --soft "$BOUNDARY"
-git restore --staged .github/agent-delivery-iteration/
+git restore --staged .github/agent-delivery-iteration/history.json 2>/dev/null || true
 git diff --cached --stat
 ```
 
-Unstaging `.github/agent-delivery-iteration/` keeps harness bookkeeping (history.json,
-pr-body.md) out of the substantive commits — otherwise a previous iteration's pr-body.md
-gets swept into the next squash. The staged diff now contains everything that changed this
+Unstaging only `history.json` — it is committed by its own dedicated workflow step, not here.
+`pr-body.md` is gitignored so it cannot be staged. `learnings.md` must stay staged so its
+changes are included in the clean commits. The staged diff now contains everything that changed this
 branch. Make 1–3 clean commits:
 
 - `feat(<scope>): <what was added>` for new capability
