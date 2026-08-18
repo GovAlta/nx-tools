@@ -246,15 +246,34 @@ export default async function runExecutor(
             }
           }
         }
-        // Grant restricted-v2 SCC BEFORE applying the Cluster manifest (findings
-        // 1 & 3): the controller only schedules the first pod if the SA already
-        // has the SCC at first reconcile. Granting after apply would leave the
-        // Cluster in BootstrapPending until a manual reconcile trigger.
+        // restricted-v2 SCC must be granted to the sandbox-postgres SA before the
+        // Cluster manifest is applied (findings 1 & 3): the controller only
+        // schedules the first pod if the SA already has the SCC at first reconcile.
+        // Create the SA first so the grant can run (the operator would otherwise
+        // create it implicitly on first apply, too late for the SCC to take effect).
         run(
-          'Grant restricted-v2 SCC to CNPG Cluster SA',
-          `oc adm policy add-scc-to-user restricted-v2 -z sandbox-postgres -n ${sandboxProject}`,
+          'Ensure sandbox-postgres SA',
+          `oc get sa sandbox-postgres -n ${sandboxProject} 2>/dev/null || ` +
+            `oc create sa sandbox-postgres -n ${sandboxProject}`,
           cwd,
         );
+        // Try to grant the SCC — succeeds for users with cluster-admin rights (local
+        // dev). In CI the github-actions SA lacks `adm policy` permission; warn
+        // and continue. If the SCC was not pre-provisioned by a cluster admin,
+        // `oc wait` below will surface the failure. See SANDBOX.md Prerequisites
+        // for the one-time command a cluster admin must run before first CI deploy.
+        try {
+          run(
+            'Grant restricted-v2 SCC to CNPG Cluster SA',
+            `oc adm policy add-scc-to-user restricted-v2 -z sandbox-postgres -n ${sandboxProject}`,
+            cwd,
+          );
+        } catch {
+          logger.warn(
+            '  Could not grant restricted-v2 SCC to sandbox-postgres SA — ' +
+              'ensure a cluster admin has run this once; see SANDBOX.md Prerequisites.',
+          );
+        }
         run(
           'Apply CNPG Cluster',
           `oc apply -f .openshift/sandbox/sandbox-postgres-cnpg.yml -n ${sandboxProject}`,

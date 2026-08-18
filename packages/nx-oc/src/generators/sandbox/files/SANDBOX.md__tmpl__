@@ -6,6 +6,33 @@ image **locally with podman**, pushes it to GHCR, imports it into the
 orchestration lives in the `@abgov/nx-oc:sandbox` executor (versioned in the
 plugin), so the steps below are what it runs for you.
 
+## Prerequisites (one-time, cluster admin)<% if (database === 'postgres') { %>
+
+The `github-actions` service account must exist in `<%= sandboxProject %>` before
+the first deploy. It is created by `nx g @abgov/nx-oc:pipeline` (run once,
+workspace-wide) and provisioned into GitHub Actions secrets by
+`nx g @abgov/nx-oc:setup-secrets`.
+
+### CloudNativePG (postgres only)
+
+If the CNPG operator is present in the cluster, a cluster admin must grant the
+`restricted-v2` SCC to the `sandbox-postgres` service account **before the first
+deploy**. The executor creates the SA automatically, so this can be done any time
+after `nx g @abgov/nx-oc:sandbox` has run:
+
+```bash
+oc adm policy add-scc-to-user restricted-v2 \
+  -z sandbox-postgres -n <%= sandboxProject %>
+```
+
+Without this, the CNPG Cluster CR applies but its first pod never schedules
+(`BootstrapPending`), and the deploy times out waiting for `Ready`.<% } else { %>
+
+The `github-actions` service account must exist in `<%= sandboxProject %>` before
+the first deploy. It is created by `nx g @abgov/nx-oc:pipeline` (run once,
+workspace-wide) and provisioned into GitHub Actions secrets by
+`nx g @abgov/nx-oc:setup-secrets`.<% } %>
+
 ## What the target does, in order
 
 1. **Preflight** — `oc` login, `gh` auth, and `podman` machine are checked up

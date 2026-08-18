@@ -287,6 +287,9 @@ describe('sandbox executor', () => {
 
       const cmds = commands();
       expect(
+        cmds.some((c) => c.includes('oc create sa sandbox-postgres')),
+      ).toBe(true);
+      expect(
         cmds.some((c) =>
           c.includes('add-scc-to-user restricted-v2 -z sandbox-postgres'),
         ),
