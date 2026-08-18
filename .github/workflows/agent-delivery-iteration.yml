@@ -233,6 +233,8 @@ jobs:
       # is. ----
       - name: Handoff — clean up commits and write PR body
         if: steps.iteration.outputs.made_commits == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           copilot -p "$(cat .claude/skills/handoff/SKILL.md)" \
             --no-ask-user \
