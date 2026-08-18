@@ -243,7 +243,8 @@ const RESOLUTION_PREFIXES = ['broken:', 'open:'];
 // isInArtifactScope returns true for everything), but the composePrompt note is explicit.
 const rawScope = process.env.ARTIFACT_SCOPE ?? '';
 const openScope = rawScope === '*';
-const scopedPaths = openScope ? [] : rawScope.split(',').filter(Boolean);
+const noScope = !openScope && rawScope === ''; // first commit touched no project-docs files — distinct from open scope
+const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
 const scopedKeys = new Set(
   scopedPaths
     .map((p) => Object.keys(registry).find((k) => registry[k].path === p))
@@ -261,7 +262,9 @@ if (scopedPaths.length > 0 && scopedKeys.size === 0) {
 }
 
 function isInArtifactScope(signalKey) {
-  if (scopedKeys.size === 0) return true; // open scope (*), no scope derived, or unresolvable paths → unfiltered
+  if (openScope) return true;             // explicit * → unfiltered
+  if (noScope) return false;             // first commit touched no project-docs files → nothing in scope
+  if (scopedKeys.size === 0) return true; // paths specified but unresolvable → fall back to unfiltered (warn already printed)
   // Signal keys look like 'open:features:x', 'unrefined:requirements:x', etc. -- the artifact
   // registry key is everything after the first colon-prefix segment.
   const artifactKey = signalKey.includes(':') ? signalKey.replace(/^[^:]+:/, '') : signalKey;
@@ -292,7 +295,11 @@ if (eligibleSignals.length === 0 && signals.length > 0) {
   const inBranchType = isFixBranch
     ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
     : signals;
-  if (isFixBranch && scopedKeys.size > 0) {
+  if (noScope) {
+    noEligibleNote =
+      `first commit on this branch touched no project-docs/ files — no artifact scope could be derived. ` +
+      `Push a commit that touches a project-docs/ file, or set artifact_scope to '*' on a manual trigger for open scope.`;
+  } else if (isFixBranch && scopedKeys.size > 0) {
     // Both filters active — name the intersection explicitly.
     const inBoth = inScope.filter((s) => inBranchType.includes(s));
     noEligibleNote =
@@ -329,6 +336,9 @@ if (process.env.PEEK_ONLY !== 'true') {
     }
   }
 
+  // Only record history when there is a real eligible signal — no-work runs have
+  // nothing to stall on, and 'none' entries corrupt the stall-detection window when
+  // a real signal recurs across a no-work gap.
   if (topSignal) {
     const lineageFingerprint = JSON.stringify(violations);
     history.push({ key: topSignal.key, lineageFingerprint });
