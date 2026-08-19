@@ -200,9 +200,11 @@ export default async function runExecutor(
     if (appType === 'node') {
       run(
         'Upsert CLIENT_SECRET',
-        `oc create secret generic ${projectName}-secrets ` +
-          `--from-literal=CLIENT_SECRET="$(grep -E '^CLIENT_SECRET=' ${projectRoot}/.env.local 2>/dev/null | cut -d= -f2-)" ` +
-          `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -`,
+        `_cs=$(grep -E '^CLIENT_SECRET=' ${projectRoot}/.env.local 2>/dev/null | cut -d= -f2-); ` +
+          `if [ -n "$_cs" ]; then ` +
+          `oc create secret generic ${projectName}-secrets ` +
+          `--from-literal=CLIENT_SECRET="$_cs" ` +
+          `-n ${sandboxProject} --dry-run=client -o yaml | oc apply -f -; fi`,
         cwd,
       );
     }
