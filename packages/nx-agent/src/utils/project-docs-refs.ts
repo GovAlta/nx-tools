@@ -283,7 +283,7 @@ function buildPathToKeyMap(registry: Registry): Map<string, string> {
   return pathToKey;
 }
 
-const REF_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.md'];
+const REF_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.vue', '.cs', '.md'];
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.nx']);
 
 function walk(host: Tree, dir: string): string[] {
