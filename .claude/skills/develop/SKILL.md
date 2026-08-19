@@ -158,3 +158,5 @@ the code's approach is the better one, don't just log it.
 Commit the implementation once every blocking check above passes —
 `feat(develop): implement <resource> against <api-design/ux-design>` — covering the new code, its
 tests, and the `project-docs-ancestors` comment tying it back to the design, together as one unit.
+If `package.json` changed, `package-lock.json` must be consistent with it and staged in the same
+commit — run `npm install` first if it isn't.
