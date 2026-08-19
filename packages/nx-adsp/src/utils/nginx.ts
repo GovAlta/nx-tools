@@ -58,7 +58,7 @@ export function generateNginxConf({ proxyLocations = [], silentCheckSso = false 
     `    add_header X-Content-Type-Options "nosniff" always;\n` +
     `    add_header X-Frame-Options "DENY" always;\n` +
     `    add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n` +
-    `    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' https://*.gov.ab.ca https://*.alberta.ca; connect-src 'self' https://*.gov.ab.ca https://*.alberta.ca; frame-ancestors 'none'; form-action 'self'; base-uri 'self';" always;\n` +
+    `    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.gov.ab.ca https://*.alberta.ca; font-src 'self' https://*.gov.ab.ca https://*.alberta.ca https://fonts.gstatic.com https://use.typekit.net; connect-src 'self' https://*.gov.ab.ca https://*.alberta.ca https://p.typekit.net; frame-src 'self' https://*.gov.ab.ca https://*.alberta.ca; object-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'self';" always;\n` +
     `\n` +
     `    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {\n` +
     `      expires 30d;\n` +
