@@ -7,9 +7,19 @@ jest.mock('child_process', () => ({
   execSync: jest.fn(),
 }));
 jest.mock('../../utils/oc-utils', () => ({ ensureOcLogin: jest.fn() }));
+jest.mock('@abgov/adsp-cli', () => ({
+  getAccessToken: jest.fn(),
+  getDirectoryServiceUrl: jest.fn(),
+  registerDirectoryService: jest.fn(),
+}));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { execSync } = require('child_process') as { execSync: jest.Mock };
+
+const adspCli = require('@abgov/adsp-cli') as {
+  getAccessToken: jest.Mock;
+  getDirectoryServiceUrl: jest.Mock;
+  registerDirectoryService: jest.Mock;
+};
 
 const IMAGE_REF = 'ghcr.io/test-org/test-sandbox-test:sandbox';
 
@@ -42,6 +52,12 @@ function commands(): string[] {
 beforeEach(() => {
   execSync.mockReset();
   execSync.mockImplementation(() => Buffer.from(''));
+  adspCli.getAccessToken.mockReset();
+  adspCli.getAccessToken.mockResolvedValue({ status: 'ok', token: 'test-token' });
+  adspCli.getDirectoryServiceUrl.mockReset();
+  adspCli.getDirectoryServiceUrl.mockReturnValue('https://directory.adsp.alberta.ca');
+  adspCli.registerDirectoryService.mockReset();
+  adspCli.registerDirectoryService.mockResolvedValue('registered');
 });
 
 describe('sandbox executor', () => {
@@ -461,5 +477,140 @@ describe('sandbox executor', () => {
     ).toBe(true);
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  describe('registerDirectory', () => {
+    const TENANT_TAG = 'adsp:scaffold-tenant:My Tenant';
+
+    it('registers the service when route resolves and tenant tag is present', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).toHaveBeenCalledWith(
+        'https://directory.adsp.alberta.ca',
+        'my-tenant',
+        'test',
+        'https://test.apps.example.com',
+        'test-token',
+      );
+    });
+
+    it('logs skip when the directory entry already exists (409)', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      adspCli.registerDirectoryService.mockResolvedValue('exists');
+      const info = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining('already exists'),
+      );
+      info.mockRestore();
+    });
+
+    it('warns and skips registration when the route cannot be resolved', async () => {
+      // default execSync mock returns '' → no route host
+      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Could not resolve route'),
+      );
+      warn.mockRestore();
+    });
+
+    it('warns and skips registration when no ADSP tenant tag is present', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context(), // no tenant tag
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('No ADSP tenant tag'),
+      );
+      warn.mockRestore();
+    });
+
+    it('warns and skips registration when not authenticated to ADSP', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      adspCli.getAccessToken.mockResolvedValue({ status: 'not-authenticated' });
+      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Not authenticated to ADSP'),
+      );
+      warn.mockRestore();
+    });
+
+    it('warns (non-fatal) when registerDirectoryService throws (e.g. 403)', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      adspCli.registerDirectoryService.mockRejectedValue(
+        new Error("Not authorized to register services in namespace 'my-tenant'."),
+      );
+      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Directory registration skipped'),
+      );
+      warn.mockRestore();
+    });
+
+    it('skips registration entirely for frontend app types', async () => {
+      execSync.mockImplementation((cmd: string) => {
+        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        return Buffer.from('');
+      });
+      const result = await runExecutor(
+        { ...baseOptions, appType: 'frontend', registerDirectory: true },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
+    });
+
+    it('does not call registerDirectoryService when registerDirectory is false', async () => {
+      const result = await runExecutor(
+        { ...baseOptions, registerDirectory: false },
+        context([TENANT_TAG]),
+      );
+      expect(result.success).toBe(true);
+      expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
+    });
   });
 });
