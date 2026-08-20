@@ -49,6 +49,11 @@
       "type": "number",
       "default": 5,
       "description": "How many times to retry oc import-image (absorbs the 409 from oc tag's async reconcile)."
+    },
+    "registerDirectory": {
+      "type": "boolean",
+      "default": false,
+      "description": "After a successful rollout, register the service in the ADSP directory under the tenant's namespace (register-once — skips if the entry already exists). Only applies to node and dotnet app types. Requires an active adsp login with the directory-admin role."
     }
   },
   "required": ["sandboxProject", "registry"]

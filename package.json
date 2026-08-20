@@ -28,7 +28,7 @@
   },
   "private": true,
   "dependencies": {
-    "@abgov/adsp-cli": "^1.7.0",
+    "@abgov/adsp-cli": "^1.10.0",
     "@angular/core": "22.0.8",
     "@nx/devkit": "23.1.1",
     "json-schema-to-typescript": "^13.0.1",
@@ -45,8 +45,8 @@
     "@angular-devkit/core": "22.0.9",
     "@angular-devkit/schematics": "22.0.9",
     "@nx/angular": "23.1.1",
-    "@nx/dotnet": "23.1.1",
     "@nx/cypress": "23.1.1",
+    "@nx/dotnet": "23.1.1",
     "@nx/eslint": "23.1.1",
     "@nx/eslint-plugin": "23.1.1",
     "@nx/express": "23.1.1",

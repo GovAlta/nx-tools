@@ -13,4 +13,5 @@ export interface SandboxExecutorSchema {
   skipPush?: boolean;
   deployBackend?: boolean;
   importRetries?: number;
+  registerDirectory?: boolean;
 }

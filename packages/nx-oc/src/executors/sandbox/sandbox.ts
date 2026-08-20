@@ -1,8 +1,14 @@
 import { ExecutorContext, logger } from '@nx/devkit';
+import {
+  getAccessToken,
+  getDirectoryServiceUrl,
+  registerDirectoryService,
+} from '@abgov/adsp-cli';
 import { execSync } from 'child_process';
 import { detectApplicationType } from '../../utils/app-type';
 import { activeAccountScopes } from '../../utils/gh-utils';
 import { ensureOcLogin } from '../../utils/oc-utils';
+import { detectAdspTenant } from '../../adsp/adsp-utils';
 import { SandboxExecutorSchema } from './schema';
 
 const PROXY_TAG_PREFIX = 'adsp:proxy-service:';
@@ -153,6 +159,7 @@ export default async function runExecutor(
     skipPush = false,
     deployBackend = false,
     importRetries = 5,
+    registerDirectory = false,
   } = options;
 
   if (!sandboxProject) {
@@ -501,6 +508,73 @@ export default async function runExecutor(
       `oc rollout status deployment/${projectName} -n ${sandboxProject} --timeout=180s`,
       cwd,
     );
+
+    // ---- ADSP directory registration (opt-in, non-fatal) ----
+    if (registerDirectory && appType !== 'frontend') {
+      const routeHost = capture(
+        `oc get route ${projectName} -n ${sandboxProject} -o jsonpath='{.spec.host}'`,
+        cwd,
+      );
+      if (!routeHost) {
+        logger.warn(
+          `[nx-oc:sandbox] Could not resolve route for ${projectName} — skipping directory registration.`,
+        );
+      } else {
+        const serviceUrl = `https://${routeHost}`;
+        const tenantName = detectAdspTenant(project.tags ?? []);
+        if (!tenantName) {
+          logger.warn(
+            `[nx-oc:sandbox] No ADSP tenant tag found on ${projectName} — skipping directory registration. ` +
+              `Scaffold with nx-adsp or add the tag manually.`,
+          );
+        } else {
+          const namespace = tenantName.toLowerCase().replace(/ /g, '-');
+          const tokenResult = await getAccessToken();
+          if (tokenResult.status !== 'ok') {
+            logger.warn(
+              `[nx-oc:sandbox] Not authenticated to ADSP — skipping directory registration. ` +
+                `Run \`adsp login --tenant "${tenantName}"\` first.`,
+            );
+          } else {
+            try {
+              const directoryServiceUrl = getDirectoryServiceUrl();
+              const outcome = await registerDirectoryService(
+                directoryServiceUrl,
+                namespace,
+                projectName,
+                serviceUrl,
+                tokenResult.token,
+              );
+              if (outcome === 'registered') {
+                logger.info(
+                  `\n✓ Registered urn:ads:${namespace}:${projectName} → ${serviceUrl}`,
+                );
+              } else {
+                logger.info(
+                  `  Directory entry urn:ads:${namespace}:${projectName} already exists, skipping.`,
+                );
+              }
+            } catch (err) {
+              logger.warn(
+                `[nx-oc:sandbox] Directory registration skipped: ${(err as Error).message}`,
+              );
+            }
+            // Advisory: warn if the app doesn't serve the HAL root docs link
+            // that the api-docs aggregator needs to discover the OpenAPI spec.
+            const rootJson = capture(
+              `curl -sf --connect-timeout 5 --max-time 10 ${serviceUrl}/ 2>/dev/null`,
+              cwd,
+            );
+            if (rootJson && !rootJson.includes('"docs"')) {
+              logger.warn(
+                `[nx-oc:sandbox] ${projectName} does not expose _links.docs.href at GET /. ` +
+                  `The ADSP api-docs aggregator won't be able to find its OpenAPI spec.`,
+              );
+            }
+          }
+        }
+      }
+    }
 
     logger.info(`\n✓ Sandbox deploy complete for ${projectName}.`);
     return { success: true };
