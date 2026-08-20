@@ -167,6 +167,7 @@ npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --da
 
 - `podman` installed.
 - `gh auth login` as an account with **`write:packages`** on the registry org (the same login supplies both the push and the per-deploy pull secret — no PAT is stored).
+- For `--registerDirectory`: `npx @abgov/adsp-cli login --tenant "<tenant name>"` as a user with the `directory-admin` role (tenant admins have it automatically).
 
 The generator adds `sandbox` and `sandbox-teardown` targets to the project and creates:
 
@@ -188,6 +189,7 @@ Running `nx run my-app:sandbox` executes the full loop:
 3. Refreshes the `ghcr-pull` Secret from the current `gh` session token.
 4. `oc tag` + `oc import-image --reference-policy=local` — the internal registry serves the image, so pods pull in-cluster (no per-pod pull secret, no node egress).
 5. Applies the manifest, restarts the Deployment, waits for rollout.
+6. **ADSP directory registration** (opt-in — `--registerDirectory`): resolves the app's Route URL, derives the tenant namespace from the project's `adsp:scaffold-tenant:` tag, and calls `registerDirectoryService` (from `@abgov/adsp-cli`) to POST the entry. Register-once — a 409 is silently skipped. All auth/permission failures are non-fatal warns; the deploy succeeds regardless. Only runs for `node`/`dotnet` app types.
 
 Local layer caching makes iteration fast — after the first push, only the changed app layer is re-uploaded.
 
