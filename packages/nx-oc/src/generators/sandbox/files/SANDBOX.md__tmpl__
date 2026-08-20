@@ -44,15 +44,22 @@ workspace-wide) and provisioned into GitHub Actions secrets by
 5. `oc tag … --reference-policy=local` then `oc import-image` (retried to absorb
    the tag-reconcile 409).
 6. `oc process | oc apply` the manifest, then `oc rollout restart` + `status`.
+7. **ADSP directory registration** (opt-in — `--registerDirectory`): resolves the
+   app's Route URL, derives the tenant namespace from the `adsp:scaffold-tenant:`
+   project tag, and calls `registerDirectoryService` from `@abgov/adsp-cli` to POST
+   the entry. Register-once — a 409 (already exists) is silently skipped. All
+   failures are non-fatal warns; the deploy succeeds regardless. Only runs for
+   `node`/`dotnet` app types.
 
 ## Options (resume a partial deploy without rebuilding)
 
 ```bash
-nx run <%= projectName %>:sandbox --skipBuild            # reuse the built image; re-push + import + roll out
-nx run <%= projectName %>:sandbox --skipBuild --skipPush # reuse the pushed image; re-import + roll out only
-nx run <%= projectName %>:sandbox --imageTag=<tag>       # push/import under a different tag
-nx run <%= projectName %>:sandbox --importRetries=8      # more import retries on a slow cluster
-<% if (appType === 'frontend') { %>nx run <%= projectName %>:sandbox --deployBackend         # deploy each paired backend (its own sandbox) first
+nx run <%= projectName %>:sandbox --skipBuild              # reuse the built image; re-push + import + roll out
+nx run <%= projectName %>:sandbox --skipBuild --skipPush   # reuse the pushed image; re-import + roll out only
+nx run <%= projectName %>:sandbox --imageTag=<tag>         # push/import under a different tag
+nx run <%= projectName %>:sandbox --importRetries=8        # more import retries on a slow cluster
+nx run <%= projectName %>:sandbox --registerDirectory      # register in ADSP directory after rollout (opt-in)
+<% if (appType === 'frontend') { %>nx run <%= projectName %>:sandbox --deployBackend           # deploy each paired backend (its own sandbox) first
 <% } %>```
 <% if (appType === 'frontend') { %>
 This frontend proxies `/api` to its paired backend Service. The target always
@@ -129,6 +136,18 @@ oc get pods -n <%= sandboxProject %> -l name=<%= projectName %>
   to the client's valid redirect URIs.
 <% } %>- **Import 409 "object has been modified"** — the `oc tag` reconcile race; the
   executor already retries. If you hit it manually, just re-run the import.
+- **`--registerDirectory` warns "Not authenticated to ADSP"** — run
+  `npx @abgov/adsp-cli login --tenant "<tenant name>"` before deploying, or
+  ensure `ADSP_CLIENT_ID`/`ADSP_CLIENT_SECRET`/`ADSP_TENANT_REALM` are set for CI.
+  The deploy still completes — registration is non-fatal.
+- **`--registerDirectory` warns "Not authorized to register services"** — the
+  logged-in ADSP user is missing the `directory-admin` role. A tenant admin has it
+  automatically; other users need it granted. The deploy still completes.
+- **`--registerDirectory` warns "does not expose `_links.docs.href`"** — the app's
+  `GET /` root does not return a HAL JSON body with `_links.docs.href`. The ADSP
+  api-docs aggregator follows that link to discover the OpenAPI spec; without it the
+  service is in the directory but won't appear in api-docs. `nx-adsp`'s
+  `express-service` scaffolds this automatically; add it manually if needed.
 <% if (database === 'postgres') { %>
 ## CloudNativePG notes
 

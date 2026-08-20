@@ -363,7 +363,8 @@ The executor (`packages/nx-oc/src/executors/sandbox/`) runs: preflight (`oc` log
 per-deploy pull secret → `oc tag … --reference-policy=local` → **`oc import-image` with retry**
 (absorbs the tag-reconcile 409) → `oc process | oc apply` → `oc rollout`. Pods pull in-cluster
 via the local reference policy. Options include `--database`, `--imageTag`, `--importRetries`,
-`--deployBackend`, and `--skipBuild`/`--skipPush` (resume a partial deploy).
+`--deployBackend`, `--skipBuild`/`--skipPush` (resume a partial deploy), and
+`--registerDirectory` (opt-in ADSP directory registration after rollout).
 
 Key wiring to preserve when editing:
 
@@ -397,8 +398,16 @@ Key wiring to preserve when editing:
   token (`GITHUB_TOKEN`), so a workflow running this executor under its own token (no PAT) needs the
   `GITHUB_ACTOR` fallback the Actions runner always sets. Local/interactive use is unaffected —
   `GITHUB_ACTOR` is unset there, so it still resolves the active `gh` account.
+- **`--registerDirectory` (opt-in, non-fatal)**: after a successful rollout, resolves the app's
+  Route host via `oc get route`, derives the tenant namespace from the project's
+  `adsp:scaffold-tenant:<name>` tag (`toLowerCase().replace(/ /g, '-')`), then calls
+  `registerDirectoryService` from `@abgov/adsp-cli`. Register-once semantics: a 409 is silently
+  skipped. Token comes from `getAccessToken()` — a `not-authenticated` result warns and skips (run
+  `adsp login` first). A 403 from the directory service means the logged-in user lacks the
+  `directory-admin` role — warn and skip, not a hard failure. Only runs for `node`/`dotnet` app
+  types; frontends are skipped unconditionally. Requires `@abgov/adsp-cli ^1.10.0`.
 - The generator unit tests assert the target/manifest shape; the executor tests mock `child_process`
-  `execSync` and assert the command sequence/preflight/retry.
+  `execSync` and `@abgov/adsp-cli` and assert the command sequence/preflight/retry/registration.
 
 ---
 
