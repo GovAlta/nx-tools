@@ -2,6 +2,25 @@ import { Tree, getProjects } from '@nx/devkit';
 import * as yaml from 'yaml';
 import { ArtifactSchema } from './artifact-schema';
 
+// The allowed character set for project-docs slugs — used by both the
+// lineage parser and generator validation so they cannot drift apart.
+export const SLUG_CHARS = 'a-zA-Z0-9_-'
+
+const SLUG_INVALID_RE = new RegExp(`[^${SLUG_CHARS}]`, 'g')
+
+export function validateProjectDocsSlug(
+  slug: string,
+  originalInput: string,
+): void {
+  const invalid = slug.match(SLUG_INVALID_RE)
+  if (!invalid) return
+  const chars = [...new Set(invalid)].map((c) => `"${c}"`).join(', ')
+  throw new Error(
+    `[nx-agent] "${originalInput}" produces slug "${slug}" containing invalid character(s): ${chars}. ` +
+      `Project-docs slugs must contain only letters, digits, hyphens, and underscores.`,
+  )
+}
+
 // project-docs-ancestors convention: <type>[:<id>][#fragment], optionally
 // qualified with a project name (<project>/<type>...). `type` is the literal
 // project-docs/ subfolder name — no singular/plural transformation, so an
@@ -17,8 +36,9 @@ export interface AncestorRef {
   fragment?: string;
 }
 
-const ANCESTOR_REF_TOKEN =
-  /^(?:([^/]+)\/)?([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_-]+))?(?:#([a-zA-Z0-9_-]+))?$/;
+const ANCESTOR_REF_TOKEN = new RegExp(
+  `^(?:([^/]+)/)?([${SLUG_CHARS}]+)(?::([${SLUG_CHARS}]+))?(?:#([${SLUG_CHARS}]+))?$`,
+)
 
 export function parseAncestorRef(token: string): AncestorRef | null {
   const trimmed = token.trim();
