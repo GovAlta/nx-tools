@@ -98,14 +98,21 @@ scope here.
    experiences the requirement: what it shows, what it does, which rule each behavior traces to.
    For a UI-backed requirement, this is a **UX design** — hand-author under
    `project-docs/ux-designs/<slug>.md`, frontmatter `project-docs-ancestors:
-   [domain-models:<slug>]`, and a structured `screens`/`rules`/`examples`/`questions` shape
-   (screens, not endpoints — each translating one of the requirement's business rules into what a
-   screen shows and does, plus which design-system component(s) it uses, per step 5). Each screen
-   also states what it needs from its provider as its own list — the contract interface points get
-   checked against next: the consumer states what it needs, the provider satisfies it. Register
-   once: `"ux-designs": { "expectedAncestorTypes": ["domain-models"] }`. A requirement with no
-   human-facing consumer (a backend-to-backend integration, a scheduled job) has no interaction
-   surface to design — skip straight to interface points below.
+   [domain-models:<slug>]`, and a structured shape with these sections:
+   - **`navigation`** — where this feature lives in the app's information architecture: `sitemap-position`
+     (its place relative to existing sections), `entry-from` (how users reach it from the app shell —
+     `"temporary dev route"` is a valid explicit answer for a feature under initial development), and
+     `route` (the URL path). This section is required; an absent or blank `entry-from` is a design gap,
+     not a deferral — make the decision consciously and state it.
+   - **`screens`** — each translating one of the requirement's business rules into what a screen shows
+     and does, plus which design-system component(s) it uses (per step 5). Each screen also states what
+     it needs from its provider as its own list.
+   - **`rules`**, **`examples`**, **`questions`**
+
+   The contract interface points get checked against next: the consumer states what it needs, the
+   provider satisfies it. Register once: `"ux-designs": { "expectedAncestorTypes": ["domain-models"] }`.
+   A requirement with no human-facing consumer (a backend-to-backend integration, a scheduled job) has
+   no interaction surface to design — skip straight to interface points below.
 
 7. **Design the requirement's interface points** — the named contracts other code calls into,
    each satisfying something a real consumer (the interaction surface above, or another service)
@@ -146,6 +153,7 @@ produced this pass — not this pass's own reasoning. Ask it:
 3. Is the API design consistent with existing API designs in the workspace (naming, status codes, auth patterns)?
 4. Are auth and authorization requirements explicitly addressed, or silently assumed?
 5. Does the API design actually satisfy what the UX design says its screens need?
+6. Does the UX design's `navigation` section specify a concrete `entry-from` path, and is it consistent with the app's existing information architecture?
 
 Always advisory — act on a real finding by fixing the inconsistency or missing coverage, don't
 just log it.
