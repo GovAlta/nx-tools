@@ -9,7 +9,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
+import {
+  resolveAncestorsAndResolves,
+  validateProjectDocsSlug,
+} from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const DOMAIN_TERMS_SUBDIR = 'project-docs/domain-terms';
@@ -40,6 +43,7 @@ export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project);
   const containerDir = joinPathFragments(targetRoot, DOMAIN_TERMS_SUBDIR);
   const slug = names(options.term).fileName;
+  validateProjectDocsSlug(slug, options.term)
   const termPath = joinPathFragments(containerDir, `${slug}.md`);
 
   // A repeat/typo'd invocation should fail loudly rather than silently

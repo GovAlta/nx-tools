@@ -9,7 +9,10 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema'
 import { ensureReadme } from '../../utils/readme'
-import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs'
+import {
+  resolveAncestorsAndResolves,
+  validateProjectDocsSlug,
+} from '../../utils/project-docs-refs'
 import { Schema } from './schema'
 
 const PRODUCT_BRIEFS_SUBDIR = 'project-docs/product-briefs'
@@ -23,6 +26,7 @@ export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project)
   const containerDir = joinPathFragments(targetRoot, PRODUCT_BRIEFS_SUBDIR)
   const slug = names(options.name).fileName
+  validateProjectDocsSlug(slug, options.name)
   const briefPath = joinPathFragments(containerDir, `${slug}.md`)
 
   // A repeat/typo'd invocation should fail loudly rather than silently

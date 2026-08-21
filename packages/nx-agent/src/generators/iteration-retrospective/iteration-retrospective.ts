@@ -9,7 +9,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
+import {
+  resolveAncestorsAndResolves,
+  validateProjectDocsSlug,
+} from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const ITERATION_RETROSPECTIVES_SUBDIR = 'project-docs/iteration-retrospectives';
@@ -44,6 +47,7 @@ export default async function (host: Tree, options: Schema) {
     ITERATION_RETROSPECTIVES_SUBDIR,
   );
   const slug = names(options.title).fileName;
+  validateProjectDocsSlug(slug, options.title)
   const retrospectivePath = joinPathFragments(containerDir, `${slug}.md`);
 
   // A repeat/typo'd invocation should fail loudly rather than silently

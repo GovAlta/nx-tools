@@ -11,7 +11,10 @@ import { join } from 'path';
 import * as yaml from 'yaml';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveAncestorsAndResolves } from '../../utils/project-docs-refs';
+import {
+  resolveAncestorsAndResolves,
+  validateProjectDocsSlug,
+} from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const REQUIREMENTS_SUBDIR = 'project-docs/requirements';
@@ -61,6 +64,7 @@ export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project);
   const containerDir = joinPathFragments(targetRoot, REQUIREMENTS_SUBDIR);
   const slug = names(options.title).fileName;
+  validateProjectDocsSlug(slug, options.title)
   const requirementPath = joinPathFragments(containerDir, `${slug}.md`);
 
   // Fail loudly before any write — a duplicate is always a mistake, not an

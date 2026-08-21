@@ -9,7 +9,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ensureArtifactSchemaEntry } from '../../utils/artifact-schema';
 import { ensureReadme } from '../../utils/readme';
-import { resolveRefFromPath } from '../../utils/project-docs-refs';
+import {
+  resolveRefFromPath,
+  validateProjectDocsSlug,
+} from '../../utils/project-docs-refs';
 import { Schema } from './schema';
 
 const BLOCKERS_SUBDIR = 'project-docs/blockers';
@@ -40,6 +43,7 @@ export default async function (host: Tree, options: Schema) {
   const targetRoot = resolveTargetRoot(host, options.project);
   const containerDir = joinPathFragments(targetRoot, BLOCKERS_SUBDIR);
   const slug = names(options.description).fileName;
+  validateProjectDocsSlug(slug, options.description)
   const blockerPath = joinPathFragments(containerDir, `${slug}.md`);
 
   // A repeat/typo'd invocation should fail loudly rather than silently
