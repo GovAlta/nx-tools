@@ -120,7 +120,12 @@ blocking status depends on whether this project has a CI backstop yet — see be
   workspace/input and asserting on its actual output or side effects, not a unit test that mocks
   the very thing being verified. If the scaffolded e2e project's own spec is still the generic
   starter, that's not a passing gate — write real cases from the design's Given/When/Then examples
-  first. The same spec file should also work verbatim against a live deployment via `BASE_URL`
+  first. **For a frontend view, e2e tests must reach the feature via the entry point the ux-design's
+  `navigation` section specifies** — starting from the app shell, not by visiting the route URL
+  directly. A test that opens `/new-feature` directly passes even when the view is completely
+  orphaned from navigation and proves nothing about reachability; if `entry-from` is `"temporary dev
+  route"`, the test may deep-link for now but must include a TODO naming the permanent entry point to
+  wire in before graduation. The same spec file should also work verbatim against a live deployment via `BASE_URL`
   (see Deploy's Gate — the same `e2e` target, not a separate one, once
   `global-setup.ts`/`global-teardown.ts` guard on `BASE_URL`).
 
@@ -158,5 +163,3 @@ the code's approach is the better one, don't just log it.
 Commit the implementation once every blocking check above passes —
 `feat(develop): implement <resource> against <api-design/ux-design>` — covering the new code, its
 tests, and the `project-docs-ancestors` comment tying it back to the design, together as one unit.
-If `package.json` changed, `package-lock.json` must be consistent with it and staged in the same
-commit — run `npm install` first if it isn't.
