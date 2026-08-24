@@ -421,14 +421,16 @@ describe('sandbox executor', () => {
       { ...baseOptions, appType: 'frontend' },
       context(['adsp:proxy-service:test-service:3333']),
     );
-    const guard = commands().find((c) =>
-      c.includes('oc get service test-service'),
+    const applyCmd = commands().find((c) =>
+      c.includes('oc apply -f - -n test-sandbox'),
     );
-    expect(guard).toBeTruthy();
-    expect(guard).toContain('||');
-    expect(guard).toContain(
-      'oc create service clusterip test-service --tcp=3333:3333',
-    );
+    expect(applyCmd).toBeTruthy();
+    expect(applyCmd).toContain('name: test-service');
+    expect(applyCmd).toContain('app: test-service');
+    expect(applyCmd).toContain('deployment-mode: sandbox');
+    expect(applyCmd).toContain('selector:\n    name: test-service');
+    expect(applyCmd).toContain('port: 3333');
+    expect(applyCmd).not.toContain('oc create service clusterip');
   });
 
   it('adds no paired-service guard without proxy-service tags', async () => {

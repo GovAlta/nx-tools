@@ -394,14 +394,29 @@ export default async function runExecutor(
         };
       });
     for (const { name, port } of proxyServices) {
-      // Always label with deployment-mode=sandbox so the teardown target's selector
-      // (-l app=<name>,deployment-mode=sandbox) can clean up the stub when the backend
-      // was never deployed (and oc apply never ran to reconcile the Service itself).
+      // Use oc apply (idempotent) with selector: name: <name> — the same selector the
+      // backend's own manifest uses. oc create service clusterip writes selector: app: <name>
+      // and oc apply's three-way merge never removes it (it was never in last-applied-
+      // configuration), leaving both keys and no matching endpoints. app: <name> is kept in
+      // metadata.labels so the teardown target's -l app=<name>,deployment-mode=sandbox
+      // can clean up the stub if the backend is never deployed.
       run(
         `Ensure paired Service ${name}`,
-        `oc get service ${name} -n ${sandboxProject} >/dev/null 2>&1 || ` +
-          `oc create service clusterip ${name} --tcp=${port}:${port} -n ${sandboxProject}; ` +
-          `oc label service ${name} deployment-mode=sandbox -n ${sandboxProject} --overwrite`,
+        `cat <<'EOF' | oc apply -f - -n ${sandboxProject}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${name}
+  labels:
+    app: ${name}
+    deployment-mode: sandbox
+spec:
+  selector:
+    name: ${name}
+  ports:
+  - port: ${port}
+    targetPort: ${port}
+EOF`,
         cwd,
       );
     }
