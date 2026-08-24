@@ -27,6 +27,13 @@ const STALL_THRESHOLD = 3;
 const HISTORY_KEEP = STALL_THRESHOLD + 2;
 const DESIGN_TYPES = ['api-designs', 'ux-designs'];
 
+// Declared here — before the lineage-missing early-exit — because composePrompt references
+// scopedPaths and these values only need process.env, not the registry.
+const rawScope = process.env.ARTIFACT_SCOPE ?? '';
+const openScope = rawScope === '*';
+const noScope = !openScope && rawScope === '';
+const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
 function readFrontmatter(path) {
@@ -241,10 +248,8 @@ const RESOLUTION_PREFIXES = ['broken:', 'open:'];
 // '*' is an explicit opt-in to open scope — no artifact filtering at all, not the same as
 // "first commit touched no project-docs files." When set, scopedKeys stays empty (so
 // isInArtifactScope returns true for everything), but the composePrompt note is explicit.
-const rawScope = process.env.ARTIFACT_SCOPE ?? '';
-const openScope = rawScope === '*';
-const noScope = !openScope && rawScope === ''; // first commit touched no project-docs files — distinct from open scope
-const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+// (rawScope/openScope/noScope/scopedPaths are declared earlier — before the lineage-missing
+// early-exit — because composePrompt needs them and runs on that path too.)
 const scopedKeys = new Set(
   scopedPaths
     .map((p) => Object.keys(registry).find((k) => registry[k].path === p))
