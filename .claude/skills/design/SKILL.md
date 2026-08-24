@@ -97,7 +97,9 @@ scope here.
    before its interface points, not after.** An interaction surface is how a human actually
    experiences the requirement: what it shows, what it does, which rule each behavior traces to.
    For a UI-backed requirement, this is a **UX design** — hand-author under
-   `project-docs/ux-designs/<slug>.md`, frontmatter `project-docs-ancestors:
+   `project-docs/ux-designs/<slug>.md` (`<slug>` must contain only letters, digits, hyphens, and
+   underscores — other characters are silently dropped by the lineage system), frontmatter
+   `project-docs-ancestors:
    [domain-models:<slug>]`, and a structured shape with these sections:
    - **`navigation`** — where this feature lives in the app's information architecture: `sitemap-position`
      (its place relative to existing sections), `entry-from` (how users reach it from the app shell —
@@ -117,7 +119,8 @@ scope here.
 7. **Design the requirement's interface points** — the named contracts other code calls into,
    each satisfying something a real consumer (the interaction surface above, or another service)
    actually stated it needs, each tracing to a specific rule. For an HTTP-backed requirement, this
-   is an **API design** — hand-author under `project-docs/api-designs/<slug>.md`, frontmatter
+   is an **API design** — hand-author under `project-docs/api-designs/<slug>.md` (same slug
+   constraint: letters, digits, hyphens, underscores only), frontmatter
    `project-docs-ancestors: [domain-models:<slug>, ux-designs:<slug>]` when a ux-design exists for
    this requirement (`domain-models` alone otherwise). Each endpoint should satisfy something the
    ux-design's screens actually stated they need — don't let this become "design the interface
