@@ -101,6 +101,14 @@ const designArtifactsOf = (key) => (index[key] ?? []).filter((e) => DESIGN_TYPES
 
 const signals = [];
 
+for (const yamlError of violations.yamlErrors ?? []) {
+  signals.push({
+    key: `yaml-error:${yamlError.path}`,
+    stage: 'unknown',
+    reason: `YAML parse error in ${yamlError.path}: ${yamlError.error} — fix the frontmatter before anything else.`,
+  });
+}
+
 for (const broken of violations.brokenRefs ?? []) {
   signals.push({
     key: `broken:${broken.ref}`,

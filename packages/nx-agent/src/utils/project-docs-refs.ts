@@ -312,7 +312,7 @@ function projectDocsRoots(host: Tree): string[] {
 // Every project-docs/ artifact in the workspace, keyed by its canonical
 // reference string, recording its own ancestor refs (chained artifacts —
 // e.g. a domain term deriving from a bounded context).
-export function buildRegistry(host: Tree): Registry {
+export function buildRegistry(host: Tree, yamlErrors: YamlError[] = []): Registry {
   const registry: Registry = new Map();
 
   for (const docsRoot of projectDocsRoots(host)) {
@@ -335,7 +335,7 @@ export function buildRegistry(host: Tree): Registry {
           continue;
         }
         const type = child.replace(/\.md$/, '');
-        registerArtifact(host, registry, childPath, { project, type });
+        registerArtifact(host, registry, childPath, { project, type }, yamlErrors);
       } else {
         for (const file of host.children(childPath)) {
           const filePath = `${childPath}/${file}`;
@@ -351,7 +351,7 @@ export function buildRegistry(host: Tree): Registry {
             project,
             type: child,
             id,
-          });
+          }, yamlErrors);
         }
       }
     }
@@ -365,15 +365,29 @@ function registerArtifact(
   registry: Registry,
   path: string,
   ref: Pick<AncestorRef, 'project' | 'type' | 'id'>,
+  yamlErrors: YamlError[],
 ): void {
-  const key = refKey(ref);
-  const content = host.read(path, 'utf-8') ?? '';
+  const key = refKey(ref)
+  const content = host.read(path, 'utf-8') ?? ''
+  const block = FRONTMATTER_BLOCK.exec(content)
+  if (block) {
+    try {
+      yaml.parse(block[1])
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e)
+      yamlErrors.push({ path, error })
+      // eslint-disable-next-line no-console
+      console.log(`[nx-agent] YAML parse error in ${path}: ${error}`)
+      registry.set(key, { path, ancestorRefs: [], resolves: [], metadata: {} })
+      return
+    }
+  }
   registry.set(key, {
     path,
     ancestorRefs: extractFrontmatterAncestorRefs(content, path),
     resolves: extractFrontmatterField(content, 'resolves', path),
     metadata: extractFrontmatterMetadata(content, path),
-  });
+  })
 }
 
 // Every project-docs-ancestors reference found anywhere in the workspace's
@@ -421,11 +435,17 @@ export function buildIndex(
   return index;
 }
 
+export interface YamlError {
+  path: string
+  error: string
+}
+
 export interface Violations {
   brokenRefs: { ref: string; referencedFrom: string }[];
   orphans: string[];
   unscoped: string[];
   resolutionStatus: { open: string[]; resolved: string[] };
+  yamlErrors: YamlError[];
 }
 
 // `artifactSchema` is plain data the workspace owns (see utils/artifact-schema.ts)
@@ -440,6 +460,7 @@ export function computeViolations(
   registry: Registry,
   index: Index,
   artifactSchema: ArtifactSchema = {},
+  yamlErrors: YamlError[] = [],
 ): Violations {
   const brokenRefs: Violations['brokenRefs'] = [];
   for (const [key, entries] of index) {
@@ -509,7 +530,7 @@ export function computeViolations(
     ).push(key);
   }
 
-  return { brokenRefs, orphans, unscoped, resolutionStatus };
+  return { brokenRefs, orphans, unscoped, resolutionStatus, yamlErrors };
 }
 
 // The two retrieval directions, deliberately not symmetric in cost. Forward

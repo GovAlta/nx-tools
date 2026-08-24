@@ -5,6 +5,7 @@ import {
   buildIndex,
   buildRegistry,
   computeViolations,
+  YamlError,
 } from '../../utils/project-docs-refs';
 
 const LINEAGE_PATH = '.nx-agent/lineage.json';
@@ -16,10 +17,11 @@ export default async function (host: Tree) {
   // references were chosen over a forward-ownership model to avoid.
   ensureGitignoreEntries(host, ['.nx-agent/']);
 
-  const registry = buildRegistry(host);
+  const yamlErrors: YamlError[] = []
+  const registry = buildRegistry(host, yamlErrors);
   const index = buildIndex(host, registry);
   const artifactSchema = readArtifactSchema(host);
-  const violations = computeViolations(registry, index, artifactSchema);
+  const violations = computeViolations(registry, index, artifactSchema, yamlErrors);
 
   for (const orphan of violations.orphans) {
     // eslint-disable-next-line no-console
@@ -70,5 +72,10 @@ export default async function (host: Tree) {
     throw new Error(
       `[nx-agent] ${violations.brokenRefs.length} broken project-docs-ancestors reference(s) found — see above.`,
     );
+  }
+  if (violations.yamlErrors.length > 0) {
+    throw new Error(
+      `[nx-agent] ${violations.yamlErrors.length} YAML parse error(s) in project-docs frontmatter — fix the malformed file(s) above before continuing.`,
+    )
   }
 }
