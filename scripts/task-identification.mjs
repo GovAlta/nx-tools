@@ -27,6 +27,13 @@ const STALL_THRESHOLD = 3;
 const HISTORY_KEEP = STALL_THRESHOLD + 2;
 const DESIGN_TYPES = ['api-designs', 'ux-designs'];
 
+// Declared here — before the lineage-missing early-exit — because composePrompt references
+// scopedPaths and these values only need process.env, not the registry.
+const rawScope = process.env.ARTIFACT_SCOPE ?? '';
+const openScope = rawScope === '*';
+const noScope = !openScope && rawScope === '';
+const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
 function readFrontmatter(path) {
@@ -82,8 +89,9 @@ if (!existsSync(LINEAGE_PATH)) {
         stage: 'unknown',
         reason:
           `${LINEAGE_PATH} doesn't exist — either project-docs-lineage hasn't run yet this job, ` +
-          `or it threw on a broken project-docs-ancestors reference (check the previous workflow ` +
-          `step's log for "[nx-agent] broken reference").`,
+          `or it failed outright. A broken reference or a YAML parse error no longer aborts its ` +
+          `write (both come through as their own signals below), so check the previous workflow ` +
+          `step's log for a genuine error.`,
       },
     ],
   });
@@ -100,6 +108,26 @@ const designArtifactsOf = (key) => (index[key] ?? []).filter((e) => DESIGN_TYPES
 // --- Signals, in priority order --------------------------------------------------------------
 
 const signals = [];
+
+for (const yamlError of violations.yamlErrors ?? []) {
+  signals.push({
+    key: `yaml-error:${yamlError.path}`,
+    stage: 'unknown',
+    reason: `YAML parse error in ${yamlError.path}: ${yamlError.error} — fix the frontmatter before anything else.`,
+  });
+}
+
+for (const unparseable of violations.unparseableRefs ?? []) {
+  signals.push({
+    key: `unparseable:${unparseable.ref}`,
+    stage: 'unknown',
+    reason:
+      `Unparseable project-docs reference "${unparseable.ref}" in ${unparseable.foundIn} — an id ` +
+      `may contain only letters, digits, hyphens, and underscores. If the offending characters ` +
+      `are in that file's own name, rename the file; otherwise fix the reference. Nothing can ` +
+      `resolve it until then, so do this before anything else.`,
+  });
+}
 
 for (const broken of violations.brokenRefs ?? []) {
   signals.push({
@@ -236,15 +264,22 @@ for (const path of mdFilesIn('project-docs/requirements')) {
 // are eligible -- preventing the loop from drifting to unrelated work across iterations.
 const branchName = process.env.GITHUB_REF_NAME ?? '';
 const isFixBranch = branchName.startsWith('fix/');
-const RESOLUTION_PREFIXES = ['broken:', 'open:'];
+// 'unparseable:' and 'yaml-error:' are resolution signals for the same reason 'broken:' is —
+// each names one specific thing to repair, not new work to start. Both only became reachable
+// once project-docs-lineage stopped aborting its write on them; without them here, a fix/**
+// branch would see the signal and then be told it isn't eligible to act on it.
+const RESOLUTION_PREFIXES = [
+  'broken:',
+  'unparseable:',
+  'yaml-error:',
+  'open:',
+];
 
 // '*' is an explicit opt-in to open scope — no artifact filtering at all, not the same as
 // "first commit touched no project-docs files." When set, scopedKeys stays empty (so
 // isInArtifactScope returns true for everything), but the composePrompt note is explicit.
-const rawScope = process.env.ARTIFACT_SCOPE ?? '';
-const openScope = rawScope === '*';
-const noScope = !openScope && rawScope === ''; // first commit touched no project-docs files — distinct from open scope
-const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+// (rawScope/openScope/noScope/scopedPaths are declared earlier — before the lineage-missing
+// early-exit — because composePrompt needs them and runs on that path too.)
 const scopedKeys = new Set(
   scopedPaths
     .map((p) => Object.keys(registry).find((k) => registry[k].path === p))
@@ -303,7 +338,7 @@ if (eligibleSignals.length === 0 && signals.length > 0) {
     // Both filters active — name the intersection explicitly.
     const inBoth = inScope.filter((s) => inBranchType.includes(s));
     noEligibleNote =
-      `fix/** branch (broken:/open: only) AND artifact scope [${scopedPaths.join(', ')}]: ` +
+      `fix/** branch (${RESOLUTION_PREFIXES.join('/')} only) AND artifact scope [${scopedPaths.join(', ')}]: ` +
       `${inScope.length} signal(s) in scope, ${inBranchType.length} resolution-type total, ` +
       `${inBoth.length} satisfy both — no eligible signals on this branch.`;
   } else if (scopedKeys.size > 0) {
@@ -311,7 +346,7 @@ if (eligibleSignals.length === 0 && signals.length > 0) {
       `artifact scope [${scopedPaths.join(', ')}] matches ${inScope.length} of ${signals.length} signal(s) — nothing in scope yet.`;
   } else if (isFixBranch) {
     noEligibleNote =
-      `fix/** branch restricts to broken:/open: signals only — ${inBranchType.length} such signal(s) currently exist.`;
+      `fix/** branch restricts to ${RESOLUTION_PREFIXES.join('/')} signals only — ${inBranchType.length} such signal(s) currently exist.`;
   }
 }
 
