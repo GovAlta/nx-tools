@@ -329,10 +329,47 @@ function projectDocsRoots(host: Tree): string[] {
   return [...new Set(roots)].filter((root) => host.exists(root));
 }
 
+// A reference string the grammar can't read. Distinct from a broken reference,
+// which parses cleanly and simply names something that doesn't exist: this one
+// never became a reference at all, so nothing downstream can resolve, invert,
+// or classify it. Collected from two places, hence `foundIn` rather than
+// brokenRefs' `referencedFrom` — a reference written in some file (a code
+// comment or frontmatter), or an artifact's own path-derived key, where the
+// offending characters are in the filename itself and the fix is a rename.
+export interface UnparseableRef {
+  ref: string
+  foundIn: string
+}
+
+// Whether a scanned token was plausibly *meant* to be a reference, and so is
+// worth reporting when it doesn't parse. extractCommentAncestorRefs matches the
+// bare `project-docs-ancestors:` token anywhere in a source file, which also
+// catches generator code that writes that frontmatter and test fixtures that
+// assert on it — `[${ancestors.join(', ')}]` is not a typo'd reference, it's a
+// template literal, and reporting it as one would bury the real finding in
+// noise (35 such matches in this repo alone). Code punctuation is the tell, so
+// this admits only the grammar's own charset plus the characters that
+// realistically slip into a hand-written id: a period, a stray slash, a space.
+const PLAUSIBLE_REF = /^[\w .:/#-]+$/
+
+function recordUnparseable(
+  unparseableRefs: UnparseableRef[],
+  ref: string,
+  foundIn: string,
+): void {
+  if (PLAUSIBLE_REF.test(ref)) {
+    unparseableRefs.push({ ref, foundIn })
+  }
+}
+
 // Every project-docs/ artifact in the workspace, keyed by its canonical
 // reference string, recording its own ancestor refs (chained artifacts —
 // e.g. a domain term deriving from a bounded context).
-export function buildRegistry(host: Tree, yamlErrors: YamlError[] = []): Registry {
+export function buildRegistry(
+  host: Tree,
+  yamlErrors: YamlError[] = [],
+  unparseableRefs: UnparseableRef[] = [],
+): Registry {
   const registry: Registry = new Map();
 
   for (const docsRoot of projectDocsRoots(host)) {
@@ -355,7 +392,14 @@ export function buildRegistry(host: Tree, yamlErrors: YamlError[] = []): Registr
           continue;
         }
         const type = child.replace(/\.md$/, '');
-        registerArtifact(host, registry, childPath, { project, type }, yamlErrors);
+        registerArtifact(
+          host,
+          registry,
+          childPath,
+          { project, type },
+          yamlErrors,
+          unparseableRefs,
+        );
       } else {
         for (const file of host.children(childPath)) {
           const filePath = `${childPath}/${file}`;
@@ -367,11 +411,14 @@ export function buildRegistry(host: Tree, yamlErrors: YamlError[] = []): Registr
             continue;
           }
           const id = file.replace(/\.md$/, '');
-          registerArtifact(host, registry, filePath, {
-            project,
-            type: child,
-            id,
-          }, yamlErrors);
+          registerArtifact(
+            host,
+            registry,
+            filePath,
+            { project, type: child, id },
+            yamlErrors,
+            unparseableRefs,
+          );
         }
       }
     }
@@ -386,8 +433,19 @@ function registerArtifact(
   path: string,
   ref: Pick<AncestorRef, 'project' | 'type' | 'id'>,
   yamlErrors: YamlError[],
+  unparseableRefs: UnparseableRef[],
 ): void {
   const key = refKey(ref)
+  // An artifact whose own key can't be parsed back is still registered — it
+  // exists, and hiding it would be the very failure this records. But every
+  // parse-dependent check below degrades on it: orphans counts it as an orphan
+  // regardless, and resolutionStatus skips it entirely, so a tracked artifact
+  // silently stops being reported open or resolved. Since 7b777dd the
+  // generators reject these at creation time, so this only catches a
+  // hand-authored or pre-existing file.
+  if (!parseAncestorRef(key)) {
+    unparseableRefs.push({ ref: key, foundIn: path })
+  }
   const content = host.read(path, 'utf-8') ?? ''
   const block = FRONTMATTER_BLOCK.exec(content)
   if (block) {
@@ -417,6 +475,7 @@ function registerArtifact(
 export function buildIndex(
   host: Tree,
   registry: Registry = buildRegistry(host),
+  unparseableRefs: UnparseableRef[] = [],
 ): Index {
   const index: Index = new Map();
   const pathToKey = buildPathToKeyMap(registry);
@@ -439,6 +498,11 @@ export function buildIndex(
     for (const raw of rawRefs) {
       const parsed = parseAncestorRef(raw);
       if (!parsed) {
+        // Recorded rather than skipped: a grammar will always meet an id it
+        // didn't expect, and dropping it silently turns that into a wrong
+        // report (the target looks unreferenced, so it reads as an orphan)
+        // instead of a loud one.
+        recordUnparseable(unparseableRefs, raw, file);
         continue;
       }
       const key = refKey(parsed);
@@ -462,6 +526,7 @@ export interface YamlError {
 
 export interface Violations {
   brokenRefs: { ref: string; referencedFrom: string }[];
+  unparseableRefs: UnparseableRef[];
   orphans: string[];
   unscoped: string[];
   resolutionStatus: { open: string[]; resolved: string[] };
@@ -481,6 +546,7 @@ export function computeViolations(
   index: Index,
   artifactSchema: ArtifactSchema = {},
   yamlErrors: YamlError[] = [],
+  unparseableRefs: UnparseableRef[] = [],
 ): Violations {
   const brokenRefs: Violations['brokenRefs'] = [];
   for (const [key, entries] of index) {
@@ -550,7 +616,14 @@ export function computeViolations(
     ).push(key);
   }
 
-  return { brokenRefs, orphans, unscoped, resolutionStatus, yamlErrors };
+  return {
+    brokenRefs,
+    unparseableRefs,
+    orphans,
+    unscoped,
+    resolutionStatus,
+    yamlErrors,
+  };
 }
 
 // The two retrieval directions, deliberately not symmetric in cost. Forward

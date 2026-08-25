@@ -5,6 +5,7 @@ import {
   buildIndex,
   buildRegistry,
   computeViolations,
+  UnparseableRef,
   YamlError,
 } from '../../utils/project-docs-refs';
 import { Schema } from './schema';
@@ -19,10 +20,17 @@ export default async function (host: Tree, options: Schema = {}) {
   ensureGitignoreEntries(host, ['.nx-agent/']);
 
   const yamlErrors: YamlError[] = []
-  const registry = buildRegistry(host, yamlErrors);
-  const index = buildIndex(host, registry);
+  const unparseableRefs: UnparseableRef[] = []
+  const registry = buildRegistry(host, yamlErrors, unparseableRefs);
+  const index = buildIndex(host, registry, unparseableRefs);
   const artifactSchema = readArtifactSchema(host);
-  const violations = computeViolations(registry, index, artifactSchema, yamlErrors);
+  const violations = computeViolations(
+    registry,
+    index,
+    artifactSchema,
+    yamlErrors,
+    unparseableRefs,
+  );
 
   for (const orphan of violations.orphans) {
     // eslint-disable-next-line no-console
@@ -38,6 +46,13 @@ export default async function (host: Tree, options: Schema = {}) {
     // eslint-disable-next-line no-console
     console.log(
       `[nx-agent] broken reference "${broken.ref}" in ${broken.referencedFrom}`,
+    );
+  }
+  for (const unparseable of violations.unparseableRefs) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[nx-agent] unparseable reference "${unparseable.ref}" in ${unparseable.foundIn} — ` +
+        `an id may contain only letters, digits, hyphens, and underscores`,
     );
   }
   for (const open of violations.resolutionStatus.open) {
@@ -80,6 +95,11 @@ export default async function (host: Tree, options: Schema = {}) {
       `${violations.brokenRefs.length} broken project-docs-ancestors reference(s)`,
     )
   }
+  if (violations.unparseableRefs.length > 0) {
+    failures.push(
+      `${violations.unparseableRefs.length} unparseable project-docs reference(s)`,
+    )
+  }
   if (violations.yamlErrors.length > 0) {
     failures.push(
       `${violations.yamlErrors.length} YAML parse error(s) in project-docs frontmatter`,
@@ -96,10 +116,12 @@ export default async function (host: Tree, options: Schema = {}) {
   // here either way — an artifact nothing implements yet is a normal,
   // temporary state, not a mistake.
   if (options.strict) {
-    throw new Error(`[nx-agent] ${failures.join(' and ')} found — see above.`)
+    throw new Error(
+      `[nx-agent] ${failures.join(', ')} found — see above.`,
+    )
   }
   // eslint-disable-next-line no-console
   console.log(
-    `[nx-agent] wrote ${LINEAGE_PATH} with ${failures.join(' and ')} recorded — re-run with --strict to fail on them.`,
+    `[nx-agent] wrote ${LINEAGE_PATH} with ${failures.join(', ')} recorded — re-run with --strict to fail on them.`,
   )
 }

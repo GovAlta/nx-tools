@@ -117,6 +117,18 @@ for (const yamlError of violations.yamlErrors ?? []) {
   });
 }
 
+for (const unparseable of violations.unparseableRefs ?? []) {
+  signals.push({
+    key: `unparseable:${unparseable.ref}`,
+    stage: 'unknown',
+    reason:
+      `Unparseable project-docs reference "${unparseable.ref}" in ${unparseable.foundIn} — an id ` +
+      `may contain only letters, digits, hyphens, and underscores. If the offending characters ` +
+      `are in that file's own name, rename the file; otherwise fix the reference. Nothing can ` +
+      `resolve it until then, so do this before anything else.`,
+  });
+}
+
 for (const broken of violations.brokenRefs ?? []) {
   signals.push({
     key: `broken:${broken.ref}`,
@@ -252,7 +264,16 @@ for (const path of mdFilesIn('project-docs/requirements')) {
 // are eligible -- preventing the loop from drifting to unrelated work across iterations.
 const branchName = process.env.GITHUB_REF_NAME ?? '';
 const isFixBranch = branchName.startsWith('fix/');
-const RESOLUTION_PREFIXES = ['broken:', 'open:'];
+// 'unparseable:' and 'yaml-error:' are resolution signals for the same reason 'broken:' is —
+// each names one specific thing to repair, not new work to start. Both only became reachable
+// once project-docs-lineage stopped aborting its write on them; without them here, a fix/**
+// branch would see the signal and then be told it isn't eligible to act on it.
+const RESOLUTION_PREFIXES = [
+  'broken:',
+  'unparseable:',
+  'yaml-error:',
+  'open:',
+];
 
 // '*' is an explicit opt-in to open scope — no artifact filtering at all, not the same as
 // "first commit touched no project-docs files." When set, scopedKeys stays empty (so
@@ -317,7 +338,7 @@ if (eligibleSignals.length === 0 && signals.length > 0) {
     // Both filters active — name the intersection explicitly.
     const inBoth = inScope.filter((s) => inBranchType.includes(s));
     noEligibleNote =
-      `fix/** branch (broken:/open: only) AND artifact scope [${scopedPaths.join(', ')}]: ` +
+      `fix/** branch (${RESOLUTION_PREFIXES.join('/')} only) AND artifact scope [${scopedPaths.join(', ')}]: ` +
       `${inScope.length} signal(s) in scope, ${inBranchType.length} resolution-type total, ` +
       `${inBoth.length} satisfy both — no eligible signals on this branch.`;
   } else if (scopedKeys.size > 0) {
@@ -325,7 +346,7 @@ if (eligibleSignals.length === 0 && signals.length > 0) {
       `artifact scope [${scopedPaths.join(', ')}] matches ${inScope.length} of ${signals.length} signal(s) — nothing in scope yet.`;
   } else if (isFixBranch) {
     noEligibleNote =
-      `fix/** branch restricts to broken:/open: signals only — ${inBranchType.length} such signal(s) currently exist.`;
+      `fix/** branch restricts to ${RESOLUTION_PREFIXES.join('/')} signals only — ${inBranchType.length} such signal(s) currently exist.`;
   }
 }
 
