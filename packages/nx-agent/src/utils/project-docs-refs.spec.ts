@@ -13,6 +13,7 @@ import {
   parseAncestorRef,
   refKey,
   resolveRefFromPath,
+  UnparseableRef,
 } from './project-docs-refs';
 
 describe('parseAncestorRef', () => {
@@ -855,6 +856,134 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
     );
 
     expect(violations.resolutionStatus).toEqual({ open: [], resolved: [] });
+  });
+});
+
+describe('unparseableRefs', () => {
+  let host: Tree;
+  let unparseableRefs: UnparseableRef[];
+
+  beforeEach(() => {
+    host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    unparseableRefs = [];
+  });
+
+  // The grammar admits letters, digits, hyphens and underscores. A version
+  // number in a title is the ordinary way a period reaches an id, and dropping
+  // the reference silently made the target read as unreferenced — an orphan —
+  // rather than as something nobody can resolve.
+  it('records a reference the grammar cannot read, rather than dropping it', () => {
+    host.write(
+      'project-docs/open-questions/upgrade-otel.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'apps/test/src/telemetry.ts',
+      '// project-docs-ancestors: open-questions:otel-1.23.0\nexport {};',
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+    buildIndex(host, registry, unparseableRefs);
+
+    expect(unparseableRefs).toEqual([
+      { ref: 'open-questions:otel-1.23.0', foundIn: 'apps/test/src/telemetry.ts' },
+    ]);
+  });
+
+  it('records an unparseable reference written in frontmatter, not just a code comment', () => {
+    host.write(
+      'project-docs/domain-models/m.md',
+      [
+        '---',
+        'name: M',
+        'project-docs-ancestors: [requirements:v1.2-scope]',
+        '---',
+      ].join('\n'),
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+    buildIndex(host, registry, unparseableRefs);
+
+    expect(unparseableRefs).toEqual([
+      { ref: 'requirements:v1.2-scope', foundIn: 'project-docs/domain-models/m.md' },
+    ]);
+  });
+
+  // The other direction: the offending characters are in the artifact's own
+  // filename, so its key can't be parsed back. It stays registered — hiding it
+  // is the failure being fixed — but resolutionStatus silently skipped it, so a
+  // tracked question stopped being reported either open or resolved.
+  it("records an artifact whose own path-derived key cannot be parsed, and still registers it", () => {
+    host.write(
+      'project-docs/open-questions/otel-1.23.0.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+
+    expect(registry.has('open-questions:otel-1.23.0')).toBe(true);
+    expect(unparseableRefs).toEqual([
+      {
+        ref: 'open-questions:otel-1.23.0',
+        foundIn: 'project-docs/open-questions/otel-1.23.0.md',
+      },
+    ]);
+  });
+
+  it('surfaces them through computeViolations', () => {
+    host.write(
+      'apps/test/src/telemetry.ts',
+      '// project-docs-ancestors: open-questions:otel-1.23.0\nexport {};',
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+    const index = buildIndex(host, registry, unparseableRefs);
+    const violations = computeViolations(registry, index, {}, [], unparseableRefs);
+
+    expect(violations.unparseableRefs).toEqual([
+      { ref: 'open-questions:otel-1.23.0', foundIn: 'apps/test/src/telemetry.ts' },
+    ]);
+    // Not a broken reference — it never parsed, so there was never a key to
+    // look up in the registry.
+    expect(violations.brokenRefs).toEqual([]);
+  });
+
+  // extractCommentAncestorRefs matches the bare token anywhere in a source
+  // file, so generator code that writes this frontmatter matches too. Reporting
+  // those would have added 35 findings in this repo alone and buried every real
+  // one.
+  it('ignores a code-shaped match that was never meant to be a reference', () => {
+    host.write(
+      'packages/p/src/generators/thing/thing.ts',
+      [
+        "const content = [",
+        "  `project-docs-ancestors: [${projectDocsAncestors.join(', ')}]`,",
+        "].join('\\n');",
+      ].join('\n'),
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+    buildIndex(host, registry, unparseableRefs);
+
+    expect(unparseableRefs).toEqual([]);
+  });
+
+  it('stays empty for a graph whose every reference and filename parses', () => {
+    host.write(
+      'project-docs/domain-terms/collision-report.md',
+      ['---', 'term: Collision Report', '---'].join('\n'),
+    );
+    host.write(
+      'apps/test/src/routes/collision-reports.ts',
+      '// project-docs-ancestors: domain-terms:collision-report\nexport {};',
+    );
+
+    const registry = buildRegistry(host, [], unparseableRefs);
+    const index = buildIndex(host, registry, unparseableRefs);
+    const violations = computeViolations(registry, index, {}, [], unparseableRefs);
+
+    expect(violations.unparseableRefs).toEqual([]);
+    expect(violations.brokenRefs).toEqual([]);
   });
 });
 

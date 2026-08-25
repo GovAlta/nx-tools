@@ -88,6 +88,45 @@ describe('nx-agent project-docs-lineage generator', () => {
     jest.restoreAllMocks();
   });
 
+  // The reported case end to end: an artifact whose title carried a version
+  // number, referenced from code. Both the reference and the artifact's own key
+  // are unreadable to the grammar, and both used to vanish without a word.
+  it('records an unparseable reference in the graph, and blocks on it with --strict', async () => {
+    host.write(
+      'project-docs/open-questions/otel-1.23.0.md',
+      ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
+    );
+    host.write(
+      'apps/test/src/telemetry.ts',
+      '// project-docs-ancestors: open-questions:otel-1.23.0\nexport {};',
+    );
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await expect(generator(host)).resolves.toBeUndefined();
+
+    const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+    expect(lineage.violations.unparseableRefs).toEqual([
+      {
+        ref: 'open-questions:otel-1.23.0',
+        foundIn: 'project-docs/open-questions/otel-1.23.0.md',
+      },
+      {
+        ref: 'open-questions:otel-1.23.0',
+        foundIn: 'apps/test/src/telemetry.ts',
+      },
+    ]);
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'unparseable reference "open-questions:otel-1.23.0"',
+      ),
+    );
+    logSpy.mockRestore();
+
+    await expect(generator(host, { strict: true })).rejects.toThrow(
+      /2 unparseable/,
+    );
+  });
+
   it('reports an orphan without throwing', async () => {
     host.write(
       'project-docs/domain-terms/unused.md',
