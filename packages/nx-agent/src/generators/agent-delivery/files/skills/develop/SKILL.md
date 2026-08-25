@@ -106,7 +106,7 @@ npx nx build <service>
 npx nx lint <service>
 npx secretlint <changed files>
 npm audit --audit-level=high
-npx nx g @abgov/nx-agent:project-docs-lineage
+npx nx g @abgov/nx-agent:project-docs-lineage --strict
 ```
 
 Test/build/lint/secret-scan/lineage are always blocking, no exception. `<service>-e2e`'s own
@@ -144,7 +144,8 @@ blocking status depends on whether this project has a CI backstop yet — see be
 - **`npm audit`** blocks only on a finding introduced by *this* change. A high-severity finding
   already present in scaffolding before this pass touched anything is drift to flag, not a reason
   to block.
-- **`project-docs-lineage`**'s broken-reference check blocks as always. Its orphan/unscoped report
+- **`project-docs-lineage --strict`** blocks on a broken reference, as always — `--strict` is what
+  makes it fail the command rather than just record the reference in `lineage.json`. Its orphan/unscoped report
   should be empty by the time a resource's code exists and correctly references its api-design.
 
 ### Independent code review — every pass

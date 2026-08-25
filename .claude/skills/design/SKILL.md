@@ -139,10 +139,11 @@ scope here.
 ## Gate — run before ending this skill
 
 ```
-npx nx g @abgov/nx-agent:project-docs-lineage --dry-run
+npx nx g @abgov/nx-agent:project-docs-lineage --dry-run --strict
 ```
 
-- **Broken reference** always blocks.
+- **Broken reference** always blocks — `--strict` is what makes it fail the command rather than
+  just record the reference in the graph.
 - **`unscoped`** (an artifact missing one of its kind's expected ancestors) blocks the
   Design→Develop transition — advisory while still mid-pass.
 

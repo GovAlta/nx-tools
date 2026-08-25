@@ -133,9 +133,11 @@ jobs:
       # scripts/task-identification.mjs's own header for the ready/stalled/summary/prompt
       # contract it must satisfy. ----
       - name: Refresh project-docs lineage graph
-        # `|| true`: a broken reference makes this throw; task identification treats a missing
-        # lineage.json as its own top-priority signal, so let that surface it instead of failing
-        # the job outright.
+        # No `--strict`: a broken reference or YAML parse error is recorded in lineage.json and
+        # picked up as its own top-priority signal below, which only works if the file gets
+        # written. `|| true` covers a genuine failure of the generator itself — task
+        # identification treats a missing lineage.json as its own signal, so let that surface it
+        # instead of failing the job outright.
         run: npx nx g @abgov/nx-agent:project-docs-lineage || true
 
       - name: Resolve artifact scope

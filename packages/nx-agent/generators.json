@@ -61,7 +61,7 @@
     "project-docs-lineage": {
       "factory": "./src/generators/project-docs-lineage/project-docs-lineage",
       "schema": "./src/generators/project-docs-lineage/schema.json",
-      "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references, and writes the resulting graph to .nx-agent/lineage.json. Throws on a broken reference. Run with --dry-run to check without writing."
+      "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references, and writes the resulting graph to .nx-agent/lineage.json, recording broken references and YAML parse errors in the output. Run with --dry-run to check without writing, or --strict to fail on a violation."
     },
     "project-docs-report": {
       "factory": "./src/generators/project-docs-report/project-docs-report",

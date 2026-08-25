@@ -29,13 +29,63 @@ describe('nx-agent project-docs-lineage generator', () => {
     expect(lineage.violations.unscoped).toEqual([]);
   });
 
-  it('throws and lists every broken reference when one is found', async () => {
+  it('throws and lists every broken reference when one is found, with --strict', async () => {
     host.write(
       'apps/test/src/routes/collision-reports.ts',
       '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
     );
 
-    await expect(generator(host)).rejects.toThrow(/1 broken/);
+    await expect(generator(host, { strict: true })).rejects.toThrow(/1 broken/);
+  });
+
+  // The whole point of recording rather than aborting: a consumer reading the
+  // file has to be able to tell "one known gap" from "no data at all".
+  it('still writes the graph, with the broken reference recorded, by default', async () => {
+    host.write(
+      'project-docs/domain-terms/collision-report.md',
+      ['---', 'term: Collision Report', '---'].join('\n'),
+    );
+    host.write(
+      'apps/test/src/routes/collision-reports.ts',
+      [
+        '// project-docs-ancestors: domain-terms:collision-report, domain-terms:typo-id',
+        'export {};',
+      ].join('\n'),
+    );
+
+    await expect(generator(host)).resolves.toBeUndefined();
+
+    const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+    expect(lineage.violations.brokenRefs).toEqual([
+      {
+        ref: 'domain-terms:typo-id',
+        referencedFrom: 'apps/test/src/routes/collision-reports.ts',
+      },
+    ]);
+    // Everything unrelated to the broken reference survives — that's the fact
+    // aborting the write used to destroy.
+    expect(lineage.registry['domain-terms:collision-report']).toBeDefined();
+    expect(lineage.violations.orphans).toEqual([]);
+  });
+
+  it('throws on a YAML parse error with --strict, and records it by default', async () => {
+    host.write(
+      'project-docs/domain-terms/malformed.md',
+      ['---', 'term: Malformed', '  bad: indentation', '---'].join('\n'),
+    );
+    jest.spyOn(console, 'log').mockImplementation();
+
+    await expect(generator(host, { strict: true })).rejects.toThrow(
+      /YAML parse error/,
+    );
+
+    await expect(generator(host)).resolves.toBeUndefined();
+    const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+    expect(lineage.violations.yamlErrors).toHaveLength(1);
+    expect(lineage.violations.yamlErrors[0].path).toBe(
+      'project-docs/domain-terms/malformed.md',
+    );
+    jest.restoreAllMocks();
   });
 
   it('reports an orphan without throwing', async () => {
