@@ -268,9 +268,14 @@ jobs:
           ITERATION: ${{ steps.iterations.outputs.iteration }}
         run: bash scripts/dispatch-next-iteration.sh
 
+      # ---- HARNESS: open completion PR whenever the loop ends without all work done —
+      # regardless of whether this specific iteration committed anything. Condition on
+      # readiness.ready (iteration actually ran) to avoid firing when the iteration was
+      # skipped. SUMMARY falls back to the pre-iteration summary when readiness_after
+      # was never evaluated (no-op final iteration). ----
       - name: Ensure completion PR exists (after this iteration)
-        if: steps.iteration.outputs.made_commits == 'true' && steps.readiness_after.outputs.ready != 'true'
+        if: steps.readiness.outputs.ready == 'true' && env.STOP_REASON != 'max-iterations' && steps.readiness_after.outputs.ready != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SUMMARY: ${{ steps.readiness_after.outputs.summary }}
+          SUMMARY: ${{ steps.readiness_after.outputs.summary || steps.readiness.outputs.summary }}
         run: bash scripts/ensure-completion-pr.sh
