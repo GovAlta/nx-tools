@@ -123,13 +123,15 @@ Given one requirement (by slug or `id`):
 ## Gate — run before ending this skill
 
 ```
-npx nx g @abgov/nx-agent:project-docs-lineage --dry-run
+npx nx g @abgov/nx-agent:project-docs-lineage --dry-run --strict
 node scripts/check-example-mapping.mjs
 ```
 
 These check different things:
 
-- `project-docs-lineage`'s broken-reference check always blocks, regardless of mode. Its
+- `project-docs-lineage`'s broken-reference check always blocks, regardless of mode — `--strict`
+  is what turns a recorded broken reference into a failing command, and composes with
+  `--dry-run` to check without writing anything. Its
   `orphans` report is a graph fact (has Design picked this requirement up yet), not an
   example-mapping check — it stays true even after perfect example-mapping, since nothing
   downstream exists yet.

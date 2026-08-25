@@ -103,7 +103,7 @@ npx nx build nx-agent
 npx nx lint nx-agent
 npx secretlint <changed files>
 npm audit --audit-level=high
-npx nx g @abgov/nx-agent:project-docs-lineage
+npx nx g @abgov/nx-agent:project-docs-lineage --strict
 ```
 For `nx-adsp` and `nx-oc`, their e2e projects (`nx-adsp-e2e`, `nx-oc-e2e`) exist and are blocking
 (neither has an `.openshift/` graduation signal, so the develop skill's permanent-blocking default

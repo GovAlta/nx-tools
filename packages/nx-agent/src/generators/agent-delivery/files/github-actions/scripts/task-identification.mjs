@@ -89,8 +89,9 @@ if (!existsSync(LINEAGE_PATH)) {
         stage: 'unknown',
         reason:
           `${LINEAGE_PATH} doesn't exist — either project-docs-lineage hasn't run yet this job, ` +
-          `or it threw on a broken project-docs-ancestors reference (check the previous workflow ` +
-          `step's log for "[nx-agent] broken reference").`,
+          `or it failed outright. A broken reference or a YAML parse error no longer aborts its ` +
+          `write (both come through as their own signals below), so check the previous workflow ` +
+          `step's log for a genuine error.`,
       },
     ],
   });
