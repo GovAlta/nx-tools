@@ -59,4 +59,78 @@ describe('build assets packaging', () => {
 
     expect(unmatched).toEqual([]);
   });
+
+  // The same boundary one level up. A migration is only reachable if
+  // package.json declares the registry and project.json ships it — and the
+  // migration's own unit tests resolve everything from the source tree, so they
+  // pass either way. Nothing else catches a migration that publishes inert.
+  it('ships the migrations registry declared in package.json', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'),
+    );
+    const registry: string | undefined = pkg['nx-migrations']?.migrations;
+    expect(registry).toBeDefined();
+
+    const registryPath = path.join(projectRoot, registry as string);
+    expect(fs.existsSync(registryPath)).toBe(true);
+
+    const project = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, 'project.json'), 'utf-8'),
+    );
+    const assets: unknown[] = project.targets.build.options.assets ?? [];
+    const rootGlobs = assets
+      .filter(
+        (a): a is { input: string; glob: string } =>
+          typeof a === 'object' &&
+          a !== null &&
+          'input' in a &&
+          path.resolve(repoRoot, (a as { input: string }).input) ===
+            path.resolve(projectRoot),
+      )
+      .map((a) => a.glob);
+
+    const rel = path.relative(projectRoot, registryPath);
+    expect(rootGlobs.some((glob) => minimatch(rel, glob, { dot: true }))).toBe(
+      true,
+    );
+  });
+
+  // Every file a migration names must resolve, or `nx migrate` fails at run
+  // time in the consumer's workspace rather than here. `prompt` is the markdown
+  // handed to the paired AI step; Nx resolves it relative to migrations.json
+  // (not through package exports), and requires at least one of implementation,
+  // factory, or prompt per entry.
+  it('points every migration at files that exist', () => {
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, 'migrations.json'), 'utf-8'),
+    );
+    const entries: [
+      string,
+      { implementation?: string; factory?: string; prompt?: string },
+    ][] = Object.entries(registry.generators ?? {});
+    expect(entries.length).toBeGreaterThan(0);
+
+    const problems: string[] = [];
+    for (const [name, entry] of entries) {
+      if (!entry.implementation && !entry.factory && !entry.prompt) {
+        problems.push(`${name}: needs implementation, factory, or prompt`);
+      }
+      if (
+        entry.implementation &&
+        !fs.existsSync(path.join(projectRoot, `${entry.implementation}.ts`))
+      ) {
+        problems.push(`${name}: implementation not found`);
+      }
+      // Referenced verbatim, extension included — unlike implementation, which
+      // Nx resolves without one.
+      if (
+        entry.prompt &&
+        !fs.existsSync(path.join(projectRoot, entry.prompt))
+      ) {
+        problems.push(`${name}: prompt not found`);
+      }
+    }
+
+    expect(problems).toEqual([]);
+  });
 });

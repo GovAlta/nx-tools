@@ -141,13 +141,47 @@ exists and is blocking.
 
 ### Migrations
 
-`nx-oc` has an `nx migrate` migrations registry at `packages/nx-oc/migrations.json`
-(wired via the `nx-migrations` field in its `package.json`, and packaged by an asset glob
-in `project.json`). Migrations live under `packages/nx-oc/src/migrations/[name]/`. A
+`nx-oc` and `nx-adsp` each have an `nx migrate` migrations registry at
+`packages/[plugin]/migrations.json` (wired via the `nx-migrations` field in the package's
+`package.json`, and packaged by an asset glob in its `project.json` — all three are
+required, and a missing asset glob produces a migration that unit-tests green and is
+inert once published). Migrations live under `packages/[plugin]/src/migrations/[name]/`. A
 migration's `version` must be on the branch's release line (e.g. `13.0.0-beta.3` on
-`beta`) so `nx migrate` runs it for the right upgrade range. Migrations retrofit generated
-config in consuming workspaces — e.g. `convert-sandbox-target-to-executor` rewrites older
-`nx:run-commands` sandbox targets to the `@abgov/nx-oc:sandbox` executor.
+`beta`) so `nx migrate` runs it for the right upgrade range — check the published
+`latest`/`beta` dist-tag before pinning it, and err high rather than low: a version below
+what a workspace already has is skipped silently and forever.
+
+The two registries retrofit different things, with different risk:
+
+- **Generated config** (`nx-oc`) — e.g. `convert-sandbox-target-to-executor` rewrites older
+  `nx:run-commands` sandbox targets to the `@abgov/nx-oc:sandbox` executor. `project.json`
+  is structured data, so a migration can reason about it precisely.
+- **Generated app code** (`nx-adsp`) — e.g. `add-migrate-advisory-lock` retrofits the
+  advisory lock from `aa16d7b` into an already-generated `src/migrate.ts`. This is source
+  a team may have edited, and `express-service` is a one-shot scaffolder that throws on
+  re-run, so a migration is the *only* route to those projects. Identify the file
+  positively (compare against a verbatim fixture of what the generator emitted, captured
+  post-`formatFiles`) and warn-and-skip anything that doesn't match, rather than
+  pattern-editing a file that might not be the one you think it is. Hold the fixtures as
+  their own files, never sourced from the live template: a released migration must keep
+  applying the same change, so reading the template would let a later edit to it silently
+  change what an old migration does.
+
+A migration entry may also carry a **`prompt`**: a markdown file, path relative to
+`migrations.json` and required to resolve within its directory, holding instructions for an AI
+step. Nx requires at least one of `implementation`, `factory`, or `prompt` per entry, and the
+capability is not restricted to first-party `@nx/*` packages — it works for any package
+declaring `nx-migrations`. On `nx migrate` the file is extracted into
+`tools/ai-migrations/<package>/<version>/`, and `nx migrate --agentic[=claude-code|codex|opencode]`
+runs an agent against it. Prefer the **hybrid** shape (`implementation` *and* `prompt`) over
+prompt-only: the codemod handles the mechanical majority with no tokens spent, the prompt handles
+only what needs judgment, and an older Nx ignores the unknown key rather than failing validation.
+
+A migration can `return { nextSteps, agentContext }`. `nextSteps` is surfaced to the user in the
+run summary; `agentContext` is handed to the paired prompt phase as advisory hints. Use these
+rather than relying on Nx's console-output capture — a file the codemod deliberately skipped
+should name itself in `agentContext` so the prompt has a work list instead of having to
+re-discover one. `add-migrate-advisory-lock` is the worked example of both halves.
 
 ---
 
