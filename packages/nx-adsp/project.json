@@ -52,6 +52,11 @@
             "input": "./packages/nx-adsp",
             "glob": "executors.json",
             "output": "."
+          },
+          {
+            "input": "./packages/nx-adsp",
+            "glob": "migrations.json",
+            "output": "."
           }
         ]
       }

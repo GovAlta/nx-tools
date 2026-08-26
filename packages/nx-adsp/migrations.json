@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "generators": {
+    "add-migrate-advisory-lock": {
+      "version": "13.24.0",
+      "description": "Wrap express-service's generated src/migrate.ts drizzle migrate() call in a Postgres advisory lock, so concurrent init containers serialize instead of racing.",
+      "implementation": "./src/migrations/add-migrate-advisory-lock/add-migrate-advisory-lock",
+      "prompt": "./src/migrations/add-migrate-advisory-lock/add-migrate-advisory-lock.md"
+    }
+  }
+}
