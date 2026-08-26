@@ -97,6 +97,7 @@ New generators must be registered in the package's `generators.json`.
 6. Write unit tests in `[name].spec.ts` using `createTreeWithEmptyWorkspace({ layout: 'apps-libs' })`.
 
 **Gate for this repo**: `nx-agent` has no e2e project — the gate is unit tests + build + lint only:
+
 ```
 npx nx test nx-agent
 npx nx build nx-agent
@@ -105,6 +106,7 @@ npx secretlint <changed files>
 npm audit --audit-level=high
 npx nx g @abgov/nx-agent:project-docs-lineage --strict
 ```
+
 For `nx-adsp` and `nx-oc`, their e2e projects (`nx-adsp-e2e`, `nx-oc-e2e`) exist and are blocking
 (neither has an `.openshift/` graduation signal, so the develop skill's permanent-blocking default
 applies).
@@ -159,7 +161,7 @@ The two registries retrofit different things, with different risk:
 - **Generated app code** (`nx-adsp`) — e.g. `add-migrate-advisory-lock` retrofits the
   advisory lock from `aa16d7b` into an already-generated `src/migrate.ts`. This is source
   a team may have edited, and `express-service` is a one-shot scaffolder that throws on
-  re-run, so a migration is the *only* route to those projects. Identify the file
+  re-run, so a migration is the _only_ route to those projects. Identify the file
   positively (compare against a verbatim fixture of what the generator emitted, captured
   post-`formatFiles`) and warn-and-skip anything that doesn't match, rather than
   pattern-editing a file that might not be the one you think it is. Hold the fixtures as
@@ -173,7 +175,7 @@ step. Nx requires at least one of `implementation`, `factory`, or `prompt` per e
 capability is not restricted to first-party `@nx/*` packages — it works for any package
 declaring `nx-migrations`. On `nx migrate` the file is extracted into
 `tools/ai-migrations/<package>/<version>/`, and `nx migrate --agentic[=claude-code|codex|opencode]`
-runs an agent against it. Prefer the **hybrid** shape (`implementation` *and* `prompt`) over
+runs an agent against it. Prefer the **hybrid** shape (`implementation` _and_ `prompt`) over
 prompt-only: the codemod handles the mechanical majority with no tokens spent, the prompt handles
 only what needs judgment, and an older Nx ignores the unknown key rather than failing validation.
 
@@ -253,40 +255,47 @@ unless explicitly directed.
 
 ## Branching and Release
 
-- **`main`** — the current stable line (Nx 22 / `@abgov/*@12`).
-- **`beta`** — the **next major line**, currently Nx 23 / `@abgov/*@13`, published on
-  the `@beta` dist-tag (e.g. `13.0.0-beta.4`). This is a standing major-version track,
-  not just an occasional validation channel: features that require Nx 23 (the sandbox
-  executor, DB auto-detection, `--deployBackend`, etc.) live here and graduate to `main`
-  when the major line does. A change targets `beta` when it depends on the Nx 23 line or
-  needs validation by importing the published package from a consuming project; changes
-  fully verifiable within this repo against the stable line (docs, refactors, generator
-  logic covered by tests) target `main`.
+- **`main`** — the stable line, currently Nx 23 / `@abgov/*@13`, published on the
+  `@latest` dist-tag. This is where almost everything goes.
+- **`beta`** — the prerelease channel, published on the `@beta` dist-tag. It is on the
+  **same major** as `main`, not a future one, and it has trailed `main` on every package
+  since the 13 line was promoted — so don't assume it's ahead; check with
+  `npm view @abgov/<pkg> dist-tags`. Its only purpose is a change that can't be verified
+  inside this repo and needs validating by importing the published package from a
+  consuming workspace. Everything else — docs, refactors, generator logic covered by
+  tests — targets `main`.
 
-Version-pinned specs written for the `beta` prerelease (peer ranges like `^13.0.0-0`,
+Both branches carry identical peer ranges (`@nx/* ^23.0.0`, and `@abgov/nx-oc
+^13.0.0-0`, whose `-0` accepts the `13.x.y-beta.z` prereleases), so a change does not
+need editing to move between them.
+
+Version-pinned specs written against a prerelease (peer ranges like `^13.0.0-0`,
 migration `version`s like `13.0.0-beta.3`) are deliberately valid for both the prerelease
-and the eventual stable release, so they carry to `main` on promotion without edits — and
+and the eventual stable release, so they carry across on promotion without edits — and
 promotion merges must stay pure (never fold a content edit into a merge commit).
 
 ### Version convention
 
-**@abgov major version = Nx major version − 10**
+**@abgov major version = Nx major version − 10**, for `nx-adsp`, `nx-oc` and
+`nx-release`:
 
-| Nx version    | @abgov packages          |
-| ------------- | ------------------------ |
-| @nrwl/cli@11  | @abgov/nx-oc@1           |
-| @nrwl/cli@12  | @abgov/nx-oc@2           |
-| @nrwl/cli@15  | @abgov/nx-oc@5           |
-| @nx/devkit@22 | @abgov/nx-oc@12 (`main`) |
-| @nx/devkit@23 | @abgov/nx-oc@13 (`beta`) |
+| Nx version    | @abgov packages                  |
+| ------------- | -------------------------------- |
+| @nrwl/cli@11  | @abgov/nx-oc@1                   |
+| @nrwl/cli@12  | @abgov/nx-oc@2                   |
+| @nrwl/cli@15  | @abgov/nx-oc@5                   |
+| @nx/devkit@22 | @abgov/nx-oc@12                  |
+| @nx/devkit@23 | @abgov/nx-oc@13 (`main`, `beta`) |
 
-So the `beta` branch's package peers are `@nx/* ^23`, and its sibling peer is
-`@abgov/nx-oc@^13.0.0-0` (the `-0` accepts the `13.0.0-beta.x` prereleases). When
-bumping a version-pinned spec on `beta` (peer range, migration `version`), keep it on
-the 13 line, not 12.
+**`nx-agent` is the exception**: it versions on its own line (currently `1.x`) rather
+than tracking the Nx major, while still peering `@nx/devkit ^23.0.0` like the others. Do
+not "correct" it to a 13.x version.
 
 The `package.json` `version` field in this repo is a placeholder `0.0.0`.
-Semantic-release sets the real published version at CI publish time.
+Semantic-release sets the real published version at CI publish time — so a spec that has
+to name a concrete future version (a migration's `version`, most often) is a prediction.
+Check the published dist-tag with `npm view @abgov/<pkg> dist-tags` before pinning one;
+see **Migrations** above for why guessing low is the dangerous direction.
 
 ### Release process
 
@@ -633,6 +642,7 @@ verifying anything real.
 <!-- /nx-agent:managed:agent-guidance -->
 
 <!-- nx-agent:managed:agent-delivery -->
+
 ## DDDD workflow
 
 This workspace uses the Discover/Design/Develop/Deploy (DDDD) workflow for tactical,
@@ -677,10 +687,10 @@ is left or the `MAX_ITERATIONS` cap is hit.
 
 ### Branch conventions
 
-| Branch prefix | Signal types eligible | Typical use |
-|---|---|---|
-| `feature/**` | All (discover → design → develop → deploy) | Advancing a new capability from a `features:` artifact through to Deploy |
-| `fix/**` | Resolution only (`broken:`, `unparseable:`, `yaml-error:`, `open:`) | Resolving a specific blocker, open question, broken/unparseable reference, or malformed frontmatter |
+| Branch prefix | Signal types eligible                                               | Typical use                                                                                         |
+| ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `feature/**`  | All (discover → design → develop → deploy)                          | Advancing a new capability from a `features:` artifact through to Deploy                            |
+| `fix/**`      | Resolution only (`broken:`, `unparseable:`, `yaml-error:`, `open:`) | Resolving a specific blocker, open question, broken/unparseable reference, or malformed frontmatter |
 
 Both branch types derive artifact scope from the first commit (see below). The `fix/**`
 restriction is enforced independently of scope — a scoped fix branch only sees resolution
@@ -691,11 +701,11 @@ signals within its scoped artifacts; a `feature/**` branch sees all signal types
 Controls which artifacts' signals are eligible each iteration. Set via the `artifact_scope`
 input on the GitHub Actions manual dispatch UI, or left blank to auto-derive on first push.
 
-| Value | Behaviour |
-|---|---|
-| Blank | Scope derived from the project-docs files the branch's first commit touched. Forwarded unchanged to all subsequent iterations — the first commit's scope is stable for the life of the branch. |
+| Value                                                                      | Behaviour                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blank                                                                      | Scope derived from the project-docs files the branch's first commit touched. Forwarded unchanged to all subsequent iterations — the first commit's scope is stable for the life of the branch.                                               |
 | `project-docs/features/my-feature.md` (or a comma-separated list of paths) | Explicit scope: only signals whose artifact is, or descends from, the named artifact(s). Use this on a manual trigger when you want to re-run the loop focused on a specific artifact without relying on the first commit having touched it. |
-| `*` | Open scope. No artifact filtering: the agent picks the globally highest-priority signal. Use for a broad sweep of the whole backlog. |
+| `*`                                                                        | Open scope. No artifact filtering: the agent picks the globally highest-priority signal. Use for a broad sweep of the whole backlog.                                                                                                         |
 
 When task-identification finds no eligible signals after filtering it emits a diagnostic naming
 which filter(s) fired and how many signals each matched, so a human or agent debugging a stalled
