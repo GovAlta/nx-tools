@@ -12,7 +12,7 @@ const STEPS = [
 
 const route = useRoute();
 const router = useRouter();
-const { apiFetch } = useApi();
+const { get, save } = useApi();
 
 const idParam = computed(() => String(route.params.id ?? ''));
 const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
@@ -50,9 +50,7 @@ async function load() {
   loading.value = true;
   loadError.value = null;
   try {
-    const res = await apiFetch(`/api/<%= resource %>/${idParam.value}`);
-    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-    const data = await res.json();
+    const data = await get('<%= resource %>', idParam.value);
     completedSteps.value = Array.isArray(data.completedSteps) ? data.completedSteps : [];
 <% stepFields.forEach(function (field) { -%>
     if (data['<%- field.key %>'] !== undefined) form.<%- field.key %> = data['<%- field.key %>'];
@@ -98,17 +96,14 @@ async function onSaveAndContinue() {
       ...form,
       completedSteps: [...new Set([...completedSteps.value, '<%- stepKey %>'])],
     };
-    const res = await apiFetch(
-      isNew.value ? '/api/<%= resource %>' : `/api/<%= resource %>/${idParam.value}`,
-      {
-        method: isNew.value ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      },
+    // A create has to answer with the new record's id for the wizard to advance
+    // to the next step, so this one call site states the shape it needs.
+    const saved = await save<{ id: string | number }>(
+      '<%= resource %>',
+      isNew.value ? null : idParam.value,
+      body,
     );
-    if (!res.ok) throw new Error(`Failed to save (${res.status})`);
-    const saved = await res.json();
-    const nextId = isNew.value ? saved.id : idParam.value;
+    const nextId = isNew.value ? String(saved.id) : idParam.value;
     router.push(`<%= route %>/${nextId}/<%- nextStepKey %>`);
   } catch (e) {
     saveError.value = e instanceof Error ? e.message : 'Failed to save.';

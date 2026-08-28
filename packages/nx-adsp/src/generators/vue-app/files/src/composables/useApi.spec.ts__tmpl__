@@ -1,0 +1,71 @@
+import { describe, it, expect } from 'vitest'
+import { apiConvention } from './useApi'
+
+// The API convention adapter is this app's glue layer to its backend, so it is
+// the piece most likely to be edited by hand. These tests pin the default
+// mapping; if you change the adapter to match a different API, change them with
+// it -- a failure here means a generated view's assumptions moved.
+describe('apiConvention', () => {
+  it('builds collection, record, and action paths', () => {
+    expect(apiConvention.path('widgets')).toBe('/api/widgets')
+    expect(apiConvention.path('widgets', 7)).toBe('/api/widgets/7')
+    expect(apiConvention.path('widgets', 7, 'submit')).toBe('/api/widgets/7/submit')
+  })
+
+  it('maps a domain page/pageSize onto this API page/limit parameters', () => {
+    const params = apiConvention.query({ page: 3, pageSize: 20 })
+    expect(params.get('page')).toBe('3')
+    expect(params.get('limit')).toBe('20')
+  })
+
+  it('omits paging entirely when the view did not ask for a page', () => {
+    expect(apiConvention.query({}).toString()).toBe('')
+  })
+
+  it('passes search, sort, and extra filters through, dropping empty values', () => {
+    const params = apiConvention.query({
+      search: 'abc',
+      sortBy: 'name',
+      filters: { status: 'active', region: undefined, owner: '' },
+    })
+    expect(params.get('search')).toBe('abc')
+    expect(params.get('sortBy')).toBe('name')
+    expect(params.get('sortDir')).toBe('asc') // defaulted
+    expect(params.get('status')).toBe('active')
+    expect(params.has('region')).toBe(false)
+    expect(params.has('owner')).toBe(false)
+  })
+
+  it('reads a bare array response', () => {
+    expect(apiConvention.result([{ id: 1 }, { id: 2 }])).toEqual({
+      rows: [{ id: 1 }, { id: 2 }],
+      total: 2,
+    })
+  })
+
+  it('reads a { results, total } envelope, and falls back to row count', () => {
+    expect(apiConvention.result({ results: [{ id: 1 }], total: 57 })).toEqual({
+      rows: [{ id: 1 }],
+      total: 57,
+    })
+    expect(apiConvention.result({ results: [{ id: 1 }] })).toEqual({
+      rows: [{ id: 1 }],
+      total: 1,
+    })
+  })
+
+  it('yields no rows rather than throwing on an unrecognised envelope', () => {
+    // A silently empty table is the failure this adapter exists to make fixable
+    // in one place: if your API nests rows under another key, map it above.
+    expect(apiConvention.result({ entries: [{ id: 1 }], total: 9 })).toEqual({
+      rows: [],
+      total: 9,
+    })
+    expect(apiConvention.result(null)).toEqual({ rows: [], total: 0 })
+  })
+
+  it('creates with POST and updates with PUT', () => {
+    expect(apiConvention.writeMethod(true)).toBe('POST')
+    expect(apiConvention.writeMethod(false)).toBe('PUT')
+  })
+})
