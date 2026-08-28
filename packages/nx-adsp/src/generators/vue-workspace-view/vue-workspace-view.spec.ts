@@ -108,18 +108,57 @@ describe('Vue Workspace View Generator', () => {
     expect(view).not.toContain('apiFetch');
     expect(view).not.toContain('URLSearchParams');
     expect(view).not.toContain('data.results');
+
+    // Out-of-order responses: load() fires from page change, sort and the
+    // debounced search, so only the most recent call may apply its result.
+    expect(view).toContain('let loadSequence = 0');
+    expect(view).toContain('const sequence = ++loadSequence');
+    expect(view).toContain('if (sequence !== loadSequence) return;');
+    expect(view).toContain('if (sequence === loadSequence) loading.value = false;');
+
+    // The debounce timer must not outlive the component.
+    expect(view).toContain('onUnmounted(');
+    expect(view).toContain('clearTimeout(searchDebounce)');
+
+    // Dates come from the shared formatter, not a per-view copy.
+    expect(view).toContain('formatDateTime');
+    expect(view).not.toContain('function formatDate');
+    expect(view).not.toContain('toLocaleString');
+    expect(view).not.toContain('Intl.');
+    expect(view).not.toContain('function formatCurrency');
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(row['status'] ?? '—')\" />",
     );
-    expect(view).toContain("formatDate(row['lastSaved'])");
+    expect(view).toContain("formatDateTime(row['lastSaved'])");
     expect(view).toContain("formatCurrency(row['requestTotal'])");
     // Uses the shared table shell, not hand-rolled loading/pagination markup.
-    expect(view).toContain("import { WorkspaceTable } from '@proj/vue-components';");
+    // Read the import's contents rather than an exact line: formatFiles wraps a
+    // long import list and adds a trailing comma.
+    const goaImport =
+      view
+        .replace(/\s+/g, ' ')
+        .match(/import \{[^}]*\} from '@proj\/vue-components';/)?.[0] ?? '';
+    for (const name of ['WorkspaceTable', 'formatCurrency', 'formatDateTime']) {
+      expect(goaImport).toContain(name);
+    }
     expect(view).toContain('<WorkspaceTable');
     // Filterable by default: a debounced search input.
     expect(view).toContain('type="search"');
     expect(view).toContain('searchDebounce');
   }, 30000);
+
+  it('omits onUnmounted along with the debounce when --filterable=false', async () => {
+    // onUnmounted exists only to clear the search debounce, so importing it
+    // unconditionally would be an unused import and fail the generated lint.
+    await generator(host, { ...baseOptions, filterable: false });
+    const view = host
+      .read('apps/test/src/views/ApplicationsListView.vue')
+      .toString();
+    expect(view).not.toContain('onUnmounted');
+    expect(view).not.toContain('searchDebounce');
+    // The out-of-order guard is not search-specific -- page and sort still race.
+    expect(view).toContain('let loadSequence = 0');
+  });
 
   it('omits the search input and its wiring when --filterable=false', async () => {
     await generator(host, { ...baseOptions, filterable: false });

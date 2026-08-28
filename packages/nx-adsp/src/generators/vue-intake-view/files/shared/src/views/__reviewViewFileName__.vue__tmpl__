@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { GoabCheckbox } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
@@ -31,7 +31,10 @@ async function load() {
   }
 }
 
-onMounted(load);
+// Vue Router reuses this component when only the id param changes, so onMounted
+// would never fire again and the previous record would stay on screen. An
+// immediate watch covers first load and every later param change in one place.
+watch(idParam, load, { immediate: true });
 
 function editStep(key: string) {
   router.push(`<%= route %>/${idParam.value}/${key}`);

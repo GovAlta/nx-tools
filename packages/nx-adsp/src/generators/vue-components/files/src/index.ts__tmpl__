@@ -32,6 +32,7 @@ export { default as Stepper } from './lib/patterns/Stepper.vue';
 export { default as StepErrorSummary } from './lib/patterns/StepErrorSummary.vue';
 
 export {
+  formatCurrency,
   formatDate,
   formatDateTime,
   formatNumber,

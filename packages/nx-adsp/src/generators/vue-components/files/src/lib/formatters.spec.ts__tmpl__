@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatCurrency,
   formatDate,
   formatDateTime,
   formatNumber,
@@ -19,13 +20,19 @@ describe('formatters', () => {
     expect(formatDate(new Date(iso).getTime())).toBe(expected);
   });
 
-  it.each([null, undefined, '', 'not-a-date'])(
+  // `unknown` input: views read fields off a record of unknown shape, so a
+  // non-date value must degrade rather than throw or need a cast.
+  it.each([null, undefined, '', 'not-a-date', {}, [], true, NaN])(
     'returns the em dash for %p rather than throwing',
     (value) => {
-      expect(formatDate(value as string | null | undefined)).toBe('—');
-      expect(formatDateTime(value as string | null | undefined)).toBe('—');
+      expect(formatDate(value)).toBe('—');
+      expect(formatDateTime(value)).toBe('—');
     },
   );
+
+  it('returns the em dash for an Invalid Date instance', () => {
+    expect(formatDate(new Date('nope'))).toBe('—');
+  });
 
   it('separates thousands', () => {
     expect(formatNumber(12345)).toBe('12,345');
@@ -46,6 +53,22 @@ describe('formatters', () => {
     // 0.95 is nine-tenths of one percent here, NOT 95% -- the scaling contract
     // is the whole reason this helper exists rather than a bare toFixed call.
     expect(formatPercent(0.95)).toBe('1%');
+  });
+
+  it('formats CAD currency', () => {
+    expect(formatCurrency(1234.5)).toContain('1,234.50');
+    expect(formatCurrency('1234.5')).toBe(formatCurrency(1234.5));
+  });
+
+  it.each([null, undefined, ''])(
+    'returns the em dash for an absent currency value (%p)',
+    (value) => {
+      expect(formatCurrency(value)).toBe('—');
+    },
+  );
+
+  it('echoes an unparseable currency value rather than hiding it behind a dash', () => {
+    expect(formatCurrency('n/a')).toBe('n/a');
   });
 
   it('honours the fractionDigits argument', () => {

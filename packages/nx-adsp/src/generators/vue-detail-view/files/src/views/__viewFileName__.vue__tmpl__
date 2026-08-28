@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { RecordDetailShell } from '<%= goaImportPath %>';
+import { RecordDetailShell, formatCurrency, formatDateTime } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 // The fetched record's shape isn't known to this generator -- read fields
@@ -26,27 +26,16 @@ async function load() {
   }
 }
 
-onMounted(load);
+// Vue Router reuses this component when only the id param changes, so onMounted
+// would never fire again and the previous record would stay on screen. An
+// immediate watch covers first load and every later param change in one place.
+watch(() => route.params.id, load, { immediate: true });
 
 function goBack() {
   router.back();
 }
 
-function formatDate(value: unknown): string {
-  if (!value) return '—';
-  try {
-    return new Date(String(value)).toLocaleString('en-CA');
-  } catch {
-    return String(value);
-  }
-}
 
-function formatCurrency(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '—';
-  const n = Number(value);
-  if (Number.isNaN(n)) return String(value);
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n);
-}
 </script>
 
 <template>
@@ -65,7 +54,7 @@ function formatCurrency(value: unknown): string {
 <% if (field.type === 'badge') { -%>
         <goa-badge type="information" :content="String(record['<%= field.key %>'] ?? '—')" />
 <% } else if (field.type === 'date') { -%>
-        {{ formatDate(record['<%= field.key %>']) }}
+        {{ formatDateTime(record['<%= field.key %>']) }}
 <% } else if (field.type === 'currency') { -%>
         {{ formatCurrency(record['<%= field.key %>']) }}
 <% } else { -%>
