@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/schema",
   "generators": {
     "rename-service-descriptions-to-product-briefs": {
-      "version": "12.2.0",
+      "version": "1.27.4",
       "description": "Rename project-docs/service-descriptions/ to product-briefs/, rewrite service-descriptions: refs, and update artifact-schema.json.",
       "implementation": "./src/migrations/rename-service-descriptions-to-product-briefs/rename-service-descriptions-to-product-briefs"
     }
