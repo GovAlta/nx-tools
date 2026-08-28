@@ -1,5 +1,83 @@
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js'
 
+// ---------------------------------------------------------------------------
+// API convention adapter — THE GLUE LAYER. Edit this block, not the views.
+//
+// Generated views speak in domain terms only: page, pageSize, search, sort,
+// filters, rows, total. Every wire-level detail — the base path, what the paging
+// parameters are called, which key the rows arrive under, which verb updates a
+// record — lives here and nowhere else. A backend that pages by limit/offset,
+// wraps rows under `entries`, or updates with PATCH is a change to this block
+// alone, with no view touched and nothing to redo when a view is regenerated.
+//
+// This is deliberately a small amount of indirection: the alternative, which
+// this replaced, inlined `page`/`limit` and `data.results` into every generated
+// view, so a backend using different names silently produced an empty table
+// under a pagination control reporting the right total.
+// ---------------------------------------------------------------------------
+
+export interface ListQuery {
+  page?: number
+  pageSize?: number
+  search?: string
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+  /** Extra key/value filters. Empty values are dropped. */
+  filters?: Record<string, string | undefined>
+}
+
+export interface ListResult<T = Record<string, unknown>> {
+  rows: T[]
+  total: number
+}
+
+export const apiConvention = {
+  /** Path to a collection, one record, or a named action on a record. */
+  path(resource: string, id?: string | number, action?: string): string {
+    const base = `/api/${resource}`
+    if (id === undefined || id === null) return base
+    return action ? `${base}/${id}/${action}` : `${base}/${id}`
+  },
+
+  /** Domain list query -> this API's query string. */
+  query(query: ListQuery): URLSearchParams {
+    const params = new URLSearchParams()
+    if (query.page !== undefined && query.pageSize !== undefined) {
+      params.set('page', String(query.page))
+      params.set('limit', String(query.pageSize))
+      // For a limit/offset API, replace the two lines above with:
+      //   params.set('limit', String(query.pageSize))
+      //   params.set('offset', String((query.page - 1) * query.pageSize))
+    }
+    if (query.search) params.set('search', query.search)
+    if (query.sortBy) {
+      params.set('sortBy', query.sortBy)
+      params.set('sortDir', query.sortDir ?? 'asc')
+    }
+    for (const [key, value] of Object.entries(query.filters ?? {})) {
+      if (value) params.set(key, value)
+    }
+    return params
+  },
+
+  /**
+   * This API's list response -> { rows, total }. Handles a bare array and a
+   * `{ results, total }` envelope; if yours nests rows under a different key
+   * (e.g. `entries`), read it here.
+   */
+  result(data: unknown): ListResult {
+    if (Array.isArray(data)) return { rows: data, total: data.length }
+    const envelope = (data ?? {}) as Record<string, unknown>
+    const rows = (envelope.results ?? []) as Record<string, unknown>[]
+    return { rows, total: (envelope.total as number) ?? rows.length }
+  },
+
+  /** Create vs. update verb. Updates with PATCH instead? Change it here. */
+  writeMethod(isNew: boolean): 'POST' | 'PUT' | 'PATCH' {
+    return isNew ? 'POST' : 'PUT'
+  },
+}
+
 export function useApi() {
   // Keep the reactive instance — do NOT destructure: `authenticated` and `keycloak`
   // are plain values inside a reactive object and only populate asynchronously once
@@ -17,5 +95,80 @@ export function useApi() {
     return fetch(url, init)
   }
 
-  return { apiFetch }
+  // `verb` only shapes the thrown message ("Failed to load (404)"), so a view's
+  // catch block can surface it unchanged.
+  async function request<T>(
+    url: string,
+    init: RequestInit,
+    verb: string,
+  ): Promise<T> {
+    const res = await apiFetch(url, init)
+    if (!res.ok) throw new Error(`Failed to ${verb} (${res.status})`)
+    // A write may legitimately answer 204, or 200 with an empty body — parsing
+    // that as JSON would throw on a request that actually succeeded.
+    if (res.status === 204) return undefined as T
+    const body = await res.text()
+    return (body ? JSON.parse(body) : undefined) as T
+  }
+
+  function list<T = Record<string, unknown>>(
+    resource: string,
+    query: ListQuery = {},
+  ): Promise<ListResult<T>> {
+    const params = apiConvention.query(query).toString()
+    const url = apiConvention.path(resource) + (params ? `?${params}` : '')
+    return request<unknown>(url, {}, 'load').then(
+      (data) => apiConvention.result(data) as ListResult<T>,
+    )
+  }
+
+  function get<T = Record<string, unknown>>(
+    resource: string,
+    id: string | number,
+  ): Promise<T> {
+    return request<T>(apiConvention.path(resource, id), {}, 'load')
+  }
+
+  function save<T = Record<string, unknown>>(
+    resource: string,
+    id: string | number | null,
+    body: unknown,
+  ): Promise<T> {
+    const isNew = id === null || id === undefined
+    return request<T>(
+      isNew
+        ? apiConvention.path(resource)
+        : apiConvention.path(resource, id),
+      {
+        method: apiConvention.writeMethod(isNew),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+      'save',
+    )
+  }
+
+  /** A named action on one record, e.g. action('applications', id, 'submit'). */
+  function action<T = Record<string, unknown>>(
+    resource: string,
+    id: string | number,
+    name: string,
+    body?: unknown,
+  ): Promise<T> {
+    return request<T>(
+      apiConvention.path(resource, id, name),
+      {
+        method: 'POST',
+        ...(body === undefined
+          ? {}
+          : {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            }),
+      },
+      name,
+    )
+  }
+
+  return { apiFetch, list, get, save, action }
 }

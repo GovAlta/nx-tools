@@ -61,7 +61,9 @@ describe('Vue Admin CRUD Generator', () => {
       .read('apps/test/src/views/RegionsListView.vue')
       .toString();
     expect(view).toContain('<h1>Regions</h1>');
-    expect(view).toContain("apiFetch('/api/regions')");
+    expect(view).toContain("await list('regions')");
+    // The envelope shape is the adapter's business, not the view's.
+    expect(view).not.toContain('data.results');
     expect(view).toContain("import { WorkspaceTable } from '@proj/vue-components';");
     expect(view).toContain('<WorkspaceTable');
     // No pagination props bound -- this is the "reused without its pagination/
@@ -90,9 +92,12 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).toContain("errors.name = 'Name is required.';");
     // Checkbox has no required-validation block.
     expect(view).not.toContain('errors.active');
-    expect(view).toContain("method: isNew.value ? 'POST' : 'PUT'");
-    expect(view).toContain("isNew.value ? '/api/regions'");
-    expect(view).toContain('apiFetch(`/api/regions/${idParam.value}`');
+    // Create vs. update is expressed as a null id; which verb and path that
+    // becomes is decided by useApi's adapter.
+    expect(view).toContain("await save('regions', isNew.value ? null : idParam.value, form)");
+    expect(view).toContain("await get('regions', idParam.value)");
+    expect(view).not.toContain('apiFetch');
+    expect(view).not.toContain("'PUT'");
     expect(view).toContain("router.push('/regions')");
     expect(view).toContain('Create Regions');
     expect(view).toContain('Edit Regions');

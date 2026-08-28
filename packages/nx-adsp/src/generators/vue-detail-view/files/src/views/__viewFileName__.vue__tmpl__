@@ -12,15 +12,13 @@ const error = ref<string | null>(null);
 
 const route = useRoute();
 const router = useRouter();
-const { apiFetch } = useApi();
+const { get } = useApi();
 
 async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const res = await apiFetch(`/api/<%= resource %>/${route.params.id}`);
-    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-    record.value = await res.json();
+    record.value = await get('<%= resource %>', String(route.params.id));
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load.';
   } finally {

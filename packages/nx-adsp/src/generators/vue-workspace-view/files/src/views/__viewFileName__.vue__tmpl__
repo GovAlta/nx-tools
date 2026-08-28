@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { WorkspaceTable } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
-const { apiFetch } = useApi();
+const { list } = useApi();
 
 const columns = [
 <% columns.forEach(function (column) { -%>
@@ -31,23 +31,19 @@ async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const params = new URLSearchParams({
-      page: String(page.value),
-      limit: String(PAGE_SIZE),
-    });
+    // Paging/sorting/filtering are stated in domain terms; useApi's adapter maps
+    // them onto whatever this backend actually expects (see its glue-layer block).
+    const result = await list('<%= resource %>', {
+      page: page.value,
+      pageSize: PAGE_SIZE,
 <% if (filterable) { -%>
-    if (search.value) params.set('search', search.value);
+      search: search.value || undefined,
 <% } -%>
-    if (sortBy.value) {
-      params.set('sortBy', sortBy.value);
-      params.set('sortDir', sortDir.value);
-    }
-    const res = await apiFetch(`/api/<%= resource %>?${params.toString()}`);
-    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-    const data = await res.json();
-    // Accept either a bare array or a { results, total } page envelope.
-    rows.value = Array.isArray(data) ? data : (data.results ?? []);
-    itemCount.value = Array.isArray(data) ? data.length : (data.total ?? rows.value.length);
+      sortBy: sortBy.value,
+      sortDir: sortDir.value,
+    });
+    rows.value = result.rows;
+    itemCount.value = result.total;
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load.';
   } finally {

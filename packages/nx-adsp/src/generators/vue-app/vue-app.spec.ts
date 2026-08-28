@@ -295,6 +295,16 @@ describe('Vue App Generator', () => {
     expect(useApi).toContain('updateToken');
     expect(useApi).toContain('Authorization');
     expect(useApi).toContain('apiFetch');
+    // The glue layer: views state paging/sorting in domain terms and this block
+    // maps them to the wire. Its absence is what let query-param names and
+    // response-envelope keys get inlined into every generated view.
+    expect(useApi).toContain('apiConvention');
+    expect(useApi).toContain('THE GLUE LAYER');
+    for (const method of ['function list', 'function get', 'function save', 'function action']) {
+      expect(useApi).toContain(method);
+    }
+    // The documented escape hatch for a limit/offset backend.
+    expect(useApi).toContain("params.set('offset'");
 
     // HomeView delegates to the composable — raw token wiring must not leak into views.
     const homeView = host.read('apps/test/src/views/HomeView.vue').toString();

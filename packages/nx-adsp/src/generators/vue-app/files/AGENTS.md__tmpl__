@@ -290,6 +290,34 @@ const res = await apiFetch('/api/v1/my-resource', {
 const res = await fetch('http://localhost:3333/<%= pairedProject || 'my-service' %>/v1/my-resource')
 ```
 
+**For CRUD against a REST resource, prefer the domain-level helpers over `apiFetch`.**
+`useApi()` also returns `list`/`get`/`save`/`action`, which state what you want rather than how
+this API spells it:
+
+```typescript
+const { list, get, save, action } = useApi()
+
+const { rows, total } = await list('my-resource', {
+  page: 1, pageSize: 20, search: term, sortBy: 'name', sortDir: 'asc',
+  filters: { status: 'active' },
+})
+const record = await get('my-resource', id)
+await save('my-resource', null, payload)   // null id = create
+await save('my-resource', id, payload)     // an id = update
+await action('my-resource', id, 'submit')  // POST /:id/submit
+```
+
+Every wire-level detail these hide — the base path, whether paging is `page`/`limit` or
+`limit`/`offset`, whether rows arrive bare or under `results`/`entries`, whether an update is PUT
+or PATCH — lives in the **API convention adapter** at the top of
+`src/composables/useApi.ts`. That block is the glue layer between this app and its backend:
+**edit it when your API differs, and never encode an API convention in a view.** Every
+`vue-*-view` generator emits views that go through these helpers, so a view stays correct when the
+backend's conventions aren't the default ones, and your mapping survives regenerating the view.
+
+Use `apiFetch` directly for anything that isn't resource CRUD — a non-REST endpoint, a file
+download, a custom collection path.
+
 **Most routes require authentication.** The service mounts `/v1` with the anonymous passport
 strategy, so a bare request without a token reaches the router — but business routes also
 gate on `tenant` auth and will 401. `apiFetch` handles this automatically when signed in.

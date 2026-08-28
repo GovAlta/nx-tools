@@ -99,7 +99,15 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain(
       "{ key: 'lastSaved', label: 'Last saved', sortable: true }",
     );
-    expect(view).toContain('apiFetch(`/api/applications?${params.toString()}`)');
+    // Goes through useApi's adapter in domain terms -- no query-param name and
+    // no response-envelope key appears in the view.
+    expect(view).toContain("await list('applications', {");
+    expect(view).toContain('pageSize: PAGE_SIZE');
+    expect(view).toContain('rows.value = result.rows');
+    expect(view).toContain('itemCount.value = result.total');
+    expect(view).not.toContain('apiFetch');
+    expect(view).not.toContain('URLSearchParams');
+    expect(view).not.toContain('data.results');
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(row['status'] ?? '—')\" />",
     );
