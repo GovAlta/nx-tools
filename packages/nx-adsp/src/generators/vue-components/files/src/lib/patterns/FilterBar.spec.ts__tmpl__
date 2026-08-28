@@ -1,0 +1,121 @@
+import { describe, it, expect } from 'vitest';
+import { mount } from '@vue/test-utils';
+import FilterBar from './FilterBar.vue';
+
+// FilterBar is presentational: values in via v-model, values out via
+// update:modelValue, and nothing else. These tests pin that contract -- notably
+// that it never reaches for the page, the router, or the network.
+//
+// These mount goa-* elements, so Vue logs "Failed to resolve component" unless
+// this project's vite config sets isCustomElement (see AGENTS.md > Testing).
+// The assertions pass either way -- the option only silences the warnings.
+const filters = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'dropdown' as const,
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'closed', label: 'Closed' },
+    ],
+  },
+  { key: 'from', label: 'From', type: 'date' as const },
+];
+
+function mountBar(modelValue: Record<string, string> = {}) {
+  return mount(FilterBar, {
+    props: { filters, modelValue },
+    global: { stubs: { GoabDropdown: true, GoabDatePicker: true, GoabButton: true } },
+  });
+}
+
+describe('FilterBar', () => {
+  it('renders one form item per filter', () => {
+    const wrapper = mountBar();
+    expect(wrapper.findAll('goa-form-item')).toHaveLength(2);
+  });
+
+  it('shows no chips and no clear-all when nothing is filtered', () => {
+    const wrapper = mountBar();
+    expect(wrapper.find('goa-filter-chip').exists()).toBe(false);
+  });
+
+  it('renders a chip per active filter, labelled with the option label not its value', () => {
+    const wrapper = mountBar({ status: 'active' });
+    const chips = wrapper.findAll('goa-filter-chip');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].attributes('content')).toBe('Status: Active');
+  });
+
+  it('falls back to the raw value when no option matches (e.g. a date)', () => {
+    const wrapper = mountBar({ from: '2026-08-28' });
+    expect(wrapper.find('goa-filter-chip').attributes('content')).toBe(
+      'From: 2026-08-28',
+    );
+  });
+
+  it('emits the whole values object, not a partial patch', async () => {
+    const wrapper = mountBar({ status: 'active' });
+    // Dismissing a chip clears that one key and keeps the rest of the object.
+    await wrapper.find('goa-filter-chip').trigger('_click');
+    const emitted = wrapper.emitted('update:modelValue');
+    expect(emitted?.[0][0]).toEqual({ status: '' });
+  });
+
+  it('collapses behind goa-details only when asked', () => {
+    expect(mountBar().find('goa-details').exists()).toBe(false);
+    const collapsible = mount(FilterBar, {
+      props: { filters, modelValue: {}, collapsible: true, heading: 'Filters' },
+      global: { stubs: { GoabDropdown: true, GoabDatePicker: true, GoabButton: true } },
+    });
+    expect(collapsible.find('goa-details').exists()).toBe(true);
+  });
+});
+
+describe('FilterBar date handling', () => {
+  it('serialises a picked Date to YYYY-MM-DD for the query string', async () => {
+    const wrapper = mount(FilterBar, {
+      props: { filters, modelValue: {} },
+      global: { stubs: { GoabDropdown: true, GoabButton: true } },
+    });
+    const picker = wrapper.findComponent({ name: 'GoabDatePicker' });
+    // Local midnight is what a date picker yields for a picked calendar date.
+    // A UTC instant here would make the assertion timezone-dependent.
+    await picker.vm.$emit('update:modelValue', new Date(2026, 7, 28));
+    expect(wrapper.emitted('update:modelValue')?.[0][0]).toEqual({
+      from: '2026-08-28',
+    });
+  });
+
+  it('clears the key when the date is cleared', async () => {
+    const wrapper = mount(FilterBar, {
+      props: { filters, modelValue: { from: '2026-08-28' } },
+      global: { stubs: { GoabDropdown: true, GoabButton: true } },
+    });
+    const picker = wrapper.findComponent({ name: 'GoabDatePicker' });
+    await picker.vm.$emit('update:modelValue', undefined);
+    expect(wrapper.emitted('update:modelValue')?.[0][0]).toEqual({ from: '' });
+  });
+});
+
+const dateOnlyFilters = [{ key: 'from', label: 'From', type: 'date' as const }];
+const stubs = { GoabDropdown: true, GoabButton: true };
+
+describe('date round-trip preserves the calendar date the user picked', () => {
+  it('serialises the picked calendar date, not its UTC date', async () => {
+    const wrapper = mount(FilterBar, { props: { filters: dateOnlyFilters, modelValue: {} }, global: { stubs } });
+    // What a picker yields for "28 Aug 2026": local midnight.
+    const localMidnight = new Date(2026, 7, 28, 0, 0, 0);
+    await wrapper.findComponent({ name: 'GoabDatePicker' }).vm.$emit('update:modelValue', localMidnight);
+    expect(wrapper.emitted('update:modelValue')?.[0][0]).toEqual({ from: '2026-08-28' });
+  });
+
+  it('parses a stored YYYY-MM-DD back to the same local calendar date', () => {
+    const wrapper = mount(FilterBar, {
+      props: { filters: dateOnlyFilters, modelValue: { from: '2026-08-28' } },
+      global: { stubs },
+    });
+    const back = wrapper.findComponent({ name: 'GoabDatePicker' }).props('modelValue') as Date;
+    expect([back.getFullYear(), back.getMonth() + 1, back.getDate()]).toEqual([2026, 8, 28]);
+  });
+});

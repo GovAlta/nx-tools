@@ -58,6 +58,50 @@ describe('Vue Components Generator', () => {
     expect(index).toContain('export { default as AppLayout }');
     expect(index).toContain('@abgov/vue-components'); // interim marker
     expect(index).toContain("from './lib/formatters'");
+    expect(index).toContain('export { default as GoabDatePicker }');
+    expect(index).toContain('export { default as FilterBar }');
+
+    // GoabDatePicker is the one wrapper whose _change detail.value is a Date
+    // rather than a string -- verified against the installed web-components,
+    // where the dispatch reads `value: j.date, valueStr: r`.
+    const datePicker = host
+      .read('libs/vue-components/src/lib/primitives/GoabDatePicker.vue')
+      .toString();
+    expect(datePicker).toContain('defineModel<Date | undefined>()');
+    expect(datePicker).toContain('CustomEvent<{ value: Date }>');
+
+    // FilterBar stays presentational: it emits a query-ready values object and
+    // never touches the page, the router, or the network.
+    const filterBar = host
+      .read('libs/vue-components/src/lib/patterns/FilterBar.vue')
+      .toString();
+    expect(filterBar).toContain('goa-filter-chip');
+    expect(filterBar).toContain('goa-details');
+    // Precise API forms, not bare words -- 'page' appears in the component's own
+    // comment explaining that the *view* owns it.
+    for (const forbidden of [
+      'useRouter',
+      'useRoute',
+      'apiFetch',
+      'fetch(',
+      'page.value',
+    ]) {
+      expect(filterBar).not.toContain(forbidden);
+    }
+    // Local calendar parts, not UTC: in Alberta new Date('2026-08-28') is
+    // 27 Aug 18:00 local, so a stored date would render as the day before.
+    expect(filterBar).toContain('function toIsoDate');
+    expect(filterBar).toContain('function fromIsoDate');
+    // The call form, not the bare name: the component's own comments explain why
+    // toISOString() is wrong, so the name legitimately appears in them.
+    expect(filterBar).not.toContain('date.toISOString()');
+
+    for (const spec of [
+      'libs/vue-components/src/lib/patterns/FilterBar.spec.ts',
+      'libs/vue-components/src/lib/primitives/GoabDatePicker.spec.ts',
+    ]) {
+      expect(host.exists(spec)).toBeTruthy();
+    }
 
     // Shared value formatters: every view renders a date/count the same way
     // instead of inlining its own toLocaleString (which is what a real app did

@@ -7,7 +7,7 @@ invoked automatically by `vue-app` and by every `vue-*-view` generator.
 | Folder | Contains | Lifespan |
 |---|---|---|
 | `src/lib/primitives/` | Thin `v-model`/idiomatic-event wrappers over individual `goa-*` elements (`GoabInput`, `GoabButton`, …) | **Interim** — see below |
-| `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`, `Stepper`, `StepErrorSummary`) | **Permanent** |
+| `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`, `Stepper`, `StepErrorSummary`, `FilterBar`) | **Permanent** |
 | `src/lib/formatters.ts` | Shared value formatting for views (`formatDate`, `formatDateTime`, `formatNumber`, `formatPercent`) | **Permanent** |
 
 **Not every pattern component is present in every app.** `AppLayout`, `AppHeader`,
@@ -66,10 +66,11 @@ inline styles.
 | A loading `<div>` or spinner markup | `<goa-skeleton type="…">` or `<goa-spinner>` | Skeletons match the shape they replace (`card`, `text`, `table`) |
 | A `<label>` + error `<span>` around an input | `<goa-form-item label="…" error="…">` | Wrap the `Goab*` input in this, don't restyle it |
 | A row of buttons with flex styling | `<goa-button-group alignment="…">` | |
+| A hand-built filter row above a table | `<FilterBar>` (this library) | Controls, collapse, active-filter chips and clear-all. It emits a query-ready values object; the *view* owns resetting the page, debouncing, and URL sync |
 
 Also available bare and worth knowing before hand-rolling: `goa-accordion`, `goa-details`,
 `goa-divider`, `goa-chip`, `goa-filter-chip`, `goa-icon`, `goa-icon-button`, `goa-link`,
-`goa-notification`, `goa-popover`, `goa-tooltip`, `goa-date-picker`, `goa-file-upload-input`,
+`goa-notification`, `goa-popover`, `goa-tooltip`, `goa-file-upload-input`,
 `goa-file-upload-card`, `goa-circular-progress`, `goa-linear-progress`, `goa-hero-banner`,
 `goa-page-block`. For the full set, list the registered element names from the installed package:
 
@@ -111,6 +112,7 @@ the design system supports keeps working without being re-declared.
 | `GoabCheckbox` | `goa-checkbox` | `boolean` | `$event.detail.checked` |
 | `GoabButton` | `goa-button` | — (re-exposes `_click` as `@click`) | — |
 | `GoabModal` | `goa-modal` | `open: boolean` (`v-model:open`) | `_close` clears it |
+| `GoabDatePicker` | `goa-date-picker` | `Date \| undefined` | `$event.detail.value` is a **`Date`**, not a string (`valueStr` carries the string form) |
 
 Most value elements put the value on `detail.value`; some carry extra keys
 (dropdown adds `label`, radio-group adds `labels`) you can ignore unless you need

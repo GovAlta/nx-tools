@@ -1,0 +1,27 @@
+<script setup lang="ts">
+// INTERIM WRAPPER — remove once GoA DS publishes @abgov/vue-components (see
+// GoabInput.vue for the full rationale). Adds v-model to <goa-date-picker>.
+//
+// The model is a Date, not a string: goa-date-picker's _change detail is
+// { name, value: Date, valueStr: string } — verified against the installed
+// package, where the dispatch reads `value: j.date, valueStr: r`. That makes it
+// the one element here whose detail.value isn't the string the other value
+// wrappers read, so it does not use skeleton A verbatim.
+//
+// Consumers that need a wire format (a query parameter, a JSON body) convert at
+// that boundary — `date?.toISOString().slice(0, 10)` for YYYY-MM-DD — rather
+// than this wrapper guessing which format is wanted.
+//
+// Usage: <GoabDatePicker v-model="startDate" name="startDate" :max="new Date()" />
+const model = defineModel<Date | undefined>();
+
+function onChange(e: Event) {
+  model.value = (e as CustomEvent<{ value: Date }>).detail.value;
+}
+</script>
+
+<template>
+  <goa-date-picker :value="model" @_change="onChange">
+    <slot />
+  </goa-date-picker>
+</template>
