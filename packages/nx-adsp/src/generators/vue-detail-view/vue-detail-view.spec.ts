@@ -104,16 +104,33 @@ describe('Vue Detail View Generator', () => {
     expect(view).toContain('heading="Application Detail"');
     expect(view).toContain("await get('applications', String(route.params.id))");
     expect(view).not.toContain('apiFetch');
+
+    // Vue Router reuses this component across an id-only change, so the fetch
+    // is driven by a watch rather than onMounted.
+    expect(view).toContain("watch(() => route.params.id, load, { immediate: true })");
+    expect(view).not.toContain('onMounted(');
+    expect(view).not.toContain('function formatCurrency');
+
+    expect(view).toContain('formatDateTime');
+    expect(view).not.toContain('function formatDate');
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(record['status'] ?? '—')\" />",
     );
-    expect(view).toContain("formatDate(record['lastSaved'])");
+    expect(view).toContain("formatDateTime(record['lastSaved'])");
     expect(view).toContain("formatCurrency(record['requestTotal'])");
     expect(view).toContain("record['serviceModel'] ?? '—'");
     expect(view).toContain('<dt>Status</dt>');
     expect(view).toContain('<dt>Service Model</dt>');
     // Uses the shared shell, not hand-rolled loading/error markup.
-    expect(view).toContain("import { RecordDetailShell } from '@proj/vue-components';");
+    // Read the import's contents rather than an exact line: formatFiles wraps a
+    // long import list and adds a trailing comma.
+    const goaImport =
+      view
+        .replace(/\s+/g, ' ')
+        .match(/import \{[^}]*\} from '@proj\/vue-components';/)?.[0] ?? '';
+    for (const name of ['RecordDetailShell', 'formatCurrency', 'formatDateTime']) {
+      expect(goaImport).toContain(name);
+    }
     expect(view).toContain('<RecordDetailShell');
   }, 30000);
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue';
+import { reactive, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Stepper, StepErrorSummary, GoabInput } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
@@ -62,7 +62,33 @@ async function load() {
   }
 }
 
-onMounted(load);
+// Field defaults come from the same EJS loop that seeds `form` above, so there
+// is one source of truth for them. `form` is reactive, so it is reset per key
+// rather than reassigned.
+function resetForm() {
+<% stepFields.forEach(function (field) { -%>
+  form.<%- field.key %> = '';
+<% }); -%>
+  errors.value = [];
+  completedSteps.value = [];
+}
+
+// Vue Router reuses this component when only the id param changes, so onMounted
+// would never fire again. The reset branch matters as much as the reload one: on
+// an edit/<id> -> edit/new change load() returns early on isNew, which would
+// leave the previous record's values sitting in a "create" form.
+watch(
+  idParam,
+  () => {
+    if (isNew.value) {
+      resetForm();
+      loadError.value = null;
+      return;
+    }
+    void load();
+  },
+  { immediate: true },
+);
 
 function validate(): boolean {
   const found: { message: string; anchor?: string }[] = [];

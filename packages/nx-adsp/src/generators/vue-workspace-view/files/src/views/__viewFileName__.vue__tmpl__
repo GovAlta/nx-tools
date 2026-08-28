@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { WorkspaceTable } from '<%= goaImportPath %>';
+import { ref, onMounted<% if (filterable) { %>, onUnmounted<% } %> } from 'vue';
+import { WorkspaceTable, formatCurrency, formatDateTime } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 const { list } = useApi();
@@ -27,7 +27,14 @@ let searchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 const PAGE_SIZE = <%= pageSize %>;
 
+// load() fires from page change, sort<% if (filterable) { %>, and the debounced search<% } %>, so two requests can
+// overlap and resolve out of order — a slower earlier one would otherwise land
+// last and overwrite the newer rows while the pagination control still showed
+// the newer page. Only the most recent call is allowed to apply its result.
+let loadSequence = 0;
+
 async function load() {
+  const sequence = ++loadSequence;
   loading.value = true;
   error.value = null;
   try {
@@ -42,12 +49,16 @@ async function load() {
       sortBy: sortBy.value,
       sortDir: sortDir.value,
     });
+    if (sequence !== loadSequence) return;
     rows.value = result.rows;
     itemCount.value = result.total;
   } catch (e) {
+    if (sequence !== loadSequence) return;
     error.value = e instanceof Error ? e.message : 'Failed to load.';
   } finally {
-    loading.value = false;
+    // A superseded request must not clear the flag — the newer one is still in
+    // flight, and the table would flash out of its loading state and back.
+    if (sequence === loadSequence) loading.value = false;
   }
 }
 
@@ -78,23 +89,15 @@ function onSearchInput(e: Event) {
     void load();
   }, 300);
 }
+
+// Without this, navigating away mid-keystroke lets the timer fire load() against
+// a torn-down component.
+onUnmounted(() => {
+  if (searchDebounce) clearTimeout(searchDebounce);
+});
 <% } -%>
 
-function formatDate(value: unknown): string {
-  if (!value) return '—';
-  try {
-    return new Date(String(value)).toLocaleString('en-CA');
-  } catch {
-    return String(value);
-  }
-}
 
-function formatCurrency(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '—';
-  const n = Number(value);
-  if (Number.isNaN(n)) return String(value);
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n);
-}
 </script>
 
 <template>
@@ -137,7 +140,7 @@ function formatCurrency(value: unknown): string {
       </template>
 <% } else if (column.type === 'date') { -%>
       <template #cell-<%= column.key %>="{ row }">
-        {{ formatDate(row['<%= column.key %>']) }}
+        {{ formatDateTime(row['<%= column.key %>']) }}
       </template>
 <% } else if (column.type === 'currency') { -%>
       <template #cell-<%= column.key %>="{ row }">

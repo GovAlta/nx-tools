@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue';
+import { reactive, ref, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import { GoabInput, GoabCheckbox } from '<%= goaImportPath %>';
@@ -28,6 +28,7 @@ const saving = ref(false);
 const loadError = ref<string | null>(null);
 const saveError = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
+let redirectTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function load() {
   if (isNew.value) return;
@@ -45,7 +46,32 @@ async function load() {
   }
 }
 
-onMounted(load);
+// Field defaults come from the same EJS loop that seeds `form` above, so there
+// is one source of truth for them. `form` is reactive, so it is reset per key
+// rather than reassigned.
+function resetForm() {
+<% fields.forEach(function (field) { -%>
+  form.<%- field.key %> = <%- field.type === 'checkbox' ? 'false' : "''" %>;
+<% }); -%>
+  for (const key of Object.keys(errors)) errors[key] = undefined;
+}
+
+// Vue Router reuses this component when only the id param changes, so onMounted
+// would never fire again. The reset branch matters as much as the reload one: on
+// an edit/<id> -> edit/new change load() returns early on isNew, which would
+// leave the previous record's values sitting in a "create" form.
+watch(
+  idParam,
+  () => {
+    if (isNew.value) {
+      resetForm();
+      loadError.value = null;
+      return;
+    }
+    void load();
+  },
+  { immediate: true },
+);
 
 function validate(): boolean {
   let valid = true;
@@ -70,7 +96,7 @@ async function onSubmit() {
     // Create vs. update — which verb and path that means is the adapter's call.
     await save('<%= resource %>', isNew.value ? null : idParam.value, form);
     successMessage.value = isNew.value ? '<%= singularLabel %> created.' : '<%= singularLabel %> saved.';
-    setTimeout(() => router.push('<%= route %>'), 600);
+    redirectTimer = setTimeout(() => router.push('<%= route %>'), 600);
   } catch (e) {
     saveError.value = e instanceof Error ? e.message : 'Failed to save.';
   } finally {
@@ -81,6 +107,13 @@ async function onSubmit() {
 function goBack() {
   router.push('<%= route %>');
 }
+
+// The success message holds for 600ms before redirecting. If the user navigates
+// away inside that window the timer would fire anyway and yank them back to the
+// list from wherever they went.
+onUnmounted(() => {
+  if (redirectTimer) clearTimeout(redirectTimer);
+});
 </script>
 
 <template>

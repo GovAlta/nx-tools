@@ -98,6 +98,20 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).toContain("await get('regions', idParam.value)");
     expect(view).not.toContain('apiFetch');
     expect(view).not.toContain("'PUT'");
+
+    // Vue Router reuses this component across an id-only change. The reset
+    // branch is the point: edit/<id> -> edit/new must not leave the previous
+    // record's values in a create form.
+    expect(view).toContain('watch(');
+    expect(view).toContain('{ immediate: true }');
+    expect(view).toContain('function resetForm()');
+    expect(view).toContain('resetForm();');
+    expect(view).not.toContain('onMounted(');
+
+    // The 600ms success redirect must not fire after the user navigates away.
+    expect(view).toContain('redirectTimer = setTimeout(');
+    expect(view).toContain('clearTimeout(redirectTimer)');
+    expect(view).toContain('onUnmounted(');
     expect(view).toContain("router.push('/regions')");
     expect(view).toContain('Create Regions');
     expect(view).toContain('Edit Regions');
