@@ -8,6 +8,7 @@ invoked automatically by `vue-app` and by every `vue-*-view` generator.
 |---|---|---|
 | `src/lib/primitives/` | Thin `v-model`/idiomatic-event wrappers over individual `goa-*` elements (`GoabInput`, `GoabButton`, …) | **Interim** — see below |
 | `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`, `Stepper`, `StepErrorSummary`) | **Permanent** |
+| `src/lib/formatters.ts` | Shared value formatting for views (`formatDate`, `formatDateTime`, `formatNumber`, `formatPercent`) | **Permanent** |
 
 **Not every pattern component is present in every app.** `AppLayout`, `AppHeader`,
 `AppFooter`, `AppSideMenu`, and `SessionExpiredBanner` are base app-shell — `vue-app`
@@ -37,6 +38,50 @@ building on it.
 > header, footer, banners) has no equivalent in an official design-system
 > package — a design system ships primitives, not your app's shell. Nothing in
 > `patterns/` is deleted when `primitives/` is.
+
+## Use the design system's own elements — most need no wrapper
+
+**Read this before writing any markup.** GoA's design system ships ~94 custom elements. Only a
+handful need a Vue wrapper (the form inputs — see the next section for why); the rest are
+presentational, have nothing to bind, and are used **bare** in any Vue SFC. `vite.config.mts`'s
+`isCustomElement` already recognises `goa-*`, so they work with no import and no registration.
+
+If you find yourself writing `style="…"` for layout, spacing, or typography, stop — the element you
+want almost certainly exists. Measured on a real ADSP app that shipped without this catalog: 254 of
+its 257 inline styles were on raw HTML (`div`, `th`, `td`, `span`, `h2`) standing in for the elements
+below, while only 3 were on `goa-*` elements. Every view its generators fully covered had zero
+inline styles.
+
+| Instead of hand-rolling | Use | Notes |
+|---|---|---|
+| `<div style="background:white;border:1px solid …;border-radius:…;padding:…">` | `<goa-container>` | The bordered, padded card box. `type`/`accent` variants |
+| `<div style="display:flex;gap:…;align-items:…">` | `<goa-block>` | Flex row or stack, `gap` and `direction` props |
+| `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(…))">` | `<goa-grid>` | Responsive auto-fit grid, `min-child-width` prop |
+| `<h2 style="font-size:…;font-weight:…;color:…">`, styled `span`/`p` | `<goa-text>` | Typography scale: `size`, `weight`, `color`, `mt`/`mb` |
+| `<table>` with `<th style>`/`<td style>` | `<goa-table>` (+ `<goa-table-sort-header>`) | For any table that isn't a paginated list view — `WorkspaceTable` already wraps this for that case |
+| Tab `<button>`s toggling `v-if` blocks | `<goa-tabs>` + `<goa-tab heading="…">` | Slot-based and self-managing: `initialtab` sets the first open tab, no `v-model` and no `@_change` |
+| A margin-only `<div>` or `<br>` | `<goa-spacer vspacing="m">` | |
+| A styled status pill | `<goa-badge type="…">` | |
+| A hand-built alert/notice box | `<goa-callout type="…" heading="…">` | |
+| A loading `<div>` or spinner markup | `<goa-skeleton type="…">` or `<goa-spinner>` | Skeletons match the shape they replace (`card`, `text`, `table`) |
+| A `<label>` + error `<span>` around an input | `<goa-form-item label="…" error="…">` | Wrap the `Goab*` input in this, don't restyle it |
+| A row of buttons with flex styling | `<goa-button-group alignment="…">` | |
+
+Also available bare and worth knowing before hand-rolling: `goa-accordion`, `goa-details`,
+`goa-divider`, `goa-chip`, `goa-filter-chip`, `goa-icon`, `goa-icon-button`, `goa-link`,
+`goa-notification`, `goa-popover`, `goa-tooltip`, `goa-date-picker`, `goa-file-upload-input`,
+`goa-file-upload-card`, `goa-circular-progress`, `goa-linear-progress`, `goa-hero-banner`,
+`goa-page-block`. For the full set, list the registered element names from the installed package:
+
+```bash
+grep -rhoE 'customElements\.define\("goa-[a-z0-9-]+"' node_modules/@abgov/web-components \
+  | grep -oE 'goa-[a-z0-9-]+' | sort -u
+```
+
+For values rather than layout, use `formatters.ts` (`formatDate`, `formatDateTime`, `formatNumber`,
+`formatPercent`) rather than an inline `toLocaleString` — every view should render a date or a count
+the same way, and each formatter already returns an em dash for a null/unparseable value so a
+partially-populated record needs no per-field guard.
 
 ## What these wrappers do (and why they're needed)
 
@@ -177,6 +222,13 @@ banners — not a single-element wrapper. Existing examples: `AppLayout`,
 
 ## Don't
 
+- **Don't write inline `style` for layout, spacing, or typography** in a component here or in a
+  view that consumes it. Use the elements in the catalog above. An inline style is a signal either
+  that the right element wasn't found, or that a pattern component is missing — both worth raising
+  rather than working around.
+- **Don't wrap a presentational element.** `primitives/` exists only to add `v-model` over elements
+  whose `_`-prefixed event Vue can't bind. `goa-container`, `goa-block`, `goa-grid`, `goa-text`,
+  `goa-table`, and `goa-tabs` have no model to bind — a wrapper would add a layer for nothing.
 - **Don't add new `goa-*` element wrappers to `patterns/`, or new composite
   components to `primitives/`.** Single-element wrappers belong in
   `primitives/` (interim, deleted on the `@abgov/vue-components` swap);

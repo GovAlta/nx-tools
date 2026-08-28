@@ -9,6 +9,10 @@
 // PERMANENT: these have no equivalent in an official design-system package
 // (that's app-shell composition, not a design-system primitive) and are not
 // deleted when primitives/ is.
+//
+// formatters.ts — shared value formatting for views. PERMANENT, and not a
+// component: presentational goa-* elements need no wrapper, but every view
+// still has to render a date or a count the same way as every other view.
 export { default as GoabInput } from './lib/primitives/GoabInput.vue';
 export { default as GoabTextarea } from './lib/primitives/GoabTextarea.vue';
 export { default as GoabDropdown } from './lib/primitives/GoabDropdown.vue';
@@ -26,3 +30,10 @@ export { default as RecordDetailShell } from './lib/patterns/RecordDetailShell.v
 export { default as WorkspaceTable } from './lib/patterns/WorkspaceTable.vue';
 export { default as Stepper } from './lib/patterns/Stepper.vue';
 export { default as StepErrorSummary } from './lib/patterns/StepErrorSummary.vue';
+
+export {
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  formatPercent,
+} from './lib/formatters';

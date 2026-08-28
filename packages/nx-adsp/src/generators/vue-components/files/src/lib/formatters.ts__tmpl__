@@ -1,0 +1,65 @@
+// Shared value formatting for views across every Vue app in this workspace.
+//
+// Plain functions, not a `use*` composable: there is no reactive state and no
+// lifecycle here, and in Vue `use*` signals both. Import them directly in an
+// SFC's <script setup> and call them from the template.
+//
+// Every formatter returns an em dash for a null/undefined/unparseable value, so
+// a view can render a partially-populated record without a guard per field.
+
+const LOCALE = 'en-CA';
+const EMPTY = '—';
+
+const dateOnly = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'short' });
+const dateAndTime = new Intl.DateTimeFormat(LOCALE, {
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
+const decimal = new Intl.NumberFormat(LOCALE);
+
+type DateInput = string | number | Date | null | undefined;
+
+// Invalid dates are caught via getTime() rather than a try/catch: `new Date()`
+// doesn't throw on unparseable input, it yields an Invalid Date whose getTime()
+// is NaN, and Intl.format() on that would throw a RangeError.
+function toValidDate(value: DateInput): Date | null {
+  if (value === null || value === undefined || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Date without a time component, e.g. `2026-08-28` → `2026-08-28`. */
+export function formatDate(value: DateInput): string {
+  const date = toValidDate(value);
+  return date ? dateOnly.format(date) : EMPTY;
+}
+
+/** Date with a short time, for audit/activity timestamps. */
+export function formatDateTime(value: DateInput): string {
+  const date = toValidDate(value);
+  return date ? dateAndTime.format(date) : EMPTY;
+}
+
+/** Thousands-separated integer/decimal, e.g. `12345` → `12,345`. */
+export function formatNumber(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? decimal.format(value)
+    : EMPTY;
+}
+
+/**
+ * Percentage from a value already scaled 0–100 — the form rate/percentage
+ * fields come back in from an ADSP service, not the 0–1 fraction
+ * `Intl.NumberFormat({ style: 'percent' })` expects. Pass 99.5, not 0.995.
+ */
+export function formatPercent(
+  value: number | null | undefined,
+  fractionDigits = 1,
+): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return EMPTY;
+  const rounded = new Intl.NumberFormat(LOCALE, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+  return `${rounded}%`;
+}

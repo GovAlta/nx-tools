@@ -57,6 +57,26 @@ describe('Vue Components Generator', () => {
     expect(index).toContain('export { default as GoabInput }');
     expect(index).toContain('export { default as AppLayout }');
     expect(index).toContain('@abgov/vue-components'); // interim marker
+    expect(index).toContain("from './lib/formatters'");
+
+    // Shared value formatters: every view renders a date/count the same way
+    // instead of inlining its own toLocaleString (which is what a real app did
+    // in three separate views before this existed).
+    expect(host.exists('libs/vue-components/src/lib/formatters.ts')).toBeTruthy();
+    expect(
+      host.exists('libs/vue-components/src/lib/formatters.spec.ts'),
+    ).toBeTruthy();
+    const formatters = host
+      .read('libs/vue-components/src/lib/formatters.ts')
+      .toString();
+    for (const fn of [
+      'formatDate',
+      'formatDateTime',
+      'formatNumber',
+      'formatPercent',
+    ]) {
+      expect(formatters).toContain(`export function ${fn}`);
+    }
 
     // Ships a spec so the vitest test target isn't empty (vitest exits non-zero
     // on "no test files found").
@@ -77,6 +97,22 @@ describe('Vue Components Generator', () => {
     expect(agents).toContain('detail.value');
     expect(agents).toContain('Wrapping a new component');
     expect(agents).toContain('defineModel<boolean>');
+
+    // Catalogues the presentational goa-* elements that need no wrapper. Its
+    // absence is what drove a real app to hand-roll 254 inline styles on raw
+    // HTML standing in for elements that already shipped.
+    expect(agents).toContain('most need no wrapper');
+    for (const element of [
+      'goa-container',
+      'goa-block',
+      'goa-grid',
+      'goa-text',
+      'goa-table',
+      'goa-tabs',
+    ]) {
+      expect(agents).toContain(element);
+    }
+    expect(agents).toContain("Don't wrap a presentational element");
   }, 30000);
 
   it('AppSideMenu exposes an optional #topbar slot for header-action-style content', async () => {

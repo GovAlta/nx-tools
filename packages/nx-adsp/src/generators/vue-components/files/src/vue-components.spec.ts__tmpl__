@@ -19,6 +19,17 @@ describe('vue-components', () => {
     }
   });
 
+  it('exports the shared value formatters', () => {
+    for (const name of [
+      'formatDate',
+      'formatDateTime',
+      'formatNumber',
+      'formatPercent',
+    ]) {
+      expect(typeof lib[name as keyof typeof lib]).toBe('function');
+    }
+  });
+
   it('exports every app-shell pattern component', () => {
     for (const name of [
       'AppLayout',
