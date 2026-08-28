@@ -14,6 +14,7 @@ describe('vue-components', () => {
       'GoabRadioGroup',
       'GoabButton',
       'GoabModal',
+      'GoabDatePicker',
     ]) {
       expect(lib[name as keyof typeof lib]).toBeTruthy();
     }
@@ -41,6 +42,7 @@ describe('vue-components', () => {
       'WorkspaceTable',
       'Stepper',
       'StepErrorSummary',
+      'FilterBar',
     ]) {
       expect(lib[name as keyof typeof lib]).toBeTruthy();
     }

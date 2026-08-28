@@ -1,0 +1,158 @@
+<script setup lang="ts">
+// The presentation half of a filtered list: control layout, collapse, the
+// active-filter chips, and clear-all. Deliberately NOT the query half — it
+// emits a values object and nothing else, so it stays presentational per this
+// library's rules (accept data via props, report via emit, no side effects).
+//
+// What that means for the consumer: resetting the page to 1, debouncing, and
+// syncing to the URL all belong to the view, which owns `page` and the router.
+// A component can't reach either without becoming stateful.
+//
+// Values are strings, query-ready, so a view can hand the object straight to
+// useApi's `filters`. A `date` filter converts its Date to YYYY-MM-DD here,
+// which is a format decision this component can make because it chose the
+// control; anything richer belongs in the view.
+//
+// Both date conversions use local calendar parts, never toISOString() or
+// `new Date(string)`. Those route through UTC, which shifts the date by a day on
+// one side of midnight or the other: in Alberta (UTC-6/-7) `new Date('2026-08-28')`
+// is 27 Aug 18:00 local, so a stored date would render as the day before.
+import { computed } from 'vue';
+import GoabDropdown from '../primitives/GoabDropdown.vue';
+import GoabDatePicker from '../primitives/GoabDatePicker.vue';
+import GoabButton from '../primitives/GoabButton.vue';
+
+export interface FilterOption {
+  value: string;
+  label: string;
+}
+
+export interface FilterDescriptor {
+  key: string;
+  label: string;
+  type: 'dropdown' | 'date';
+  /** Dropdown only. May arrive after mount when fetched — it's a prop. */
+  options?: FilterOption[];
+  /** Dropdown only. Label for the "no filter" choice. */
+  anyLabel?: string;
+}
+
+const props = withDefaults(
+  defineProps<{
+    filters: FilterDescriptor[];
+    /** Collapse the controls behind a disclosure. Chips stay visible. */
+    collapsible?: boolean;
+    heading?: string;
+  }>(),
+  { collapsible: false, heading: 'Filters' },
+);
+
+// Record<key, value>; an empty string means "not filtering on this".
+const model = defineModel<Record<string, string>>({ default: () => ({}) });
+
+const active = computed(() =>
+  props.filters
+    .filter((filter) => !!model.value[filter.key])
+    .map((filter) => ({
+      ...filter,
+      value: model.value[filter.key],
+      display:
+        filter.options?.find((o) => o.value === model.value[filter.key])
+          ?.label ?? model.value[filter.key],
+    })),
+);
+
+// Parsed once per model change, not per render: handing goa-date-picker a fresh
+// Date object every render would re-set its value on each tick.
+const dateValues = computed(() =>
+  Object.fromEntries(
+    props.filters
+      .filter((filter) => filter.type === 'date')
+      .map((filter) => [
+        filter.key,
+        model.value[filter.key]
+          ? fromIsoDate(model.value[filter.key])
+          : undefined,
+      ]),
+  ),
+);
+
+// Local-calendar YYYY-MM-DD -- see the header note on why not toISOString().
+function toIsoDate(date: Date): string {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function fromIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split('-').map(Number);
+  return year && month && day ? new Date(year, month - 1, day) : undefined;
+}
+
+function set(key: string, value: string) {
+  model.value = { ...model.value, [key]: value };
+}
+
+function setDate(key: string, date: Date | undefined) {
+  set(key, date ? toIsoDate(date) : '');
+}
+
+function clearAll() {
+  model.value = Object.fromEntries(
+    props.filters.map((filter) => [filter.key, '']),
+  );
+}
+</script>
+
+<template>
+  <div>
+    <component
+      :is="collapsible ? 'goa-details' : 'div'"
+      v-bind="collapsible ? { heading } : {}"
+    >
+      <goa-block gap="m" direction="row" alignment="end">
+        <goa-form-item
+          v-for="filter in filters"
+          :key="filter.key"
+          :label="filter.label"
+        >
+          <GoabDropdown
+            v-if="filter.type === 'dropdown'"
+            :model-value="model[filter.key] ?? ''"
+            :name="filter.key"
+            @update:model-value="(value: string) => set(filter.key, value)"
+          >
+            <goa-dropdown-item value="" :label="filter.anyLabel ?? 'Any'" />
+            <goa-dropdown-item
+              v-for="option in filter.options ?? []"
+              :key="option.value"
+              :value="option.value"
+              :label="option.label"
+            />
+          </GoabDropdown>
+          <GoabDatePicker
+            v-else
+            :model-value="dateValues[filter.key]"
+            :name="filter.key"
+            @update:model-value="(date: Date | undefined) => setDate(filter.key, date)"
+          />
+        </goa-form-item>
+      </goa-block>
+    </component>
+
+    <template v-if="active.length">
+      <goa-spacer vspacing="s" />
+      <goa-block gap="xs" direction="row" alignment="center">
+        <goa-filter-chip
+          v-for="filter in active"
+          :key="filter.key"
+          :content="`${filter.label}: ${filter.display}`"
+          :aria-label="`Remove ${filter.label} filter`"
+          @_click="set(filter.key, '')"
+        />
+        <GoabButton type="tertiary" size="compact" @click="clearAll">
+          Clear all
+        </GoabButton>
+      </goa-block>
+    </template>
+  </div>
+</template>
