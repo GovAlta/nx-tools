@@ -2,6 +2,9 @@
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { GoabCheckbox } from '<%= goaImportPath %>';
+<% if (steps.some((s) => s.fields.some((f) => f.type === 'date'))) { -%>
+import { formatDate } from '<%= goaImportPath %>';
+<% } -%>
 import { useApi } from '../composables/useApi';
 
 const route = useRoute();
@@ -79,7 +82,11 @@ async function onSubmit() {
         <dl>
 <% step.fields.forEach(function (field) { -%>
           <dt><%- field.label %></dt>
+<% if (field.type === 'date') { -%>
+          <dd>{{ formatDate(record['<%- field.key %>']) }}</dd>
+<% } else { -%>
           <dd>{{ record['<%- field.key %>'] ?? '—' }}</dd>
+<% } -%>
 <% }); -%>
         </dl>
       </goa-container>

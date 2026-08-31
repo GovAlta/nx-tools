@@ -333,7 +333,7 @@ npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions 
 | `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                             |
 | `resource`      | Yes      | API resource path segment — fetches `/api/<resource>` (list), `/api/<resource>/:id` (load one), `POST /api/<resource>` (create), `PUT /api/<resource>/:id` (update) |
 | `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `${route}/:id` (visiting `${route}/new` creates)                     |
-| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"checkbox", required? }` (a JSON string — see note below)                                |
+| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"textarea"\|"number"\|"date"\|"select"\|"checkbox", options? (select), required? }` (a JSON string — see note below)                                |
 | `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                           |
 | `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                               |
 | `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                             |
@@ -342,7 +342,7 @@ npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions 
 
 ### vue-intake-view
 
-Adds a route-per-step intake wizard (`Stepper` + `StepErrorSummary`, a required read-only review step, and a confirmation page) to an existing `vue-app` project. Cross-step state is server-persisted — each step PUTs/POSTs to `/api/<resource>/:id` and refetches on mount, so there's no client-side draft caching. Every field is currently a plain text input.
+Adds a route-per-step intake wizard (`Stepper` + `StepErrorSummary`, a required read-only review step, and a confirmation page) to an existing `vue-app` project. Cross-step state is server-persisted — each step PUTs/POSTs to `/api/<resource>/:id` and refetches on mount, so there's no client-side draft caching. Fields support `text`, `textarea`, `number`, `date` and `select` types; a number is submitted as a number and a date as `YYYY-MM-DD`.
 
 ```bash
 npx nx g @abgov/nx-adsp:vue-intake-view my-app --name=application --resource=applications --route=/applications --steps='[{"key":"personal-info","label":"Personal information","fields":[{"key":"fullName","label":"Full name"}]}]'

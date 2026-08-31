@@ -138,6 +138,78 @@ describe('Vue Intake View Generator', () => {
     expect(review).toContain('/applications/${idParam.value}/confirmation');
   }, 30000);
 
+  describe('field types', () => {
+    const typedSteps = JSON.stringify([
+      {
+        key: 'details',
+        label: 'Details',
+        fields: [
+          { key: 'name', label: 'Name' },
+          { key: 'story', label: 'Story', type: 'textarea', required: false },
+          { key: 'count', label: 'Count', type: 'number' },
+          { key: 'occurred', label: 'Occurred', type: 'date' },
+          {
+            key: 'species',
+            label: 'Species',
+            type: 'select',
+            options: [{ value: 'wolf', label: 'Wolf' }],
+          },
+        ],
+      },
+      { key: 'review-it', label: 'Review it', fields: [] },
+    ]);
+
+    it('renders the right control for each type', async () => {
+      await generator(host, { ...baseOptions, steps: typedSteps });
+      const step = host
+        .read('apps/test/src/views/DetailsStepView.vue')
+        .toString();
+      expect(step).toContain('<GoabTextarea v-model="form.story"');
+      expect(step).toContain('type="number"');
+      expect(step).toContain('<GoabDatePicker v-model="form.occurred"');
+      expect(step).toContain('<goa-dropdown-item value="wolf" label="Wolf" />');
+    });
+
+    it('coerces number and date on save', async () => {
+      await generator(host, { ...baseOptions, steps: typedSteps });
+      const step = host
+        .read('apps/test/src/views/DetailsStepView.vue')
+        .toString();
+      expect(step).toContain("count: form.count === '' ? null : Number(form.count)");
+      expect(step).toContain('occurred: toIsoDateString(form.occurred) || null');
+      expect(step).toContain("fromIsoDateString(data['occurred'])");
+    });
+
+    it('validates a number and a date without assuming a string', async () => {
+      await generator(host, { ...baseOptions, steps: typedSteps });
+      const step = host
+        .read('apps/test/src/views/DetailsStepView.vue')
+        .toString();
+      expect(step).toContain("if (form.count === '')");
+      expect(step).toContain('Count must be a number.');
+      expect(step).toContain('if (!form.occurred)');
+    });
+
+    it('formats a date field on the review view rather than printing it raw', async () => {
+      await generator(host, { ...baseOptions, steps: typedSteps });
+      const review = host
+        .read('apps/test/src/views/ApplicationReviewView.vue')
+        .toString();
+      expect(review).toContain("formatDate(record['occurred'])");
+    });
+
+    it('every field is still a text input when no types are given', async () => {
+      await generator(host, baseOptions);
+      const step = host
+        .read('apps/test/src/views/PersonalInfoStepView.vue')
+        .toString();
+      expect(step).toContain('type="text"');
+      for (const unused of ['GoabTextarea', 'GoabDatePicker', 'GoabDropdown']) {
+        expect(step).not.toContain(unused);
+      }
+    });
+  });
+
   it('generates a confirmation view showing the reference number', async () => {
     await generator(host, baseOptions);
     const confirmation = host

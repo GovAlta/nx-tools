@@ -21,6 +21,7 @@ import { computed } from 'vue';
 import GoabDropdown from '../primitives/GoabDropdown.vue';
 import GoabDatePicker from '../primitives/GoabDatePicker.vue';
 import GoabButton from '../primitives/GoabButton.vue';
+import { fromIsoDateString, toIsoDateString } from '../formatters';
 
 export interface FilterOption {
   value: string;
@@ -71,29 +72,18 @@ const dateValues = computed(() =>
       .map((filter) => [
         filter.key,
         model.value[filter.key]
-          ? fromIsoDate(model.value[filter.key])
+          ? fromIsoDateString(model.value[filter.key])
           : undefined,
       ]),
   ),
 );
-
-// Local-calendar YYYY-MM-DD -- see the header note on why not toISOString().
-function toIsoDate(date: Date): string {
-  const pad = (part: number) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function fromIsoDate(value: string): Date | undefined {
-  const [year, month, day] = value.split('-').map(Number);
-  return year && month && day ? new Date(year, month - 1, day) : undefined;
-}
 
 function set(key: string, value: string) {
   model.value = { ...model.value, [key]: value };
 }
 
 function setDate(key: string, date: Date | undefined) {
-  set(key, date ? toIsoDate(date) : '');
+  set(key, toIsoDateString(date));
 }
 
 function clearAll() {

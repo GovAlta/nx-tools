@@ -94,7 +94,11 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).not.toContain('errors.active');
     // Create vs. update is expressed as a null id; which verb and path that
     // becomes is decided by useApi's adapter.
-    expect(view).toContain("await save('regions', isNew.value ? null : idParam.value, form)");
+    // payload(), not the raw form: the model holds what the controls need, the
+    // API wants wire types.
+    expect(view).toContain(
+      "await save('regions', isNew.value ? null : idParam.value, payload())",
+    );
     expect(view).toContain("await get('regions', idParam.value)");
     expect(view).not.toContain('apiFetch');
     expect(view).not.toContain("'PUT'");
@@ -116,6 +120,104 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).toContain('Create Regions');
     expect(view).toContain('Edit Regions');
   }, 30000);
+
+  describe('field types', () => {
+    const allTypes = JSON.stringify([
+      { key: 'name', label: 'Name' },
+      { key: 'notes', label: 'Notes', type: 'textarea', required: false },
+      { key: 'quota', label: 'Quota', type: 'number' },
+      { key: 'effective', label: 'Effective', type: 'date' },
+      {
+        key: 'region',
+        label: 'Region',
+        type: 'select',
+        options: [
+          { value: 'north', label: 'North' },
+          { value: 'south', label: 'South' },
+        ],
+      },
+      { key: 'active', label: 'Active', type: 'checkbox' },
+    ]);
+
+    it('renders the right control for each type', async () => {
+      await generator(host, { ...baseOptions, fields: allTypes });
+      const view = host
+        .read('apps/test/src/views/RegionsEditView.vue')
+        .toString();
+      expect(view).toContain('<GoabInput v-model="form.name"');
+      expect(view).toContain('<GoabTextarea v-model="form.notes"');
+      expect(view).toContain('type="number"');
+      expect(view).toContain('<GoabDatePicker v-model="form.effective"');
+      expect(view).toContain('<GoabDropdown v-model="form.region"');
+      expect(view).toContain('<goa-dropdown-item value="north" label="North" />');
+      expect(view).toContain('<GoabCheckbox v-model="form.active"');
+    });
+
+    it('imports only the wrappers the field set actually uses', async () => {
+      await generator(host, {
+        ...baseOptions,
+        fields: JSON.stringify([{ key: 'name', label: 'Name' }]),
+      });
+      const view = host
+        .read('apps/test/src/views/RegionsEditView.vue')
+        .toString();
+      expect(view).toContain('GoabInput');
+      for (const unused of ['GoabTextarea', 'GoabDatePicker', 'GoabDropdown']) {
+        expect(view).not.toContain(unused);
+      }
+    });
+
+    it('submits a number as a number and a date as a local-calendar string', async () => {
+      await generator(host, { ...baseOptions, fields: allTypes });
+      const view = host
+        .read('apps/test/src/views/RegionsEditView.vue')
+        .toString();
+      expect(view).toContain("quota: form.quota === '' ? null : Number(form.quota)");
+      expect(view).toContain('effective: toIsoDateString(form.effective) || null');
+      // A stored YYYY-MM-DD comes back as a Date the picker can redisplay.
+      expect(view).toContain("fromIsoDateString(data['effective'])");
+    });
+
+    it('validates by type, not by assuming every value is a string', async () => {
+      await generator(host, { ...baseOptions, fields: allTypes });
+      const view = host
+        .read('apps/test/src/views/RegionsEditView.vue')
+        .toString();
+      // A number field's required check cannot be !value.trim().
+      expect(view).toContain("if (form.quota === '')");
+      expect(view).toContain('Quota must be a number.');
+      // A date field holds a Date, so truthiness is the check.
+      expect(view).toContain('if (!form.effective)');
+    });
+
+    it('does not label a checkbox twice', async () => {
+      await generator(host, { ...baseOptions, fields: allTypes });
+      const view = host
+        .read('apps/test/src/views/RegionsEditView.vue')
+        .toString();
+      // goa-form-item must not repeat the label the checkbox already carries.
+      expect(view).not.toContain('<goa-form-item label="Active"');
+      expect(view).toContain('text="Active"');
+    });
+
+    it('rejects a type it cannot render', async () => {
+      await expect(
+        generator(host, {
+          ...baseOptions,
+          fields: JSON.stringify([{ key: 'x', label: 'X', type: 'colour' }]),
+        }),
+      ).rejects.toThrow('got "colour" for "x"');
+    });
+
+    it('requires options for a select, since it cannot know the choices', async () => {
+      await expect(
+        generator(host, {
+          ...baseOptions,
+          fields: JSON.stringify([{ key: 'r', label: 'R', type: 'select' }]),
+        }),
+      ).rejects.toThrow(/options is required for the select field "r"/);
+    });
+  });
 
   it('uses --singularLabel over --heading for Create/Edit headings when both are set', async () => {
     await generator(host, {

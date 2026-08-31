@@ -34,6 +34,8 @@ export { default as StepErrorSummary } from './lib/patterns/StepErrorSummary.vue
 export { default as FilterBar } from './lib/patterns/FilterBar.vue';
 
 export {
+  fromIsoDateString,
+  toIsoDateString,
   formatCurrency,
   formatDate,
   formatDateTime,

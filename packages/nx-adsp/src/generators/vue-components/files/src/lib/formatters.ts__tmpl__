@@ -62,6 +62,29 @@ function toValidDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/**
+ * A Date as local-calendar YYYY-MM-DD, for the wire -- a query parameter, a JSON
+ * body. NOT display: use formatDate for that.
+ *
+ * Built from local parts, never toISOString(): that routes through UTC, and the
+ * UTC day of a local-midnight Date is the previous day anywhere west of
+ * Greenwich. In Alberta (UTC-6/-7) it files every date one day early.
+ */
+export function toIsoDateString(value: unknown): string {
+  const date = toValidDate(value);
+  if (!date) return '';
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * The inverse: a stored YYYY-MM-DD back to a Date at local midnight, so the
+ * calendar date a user picked is the calendar date a picker redisplays.
+ */
+export function fromIsoDateString(value: unknown): Date | undefined {
+  return toValidDate(value) ?? undefined;
+}
+
 /** Date without a time component, e.g. `2026-08-28` → `2026-08-28`. */
 export function formatDate(value: unknown): string {
   const date = toValidDate(value);

@@ -1,6 +1,9 @@
 export interface IntakeViewField {
   key: string;
   label: string;
+  type?: 'text' | 'textarea' | 'number' | 'date' | 'select';
+  /** `select` only. Rendered as goa-dropdown-item children. */
+  options?: { value: string; label: string }[];
   required?: boolean;
 }
 
