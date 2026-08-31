@@ -7,6 +7,7 @@ import {
 } from '@nx/devkit';
 import * as path from 'path';
 import { insertVueRoute } from '../../utils/vue-router';
+import { insertSideMenuItem } from '../../utils/vue-side-menu';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -100,6 +101,12 @@ export default async function (host: Tree, options: Schema) {
     requiresAuth: normalizedOptions.requiresAuth,
     // A multi-column table at the 1000px default wraps every cell.
     layout: 'wide',
+  });
+
+  // No-op on a header-layout app, which has no side menu.
+  insertSideMenuItem(host, normalizedOptions.projectRoot, {
+    label: normalizedOptions.heading,
+    to: normalizedOptions.route,
   });
 
   await formatFiles(host);

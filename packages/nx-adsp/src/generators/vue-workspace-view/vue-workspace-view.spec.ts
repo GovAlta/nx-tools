@@ -9,6 +9,13 @@ import { Schema } from './schema';
 
 // Mirrors the shape vue-app's own template generates -- vue-workspace-view
 // retrofits into this file, so the fixture must match what it actually looks for.
+const APP_VUE_INTERNAL_FIXTURE = `<script setup lang="ts">
+const primaryItems = [
+  { label: 'Home', to: '/' },
+];
+</script>
+`;
+
 const ROUTER_FIXTURE = `import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 
@@ -41,6 +48,7 @@ describe('Vue Workspace View Generator', () => {
     host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
     addProjectConfiguration(host, 'test', { root: 'apps/test' });
     host.write('apps/test/src/router/index.ts', ROUTER_FIXTURE);
+    host.write('apps/test/src/App.vue', APP_VUE_INTERNAL_FIXTURE);
   });
 
   it('throws when --project does not exist', async () => {
@@ -263,6 +271,13 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain(':per-page-count="50"');
   }, 30000);
 
+  it('adds nothing to the side menu when the app has no App.vue', async () => {
+    host.delete('apps/test/src/App.vue');
+    // A header-layout app has no side menu; adding a staff view to one must not
+    // fail, it simply has no nav to join.
+    await expect(generator(host, baseOptions)).resolves.not.toThrow();
+  });
+
   it('inserts the route into router/index.ts, requiring auth by default', async () => {
     await generator(host, baseOptions);
 
@@ -274,6 +289,10 @@ describe('Vue Workspace View Generator', () => {
     expect(routerTs).toContain('requiresAuth: true');
     // A data table asks for the wide variant -- the generator knows it emitted one.
     expect(routerTs).toContain("layout: 'wide'");
+    // A staff queue is a nav destination, so the generator adds it to the
+    // app's side-menu list rather than leaving the route reachable only by URL.
+    const appVue = host.read('apps/test/src/App.vue').toString();
+    expect(appVue).toContain("to: '/applications'");
     expect(routerTs).toContain("{ path: '/', component: HomeView }");
   }, 30000);
 

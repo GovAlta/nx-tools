@@ -32,6 +32,14 @@ function signInAgain() {
 }
 <% if (layout === 'internal') { %>
 
+// The app's main navigation. Every `vue-*-view` generator that adds a staff
+// screen appends an entry here, and it is yours to reorder, relabel, group or
+// prune -- a generated app is a starting point, not a fixed shell. Items are
+// `{ label, to }`; add `icon` for a leading icon or `badge` for a count.
+const primaryItems = [
+  { label: 'Home', to: '/' },
+];
+
 // AppSideMenu's items are presentational — it doesn't know about Keycloak or
 // routing; it just renders whatever's passed and emits itemClick on click.
 const accountItems = computed(() => [
@@ -56,6 +64,7 @@ function onItemClick(item: { to?: string }) {
 <% if (layout === 'internal') { %>
   <AppSideMenu
     heading="<%= projectName %>"
+    :primary-items="primaryItems"
     :account-items="accountItems"
     @item-click="onItemClick"
   >
