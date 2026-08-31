@@ -149,6 +149,71 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain('searchDebounce');
   }, 30000);
 
+  describe('--filters', () => {
+    const filters = JSON.stringify([
+      {
+        key: 'status',
+        label: 'Status',
+        type: 'dropdown',
+        options: [{ value: 'open', label: 'Open' }],
+        anyLabel: 'All statuses',
+      },
+      { key: 'from', label: 'From', type: 'date' },
+    ]);
+
+    it('wires the shared FilterBar and sends the values as query filters', async () => {
+      await generator(host, { ...baseOptions, filters });
+      const view = host
+        .read('apps/test/src/views/ApplicationsListView.vue')
+        .toString();
+
+      expect(view).toContain('FilterBar');
+      expect(view).toContain(':filters="filterDescriptors"');
+      expect(view).toContain('@update:model-value="onFiltersChange"');
+      // The values object goes straight through useApi's adapter.
+      expect(view).toContain('filters: filterValues.value');
+      // The view owns the page reset, not FilterBar -- it owns `page`.
+      expect(view).toContain('page.value = 1');
+      // Descriptors are a ref so fetched dropdown options can be assigned in.
+      expect(view).toContain('const filterDescriptors = ref([');
+      expect(view).toContain("anyLabel: 'All statuses'");
+      expect(view).toContain("type: 'date' as const");
+    });
+
+    it('leaves output byte-identical when --filters is omitted', async () => {
+      await generator(host, baseOptions);
+      const without = host
+        .read('apps/test/src/views/ApplicationsListView.vue')
+        .toString();
+      expect(without).not.toContain('FilterBar');
+      expect(without).not.toContain('filterValues');
+      expect(without).not.toContain('onFiltersChange');
+    });
+
+    it('rejects a filter type it cannot render, naming the offender', async () => {
+      await expect(
+        generator(host, {
+          ...baseOptions,
+          filters: JSON.stringify([
+            { key: 'x', label: 'X', type: 'checkbox' },
+          ]),
+        }),
+      ).rejects.toThrow('--filters[].type must be "dropdown" or "date"; got "checkbox" for "x".');
+    });
+
+    it('accepts a real array, the form a programmatic caller passes', async () => {
+      await generator(host, {
+        ...baseOptions,
+        filters: [{ key: 'status', label: 'Status', type: 'dropdown' }],
+      });
+      const view = host
+        .read('apps/test/src/views/ApplicationsListView.vue')
+        .toString();
+      expect(view).toContain('FilterBar');
+      expect(view).toContain('options: []');
+    });
+  });
+
   it('omits onUnmounted along with the debounce when --filterable=false', async () => {
     // onUnmounted exists only to clear the search debounce, so importing it
     // unconditionally would be an unused import and fail the generated lint.

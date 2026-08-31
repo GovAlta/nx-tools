@@ -312,6 +312,7 @@ npx nx g @abgov/nx-adsp:vue-workspace-view my-app --name=applications --resource
 | `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable? }` (a JSON string — see note below) |
 | `detailRoute`  | No       | If set, each row gets a "View" action linking to `${detailRoute}/${row.id}` — typically a `vue-detail-view`'s route with the `:id` segment dropped      |
 | `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                        |
+| `filters`      | No       | JSON array of filter controls rendered above the table by `FilterBar`, beyond the search box — `[{key,label,type:"dropdown"\|"date",options?,anyLabel?}]`. Values are sent as query parameters alongside `search`/`page`/`sort`. Omit for no filter bar |
 | `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                    |
 | `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                         |
 | `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                 |
