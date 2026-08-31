@@ -10,7 +10,12 @@ import { insertVueRoute } from '../../utils/vue-router';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
-import { NormalizedSchema, Schema, WorkspaceViewColumn } from './schema';
+import {
+  NormalizedSchema,
+  Schema,
+  WorkspaceViewColumn,
+  WorkspaceViewFilter,
+} from './schema';
 
 // Nx's own CLI option coercion (coerceTypesInOptions in nx/src/utils/params)
 // only knows how to split an array-typed option on commas -- it has no JSON
@@ -29,6 +34,25 @@ function parseColumns(columns: Schema['columns']): WorkspaceViewColumn[] {
   return parsed;
 }
 
+// Same JSON-string-on-the-CLI reasoning as parseColumns above.
+function parseFilters(filters: Schema['filters']): WorkspaceViewFilter[] {
+  if (filters === undefined || filters === '') return [];
+  const parsed = typeof filters === 'string' ? JSON.parse(filters) : filters;
+  if (!Array.isArray(parsed)) {
+    throw new Error(
+      '--filters must be a JSON array of { key, label, type: "dropdown"|"date", options?, anyLabel? } objects.',
+    );
+  }
+  for (const filter of parsed) {
+    if (filter.type !== 'dropdown' && filter.type !== 'date') {
+      throw new Error(
+        `--filters[].type must be "dropdown" or "date"; got "${filter.type}" for "${filter.key}".`,
+      );
+    }
+  }
+  return parsed;
+}
+
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   const { root: projectRoot } = readProjectConfiguration(host, options.project);
 
@@ -37,6 +61,7 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     ...options,
     projectRoot,
     columns: parseColumns(options.columns),
+    filters: parseFilters(options.filters),
     viewFileName: `${className}ListView`,
     // className is PascalCase (e.g. "Applications") -- space it out for a
     // readable default heading ("Applications").

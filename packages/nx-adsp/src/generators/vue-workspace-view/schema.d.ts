@@ -5,6 +5,16 @@ export interface WorkspaceViewColumn {
   sortable?: boolean;
 }
 
+export interface WorkspaceViewFilter {
+  key: string;
+  label: string;
+  type: 'dropdown' | 'date';
+  /** Dropdown only. Omit and populate `filterDescriptors` at runtime to fetch them. */
+  options?: { value: string; label: string }[];
+  /** Dropdown only. Label for the "no filter" choice. Defaults to "Any". */
+  anyLabel?: string;
+}
+
 export interface Schema {
   project: string;
   name: string;
@@ -16,6 +26,8 @@ export interface Schema {
    * also accepted for programmatic callers (e.g. tests).
    */
   columns: string | WorkspaceViewColumn[];
+  /** Same JSON-string-on-the-CLI reasoning as `columns`. */
+  filters?: string | WorkspaceViewFilter[];
   detailRoute?: string;
   heading?: string;
   pageSize?: number;
@@ -23,11 +35,13 @@ export interface Schema {
   requiresAuth?: boolean;
 }
 
-export interface NormalizedSchema extends Omit<Schema, 'columns'> {
+export interface NormalizedSchema extends Omit<Schema, 'columns' | 'filters'> {
   projectRoot: string;
   /** PascalCase view name with a "ListView" suffix, e.g. ApplicationsListView. */
   viewFileName: string;
   columns: WorkspaceViewColumn[];
+  /** Empty when --filters wasn't given, so the template can skip the FilterBar. */
+  filters: WorkspaceViewFilter[];
   heading: string;
   pageSize: number;
   filterable: boolean;

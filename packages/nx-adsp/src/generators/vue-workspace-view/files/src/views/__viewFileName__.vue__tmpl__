@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted<% if (filterable) { %>, onUnmounted<% } %> } from 'vue';
-import { WorkspaceTable, formatCurrency, formatDate } from '<%= goaImportPath %>';
+import {
+  WorkspaceTable,
+<% if (filters.length) { -%>
+  FilterBar,
+<% } -%>
+  formatCurrency,
+  formatDate,
+} from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 const { list } = useApi();
@@ -23,6 +30,38 @@ const sortDir = ref<'asc' | 'desc'>('asc');
 <% if (filterable) { -%>
 const search = ref('');
 let searchDebounce: ReturnType<typeof setTimeout> | undefined;
+<% } -%>
+
+<% if (filters.length) { -%>
+// A ref, not a const: a dropdown's options can be fetched (load them in `load`
+// or a second call and assign into the matching descriptor) without changing
+// FilterBar's contract.
+const filterDescriptors = ref([
+<% filters.forEach(function (filter) { -%>
+  {
+    key: '<%- filter.key %>',
+    label: '<%- filter.label %>',
+    type: '<%- filter.type %>' as const,
+<% if (filter.type === 'dropdown') { -%>
+    options: <%- JSON.stringify(filter.options ?? []) %>,
+<% if (filter.anyLabel) { -%>
+    anyLabel: '<%- filter.anyLabel %>',
+<% } -%>
+<% } -%>
+  },
+<% }); -%>
+]);
+
+// Query-ready values, keyed by filter. FilterBar owns the controls and the
+// chips; the page reset and the reload below belong here because `page` is this
+// view's state.
+const filterValues = ref<Record<string, string>>({});
+
+function onFiltersChange(next: Record<string, string>) {
+  filterValues.value = next;
+  page.value = 1;
+  void load();
+}
 <% } -%>
 
 const PAGE_SIZE = <%= pageSize %>;
@@ -48,6 +87,9 @@ async function load() {
 <% } -%>
       sortBy: sortBy.value,
       sortDir: sortDir.value,
+<% if (filters.length) { -%>
+      filters: filterValues.value,
+<% } -%>
     });
     if (sequence !== loadSequence) return;
     rows.value = result.rows;
@@ -114,6 +156,16 @@ onUnmounted(() => {
       placeholder="Search..."
       width="320px"
       @_change="onSearchInput"
+    />
+
+    <goa-spacer vspacing="l" />
+<% } -%>
+<% if (filters.length) { -%>
+
+    <FilterBar
+      :filters="filterDescriptors"
+      :model-value="filterValues"
+      @update:model-value="onFiltersChange"
     />
 
     <goa-spacer vspacing="l" />

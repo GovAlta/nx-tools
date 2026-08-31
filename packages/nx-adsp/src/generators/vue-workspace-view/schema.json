@@ -35,6 +35,10 @@
       "type": "string",
       "description": "JSON array of table columns, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\",\"sortable\":true}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\"), sortable?: boolean }. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
     },
+    "filters": {
+      "type": "string",
+      "description": "JSON array of filter controls rendered above the table by FilterBar, beyond the --filterable search box -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"dropdown\",\"options\":[{\"value\":\"open\",\"label\":\"Open\"}]},{\"key\":\"from\",\"label\":\"From\",\"type\":\"date\"}]'. Each item: { key, label, type: \"dropdown\"|\"date\", options?: [{value,label}], anyLabel? }. Values are sent as query parameters alongside search/page/sort, so the API decides what each key means. Omit for no filter bar. Same JSON-string-on-the-CLI reasoning as --columns."
+    },
     "detailRoute": {
       "type": "string",
       "description": "If set, each row gets a \"View\" action linking to `${detailRoute}/${row.id}` -- typically a vue-detail-view's route with the :id segment dropped. Omit to leave the actions column for manual customization."
@@ -59,6 +63,12 @@
       "default": true
     }
   },
-  "required": ["project", "name", "resource", "route", "columns"],
+  "required": [
+    "project",
+    "name",
+    "resource",
+    "route",
+    "columns"
+  ],
   "additionalProperties": false
 }
