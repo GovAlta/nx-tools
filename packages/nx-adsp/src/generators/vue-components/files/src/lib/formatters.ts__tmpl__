@@ -21,6 +21,13 @@ const currency = new Intl.NumberFormat(LOCALE, {
   currency: 'CAD',
 });
 
+// A bare YYYY-MM-DD names a calendar date, not an instant, and must be built
+// from local parts. `new Date('2026-07-14')` parses as UTC midnight, which in
+// Alberta (UTC-6/-7) is 13 July 18:00 local — so the naive path renders the day
+// before, and on 1 January the year before. Every `type: 'date'` field the view
+// generators emit arrives in exactly this form.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 // `unknown` rather than a date union: views read fields off a record whose shape
 // the generator doesn't know, so every call site would otherwise need a cast.
 // Anything that isn't a usable date becomes the em dash, same as null.
@@ -34,6 +41,23 @@ function toValidDate(value: unknown): Date | null {
     return Number.isNaN(value.getTime()) ? null : value;
   }
   if (typeof value !== 'string' && typeof value !== 'number') return null;
+
+  if (typeof value === 'string') {
+    const parts = DATE_ONLY.exec(value);
+    if (parts) {
+      const [, year, month, day] = parts.map(Number);
+      const local = new Date(year, month - 1, day);
+      // Date's constructor rolls over out-of-range parts (month 13 becomes
+      // January of the next year) instead of failing, so round-trip the parts
+      // to reject '2026-13-45' and '2026-02-30' rather than render a wrong day.
+      return local.getFullYear() === year &&
+        local.getMonth() === month - 1 &&
+        local.getDate() === day
+        ? local
+        : null;
+    }
+  }
+
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -44,10 +68,18 @@ export function formatDate(value: unknown): string {
   return date ? dateOnly.format(date) : EMPTY;
 }
 
-/** Date with a short time, for audit/activity timestamps. */
+/**
+ * Date with a short time, for audit/activity timestamps. A date-only value has
+ * no time to show, so it falls back to the date alone rather than inventing a
+ * midnight that was never in the data.
+ */
 export function formatDateTime(value: unknown): string {
   const date = toValidDate(value);
-  return date ? dateAndTime.format(date) : EMPTY;
+  if (!date) return EMPTY;
+  if (typeof value === 'string' && DATE_ONLY.test(value)) {
+    return dateOnly.format(date);
+  }
+  return dateAndTime.format(date);
 }
 
 /**

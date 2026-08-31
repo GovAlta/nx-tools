@@ -56,7 +56,7 @@ inline styles.
 |---|---|---|
 | `<div style="background:white;border:1px solid …;border-radius:…;padding:…">` | `<goa-container>` | The bordered, padded card box. `type`/`accent` variants |
 | `<div style="display:flex;gap:…;align-items:…">` | `<goa-block>` | Flex row or stack, `gap` and `direction` props |
-| `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(…))">` | `<goa-grid>` | Responsive auto-fit grid, `min-child-width` prop |
+| `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(…))">` | `<goa-grid>` | Responsive auto-fit grid, `minchildwidth` prop (all lowercase — `min-child-width` silently does nothing) |
 | `<h2 style="font-size:…;font-weight:…;color:…">`, styled `span`/`p` | `<goa-text>` | Typography scale: `size`, `weight`, `color`, `mt`/`mb` |
 | `<table>` with `<th style>`/`<td style>` | `<goa-table>` (+ `<goa-table-sort-header>`) | For any table that isn't a paginated list view — `WorkspaceTable` already wraps this for that case |
 | Tab `<button>`s toggling `v-if` blocks | `<goa-tabs>` + `<goa-tab heading="…">` | Slot-based and self-managing: `initialtab` sets the first open tab, no `v-model` and no `@_change` |

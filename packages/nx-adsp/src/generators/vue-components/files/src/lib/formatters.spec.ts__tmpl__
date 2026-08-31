@@ -13,6 +13,32 @@ describe('formatters', () => {
     expect(formatDateTime('2026-08-28T14:05:00.000Z')).toMatch(/\d{1,2}:\d{2}/);
   });
 
+  // The input every generated `type: 'date'` column and field actually carries.
+  // Its absence is why a UTC-parsing bug shipped: the suite covered ISO
+  // timestamps, Dates and epoch numbers, but never a bare calendar date.
+  it.each([
+    ['2026-07-14'],
+    ['2026-01-01'],
+    ['2026-12-31'],
+  ])('renders the bare calendar date %s unchanged, in any timezone', (value) => {
+    expect(formatDate(value)).toBe(value);
+  });
+
+  it('does not invent a midnight for a date-only value', () => {
+    expect(formatDateTime('2026-07-14')).toBe('2026-07-14');
+  });
+
+  it('still renders a time for a real instant', () => {
+    expect(formatDateTime('2026-07-14T14:05:00.000Z')).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it.each(['2026-13-45', '2026-02-30', '2026-00-10'])(
+    'rejects the out-of-range date %s rather than rolling it over',
+    (value) => {
+      expect(formatDate(value)).toBe('—');
+    },
+  );
+
   it('accepts a Date, an epoch number, and an ISO string alike', () => {
     const iso = '2026-08-28T00:00:00.000Z';
     const expected = formatDate(iso);

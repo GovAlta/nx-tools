@@ -111,12 +111,14 @@ describe('Vue Detail View Generator', () => {
     expect(view).not.toContain('onMounted(');
     expect(view).not.toContain('function formatCurrency');
 
-    expect(view).toContain('formatDateTime');
+    expect(view).toContain('formatDate');
     expect(view).not.toContain('function formatDate');
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(record['status'] ?? '—')\" />",
     );
-    expect(view).toContain("formatDateTime(record['lastSaved'])");
+    // A type: 'date' column is a calendar date -- formatDate, not
+    // formatDateTime, which would show an invented midnight.
+    expect(view).toContain("formatDate(record['lastSaved'])");
     expect(view).toContain("formatCurrency(record['requestTotal'])");
     expect(view).toContain("record['serviceModel'] ?? '—'");
     expect(view).toContain('<dt>Status</dt>');
@@ -128,7 +130,7 @@ describe('Vue Detail View Generator', () => {
       view
         .replace(/\s+/g, ' ')
         .match(/import \{[^}]*\} from '@proj\/vue-components';/)?.[0] ?? '';
-    for (const name of ['RecordDetailShell', 'formatCurrency', 'formatDateTime']) {
+    for (const name of ['RecordDetailShell', 'formatCurrency', 'formatDate']) {
       expect(goaImport).toContain(name);
     }
     expect(view).toContain('<RecordDetailShell');

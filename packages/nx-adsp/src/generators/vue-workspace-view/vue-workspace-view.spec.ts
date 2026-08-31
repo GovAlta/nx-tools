@@ -121,7 +121,7 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain('clearTimeout(searchDebounce)');
 
     // Dates come from the shared formatter, not a per-view copy.
-    expect(view).toContain('formatDateTime');
+    expect(view).toContain('formatDate');
     expect(view).not.toContain('function formatDate');
     expect(view).not.toContain('toLocaleString');
     expect(view).not.toContain('Intl.');
@@ -129,7 +129,9 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain(
       "<goa-badge type=\"information\" :content=\"String(row['status'] ?? '—')\" />",
     );
-    expect(view).toContain("formatDateTime(row['lastSaved'])");
+    // A type: 'date' column is a calendar date -- formatDate, not
+    // formatDateTime, which would show an invented midnight.
+    expect(view).toContain("formatDate(row['lastSaved'])");
     expect(view).toContain("formatCurrency(row['requestTotal'])");
     // Uses the shared table shell, not hand-rolled loading/pagination markup.
     // Read the import's contents rather than an exact line: formatFiles wraps a
@@ -138,7 +140,7 @@ describe('Vue Workspace View Generator', () => {
       view
         .replace(/\s+/g, ' ')
         .match(/import \{[^}]*\} from '@proj\/vue-components';/)?.[0] ?? '';
-    for (const name of ['WorkspaceTable', 'formatCurrency', 'formatDateTime']) {
+    for (const name of ['WorkspaceTable', 'formatCurrency', 'formatDate']) {
       expect(goaImport).toContain(name);
     }
     expect(view).toContain('<WorkspaceTable');

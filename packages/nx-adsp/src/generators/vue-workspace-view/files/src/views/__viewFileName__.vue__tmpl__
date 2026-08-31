@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted<% if (filterable) { %>, onUnmounted<% } %> } from 'vue';
-import { WorkspaceTable, formatCurrency, formatDateTime } from '<%= goaImportPath %>';
+import { WorkspaceTable, formatCurrency, formatDate } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 const { list } = useApi();
@@ -140,7 +140,7 @@ onUnmounted(() => {
       </template>
 <% } else if (column.type === 'date') { -%>
       <template #cell-<%= column.key %>="{ row }">
-        {{ formatDateTime(row['<%= column.key %>']) }}
+        {{ formatDate(row['<%= column.key %>']) }}
       </template>
 <% } else if (column.type === 'currency') { -%>
       <template #cell-<%= column.key %>="{ row }">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { RecordDetailShell, formatCurrency, formatDateTime } from '<%= goaImportPath %>';
+import { RecordDetailShell, formatCurrency, formatDate } from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 // The fetched record's shape isn't known to this generator -- read fields
@@ -54,7 +54,7 @@ function goBack() {
 <% if (field.type === 'badge') { -%>
         <goa-badge type="information" :content="String(record['<%= field.key %>'] ?? '—')" />
 <% } else if (field.type === 'date') { -%>
-        {{ formatDateTime(record['<%= field.key %>']) }}
+        {{ formatDate(record['<%= field.key %>']) }}
 <% } else if (field.type === 'currency') { -%>
         {{ formatCurrency(record['<%= field.key %>']) }}
 <% } else { -%>
