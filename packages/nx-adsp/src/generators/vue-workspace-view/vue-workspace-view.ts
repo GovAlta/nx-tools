@@ -73,6 +73,8 @@ export default async function (host: Tree, options: Schema) {
     path: normalizedOptions.route,
     componentImportPath: `../views/${normalizedOptions.viewFileName}.vue`,
     requiresAuth: normalizedOptions.requiresAuth,
+    // A multi-column table at the 1000px default wraps every cell.
+    layout: 'wide',
   });
 
   await formatFiles(host);

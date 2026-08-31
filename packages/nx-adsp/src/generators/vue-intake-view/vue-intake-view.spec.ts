@@ -107,6 +107,14 @@ describe('Vue Intake View Generator', () => {
       .toString();
     // Last step in the list moves to review, not another step.
     expect(step2).toContain('/applications/${nextId}/review');
+    // Each step tells the Stepper which step it is (1-based) -- the generator
+    // knows, so the view doesn't re-derive it from the route. Without it every
+    // page renders step one as current.
+    expect(step1).toContain(':step="1"');
+    expect(step2).toContain(':step="2"');
+    // Single-column forms ask for the narrow variant.
+    const routerForm = host.read('apps/test/src/router/index.ts').toString();
+    expect(routerForm).toContain("layout: 'form'");
     // A required field gets a validation block + requirement="required"; an
     // explicitly non-required one gets neither.
     expect(step2).toContain("found.push({ message: 'Email is required.'");
@@ -156,7 +164,7 @@ describe('Vue Intake View Generator', () => {
       "component: () => import('../views/ApplicationConfirmationView.vue')",
     );
     expect(
-      routerTs.split('meta: { requiresAuth: true }').length - 1,
+      routerTs.split('requiresAuth: true').length - 1,
     ).toBe(4);
     // The existing route is untouched, not replaced.
     expect(routerTs).toContain("{ path: '/', component: HomeView }");

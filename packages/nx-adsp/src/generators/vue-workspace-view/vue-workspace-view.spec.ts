@@ -206,7 +206,9 @@ describe('Vue Workspace View Generator', () => {
     expect(routerTs).toContain(
       "component: () => import('../views/ApplicationsListView.vue')",
     );
-    expect(routerTs).toContain('meta: { requiresAuth: true }');
+    expect(routerTs).toContain('requiresAuth: true');
+    // A data table asks for the wide variant -- the generator knows it emitted one.
+    expect(routerTs).toContain("layout: 'wide'");
     expect(routerTs).toContain("{ path: '/', component: HomeView }");
   }, 30000);
 

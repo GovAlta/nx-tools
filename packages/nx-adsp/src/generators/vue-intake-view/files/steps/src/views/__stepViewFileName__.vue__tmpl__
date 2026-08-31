@@ -145,7 +145,7 @@ function goBack() {
 
 <template>
   <div>
-    <Stepper :steps="stepperSteps" @select="onStepperSelect" />
+    <Stepper :steps="stepperSteps" :step="<%= stepNumber %>" @select="onStepperSelect" />
 
     <goa-spacer vspacing="l" />
 

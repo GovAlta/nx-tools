@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 // Wraps the real, native goa-form-stepper/goa-form-step pair (confirmed via
 // design.alberta.ca/components/form-stepper -- there wasn't one when the spec
 // this is based on was written, hence "nobody used a native GoA stepper"; that
@@ -17,12 +18,27 @@ export interface StepperStep {
   status: 'complete' | 'incomplete' | 'not-started';
 }
 
-const props = defineProps<{ steps: StepperStep[] }>();
+// `step` is goa-form-stepper's OWN prop (1-based) and is what drives the
+// progress bar and the current-step emphasis. Without it the element defaults
+// to 1, so every page of a wizard renders step one as current and the internal
+// <progress> sits at zero. goa-form-step's status enum has no "current" value —
+// that state lives on the parent, which is easy to miss when reading only the
+// child's API.
+const props = withDefaults(
+  defineProps<{ steps: StepperStep[]; step?: number }>(),
+  { step: 1 },
+);
+
+// Clamped: the element sets a <progress> value from this, and an out-of-range
+// number yields a non-finite value that throws in the browser.
+const currentStep = computed(() =>
+  Math.min(Math.max(props.step, 1), Math.max(props.steps.length, 1)),
+);
 const emit = defineEmits<{ select: [key: string] }>();
 </script>
 
 <template>
-  <goa-form-stepper>
+  <goa-form-stepper :step="currentStep">
     <goa-form-step
       v-for="(step, index) in props.steps"
       :key="step.key"

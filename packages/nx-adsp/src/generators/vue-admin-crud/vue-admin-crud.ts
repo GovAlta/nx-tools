@@ -73,11 +73,13 @@ export default async function (host: Tree, options: Schema) {
     path: `${normalizedOptions.route}/:id`,
     componentImportPath: `../views/${normalizedOptions.editViewFileName}.vue`,
     requiresAuth: normalizedOptions.requiresAuth,
+    layout: 'form',
   });
   insertVueRoute(host, normalizedOptions.projectRoot, normalizedOptions.project, {
     path: normalizedOptions.route,
     componentImportPath: `../views/${normalizedOptions.listViewFileName}.vue`,
     requiresAuth: normalizedOptions.requiresAuth,
+    layout: 'wide',
   });
 
   await formatFiles(host);

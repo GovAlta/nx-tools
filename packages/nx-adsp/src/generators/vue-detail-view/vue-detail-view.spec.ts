@@ -153,6 +153,8 @@ describe('Vue Detail View Generator', () => {
       "component: () => import('../views/ApplicationDetailView.vue')",
     );
     expect(routerTs).toContain('meta: { requiresAuth: true }');
+    // A record info list is neither a table nor a form -- default width.
+    expect(routerTs).not.toContain('layout:');
     // The existing route is untouched, not replaced.
     expect(routerTs).toContain("{ path: '/', component: HomeView }");
   }, 30000);
