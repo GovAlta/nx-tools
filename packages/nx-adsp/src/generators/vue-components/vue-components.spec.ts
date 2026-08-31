@@ -93,6 +93,16 @@ describe('Vue Components Generator', () => {
     const formattersSrc = host
       .read('libs/vue-components/src/lib/formatters.ts')
       .toString();
+    // The staff shell must scroll its content, not the document -- otherwise
+    // the persistent side menu scrolls off the top. Verified in a real browser;
+    // this pins the rule so it can't regress to min-height.
+    const sideMenu = host
+      .read('libs/vue-components/src/lib/patterns/AppSideMenu.vue')
+      .toString();
+    expect(sideMenu).toContain('height: 100dvh');
+    expect(sideMenu).toContain('overflow: hidden');
+    expect(sideMenu).not.toContain('min-height: 100vh');
+
     // goa-form-stepper's `step` prop drives the progress bar; without it every
     // page of a wizard renders step one as current.
     const stepper = host
