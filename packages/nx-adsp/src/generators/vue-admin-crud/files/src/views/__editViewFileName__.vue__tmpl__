@@ -2,7 +2,27 @@
 import { reactive, ref, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
-import { GoabInput, GoabCheckbox } from '<%= goaImportPath %>';
+import {
+<% if (fields.some((f) => !f.type || f.type === 'text' || f.type === 'number')) { -%>
+  GoabInput,
+<% } -%>
+<% if (fields.some((f) => f.type === 'textarea')) { -%>
+  GoabTextarea,
+<% } -%>
+<% if (fields.some((f) => f.type === 'date')) { -%>
+  GoabDatePicker,
+<% } -%>
+<% if (fields.some((f) => f.type === 'select')) { -%>
+  GoabDropdown,
+<% } -%>
+<% if (fields.some((f) => f.type === 'checkbox')) { -%>
+  GoabCheckbox,
+<% } -%>
+<% if (fields.some((f) => f.type === 'date')) { -%>
+  fromIsoDateString,
+  toIsoDateString,
+<% } -%>
+} from '<%= goaImportPath %>';
 import { useApi } from '../composables/useApi';
 
 const route = useRoute();
@@ -15,7 +35,7 @@ const isNew = computed(() => idParam.value === 'new' || idParam.value === '');
 
 const form = reactive({
 <% fields.forEach(function (field) { -%>
-  <%- field.key %>: <%- field.type === 'checkbox' ? 'false' : "''" %>,
+  <%- field.key %>: <%- field.type === 'checkbox' ? 'false' : field.type === 'date' ? 'undefined as Date | undefined' : "''" %>,
 <% }); -%>
 });
 
@@ -37,7 +57,15 @@ async function load() {
   try {
     const data = await get('<%= resource %>', idParam.value);
 <% fields.forEach(function (field) { -%>
+<% if (field.type === 'date') { -%>
+    if (data['<%= field.key %>'] !== undefined)
+      form.<%= field.key %> = fromIsoDateString(data['<%= field.key %>']);
+<% } else if (field.type === 'number') { -%>
+    if (data['<%= field.key %>'] !== undefined)
+      form.<%= field.key %> = String(data['<%= field.key %>']);
+<% } else { -%>
     if (data['<%= field.key %>'] !== undefined) form.<%= field.key %> = data['<%= field.key %>'];
+<% } -%>
 <% }); -%>
   } catch (e) {
     loadError.value = e instanceof Error ? e.message : 'Failed to load.';
@@ -77,8 +105,34 @@ function validate(): boolean {
   let valid = true;
 <% fields.forEach(function (field) { -%>
 <% if (field.type !== 'checkbox' && field.required !== false) { -%>
+<% if (field.type === 'date') { -%>
+  if (!form.<%= field.key %>) {
+    errors.<%= field.key %> = '<%= field.label %> is required.';
+    valid = false;
+  } else {
+    errors.<%= field.key %> = undefined;
+  }
+<% } else if (field.type === 'number') { -%>
+  if (form.<%= field.key %> === '') {
+    errors.<%= field.key %> = '<%= field.label %> is required.';
+    valid = false;
+  } else if (!Number.isFinite(Number(form.<%= field.key %>))) {
+    errors.<%= field.key %> = '<%= field.label %> must be a number.';
+    valid = false;
+  } else {
+    errors.<%= field.key %> = undefined;
+  }
+<% } else { -%>
   if (!form.<%= field.key %> || !form.<%= field.key %>.trim()) {
     errors.<%= field.key %> = '<%= field.label %> is required.';
+    valid = false;
+  } else {
+    errors.<%= field.key %> = undefined;
+  }
+<% } -%>
+<% } else if (field.type === 'number') { -%>
+  if (form.<%= field.key %> !== '' && !Number.isFinite(Number(form.<%= field.key %>))) {
+    errors.<%= field.key %> = '<%= field.label %> must be a number.';
     valid = false;
   } else {
     errors.<%= field.key %> = undefined;
@@ -88,13 +142,29 @@ function validate(): boolean {
   return valid;
 }
 
+// The form model holds what each CONTROL needs (a Date for a picker, a string
+// for a number input); the API wants wire types. Converting here keeps that
+// difference in one place instead of at every call site.
+function payload() {
+  return {
+    ...form,
+<% fields.forEach(function (field) { -%>
+<% if (field.type === 'number') { -%>
+    <%- field.key %>: form.<%- field.key %> === '' ? null : Number(form.<%- field.key %>),
+<% } else if (field.type === 'date') { -%>
+    <%- field.key %>: toIsoDateString(form.<%- field.key %>) || null,
+<% } -%>
+<% }); -%>
+  };
+}
+
 async function onSubmit() {
   if (!validate()) return;
   saving.value = true;
   saveError.value = null;
   try {
     // Create vs. update — which verb and path that means is the adapter's call.
-    await save('<%= resource %>', isNew.value ? null : idParam.value, form);
+    await save('<%= resource %>', isNew.value ? null : idParam.value, payload());
     successMessage.value = isNew.value ? '<%= singularLabel %> created.' : '<%= singularLabel %> saved.';
     redirectTimer = setTimeout(() => router.push('<%= route %>'), 600);
   } catch (e) {
@@ -135,12 +205,28 @@ onUnmounted(() => {
     <form v-else @submit.prevent="onSubmit">
 <% fields.forEach(function (field) { -%>
 <% if (field.type === 'checkbox') { -%>
-      <goa-form-item label="<%= field.label %>">
+      <!-- The checkbox carries its own label via `text`; goa-form-item must not
+           repeat it, or it renders twice. -->
+      <goa-form-item>
         <GoabCheckbox v-model="form.<%= field.key %>" name="<%= field.key %>" text="<%= field.label %>" />
       </goa-form-item>
 <% } else { -%>
       <goa-form-item label="<%= field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %> :error="errors.<%= field.key %>">
+<% if (field.type === 'textarea') { -%>
+        <GoabTextarea v-model="form.<%= field.key %>" name="<%= field.key %>" />
+<% } else if (field.type === 'number') { -%>
+        <GoabInput v-model="form.<%= field.key %>" name="<%= field.key %>" type="number" />
+<% } else if (field.type === 'date') { -%>
+        <GoabDatePicker v-model="form.<%= field.key %>" name="<%= field.key %>" />
+<% } else if (field.type === 'select') { -%>
+        <GoabDropdown v-model="form.<%= field.key %>" name="<%= field.key %>">
+<% (field.options || []).forEach(function (option) { -%>
+          <goa-dropdown-item value="<%- option.value %>" label="<%- option.label %>" />
+<% }); -%>
+        </GoabDropdown>
+<% } else { -%>
         <GoabInput v-model="form.<%= field.key %>" name="<%= field.key %>" type="text" />
+<% } -%>
       </goa-form-item>
 <% } -%>
 <% }); -%>

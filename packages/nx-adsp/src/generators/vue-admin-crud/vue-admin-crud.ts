@@ -30,6 +30,30 @@ function parseFields(fields: Schema['fields']): AdminCrudField[] {
   return parsed;
 }
 
+const FIELD_TYPES = [
+  'text',
+  'textarea',
+  'number',
+  'date',
+  'select',
+  'checkbox',
+] as const;
+
+function assertFieldTypes(fields: { key: string; type?: string; options?: unknown }[]) {
+  for (const field of fields) {
+    if (field.type && !FIELD_TYPES.includes(field.type as never)) {
+      throw new Error(
+        `--fields[].type must be one of ${FIELD_TYPES.join(', ')}; got "${field.type}" for "${field.key}".`,
+      );
+    }
+    if (field.type === 'select' && !Array.isArray(field.options)) {
+      throw new Error(
+        `--fields[].options is required for the select field "${field.key}" -- the generator cannot know its choices.`,
+      );
+    }
+  }
+}
+
 function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   const { root: projectRoot } = readProjectConfiguration(host, options.project);
 
@@ -40,7 +64,11 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   return {
     ...options,
     projectRoot,
-    fields: parseFields(options.fields),
+    fields: (() => {
+      const fields = parseFields(options.fields);
+      assertFieldTypes(fields);
+      return fields;
+    })(),
     listViewFileName: `${className}ListView`,
     editViewFileName: `${className}EditView`,
     heading,

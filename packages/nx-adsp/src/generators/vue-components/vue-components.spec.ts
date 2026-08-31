@@ -129,8 +129,13 @@ describe('Vue Components Generator', () => {
     }
     // Local calendar parts, not UTC: in Alberta new Date('2026-08-28') is
     // 27 Aug 18:00 local, so a stored date would render as the day before.
-    expect(filterBar).toContain('function toIsoDate');
-    expect(filterBar).toContain('function fromIsoDate');
+    // The local-parts date conversion lives in formatters now, used by
+    // FilterBar and by every generated date field, so the rule has one home.
+    expect(filterBar).toContain('toIsoDateString');
+    expect(filterBar).toContain('fromIsoDateString');
+    expect(filterBar).not.toContain('function toIsoDate');
+    expect(formattersSrc).toContain('export function toIsoDateString');
+    expect(formattersSrc).toContain('export function fromIsoDateString');
     // The call form, not the bare name: the component's own comments explain why
     // toISOString() is wrong, so the name legitimately appears in them.
     expect(filterBar).not.toContain('date.toISOString()');

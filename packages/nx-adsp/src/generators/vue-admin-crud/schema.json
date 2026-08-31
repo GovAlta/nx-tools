@@ -33,7 +33,7 @@
     },
     "fields": {
       "type": "string",
-      "description": "JSON array of fields, in display/form order -- e.g. '[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"active\",\"label\":\"Active\",\"type\":\"checkbox\"}]'. Each item: { key, label, type?: \"text\"|\"checkbox\" (default \"text\"), required?: boolean (default true for \"text\", ignored for \"checkbox\") }. A plain array is also accepted when this generator is invoked programmatically."
+      "description": "JSON array of fields, in display/form order -- e.g. '[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"quota\",\"label\":\"Quota\",\"type\":\"number\"},{\"key\":\"region\",\"label\":\"Region\",\"type\":\"select\",\"options\":[{\"value\":\"north\",\"label\":\"North\"}]}]'. Each item: { key, label, type?: \"text\"|\"textarea\"|\"number\"|\"date\"|\"select\"|\"checkbox\" (default \"text\"), options?: [{value,label}] (select only), required?: boolean }. A number field is submitted as a number and a date as YYYY-MM-DD built from local calendar parts. A plain array is also accepted when invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that survives Nx's own arg parsing."
     },
     "heading": {
       "type": "string",
@@ -49,6 +49,12 @@
       "default": true
     }
   },
-  "required": ["project", "name", "resource", "route", "fields"],
+  "required": [
+    "project",
+    "name",
+    "resource",
+    "route",
+    "fields"
+  ],
   "additionalProperties": false
 }

@@ -1,7 +1,9 @@
 export interface AdminCrudField {
   key: string;
   label: string;
-  type?: 'text' | 'checkbox';
+  type?: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'checkbox';
+  /** `select` only. Rendered as goa-dropdown-item children. */
+  options?: { value: string; label: string }[];
   required?: boolean;
 }
 

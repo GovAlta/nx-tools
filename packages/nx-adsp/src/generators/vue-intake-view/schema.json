@@ -33,7 +33,7 @@
     },
     "steps": {
       "type": "string",
-      "description": "JSON array of steps, in order -- e.g. '[{\"key\":\"personal-info\",\"label\":\"Personal information\",\"fields\":[{\"key\":\"fullName\",\"label\":\"Full name\"}]}]'. Each item: { key, label, fields: [{ key, label, required?: boolean (default true) }] }. A plain array is also accepted when this generator is invoked programmatically. Every field is currently a plain text input -- see the generated AGENTS.md note for other field types."
+      "description": "JSON array of steps, in order -- e.g. '[{\"key\":\"personal-info\",\"label\":\"Personal information\",\"fields\":[{\"key\":\"fullName\",\"label\":\"Full name\"},{\"key\":\"born\",\"label\":\"Date of birth\",\"type\":\"date\"}]}]'. Each item: { key, label, fields: [...] }. Each field: { key, label, type?: \"text\"|\"textarea\"|\"number\"|\"date\"|\"select\" (default \"text\"), options?: [{value,label}] (select only, required for it), required?: boolean (default true) }. A number field is submitted as a number and a date as YYYY-MM-DD built from local calendar parts, not UTC. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that survives Nx's own arg parsing."
     },
     "requiresAuth": {
       "type": "boolean",
@@ -41,6 +41,12 @@
       "default": true
     }
   },
-  "required": ["project", "name", "resource", "route", "steps"],
+  "required": [
+    "project",
+    "name",
+    "resource",
+    "route",
+    "steps"
+  ],
   "additionalProperties": false
 }
