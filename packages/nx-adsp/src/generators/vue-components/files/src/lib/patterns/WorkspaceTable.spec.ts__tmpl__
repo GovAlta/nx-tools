@@ -1,0 +1,33 @@
+import { describe, it, expect } from 'vitest';
+import { mount } from '@vue/test-utils';
+import WorkspaceTable from './WorkspaceTable.vue';
+
+// goa-pagination registers pagenumber/itemcount/perpagecount with no
+// attribute: alias, so kebab-case bindings never arrive and the control
+// renders "Page — of NaN".
+describe('WorkspaceTable pagination wiring', () => {
+  const props = {
+    columns: [{ key: 'a', label: 'A' }],
+    rows: [{ a: 1 }],
+    loading: false,
+    error: null,
+    page: 2,
+    itemCount: 34,
+    perPageCount: 10,
+  };
+
+  it('passes the lowercase attribute names the element registers', () => {
+    const el = mount(WorkspaceTable, { props }).find('goa-pagination');
+    expect(el.exists()).toBe(true);
+    expect(el.attributes('pagenumber')).toBe('2');
+    expect(el.attributes('itemcount')).toBe('34');
+    expect(el.attributes('perpagecount')).toBe('10');
+  });
+
+  it('does not emit the kebab-case names that silently do nothing', () => {
+    const el = mount(WorkspaceTable, { props }).find('goa-pagination');
+    for (const wrong of ['page-number', 'item-count', 'per-page-count']) {
+      expect(el.attributes(wrong)).toBeUndefined();
+    }
+  });
+});

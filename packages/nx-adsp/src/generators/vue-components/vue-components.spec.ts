@@ -75,6 +75,27 @@ describe('Vue Components Generator', () => {
     const filterBar = host
       .read('libs/vue-components/src/lib/patterns/FilterBar.vue')
       .toString();
+    // goa-pagination registers all-lowercase prop names with no attribute:
+    // alias, so kebab-case bindings silently never arrive and the control
+    // renders "Page — of NaN".
+    const table = host
+      .read('libs/vue-components/src/lib/patterns/WorkspaceTable.vue')
+      .toString();
+    for (const prop of [':pagenumber=', ':itemcount=', ':perpagecount=']) {
+      expect(table).toContain(prop);
+    }
+    for (const wrong of [':page-number=', ':item-count=', ':per-page-count=']) {
+      expect(table).not.toContain(wrong);
+    }
+
+    // A bare YYYY-MM-DD is a calendar date, not an instant: parsing it through
+    // `new Date(string)` yields UTC midnight, which in Alberta is the day before.
+    const formattersSrc = host
+      .read('libs/vue-components/src/lib/formatters.ts')
+      .toString();
+    expect(formattersSrc).toContain('DATE_ONLY');
+    expect(formattersSrc).toContain('local.getFullYear() === year');
+
     expect(filterBar).toContain('goa-filter-chip');
     expect(filterBar).toContain('goa-details');
     // Precise API forms, not bare words -- 'page' appears in the component's own
@@ -99,6 +120,7 @@ describe('Vue Components Generator', () => {
     for (const spec of [
       'libs/vue-components/src/lib/patterns/FilterBar.spec.ts',
       'libs/vue-components/src/lib/primitives/GoabDatePicker.spec.ts',
+      'libs/vue-components/src/lib/patterns/WorkspaceTable.spec.ts',
     ]) {
       expect(host.exists(spec)).toBeTruthy();
     }

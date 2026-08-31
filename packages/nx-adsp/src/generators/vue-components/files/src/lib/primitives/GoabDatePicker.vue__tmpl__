@@ -9,8 +9,14 @@
 // wrappers read, so it does not use skeleton A verbatim.
 //
 // Consumers that need a wire format (a query parameter, a JSON body) convert at
-// that boundary — `date?.toISOString().slice(0, 10)` for YYYY-MM-DD — rather
-// than this wrapper guessing which format is wanted.
+// that boundary, and must build YYYY-MM-DD from LOCAL calendar parts:
+//
+//   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+//
+// NOT `toISOString().slice(0, 10)`. toISOString goes through UTC, and the UTC
+// day of a local-midnight Date is the previous day anywhere west of Greenwich —
+// in Alberta (UTC-6/-7) that files every date one day early. FilterBar's
+// `toIsoDate` is the reference implementation.
 //
 // Usage: <GoabDatePicker v-model="startDate" name="startDate" :max="new Date()" />
 const model = defineModel<Date | undefined>();

@@ -115,12 +115,18 @@ function ariaSort(
 
       <goa-spacer vspacing="l" />
 
+      <!-- All-lowercase, not kebab-case: goa-pagination registers `pagenumber`,
+           `itemcount`, `perpagecount` with no `attribute:` alias, so kebab-case
+           bindings never reach it and the control renders "Page — of NaN".
+           (goa-work-side-menu's `userName` DOES declare attribute: "user-name",
+           which is why the design system looks inconsistent here -- check the
+           registered name per element rather than assuming a convention.) -->
       <goa-pagination
         v-if="page && itemCount && perPageCount && itemCount > perPageCount"
         version="2"
-        :page-number="page"
-        :item-count="itemCount"
-        :per-page-count="perPageCount"
+        :pagenumber="page"
+        :itemcount="itemCount"
+        :perpagecount="perPageCount"
         @_change="(e) => emit('pageChange', (e as CustomEvent<{ page: number }>).detail?.page ?? 1)"
       />
     </template>
