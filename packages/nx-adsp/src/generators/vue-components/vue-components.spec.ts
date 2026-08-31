@@ -93,6 +93,14 @@ describe('Vue Components Generator', () => {
     const formattersSrc = host
       .read('libs/vue-components/src/lib/formatters.ts')
       .toString();
+    // goa-form-stepper's `step` prop drives the progress bar; without it every
+    // page of a wizard renders step one as current.
+    const stepper = host
+      .read('libs/vue-components/src/lib/patterns/Stepper.vue')
+      .toString();
+    expect(stepper).toContain(':step="currentStep"');
+    expect(stepper).toContain('Math.min(Math.max(props.step, 1)');
+
     expect(formattersSrc).toContain('DATE_ONLY');
     expect(formattersSrc).toContain('local.getFullYear() === year');
 
@@ -121,6 +129,7 @@ describe('Vue Components Generator', () => {
       'libs/vue-components/src/lib/patterns/FilterBar.spec.ts',
       'libs/vue-components/src/lib/primitives/GoabDatePicker.spec.ts',
       'libs/vue-components/src/lib/patterns/WorkspaceTable.spec.ts',
+      'libs/vue-components/src/lib/patterns/Stepper.spec.ts',
     ]) {
       expect(host.exists(spec)).toBeTruthy();
     }

@@ -86,6 +86,10 @@ export default async function (host: Tree, options: Schema) {
         stepFields: step.fields,
         stepperSteps,
         nextStepKey,
+        // 1-based, for goa-form-stepper's own `step` prop. The generator knows
+        // which step it is emitting; the view would otherwise have to re-derive
+        // it from the route.
+        stepNumber: index + 1,
         tmpl: '',
       },
     );
@@ -111,6 +115,7 @@ export default async function (host: Tree, options: Schema) {
     path: `${normalizedOptions.route}/:id/review`,
     componentImportPath: `../views/${reviewViewFileName}.vue`,
     requiresAuth: normalizedOptions.requiresAuth,
+    layout: 'form',
   });
   for (let i = steps.length - 1; i >= 0; i--) {
     const step = steps[i];
@@ -118,6 +123,7 @@ export default async function (host: Tree, options: Schema) {
       path: `${normalizedOptions.route}/:id/${step.key}`,
       componentImportPath: `../views/${stepViewFileName(step.key)}.vue`,
       requiresAuth: normalizedOptions.requiresAuth,
+      layout: 'form',
     });
   }
 

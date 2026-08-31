@@ -177,7 +177,7 @@ describe('Vue Admin CRUD Generator', () => {
       "component: () => import('../views/RegionsEditView.vue')",
     );
     expect(
-      routerTs.split('meta: { requiresAuth: true }').length - 1,
+      routerTs.split('requiresAuth: true').length - 1,
     ).toBe(2);
     // The existing route is untouched, not replaced.
     expect(routerTs).toContain("{ path: '/', component: HomeView }");

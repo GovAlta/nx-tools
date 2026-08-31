@@ -5,6 +5,13 @@ export interface VueRouteSpec {
   /** Relative import path passed to () => import(...), e.g. '../views/FooView.vue'. */
   componentImportPath: string;
   requiresAuth?: boolean;
+  /**
+   * Content width for the view, read by App.vue's `contentWidth` and passed to
+   * AppLayout. Omit for the 1000px default; a generator emitting a data table
+   * should say 'wide' and one emitting a single-column form 'form', since it
+   * already knows which it produced.
+   */
+  layout?: 'wide' | 'form';
 }
 
 // Deterministic text insertion, not an AST edit -- vue-app's router/index.ts
@@ -32,8 +39,12 @@ export function insertVueRoute(
     );
   }
 
-  const metaLine = route.requiresAuth
-    ? `\n      meta: { requiresAuth: true },`
+  const metaEntries = [
+    ...(route.requiresAuth ? ['requiresAuth: true'] : []),
+    ...(route.layout ? [`layout: '${route.layout}'`] : []),
+  ];
+  const metaLine = metaEntries.length
+    ? `\n      meta: { ${metaEntries.join(', ')} },`
     : '';
   const routeSnippet =
     `{\n` +
