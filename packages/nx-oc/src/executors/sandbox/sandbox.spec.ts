@@ -6,6 +6,10 @@ jest.mock('child_process', () => ({
   ...jest.requireActual('child_process'),
   execSync: jest.fn(),
 }));
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn(),
+}));
 jest.mock('../../utils/oc-utils', () => ({ ensureOcLogin: jest.fn() }));
 jest.mock('@abgov/adsp-cli', () => ({
   getAccessToken: jest.fn(),
@@ -14,6 +18,14 @@ jest.mock('@abgov/adsp-cli', () => ({
 }));
 
 const { execSync } = require('child_process') as { execSync: jest.Mock };
+const { existsSync } = require('fs') as { existsSync: jest.Mock };
+
+/** Only the given workspace-relative paths exist. */
+function onlyTheseFilesExist(...paths: string[]) {
+  existsSync.mockImplementation((candidate: string) =>
+    paths.some((path) => String(candidate).endsWith(path)),
+  );
+}
 
 const adspCli = require('@abgov/adsp-cli') as {
   getAccessToken: jest.Mock;
@@ -51,6 +63,9 @@ function commands(): string[] {
 
 beforeEach(() => {
   execSync.mockReset();
+  existsSync.mockReset();
+  // The generated default: the sandbox generator emits this path.
+  onlyTheseFilesExist('.openshift/test/Dockerfile');
   execSync.mockImplementation(() => Buffer.from(''));
   adspCli.getAccessToken.mockReset();
   adspCli.getAccessToken.mockResolvedValue({ status: 'ok', token: 'test-token' });
@@ -61,6 +76,65 @@ beforeEach(() => {
 });
 
 describe('sandbox executor', () => {
+  describe('container build file resolution', () => {
+    const buildCmd = () => commands().find((cmd) => cmd.startsWith('podman build'));
+
+    it('defaults to the path the sandbox generator emits', async () => {
+      await runExecutor(baseOptions, context());
+      expect(buildCmd()).toContain('-f .openshift/test/Dockerfile');
+    });
+
+    it('falls back to Containerfile when only that name is present', async () => {
+      onlyTheseFilesExist('.openshift/test/Containerfile');
+      await runExecutor(baseOptions, context());
+      expect(buildCmd()).toContain('-f .openshift/test/Containerfile');
+    });
+
+    it('prefers Dockerfile when both names are present', async () => {
+      onlyTheseFilesExist(
+        '.openshift/test/Dockerfile',
+        '.openshift/test/Containerfile',
+      );
+      await runExecutor(baseOptions, context());
+      expect(buildCmd()).toContain('-f .openshift/test/Dockerfile');
+    });
+
+    it('honours --dockerfile, e.g. the root Dockerfile the OpenShift container contract requires', async () => {
+      onlyTheseFilesExist('Dockerfile');
+      await runExecutor({ ...baseOptions, dockerfile: 'Dockerfile' }, context());
+      expect(buildCmd()).toContain('-f Dockerfile');
+    });
+
+    it('fails fast when --dockerfile points at nothing, naming the value given', async () => {
+      onlyTheseFilesExist('.openshift/test/Dockerfile');
+      await expect(
+        runExecutor({ ...baseOptions, dockerfile: 'build/Containerfile' }, context()),
+      ).resolves.toEqual({ success: false });
+      expect(buildCmd()).toBeUndefined();
+    });
+
+    it('fails before provisioning anything when no build file exists at all', async () => {
+      onlyTheseFilesExist();
+      await expect(runExecutor(baseOptions, context())).resolves.toEqual({
+        success: false,
+      });
+      // The point of resolving in the preflight: nothing expensive ran.
+      const cmds = commands();
+      expect(cmds.some((cmd) => cmd.startsWith('podman build'))).toBe(false);
+      expect(cmds.some((cmd) => cmd.startsWith('npx nx build'))).toBe(false);
+      expect(cmds.some((cmd) => cmd.includes('oc create secret'))).toBe(false);
+    });
+
+    it('needs no build file when --skipBuild is set', async () => {
+      onlyTheseFilesExist();
+      const result = await runExecutor(
+        { ...baseOptions, skipBuild: true },
+        context(),
+      );
+      expect(result).toEqual({ success: true });
+    });
+  });
+
   it('builds, pushes, tags, imports, and rolls out in order', async () => {
     const result = await runExecutor(baseOptions, context());
     expect(result.success).toBe(true);

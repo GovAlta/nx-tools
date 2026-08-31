@@ -406,7 +406,7 @@ The executor (`packages/nx-oc/src/executors/sandbox/`) runs: preflight (`oc` log
 per-deploy pull secret → `oc tag … --reference-policy=local` → **`oc import-image` with retry**
 (absorbs the tag-reconcile 409) → `oc process | oc apply` → `oc rollout`. Pods pull in-cluster
 via the local reference policy. Options include `--database`, `--imageTag`, `--importRetries`,
-`--deployBackend`, `--skipBuild`/`--skipPush` (resume a partial deploy), and
+`--dockerfile`, `--deployBackend`, `--skipBuild`/`--skipPush` (resume a partial deploy), and
 `--registerDirectory` (opt-in ADSP directory registration after rollout).
 
 Key wiring to preserve when editing:
@@ -422,6 +422,15 @@ Key wiring to preserve when editing:
   app manifest format is identical regardless of path. Always use `clusters.postgresql.cnpg.io`
   (fully qualified) — `oc get cluster` resolves to `clusters.aro.openshift.io` on GoA ARO.
   Mongo continues to use a plain Deployment; there is no CNPG path for mongo.
+- **Container build file**: resolved in the preflight, not at the build step, so a missing or
+  misnamed file fails before secrets and a database are provisioned. Default is
+  `.openshift/<project>/Dockerfile`, falling back to `.openshift/<project>/Containerfile` (podman
+  treats the names as equivalent; the generator emits `Dockerfile`, so the fallback is a fallback,
+  not a preference). `--dockerfile=<path>` overrides both, and a non-existent override fails naming
+  the value given. The override exists because the OpenShift container-contract preflight and the
+  Government Developer Station both look for a **repository-root** Dockerfile — without it, a
+  project satisfying that contract could not use this executor at all. Build context stays `.`
+  either way.
 - **DB auto-detection**: `express-service` records an `adsp:database:<type>` project tag; the
   sandbox generator reads it (falling back to a drizzle `db:migrate` target ⇒ `postgres`), so
   no `--database` flag is needed. Mirrors the `adsp:proxy-service:<name>:<port>` tag that

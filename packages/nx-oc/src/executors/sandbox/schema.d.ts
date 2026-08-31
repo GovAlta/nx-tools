@@ -14,4 +14,5 @@ export interface SandboxExecutorSchema {
   deployBackend?: boolean;
   importRetries?: number;
   registerDirectory?: boolean;
+  dockerfile?: string;
 }
