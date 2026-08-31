@@ -86,8 +86,24 @@ const emit = defineEmits<{ itemClick: [item: AppSideMenuItem] }>();
 
 <style scoped>
 .app-side-menu {
-  min-height: 100vh;
+  /* Bounded height, so .app-side-menu-content's overflow-y below actually
+     engages. With min-height the flex container grows past the viewport, the
+     content pane never overflows within it, and the DOCUMENT scrolls instead --
+     carrying the side menu off the top, which is the one thing a persistent
+     nav must not do. The overflow-y rule below was always intended to be the
+     scroll container; it was simply inert.
+     dvh tracks mobile browser chrome; vh is the fallback for older engines. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
+}
+
+.app-side-menu > goa-work-side-menu {
+  /* A nav longer than the viewport scrolls within its own column rather than
+     being clipped by the container's overflow: hidden. */
+  overflow-y: auto;
+  flex: 0 0 auto;
 }
 
 .app-side-menu-content {
