@@ -59,6 +59,7 @@ nx run <%= projectName %>:sandbox --skipBuild --skipPush   # reuse the pushed im
 nx run <%= projectName %>:sandbox --imageTag=<tag>         # push/import under a different tag
 nx run <%= projectName %>:sandbox --importRetries=8        # more import retries on a slow cluster
 nx run <%= projectName %>:sandbox --registerDirectory      # register in ADSP directory after rollout (opt-in)
+nx run <%= projectName %>:sandbox --dockerfile=Dockerfile  # build file elsewhere (e.g. a repo-root Dockerfile)
 <% if (appType === 'frontend') { %>nx run <%= projectName %>:sandbox --deployBackend           # deploy each paired backend (its own sandbox) first
 <% } %>```
 <% if (appType === 'frontend') { %>

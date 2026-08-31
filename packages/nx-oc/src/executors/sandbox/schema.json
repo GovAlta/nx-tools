@@ -16,13 +16,21 @@
     },
     "database": {
       "type": "string",
-      "enum": ["none", "postgres", "mongo"],
+      "enum": [
+        "none",
+        "postgres",
+        "mongo"
+      ],
       "default": "none",
       "description": "Provision a shared sandbox database of this type before deploying. 'postgres' uses the CloudNativePG operator when available and falls back to the plain Deployment otherwise."
     },
     "appType": {
       "type": "string",
-      "enum": ["node", "frontend", "dotnet"],
+      "enum": [
+        "node",
+        "frontend",
+        "dotnet"
+      ],
       "description": "Application type. Detected from the project configuration when omitted."
     },
     "imageTag": {
@@ -53,8 +61,15 @@
     "registerDirectory": {
       "type": "boolean",
       "default": false,
-      "description": "After a successful rollout, register the service in the ADSP directory under the tenant's namespace (register-once — skips if the entry already exists). Only applies to node and dotnet app types. Requires an active adsp login with the directory-admin role."
+      "description": "After a successful rollout, register the service in the ADSP directory under the tenant's namespace (register-once \u2014 skips if the entry already exists). Only applies to node and dotnet app types. Requires an active adsp login with the directory-admin role."
+    },
+    "dockerfile": {
+      "type": "string",
+      "description": "Path to the container build file, relative to the workspace root. Defaults to .openshift/<project>/Dockerfile, falling back to .openshift/<project>/Containerfile. Set this when the file lives elsewhere -- e.g. a repository-root Dockerfile, which the OpenShift container-contract preflight and the Government Developer Station both look for."
     }
   },
-  "required": ["sandboxProject", "registry"]
+  "required": [
+    "sandboxProject",
+    "registry"
+  ]
 }

@@ -5,6 +5,8 @@ import {
   registerDirectoryService,
 } from '@abgov/adsp-cli';
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { detectApplicationType } from '../../utils/app-type';
 import { activeAccountScopes } from '../../utils/gh-utils';
 import { ensureOcLogin } from '../../utils/oc-utils';
@@ -12,6 +14,48 @@ import { detectAdspTenant } from '../../adsp/adsp-utils';
 import { SandboxExecutorSchema } from './schema';
 
 const PROXY_TAG_PREFIX = 'adsp:proxy-service:';
+
+// Resolves the container build file before the build runs, so a missing or
+// misnamed file fails here rather than several minutes in as a podman error.
+//
+// `--dockerfile` exists because the path is a convention, not a law: the
+// OpenShift container-contract preflight and the Government Developer Station
+// both look for a repository-root Dockerfile, so a project satisfying that
+// contract could not otherwise use this executor at all.
+//
+// Containerfile is checked as a fallback, not preferred: podman treats the two
+// names as equivalent, and the sandbox generator emits `Dockerfile`.
+function resolveContainerfile(
+  cwd: string,
+  projectName: string,
+  override?: string,
+): string {
+  if (override) {
+    if (!existsSync(join(cwd, override))) {
+      throw new Error(
+        `--dockerfile was set to '${override}' but no such file exists relative to the workspace root.`,
+      );
+    }
+    return override;
+  }
+
+  const candidates = [
+    `.openshift/${projectName}/Dockerfile`,
+    `.openshift/${projectName}/Containerfile`,
+  ];
+  const found = candidates.find((candidate) =>
+    existsSync(join(cwd, candidate)),
+  );
+  if (!found) {
+    throw new Error(
+      `No container build file found. Looked for:\n` +
+        candidates.map((candidate) => `  ${candidate}`).join('\n') +
+        `\nRun \`nx g @abgov/nx-oc:sandbox ${projectName}\` to generate one, ` +
+        `or pass --dockerfile=<path> if it lives elsewhere (e.g. a root Dockerfile).`,
+    );
+  }
+  return found;
+}
 
 // Fail fast, with an actionable message, before the (slow) production build —
 // rather than a raw "command not found" partway through.
@@ -198,6 +242,11 @@ export default async function runExecutor(
     if (!skipBuild || !skipPush) {
       requirePodman();
     }
+    // Resolved in the preflight, not at the build step: an unbuildable path
+    // should stop the run before it provisions secrets and a database.
+    const containerfile = skipBuild
+      ? undefined
+      : resolveContainerfile(cwd, projectName, options.dockerfile);
 
     // ---- service client secret (node services authenticate to ADSP) ----
     // Upserted from the current .env.local so re-runs pick up a rotated secret.
@@ -463,7 +512,7 @@ EOF`,
       );
       run(
         'Podman build',
-        `podman build --platform=linux/amd64 -f .openshift/${projectName}/Dockerfile -t ${imageRef} .`,
+        `podman build --platform=linux/amd64 -f ${containerfile} -t ${imageRef} .`,
         cwd,
       );
     }
