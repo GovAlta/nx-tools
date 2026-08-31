@@ -234,34 +234,31 @@ mark what's meant to be edited.
    { path: '/queue', component: () => import('../views/QueueView.vue'), meta: { layout: 'wide' } }
    { path: '/apply', component: () => import('../views/ApplyView.vue'), meta: { layout: 'form' } }
    ```
-3. **For the `internal` layout: add a nav link to `src/App.vue`.** The generated shell only
-   populates `accountItems`; primary navigation lives in `primaryItems` (or `secondaryItems`).
-   `AppSideMenu` emits one `itemClick` for all slots — the generated `onItemClick` already
-   dispatches by `item.to`: items with a `to` route, items without sign in/out. Add only
-   `primaryItems`:
+3. **For the `internal` layout: check the side-menu nav.** `src/App.vue` has a plain
+   `primaryItems` array — the app's own navigation list, seeded with Home. Each `vue-*-view`
+   generator that adds a staff screen appends its entry automatically, so a generated route is
+   navigable without you doing anything.
+
+   It is a literal array, not derived from the router, on purpose: nav order, grouping and
+   labels are decisions this app owns. Reorder, relabel, group into `secondaryItems`, or prune
+   freely — the generators only ever append, and never touch an entry that already exists for
+   that route.
 
    ```typescript
-   // In <script setup> — route, router, and onItemClick are already in the generated App.vue:
-   // Icon names from the GoA icon set: design.alberta.ca/components/icons
-   const primaryItems = computed(() => [
-     { label: 'Home',       to: '/',           icon: 'home', current: route.path === '/' },
-     { label: 'My Feature', to: '/my-feature', icon: 'list', current: route.path.startsWith('/my-feature') },
-   ])
+   const primaryItems = [
+     { label: 'Home', to: '/', icon: 'home' },
+     { label: 'Review queue', to: '/queue' },   // added by vue-workspace-view
+   ];
    ```
 
-   ```html
-   <!-- In <template>, add :primary-items to <AppSideMenu>
-        (@item-click="onItemClick" is already wired in the generated shell): -->
-   <AppSideMenu
-     heading="..."
-     :primary-items="primaryItems"
-     :account-items="accountItems"
-     @item-click="onItemClick"
-   >
-   ```
+   Two things worth adding by hand: **`icon`** is effectively required —
+   `goa-work-side-menu-item` renders a blank item without one, and the generators can't guess it
+   (icon names: [design.alberta.ca/components/icons](https://design.alberta.ca/components/icons)).
+   And **`current`** for active highlighting, e.g. `current: route.path.startsWith('/queue')`,
+   which needs the `route` already in scope.
 
-   The `header` layout has no side menu — add route-level breadcrumbs or a secondary nav
-   directly inside the view component instead.
+   The `header` layout has no side menu, so it has no `primaryItems` array and the generators
+   skip the step silently — use route-level breadcrumbs or a nav inside the view instead.
 
 ## Backend API calls (proxy setup)
 

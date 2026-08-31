@@ -7,6 +7,7 @@ import {
 } from '@nx/devkit';
 import * as path from 'path';
 import { insertVueRoute } from '../../utils/vue-router';
+import { insertSideMenuItem } from '../../utils/vue-side-menu';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -80,6 +81,12 @@ export default async function (host: Tree, options: Schema) {
     componentImportPath: `../views/${normalizedOptions.listViewFileName}.vue`,
     requiresAuth: normalizedOptions.requiresAuth,
     layout: 'wide',
+  });
+
+  // The list is the nav destination; the edit form is reached from it.
+  insertSideMenuItem(host, normalizedOptions.projectRoot, {
+    label: normalizedOptions.heading,
+    to: normalizedOptions.route,
   });
 
   await formatFiles(host);

@@ -193,6 +193,12 @@ describe('Vue App Generator', () => {
     expect(app).toContain('<AppFooter />');
   }, 30000);
 
+  it('the header layout has no side-menu nav array (there is no side menu)', async () => {
+    await generator(host, options);
+    const app = host.read('apps/test/src/App.vue').toString();
+    expect(app).not.toContain('primaryItems');
+  });
+
   it('--layout=internal generates an AppSideMenu shell instead of AppHeader/AppFooter', async () => {
     await generator(host, { ...options, layout: 'internal' });
 
@@ -206,6 +212,12 @@ describe('Vue App Generator', () => {
     expect(app).toContain('<AppSideMenu');
     expect(app).toContain('heading="test"');
     expect(app).toContain(':account-items="accountItems"');
+    // A plain, editable nav array -- the app's own list, seeded with Home and
+    // appended to by each staff view generator. Not derived from the router:
+    // nav order, grouping and labels are the owning team's decisions.
+    expect(app).toContain(':primary-items="primaryItems"');
+    expect(app).toContain('const primaryItems = [');
+    expect(app).toContain("{ label: 'Home', to: '/' },");
     expect(app).toContain('@item-click="onItemClick"');
     // The content gutter is shared regardless of shell choice.
     expect(app).toContain('<AppLayout');
