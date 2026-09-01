@@ -66,6 +66,7 @@ inline styles.
 | A loading `<div>` or spinner markup | `<goa-skeleton type="…">` or `<goa-spinner>` | Skeletons match the shape they replace (`card`, `text`, `table`) |
 | A `<label>` + error `<span>` around an input | `<goa-form-item label="…" error="…">` | Wrap the `Goab*` input in this, don't restyle it |
 | A row of buttons with flex styling | `<goa-button-group alignment="…">` | |
+| A hand-built multi-select (checkbox list, chips) | `<goa-dropdown-multiselect>` | Added in web-components 2.4.0 |
 | A hand-built filter row above a table | `<FilterBar>` (this library) | Controls, collapse, active-filter chips and clear-all. It emits a query-ready values object; the *view* owns resetting the page, debouncing, and URL sync |
 
 Also available bare and worth knowing before hand-rolling: `goa-accordion`, `goa-details`,

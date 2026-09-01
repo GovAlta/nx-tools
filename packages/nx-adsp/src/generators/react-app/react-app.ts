@@ -148,9 +148,9 @@ export default async function (host: Tree, options: Schema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/design-tokens': '2.12.0',
+      '@abgov/design-tokens': '2.12.8',
       '@abgov/react-components': '7.3.0',
-      '@abgov/web-components': '2.3.0',
+      '@abgov/web-components': '2.4.0',
       '@reduxjs/toolkit': '^2.5.1',
       'keycloak-js': '^23.0.7',
       'react-redux': '^9.2.0',
