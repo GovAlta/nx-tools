@@ -91,6 +91,15 @@ export default async function (host: Tree, options: Schema) {
     {
       ...normalizedOptions,
       goaImportPath: vueComponentsImportPath(host),
+      // Derived here rather than tested inline in the template: EJS throws a
+      // ReferenceError on a bare undefined variable, so a flag the template
+      // reads must always be defined.
+      hasCodedColumns: normalizedOptions.columns.some(
+        (column) => column.options?.length,
+      ),
+      hasBadgeColumns: normalizedOptions.columns.some(
+        (column) => column.type === 'badge',
+      ),
       tmpl: '',
     },
   );

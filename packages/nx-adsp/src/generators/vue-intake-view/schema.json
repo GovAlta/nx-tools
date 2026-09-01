@@ -39,14 +39,17 @@
       "type": "boolean",
       "description": "Whether the generated routes require authentication.",
       "default": true
+    },
+    "referenceField": {
+      "type": "string",
+      "description": "Field on the submitted record holding the business reference shown on the confirmation page, e.g. 'reference'. The confirmation fetches the record and displays this rather than the route id -- an internal id presented as a reference number is meaningless to the person quoting it back. Falls back to the route id when the record has no such field.",
+      "default": "reference"
+    },
+    "heading": {
+      "type": "string",
+      "description": "Human title used in the confirmation heading, e.g. 'Compensation claim'. Defaults to the class-cased --name."
     }
   },
-  "required": [
-    "project",
-    "name",
-    "resource",
-    "route",
-    "steps"
-  ],
+  "required": ["project", "name", "resource", "route", "steps"],
   "additionalProperties": false
 }

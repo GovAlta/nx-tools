@@ -3,6 +3,26 @@ export interface WorkspaceViewColumn {
   label: string;
   type?: 'text' | 'date' | 'currency' | 'badge';
   sortable?: boolean;
+  /**
+   * Value -> label for a coded column. Supply this whenever the stored value is
+   * a code rather than prose, or the table renders the raw code.
+   */
+  options?: { value: string; label: string }[];
+  /**
+   * `badge` only. Value -> goa-badge type, e.g.
+   * `{ approved: 'success', declined: 'emergency' }`. Unmapped values render
+   * neutral.
+   */
+  badgeMap?: Record<
+    string,
+    | 'information'
+    | 'success'
+    | 'important'
+    | 'emergency'
+    | 'dark'
+    | 'midtone'
+    | 'light'
+  >;
 }
 
 export interface WorkspaceViewFilter {

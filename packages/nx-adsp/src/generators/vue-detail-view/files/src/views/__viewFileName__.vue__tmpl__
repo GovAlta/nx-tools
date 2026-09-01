@@ -1,8 +1,52 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { RecordDetailShell, formatCurrency, formatDate } from '<%= goaImportPath %>';
+import {
+  RecordDetailShell,
+  formatCurrency,
+  formatDate,
+<% if (hasCodedFields || hasBadgeFields) { -%>
+  optionLabel,
+<% } -%>
+<% if (hasBadgeFields) { -%>
+  badgeType,
+<% } -%>
+} from '<%= goaImportPath %>';
+<% if (hasCodedFields || hasBadgeFields) { -%>
+import type {
+<% if (hasCodedFields || hasBadgeFields) { -%>
+  DisplayOption,
+<% } -%>
+<% if (hasBadgeFields) { -%>
+  BadgeType,
+<% } -%>
+} from '<%= goaImportPath %>';
+<% } -%>
 import { useApi } from '../composables/useApi';
+<% if (hasCodedFields || hasBadgeFields) { -%>
+
+// Value -> label for coded fields, so the record reads back in prose rather than
+// in stored codes.
+const fieldOptions: Record<string, DisplayOption[]> = {
+<% fields.forEach(function (field) { -%>
+<% if (field.options && field.options.length) { -%>
+  '<%= field.key %>': <%- JSON.stringify(field.options) %>,
+<% } -%>
+<% }); -%>
+};
+<% } -%>
+<% if (hasBadgeFields) { -%>
+
+// Value -> badge type; unmapped values render neutral rather than being asserted
+// as good or bad.
+const fieldBadgeTypes: Record<string, Record<string, BadgeType>> = {
+<% fields.forEach(function (field) { -%>
+<% if (field.type === 'badge') { -%>
+  '<%= field.key %>': <%- JSON.stringify(field.badgeMap || {}) %>,
+<% } -%>
+<% }); -%>
+};
+<% } -%>
 
 // The fetched record's shape isn't known to this generator -- read fields
 // defensively rather than declaring (and likely getting wrong) a fake interface.
@@ -52,7 +96,12 @@ function goBack() {
       <dt><%= field.label %></dt>
       <dd>
 <% if (field.type === 'badge') { -%>
-        <goa-badge type="information" :content="String(record['<%= field.key %>'] ?? '—')" />
+        <goa-badge
+          :type="badgeType(fieldBadgeTypes['<%= field.key %>'], record['<%= field.key %>'])"
+          :content="optionLabel(fieldOptions['<%= field.key %>'], record['<%= field.key %>'])"
+        />
+<% } else if (field.options && field.options.length) { -%>
+        {{ optionLabel(fieldOptions['<%= field.key %>'], record['<%= field.key %>']) }}
 <% } else if (field.type === 'date') { -%>
         {{ formatDate(record['<%= field.key %>']) }}
 <% } else if (field.type === 'currency') { -%>

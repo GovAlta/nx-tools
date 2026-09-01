@@ -141,3 +141,61 @@ export function formatPercent(
   }).format(value);
   return `${rounded}%`;
 }
+
+/** One choice in a coded set -- the shape a generator's `options` list uses. */
+export interface DisplayOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * The human label for a coded value, e.g. 'cattle-mature' -> 'Cattle (mature)'.
+ *
+ * Every view that renders a value from a `select`/dropdown field must go through
+ * this. The generators are handed the label for each value at generation time,
+ * and rendering the bare value instead puts raw domain codes ('northwest',
+ * 'wolf') in front of the person filling the form -- most damagingly on a
+ * check-your-answers page, where the whole point is that they can read back what
+ * they entered.
+ *
+ * Falls back to the value itself, not to a dash: an unmapped code is a data or
+ * configuration problem, and showing it is far more debuggable than hiding it.
+ */
+export function optionLabel(
+  options: readonly DisplayOption[] | undefined,
+  value: unknown,
+): string {
+  if (value === null || value === undefined || value === '') return '—';
+  const match = options?.find((option) => option.value === String(value));
+  return match ? match.label : String(value);
+}
+
+/** goa-badge's `type`, which carries the semantic colour. */
+export type BadgeType =
+  | 'information'
+  | 'success'
+  | 'important'
+  | 'emergency'
+  | 'dark'
+  | 'midtone'
+  | 'light';
+
+/**
+ * The badge type for a status value, from a value -> type map.
+ *
+ * A badge's colour is the fastest thing a reader takes in, so a status rendered
+ * with the wrong one actively misinforms: a declined claim in neutral blue reads
+ * as routine. Views pass a map (supplied per column/field at generation time)
+ * rather than a hardcoded type.
+ *
+ * Falls back to 'information' -- neutral, which is the honest choice for a value
+ * whose severity we were not told.
+ */
+export function badgeType(
+  map: Readonly<Record<string, BadgeType>> | undefined,
+  value: unknown,
+  fallback: BadgeType = 'information',
+): BadgeType {
+  if (value === null || value === undefined || value === '') return fallback;
+  return map?.[String(value)] ?? fallback;
+}

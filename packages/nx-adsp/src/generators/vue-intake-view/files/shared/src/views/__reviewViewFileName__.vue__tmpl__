@@ -5,11 +5,30 @@ import { GoabCheckbox } from '<%= goaImportPath %>';
 <% if (steps.some((s) => s.fields.some((f) => f.type === 'date'))) { -%>
 import { formatDate } from '<%= goaImportPath %>';
 <% } -%>
+<% if (hasCodedFields) { -%>
+import { optionLabel } from '<%= goaImportPath %>';
+import type { DisplayOption } from '<%= goaImportPath %>';
+<% } -%>
 import { useApi } from '../composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
 const { get, action } = useApi();
+<% if (hasCodedFields) { -%>
+
+// Value -> label for every coded field across the steps. Check-your-answers is
+// where this matters most: the page exists so the person can read back what they
+// entered, and a stored code ('cattle-mature', 'northwest') is not that.
+const fieldOptions: Record<string, DisplayOption[]> = {
+<% steps.forEach(function (step) { -%>
+<% step.fields.forEach(function (field) { -%>
+<% if (field.options && field.options.length) { -%>
+  '<%- field.key %>': <%- JSON.stringify(field.options) %>,
+<% } -%>
+<% }); -%>
+<% }); -%>
+};
+<% } -%>
 
 const idParam = computed(() => String(route.params.id ?? ''));
 
@@ -84,6 +103,8 @@ async function onSubmit() {
           <dt><%- field.label %></dt>
 <% if (field.type === 'date') { -%>
           <dd>{{ formatDate(record['<%- field.key %>']) }}</dd>
+<% } else if (field.options && field.options.length) { -%>
+          <dd>{{ optionLabel(fieldOptions['<%- field.key %>'], record['<%- field.key %>']) }}</dd>
 <% } else { -%>
           <dd>{{ record['<%- field.key %>'] ?? '—' }}</dd>
 <% } -%>

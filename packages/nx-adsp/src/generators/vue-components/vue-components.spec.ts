@@ -179,7 +179,9 @@ describe('Vue Components Generator', () => {
     // Shared value formatters: every view renders a date/count the same way
     // instead of inlining its own toLocaleString (which is what a real app did
     // in three separate views before this existed).
-    expect(host.exists('libs/vue-components/src/lib/formatters.ts')).toBeTruthy();
+    expect(
+      host.exists('libs/vue-components/src/lib/formatters.ts'),
+    ).toBeTruthy();
     expect(
       host.exists('libs/vue-components/src/lib/formatters.spec.ts'),
     ).toBeTruthy();
@@ -191,6 +193,12 @@ describe('Vue Components Generator', () => {
       'formatDateTime',
       'formatNumber',
       'formatPercent',
+      // Display of a *coded* value, the other half of formatting. Views that
+      // skipped these put raw domain codes and neutral-blue badges in front of
+      // citizens, so they live beside the date/number formatters rather than
+      // being re-derived per view.
+      'optionLabel',
+      'badgeType',
     ]) {
       expect(formatters).toContain(`export function ${fn}`);
     }
@@ -322,4 +330,26 @@ describe('Vue Components Generator', () => {
       expect(host.exists('libs/vue-components/package.json')).toBeFalsy();
     });
   });
+
+  it('exports the display helpers from the lib barrel, not just the module', async () => {
+    await generator(host);
+    const index = host.read('libs/vue-components/src/index.ts').toString();
+    expect(index).toContain('optionLabel');
+    expect(index).toContain('badgeType');
+    expect(index).toContain('DisplayOption');
+    expect(index).toContain('BadgeType');
+  }, 30000);
+
+  it('falls back to the raw value for an unmapped code rather than hiding it', async () => {
+    await generator(host);
+    const formatters = host
+      .read('libs/vue-components/src/lib/formatters.ts')
+      .toString();
+    // An unmapped code is a data/config problem; showing it is debuggable,
+    // blanking it is not.
+    expect(formatters).toContain('return match ? match.label : String(value)');
+    // And an unmapped badge value stays neutral rather than being asserted good
+    // or bad.
+    expect(formatters).toContain("fallback: BadgeType = 'information'");
+  }, 30000);
 });

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
 import {
 <% if (fields.some((f) => !f.type || f.type === 'text' || f.type === 'number')) { -%>
   GoabInput,
@@ -27,7 +26,6 @@ import { useApi } from '../composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
-const kc = useKeycloak();
 const { get, save } = useApi();
 
 const idParam = computed(() => String(route.params.id ?? ''));
@@ -238,7 +236,7 @@ onUnmounted(() => {
       <goa-spacer vspacing="l" />
 
       <goa-button-group gap="relaxed">
-        <goa-button v-if="kc.authenticated" type="primary" :disabled="saving || undefined" @_click="onSubmit">
+        <goa-button type="primary" :disabled="saving || undefined" @_click="onSubmit">
           {{ isNew ? 'Create <%= singularLabel %>' : 'Save changes' }}
         </goa-button>
         <goa-button type="secondary" @_click="goBack">Cancel</goa-button>

@@ -37,8 +37,11 @@ export {
   fromIsoDateString,
   toIsoDateString,
   formatCurrency,
+  optionLabel,
+  badgeType,
   formatDate,
   formatDateTime,
   formatNumber,
   formatPercent,
 } from './lib/formatters';
+export type { DisplayOption, BadgeType } from './lib/formatters';

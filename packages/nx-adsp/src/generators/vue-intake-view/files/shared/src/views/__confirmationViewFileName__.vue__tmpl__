@@ -1,20 +1,74 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useApi } from '../composables/useApi';
 
 const route = useRoute();
+const { get } = useApi();
+
+// The confirmation page fetches the submitted record rather than reading the id
+// out of the route, so it can show the business reference the person will quote
+// back to us. The route id is a storage detail -- presenting it as "your
+// reference number" hands them a number that means nothing to anyone they later
+// talk to.
+const record = ref<Record<string, unknown> | null>(null);
+const loading = ref(true);
+
+// Falls back to the route id only when the record has no reference field, so the
+// page still shows something actionable rather than a blank.
+const reference = ref(String(route.params.id ?? ''));
+
+onMounted(async () => {
+  try {
+    const id = String(route.params.id ?? '');
+    record.value = (await get('<%- resource %>', id)) as Record<string, unknown>;
+    const value = record.value?.['<%- referenceField %>'];
+    if (value !== null && value !== undefined && value !== '') {
+      reference.value = String(value);
+    }
+  } catch {
+    // A failed lookup must not blank the confirmation: the submission already
+    // succeeded, and the route id is still a usable fallback reference.
+  } finally {
+    loading.value = false;
+  }
+});
 </script>
 
 <template>
   <div>
-    <goa-callout type="success" heading="Submitted">
-      <p>
-        Your reference number is <strong>{{ route.params.id }}</strong>. Keep this for your
-        records.
-      </p>
+    <goa-callout type="success" heading="<%- heading %> submitted">
+      <h1 class="confirmation-reference">
+        Your reference number is
+        <strong>{{ loading ? '…' : reference }}</strong>
+      </h1>
+      <p>Keep this for your records. You'll need it to check on your submission.</p>
     </goa-callout>
+
+    <goa-spacer vspacing="l" />
+
+    <h2>What happens next</h2>
+    <ol>
+      <li>We'll review what you submitted.</li>
+      <li>We'll contact you if we need anything further.</li>
+      <li>We'll let you know the outcome.</li>
+    </ol>
 
     <goa-spacer vspacing="m" />
 
-    <p>You'll be notified of any updates. No further action is needed right now.</p>
+    <router-link to="/">
+      <goa-button type="secondary">Return to the start</goa-button>
+    </router-link>
   </div>
 </template>
+
+<style scoped>
+/* The reference is the page's heading in the GDS confirmation pattern -- an h1
+   for landmark/screen-reader order, sized to sit inside the callout rather than
+   at page-title scale. */
+.confirmation-reference {
+  font-size: var(--goa-typography-heading-m-font-size, 1.25rem);
+  line-height: var(--goa-typography-heading-m-line-height, 1.5);
+  margin: 0 0 var(--goa-space-s, 0.75rem);
+}
+</style>
