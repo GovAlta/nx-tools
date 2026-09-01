@@ -37,7 +37,7 @@ function signInAgain() {
 // prune -- a generated app is a starting point, not a fixed shell. Items are
 // `{ label, to }`; add `icon` for a leading icon or `badge` for a count.
 const primaryItems = [
-  { label: 'Home', to: '/' },
+  { label: 'Home', to: '/', icon: 'home' },
 ];
 
 // AppSideMenu's items are presentational — it doesn't know about Keycloak or

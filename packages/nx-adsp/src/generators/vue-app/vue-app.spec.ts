@@ -232,7 +232,9 @@ describe('Vue App Generator', () => {
     // nav order, grouping and labels are the owning team's decisions.
     expect(app).toContain(':primary-items="primaryItems"');
     expect(app).toContain('const primaryItems = [');
-    expect(app).toContain("{ label: 'Home', to: '/' },");
+    // The icon is not decoration: goa-work-side-menu-item renders a blank
+    // item without one.
+    expect(app).toContain("{ label: 'Home', to: '/', icon: 'home' },");
     expect(app).toContain('@item-click="onItemClick"');
     // The content gutter is shared regardless of shell choice.
     expect(app).toContain('<AppLayout');
@@ -327,7 +329,12 @@ describe('Vue App Generator', () => {
     // response-envelope keys get inlined into every generated view.
     expect(useApi).toContain('apiConvention');
     expect(useApi).toContain('THE GLUE LAYER');
-    for (const method of ['function list', 'function get', 'function save', 'function action']) {
+    for (const method of [
+      'function list',
+      'function get',
+      'function save',
+      'function action',
+    ]) {
       expect(useApi).toContain(method);
     }
     // The documented escape hatch for a limit/offset backend.
@@ -443,7 +450,9 @@ describe('Vue App Generator', () => {
       .read('libs/vue-components/src/lib/patterns/AppHeader.vue')
       .toString();
     expect(appHeader).toContain('version="2"');
-    expect(appHeader).toMatch(/<div[^>]*slot="utilities"[^>]*>[\s\S]*<slot name="utilities"/);
+    expect(appHeader).toMatch(
+      /<div[^>]*slot="utilities"[^>]*>[\s\S]*<slot name="utilities"/,
+    );
 
     const app = host.read('apps/test/src/App.vue').toString();
     expect(app).toMatch(/<template #utilities>[\s\S]*<goa-button-group/);
@@ -564,5 +573,38 @@ describe('Vue App Generator', () => {
     const nginxConf = host.read('apps/test/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/test-service/');
     expect(nginxConf).toContain('http://other-service:9000/');
+  });
+
+  // Regression: the shell projects into goa-one-column-layout's native `header`
+  // and `footer` slots. The rule was only turned off for the vue-components lib,
+  // so when the shell adopted the element `nx lint` began failing on unmodified
+  // generator output -- two `vue/no-deprecated-slot-attribute` errors in the
+  // generator's own App.vue. Asserted for both layouts: the attribute is
+  // legitimate custom-element usage in either shell, and scoping the override to
+  // the one template that happens to emit it today is what caused the bug.
+  it.each(['header', 'internal'] as const)(
+    'disables vue/no-deprecated-slot-attribute for a %s-layout app',
+    async (layout) => {
+      await generator(host, { ...options, layout });
+      // create-nx-workspace's current default is flat config, so that is what
+      // @nx/vue writes for the app; read whichever is actually in effect rather
+      // than assuming a filename.
+      const config =
+        host.read('apps/test/eslint.config.mjs')?.toString() ??
+        host.read('apps/test/.eslintrc.json')?.toString() ??
+        '';
+      // Quote style differs between the flat-config writer and the legacy JSON
+      // one, so match the rule and its value together rather than a literal.
+      expect(config).toMatch(
+        /vue\/no-deprecated-slot-attribute["']?\s*:\s*["']off["']/,
+      );
+    },
+  );
+
+  it('emits native slot attributes the disabled rule would otherwise flag', async () => {
+    await generator(host, { ...options, layout: 'header' });
+    const app = host.read('apps/test/src/App.vue')?.toString() ?? '';
+    expect(app).toContain('slot="header"');
+    expect(app).toContain('slot="footer"');
   });
 });

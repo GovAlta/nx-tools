@@ -43,18 +43,17 @@
       "type": "string",
       "description": "Singular label used in \"Create <label>\"/\"Edit <label>\" headings and buttons. Defaults to --heading (override for irregular plurals, e.g. --heading=Regions --singularLabel=Region)."
     },
+    "icon": {
+      "type": "string",
+      "description": "Ionicon name for the generated side-menu entry, e.g. `settings`. goa-work-side-menu-item renders a blank item without one.",
+      "default": "settings"
+    },
     "requiresAuth": {
       "type": "boolean",
       "description": "Whether the generated routes require authentication.",
       "default": true
     }
   },
-  "required": [
-    "project",
-    "name",
-    "resource",
-    "route",
-    "fields"
-  ],
+  "required": ["project", "name", "resource", "route", "fields"],
   "additionalProperties": false
 }

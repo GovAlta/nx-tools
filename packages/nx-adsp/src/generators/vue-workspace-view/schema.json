@@ -57,18 +57,17 @@
       "description": "Whether to generate a debounced search input above the table.",
       "default": true
     },
+    "icon": {
+      "type": "string",
+      "description": "Ionicon name for the generated side-menu entry, e.g. `list`. goa-work-side-menu-item renders a blank item without one.",
+      "default": "list"
+    },
     "requiresAuth": {
       "type": "boolean",
       "description": "Whether the generated route requires authentication.",
       "default": true
     }
   },
-  "required": [
-    "project",
-    "name",
-    "resource",
-    "route",
-    "columns"
-  ],
+  "required": ["project", "name", "resource", "route", "columns"],
   "additionalProperties": false
 }
