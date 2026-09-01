@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspVueIntakeView",
   "title": "Vue Multi-Step Intake View",
-  "description": "Generates a route-per-step intake wizard (Stepper + StepErrorSummary, a required read-only review step, and a confirmation page) into an existing vue-app project. Cross-step state is server-persisted -- each step PUTs/POSTs to /api/<resource>/:id and refetches on mount; there's no client-side draft caching.",
+  "description": "Generates a route-per-step intake wizard (Stepper + StepErrorSummary, a required read-only review step, and a confirmation page) into an existing vue-app project. Cross-step state is server-persisted -- each step PUTs/POSTs to /api/v1/<resource>/:id and refetches on mount; there's no client-side draft caching.",
   "type": "object",
   "properties": {
     "project": {
@@ -25,7 +25,7 @@
     },
     "resource": {
       "type": "string",
-      "description": "API resource path segment. Each step fetches/saves /api/<resource>/:id; the review step's Submit posts /api/<resource>/:id/submit."
+      "description": "API resource path segment. Each step fetches/saves /api/v1/<resource>/:id; the review step's Submit posts /api/v1/<resource>/:id/submit."
     },
     "route": {
       "type": "string",

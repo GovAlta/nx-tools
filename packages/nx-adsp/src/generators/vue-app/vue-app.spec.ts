@@ -635,4 +635,46 @@ describe('Vue App Generator', () => {
     expect(app).toContain('slot="header"');
     expect(app).toContain('slot="footer"');
   });
+
+  // Regression: the generated guidance hardcoded `apps/` and `libs/` prefixes. In a
+  // TS-solution workspace projects sit at the workspace root, so every path in the
+  // AGENTS.md an agent is told to read was wrong. Asserted against the roots actually
+  // in the tree rather than a literal, so this holds under either layout.
+  it('points its guidance at the real project roots, not hardcoded apps//libs/', async () => {
+    addProjectConfiguration(host, 'test-service', {
+      root: 'apps/test-service',
+    });
+    await generator(host, { ...options, pairedProject: 'test-service' });
+
+    const agents = host.read('apps/test/AGENTS.md')?.toString() ?? '';
+    const libRoot = readProjectConfiguration(host, 'vue-components').root;
+    const serviceRoot = readProjectConfiguration(host, 'test-service').root;
+
+    expect(agents).toContain(`${libRoot}/src/lib/primitives/`);
+    expect(agents).toContain(`${serviceRoot}/AGENTS.md`);
+    // No path may name the lib without going through its resolved root.
+    const strayLibPaths = agents
+      .split('\n')
+      .filter(
+        (line) =>
+          line.includes('vue-components/src/') && !line.includes(libRoot),
+      );
+    expect(strayLibPaths).toEqual([]);
+  });
+
+  it('documents the options that decide what a person sees', async () => {
+    await generator(host, options);
+    const agents = host.read('apps/test/AGENTS.md')?.toString() ?? '';
+    // These live in the vue-components catalog too, but the "Adding a view"
+    // decision table is where a generator gets chosen -- an agent that never
+    // opens the lib's own docs still has to be told to pass them.
+    for (const option of [
+      'badgeMap',
+      'referenceField',
+      '--icon',
+      'optionLabel',
+    ]) {
+      expect(agents).toContain(option);
+    }
+  });
 });
