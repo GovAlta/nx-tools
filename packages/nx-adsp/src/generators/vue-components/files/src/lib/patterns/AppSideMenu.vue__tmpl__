@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSlots } from 'vue';
+import { computed, useSlots } from 'vue';
 
 // The alternate top-level shell for staff-facing/internal apps (goa-work-side-menu),
 // used instead of AppHeader/AppFooter -- not together with them. Presentational only:
@@ -23,7 +23,7 @@ interface AppSideMenuItem {
   current?: boolean;
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     heading?: string;
     userName?: string;
@@ -38,13 +38,24 @@ withDefaults(
   },
 );
 
+// goa-work-side-menu renders its profile button whenever the `account` slot has
+// content, and that button's ONLY accessible name is `user-name` — the element
+// exposes no aria-label prop, and the name also feeds the icon's own label. Left
+// empty it is an unnamed button (axe `button-name`, critical) plus an unlabelled
+// icon (`role-img-alt`), on every route of the app.
+//
+// Resolved here rather than defaulted via withDefaults: a default only applies to
+// `undefined`, and the realistic case is a caller passing a signed-out user's
+// empty-string name. Trimmed so whitespace doesn't read as a name either.
+const profileName = computed(() => props.userName?.trim() || 'Account');
+
 const emit = defineEmits<{ itemClick: [item: AppSideMenuItem] }>();
 </script>
 
 <template>
   <div class="app-side-menu">
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <goa-work-side-menu :heading="heading" :user-name="userName">
+    <goa-work-side-menu :heading="heading" :user-name="profileName">
       <goa-work-side-menu-item
         v-for="item in primaryItems"
         :key="item.label"

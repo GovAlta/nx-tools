@@ -78,6 +78,10 @@ const dateValues = computed(() =>
   ),
 );
 
+// Takes a plain string, never undefined: an unset filter is '', which is what
+// clearAll() resets to and what the dropdown renders as its "Any" option. The
+// dropdown wrapper's defineModel<string>() emits string | undefined, so its
+// handler normalises before calling this rather than widening the shape here.
 function set(key: string, value: string) {
   model.value = { ...model.value, [key]: value };
 }
@@ -109,7 +113,9 @@ function clearAll() {
             v-if="filter.type === 'dropdown'"
             :model-value="model[filter.key] ?? ''"
             :name="filter.key"
-            @update:model-value="(value: string) => set(filter.key, value)"
+            @update:model-value="
+              (value: string | undefined) => set(filter.key, value ?? '')
+            "
           >
             <goa-dropdown-item value="" :label="filter.anyLabel ?? 'Any'" />
             <goa-dropdown-item

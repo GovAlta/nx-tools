@@ -677,4 +677,12 @@ describe('Vue App Generator', () => {
       expect(agents).toContain(option);
     }
   });
+
+  it('feeds the signed-in user into the side menu profile button', async () => {
+    await generator(host, { ...options, layout: 'internal' });
+    const app = host.read('apps/test/src/App.vue')?.toString() ?? '';
+    // AppSideMenu falls back to a generic name, but the real one has to reach it
+    // or an authenticated user's own menu never shows who they are.
+    expect(app).toContain(':user-name="kc.fullName"');
+  });
 });

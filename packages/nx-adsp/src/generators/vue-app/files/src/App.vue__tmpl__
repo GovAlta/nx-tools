@@ -64,6 +64,7 @@ function onItemClick(item: { to?: string }) {
 <% if (layout === 'internal') { %>
   <AppSideMenu
     heading="<%= projectName %>"
+    :user-name="kc.fullName"
     :primary-items="primaryItems"
     :account-items="accountItems"
     @item-click="onItemClick"

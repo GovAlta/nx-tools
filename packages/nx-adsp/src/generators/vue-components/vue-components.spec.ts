@@ -393,4 +393,25 @@ describe('Vue Components Generator', () => {
         .module,
     ).toBe('preserve');
   }, 30000);
+
+  // Regression: goa-work-side-menu's profile button takes its accessible name
+  // only from `user-name` (no aria-label prop exists on the element), and the
+  // shell rendered the account slot -- which is what creates that button --
+  // without ever supplying one. Measured on pristine generator output, that was
+  // an unnamed critical `button-name` violation plus an unlabelled `role-img-alt`
+  // icon on every route of an internal-layout app.
+  it('never leaves the side menu profile button without an accessible name', async () => {
+    await generator(host);
+    const sideMenu = host
+      .read('libs/vue-components/src/lib/patterns/AppSideMenu.vue')
+      .toString();
+
+    // Resolved, not passed straight through: an empty string is the realistic
+    // input (a signed-out user), and withDefaults only covers `undefined`.
+    expect(sideMenu).toContain(
+      "const profileName = computed(() => props.userName?.trim() || 'Account')",
+    );
+    expect(sideMenu).toContain(':user-name="profileName"');
+    expect(sideMenu).not.toContain(':user-name="userName"');
+  }, 30000);
 });
