@@ -213,7 +213,7 @@ function goBack() {
       <StepErrorSummary :errors="errors" />
 
 <% stepFields.forEach(function (field) { -%>
-      <goa-form-item id="field-<%- field.key %>" label="<%- field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %>>
+      <goa-form-item mb="l" id="field-<%- field.key %>" label="<%- field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %>>
 <% if (field.type === 'textarea') { -%>
         <GoabTextarea v-model="form.<%- field.key %>" name="<%- field.key %>" />
 <% } else if (field.type === 'number') { -%>
