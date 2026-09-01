@@ -125,7 +125,9 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain('let loadSequence = 0');
     expect(view).toContain('const sequence = ++loadSequence');
     expect(view).toContain('if (sequence !== loadSequence) return;');
-    expect(view).toContain('if (sequence === loadSequence) loading.value = false;');
+    expect(view).toContain(
+      'if (sequence === loadSequence) loading.value = false;',
+    );
 
     // The debounce timer must not outlive the component.
     expect(view).toContain('onUnmounted(');
@@ -138,7 +140,7 @@ describe('Vue Workspace View Generator', () => {
     expect(view).not.toContain('Intl.');
     expect(view).not.toContain('function formatCurrency');
     expect(view).toContain(
-      "<goa-badge type=\"information\" :content=\"String(row['status'] ?? '—')\" />",
+      "badgeType(columnBadgeTypes['status'], row['status'])",
     );
     // A type: 'date' column is a calendar date -- formatDate, not
     // formatDateTime, which would show an invented midnight.
@@ -205,11 +207,11 @@ describe('Vue Workspace View Generator', () => {
       await expect(
         generator(host, {
           ...baseOptions,
-          filters: JSON.stringify([
-            { key: 'x', label: 'X', type: 'checkbox' },
-          ]),
+          filters: JSON.stringify([{ key: 'x', label: 'X', type: 'checkbox' }]),
         }),
-      ).rejects.toThrow('--filters[].type must be "dropdown" or "date"; got "checkbox" for "x".');
+      ).rejects.toThrow(
+        '--filters[].type must be "dropdown" or "date"; got "checkbox" for "x".',
+      );
     });
 
     it('accepts a real array, the form a programmatic caller passes', async () => {
@@ -265,7 +267,11 @@ describe('Vue Workspace View Generator', () => {
   }, 30000);
 
   it('respects an explicit --heading and --pageSize', async () => {
-    await generator(host, { ...baseOptions, heading: 'Grant Applications', pageSize: 50 });
+    await generator(host, {
+      ...baseOptions,
+      heading: 'Grant Applications',
+      pageSize: 50,
+    });
     const view = host
       .read('apps/test/src/views/ApplicationsListView.vue')
       .toString();
@@ -317,5 +323,65 @@ describe('Vue Workspace View Generator', () => {
     await generator(host, baseOptions);
     const after = readProjectConfiguration(host, 'test');
     expect(after).toEqual(before);
+  }, 30000);
+
+  // Regression: every badge column was hardcoded type="information", so a
+  // declined claim rendered neutral blue -- a badge's colour is the fastest thing
+  // a reader takes in, so the wrong one actively misinforms.
+  it('maps badge values to semantic types and labels', async () => {
+    await generator(host, {
+      ...baseOptions,
+      columns: [
+        { key: 'reference', label: 'Reference' },
+        {
+          key: 'status',
+          label: 'Status',
+          type: 'badge',
+          options: [{ value: 'declined', label: 'Declined' }],
+          badgeMap: { approved: 'success', declined: 'emergency' },
+        },
+      ],
+    });
+    const view = host
+      .read('apps/test/src/views/ApplicationsListView.vue')
+      .toString();
+    // Quote style depends on whether formatFiles ran, so match the pairs.
+    expect(view).toMatch(/["']?declined["']?\s*:\s*["']emergency["']/);
+    expect(view).toMatch(/["']?approved["']?\s*:\s*["']success["']/);
+    expect(view).toContain("badgeType(columnBadgeTypes['status']");
+    expect(view).toContain("optionLabel(columnOptions['status']");
+  }, 30000);
+
+  it('renders a coded non-badge column using its label', async () => {
+    await generator(host, {
+      ...baseOptions,
+      columns: [
+        {
+          key: 'region',
+          label: 'Region',
+          options: [{ value: 'northwest', label: 'North west' }],
+        },
+      ],
+    });
+    const view = host
+      .read('apps/test/src/views/ApplicationsListView.vue')
+      .toString();
+    expect(view).toContain(
+      "optionLabel(columnOptions['region'], row['region'])",
+    );
+    expect(view).toContain('North west');
+  }, 30000);
+
+  it('omits the lookup maps entirely when no column needs them', async () => {
+    await generator(host, {
+      ...baseOptions,
+      columns: [{ key: 'reference', label: 'Reference' }],
+    });
+    const view = host
+      .read('apps/test/src/views/ApplicationsListView.vue')
+      .toString();
+    expect(view).not.toContain('columnOptions');
+    expect(view).not.toContain('columnBadgeTypes');
+    expect(view).not.toContain('optionLabel');
   }, 30000);
 });

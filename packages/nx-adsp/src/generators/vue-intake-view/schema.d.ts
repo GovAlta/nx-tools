@@ -24,6 +24,14 @@ export interface Schema {
    * programmatic callers (e.g. tests).
    */
   steps: string | IntakeViewStep[];
+  /**
+   * Field on the submitted record holding the business reference shown on the
+   * confirmation page, e.g. `reference`. Defaults to `reference`; falls back to
+   * the route id when the record has no such field.
+   */
+  referenceField?: string;
+  /** Human title used in headings, e.g. "Compensation claim". */
+  heading?: string;
   requiresAuth?: boolean;
 }
 
@@ -31,6 +39,8 @@ export interface NormalizedSchema extends Omit<Schema, 'steps'> {
   projectRoot: string;
   steps: IntakeViewStep[];
   requiresAuth: boolean;
+  referenceField: string;
+  heading: string;
   /** PascalCase base name, e.g. "Application" for --name application. */
   baseName: string;
 }

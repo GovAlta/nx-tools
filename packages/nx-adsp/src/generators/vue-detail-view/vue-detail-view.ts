@@ -65,15 +65,28 @@ export default async function (host: Tree, options: Schema) {
     {
       ...normalizedOptions,
       goaImportPath: vueComponentsImportPath(host),
+      // Derived here, not tested inline: EJS throws a ReferenceError on a bare
+      // undefined variable, so a flag the template reads must always be defined.
+      hasCodedFields: normalizedOptions.fields.some(
+        (field) => field.options?.length,
+      ),
+      hasBadgeFields: normalizedOptions.fields.some(
+        (field) => field.type === 'badge',
+      ),
       tmpl: '',
     },
   );
 
-  insertVueRoute(host, normalizedOptions.projectRoot, normalizedOptions.project, {
-    path: normalizedOptions.route,
-    componentImportPath: `../views/${normalizedOptions.viewFileName}.vue`,
-    requiresAuth: normalizedOptions.requiresAuth,
-  });
+  insertVueRoute(
+    host,
+    normalizedOptions.projectRoot,
+    normalizedOptions.project,
+    {
+      path: normalizedOptions.route,
+      componentImportPath: `../views/${normalizedOptions.viewFileName}.vue`,
+      requiresAuth: normalizedOptions.requiresAuth,
+    },
+  );
 
   await formatFiles(host);
 }

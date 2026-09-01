@@ -2,6 +2,24 @@ export interface DetailViewField {
   key: string;
   label: string;
   type?: 'text' | 'date' | 'currency' | 'badge';
+  /**
+   * Value -> label for a coded field. Supply this whenever the stored value is a
+   * code rather than prose, or the view renders the raw code.
+   */
+  options?: { value: string; label: string }[];
+  /**
+   * `badge` only. Value -> goa-badge type. Unmapped values render neutral.
+   */
+  badgeMap?: Record<
+    string,
+    | 'information'
+    | 'success'
+    | 'important'
+    | 'emergency'
+    | 'dark'
+    | 'midtone'
+    | 'light'
+  >;
 }
 
 export interface Schema {

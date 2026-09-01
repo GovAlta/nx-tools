@@ -102,19 +102,23 @@ describe('Vue Detail View Generator', () => {
       .read('apps/test/src/views/ApplicationDetailView.vue')
       .toString();
     expect(view).toContain('heading="Application Detail"');
-    expect(view).toContain("await get('applications', String(route.params.id))");
+    expect(view).toContain(
+      "await get('applications', String(route.params.id))",
+    );
     expect(view).not.toContain('apiFetch');
 
     // Vue Router reuses this component across an id-only change, so the fetch
     // is driven by a watch rather than onMounted.
-    expect(view).toContain("watch(() => route.params.id, load, { immediate: true })");
+    expect(view).toContain(
+      'watch(() => route.params.id, load, { immediate: true })',
+    );
     expect(view).not.toContain('onMounted(');
     expect(view).not.toContain('function formatCurrency');
 
     expect(view).toContain('formatDate');
     expect(view).not.toContain('function formatDate');
     expect(view).toContain(
-      "<goa-badge type=\"information\" :content=\"String(record['status'] ?? '—')\" />",
+      "badgeType(fieldBadgeTypes['status'], record['status'])",
     );
     // A type: 'date' column is a calendar date -- formatDate, not
     // formatDateTime, which would show an invented midnight.
@@ -168,9 +172,7 @@ describe('Vue Detail View Generator', () => {
   it('ensures the shared RecordDetailShell pattern component exists', async () => {
     await generator(host, baseOptions);
     expect(
-      host.exists(
-        'libs/vue-components/src/lib/patterns/RecordDetailShell.vue',
-      ),
+      host.exists('libs/vue-components/src/lib/patterns/RecordDetailShell.vue'),
     ).toBeTruthy();
   }, 30000);
 
@@ -179,5 +181,33 @@ describe('Vue Detail View Generator', () => {
     await generator(host, baseOptions);
     const after = readProjectConfiguration(host, 'test');
     expect(after).toEqual(before);
+  }, 30000);
+
+  it('maps badge values to semantic types and renders coded fields as labels', async () => {
+    await generator(host, {
+      ...baseOptions,
+      fields: [
+        {
+          key: 'status',
+          label: 'Status',
+          type: 'badge',
+          badgeMap: { declined: 'emergency' },
+        },
+        {
+          key: 'region',
+          label: 'Region',
+          options: [{ value: 'northwest', label: 'North west' }],
+        },
+      ],
+    });
+    const view = host
+      .read('apps/test/src/views/ApplicationDetailView.vue')
+      .toString();
+    // Quote style depends on whether formatFiles ran, so match the pair.
+    expect(view).toMatch(/["']?declined["']?\s*:\s*["']emergency["']/);
+    expect(view).toContain("badgeType(fieldBadgeTypes['status']");
+    expect(view).toContain(
+      "optionLabel(fieldOptions['region'], record['region'])",
+    );
   }, 30000);
 });

@@ -43,6 +43,10 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
     projectRoot,
     steps: parseSteps(options.steps),
     requiresAuth: options.requiresAuth ?? true,
+    referenceField: options.referenceField ?? 'reference',
+    // Sentence-case the name for prose headings ("claim" -> "Claim"), so the
+    // confirmation reads as a service page rather than repeating a slug.
+    heading: options.heading ?? names(options.name).className,
     baseName: names(options.name).className,
   };
 }
@@ -73,26 +77,21 @@ export default async function (host: Tree, options: Schema) {
     const nextStepKey =
       index === steps.length - 1 ? 'review' : steps[index + 1].key;
 
-    generateFiles(
-      host,
-      path.join(__dirname, 'files/steps'),
-      projectRoot,
-      {
-        ...normalizedOptions,
-        goaImportPath,
-        stepViewFileName: stepViewFileName(step.key),
-        stepKey: step.key,
-        stepLabel: step.label,
-        stepFields: step.fields,
-        stepperSteps,
-        nextStepKey,
-        // 1-based, for goa-form-stepper's own `step` prop. The generator knows
-        // which step it is emitting; the view would otherwise have to re-derive
-        // it from the route.
-        stepNumber: index + 1,
-        tmpl: '',
-      },
-    );
+    generateFiles(host, path.join(__dirname, 'files/steps'), projectRoot, {
+      ...normalizedOptions,
+      goaImportPath,
+      stepViewFileName: stepViewFileName(step.key),
+      stepKey: step.key,
+      stepLabel: step.label,
+      stepFields: step.fields,
+      stepperSteps,
+      nextStepKey,
+      // 1-based, for goa-form-stepper's own `step` prop. The generator knows
+      // which step it is emitting; the view would otherwise have to re-derive
+      // it from the route.
+      stepNumber: index + 1,
+      tmpl: '',
+    });
   });
 
   generateFiles(host, path.join(__dirname, 'files/shared'), projectRoot, {
@@ -100,6 +99,11 @@ export default async function (host: Tree, options: Schema) {
     goaImportPath,
     reviewViewFileName,
     confirmationViewFileName,
+    // Derived here, not tested inline: EJS throws a ReferenceError on a bare
+    // undefined variable, so a flag the template reads must always be defined.
+    hasCodedFields: steps.some((step) =>
+      step.fields.some((field) => field.options?.length),
+    ),
     tmpl: '',
   });
 

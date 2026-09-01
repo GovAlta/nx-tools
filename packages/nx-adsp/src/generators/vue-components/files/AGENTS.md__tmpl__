@@ -8,7 +8,7 @@ invoked automatically by `vue-app` and by every `vue-*-view` generator.
 |---|---|---|
 | `src/lib/primitives/` | Thin `v-model`/idiomatic-event wrappers over individual `goa-*` elements (`GoabInput`, `GoabButton`, …) | **Interim** — see below |
 | `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`, `Stepper`, `StepErrorSummary`, `FilterBar`) | **Permanent** |
-| `src/lib/formatters.ts` | Shared value formatting for views (`formatDate`, `formatDateTime`, `formatNumber`, `formatPercent`) | **Permanent** |
+| `src/lib/formatters.ts` | Shared value formatting for views (`formatDate`, `formatDateTime`, `formatNumber`, `formatPercent`, `optionLabel`, `badgeType`) | **Permanent** |
 
 **Not every pattern component is present in every app.** `AppLayout`, `AppHeader`,
 `AppFooter`, `AppSideMenu`, and `SessionExpiredBanner` are base app-shell — `vue-app`
@@ -83,6 +83,28 @@ For values rather than layout, use `formatters.ts` (`formatDate`, `formatDateTim
 `formatPercent`) rather than an inline `toLocaleString` — every view should render a date or a count
 the same way, and each formatter already returns an em dash for a null/unparseable value so a
 partially-populated record needs no per-field guard.
+
+### Never render a stored code to a person
+
+Two more formatters exist because rendering a *coded* value is where generated views have most often
+been wrong, and the failure is invisible to a unit test — it only shows up when someone reads the
+screen.
+
+| Don't | Do |
+| --- | --- |
+| `{{ record['species'] }}` → shows `cattle-mature` | `{{ optionLabel(fieldOptions['species'], record['species']) }}` → `Cattle (mature)` |
+| `<goa-badge type="information" :content="row['status']" />` — every status the same neutral blue | `<goa-badge :type="badgeType(columnBadgeTypes['status'], row['status'])" :content="optionLabel(...)" />` |
+
+`optionLabel` falls back to the raw value for an unmapped code (a data or config problem you want to
+see, not hide); `badgeType` falls back to `information`, which is the honest colour for a value whose
+severity nobody declared.
+
+The view generators build these maps for you — but only from what you pass them. Supply `options` on
+any `--fields`/`--columns` entry whose stored value is a code, and `badgeMap` on a `badge` entry, e.g.
+`badgeMap: { approved: 'success', declined: 'emergency' }`. Omit them and the view renders the code.
+A badge's colour is the fastest thing a reader takes in, so a declined claim in neutral blue reads as
+routine — this matters most on a check-your-answers page, whose entire purpose is that the person can
+read back what they entered.
 
 ## What these wrappers do (and why they're needed)
 

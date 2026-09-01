@@ -92,8 +92,12 @@ describe('Vue Intake View Generator', () => {
     expect(step1).toContain(
       "import { Stepper, StepErrorSummary, GoabInput } from '@proj/vue-components';",
     );
-    expect(step1).toContain("{ key: 'personal-info', label: 'Personal information' }");
-    expect(step1).toContain("{ key: 'contact-info', label: 'Contact information' }");
+    expect(step1).toContain(
+      "{ key: 'personal-info', label: 'Personal information' }",
+    );
+    expect(step1).toContain(
+      "{ key: 'contact-info', label: 'Contact information' }",
+    );
     // Own step is 'incomplete' when active and not yet completed, per the real
     // goa-form-step status enum (complete/incomplete/not-started -- no "current").
     expect(step1).toContain("step.key === 'personal-info'");
@@ -125,13 +129,19 @@ describe('Vue Intake View Generator', () => {
   it('generates a review view listing every step with an Edit link, and a declaration gate on Submit', async () => {
     await generator(host, baseOptions);
 
-    const review = host.read('apps/test/src/views/ApplicationReviewView.vue').toString();
+    const review = host
+      .read('apps/test/src/views/ApplicationReviewView.vue')
+      .toString();
     expect(review).toContain("editStep('personal-info')");
     expect(review).toContain("editStep('contact-info')");
     expect(review).toContain("record['fullName'] ?? '—'");
     expect(review).toContain("record['email'] ?? '—'");
-    expect(review).toContain(':disabled="!declared || submitting || undefined"');
-    expect(review).toContain("await action('applications', idParam.value, 'submit')");
+    expect(review).toContain(
+      ':disabled="!declared || submitting || undefined"',
+    );
+    expect(review).toContain(
+      "await action('applications', idParam.value, 'submit')",
+    );
     expect(review).not.toContain('apiFetch');
     expect(review).toContain('watch(idParam, load, { immediate: true })');
     expect(review).not.toContain('onMounted(');
@@ -175,8 +185,12 @@ describe('Vue Intake View Generator', () => {
       const step = host
         .read('apps/test/src/views/DetailsStepView.vue')
         .toString();
-      expect(step).toContain("count: form.count === '' ? null : Number(form.count)");
-      expect(step).toContain('occurred: toIsoDateString(form.occurred) || null');
+      expect(step).toContain(
+        "count: form.count === '' ? null : Number(form.count)",
+      );
+      expect(step).toContain(
+        'occurred: toIsoDateString(form.occurred) || null',
+      );
       expect(step).toContain("fromIsoDateString(data['occurred'])");
     });
 
@@ -210,12 +224,39 @@ describe('Vue Intake View Generator', () => {
     });
   });
 
-  it('generates a confirmation view showing the reference number', async () => {
+  // The previous version of this test asserted `{{ route.params.id }}` -- it
+  // encoded the defect rather than the requirement, so the confirmation page
+  // shipped presenting the storage id as "your reference number" ("Your
+  // reference number is 1001" in a real build).
+  it('generates a confirmation view showing the business reference, not the route id', async () => {
     await generator(host, baseOptions);
     const confirmation = host
       .read('apps/test/src/views/ApplicationConfirmationView.vue')
       .toString();
-    expect(confirmation).toContain('{{ route.params.id }}');
+    // Fetches the record and reads the reference field off it.
+    expect(confirmation).toContain("record.value?.['reference']");
+    expect(confirmation).toContain("{{ loading ? '…' : reference }}");
+    // The route id survives only as a fallback, never as the presented value.
+    expect(confirmation).not.toContain('{{ route.params.id }}');
+  }, 30000);
+
+  it('honours --referenceField', async () => {
+    await generator(host, { ...baseOptions, referenceField: 'claimNumber' });
+    expect(
+      host
+        .read('apps/test/src/views/ApplicationConfirmationView.vue')
+        .toString(),
+    ).toContain("record.value?.['claimNumber']");
+  }, 30000);
+
+  it('gives the confirmation page an h1 and a route out of the flow', async () => {
+    await generator(host, baseOptions);
+    const confirmation = host
+      .read('apps/test/src/views/ApplicationConfirmationView.vue')
+      .toString();
+    expect(confirmation).toContain('<h1');
+    expect(confirmation).toContain('What happens next');
+    expect(confirmation).toContain('<router-link to="/">');
   }, 30000);
 
   it('inserts a route for every step plus review and confirmation, requiring auth by default', async () => {
@@ -235,9 +276,7 @@ describe('Vue Intake View Generator', () => {
     expect(routerTs).toContain(
       "component: () => import('../views/ApplicationConfirmationView.vue')",
     );
-    expect(
-      routerTs.split('requiresAuth: true').length - 1,
-    ).toBe(4);
+    expect(routerTs.split('requiresAuth: true').length - 1).toBe(4);
     // The existing route is untouched, not replaced.
     expect(routerTs).toContain("{ path: '/', component: HomeView }");
   }, 30000);
@@ -273,5 +312,35 @@ describe('Vue Intake View Generator', () => {
     await generator(host, baseOptions);
     const after = readProjectConfiguration(host, 'test');
     expect(after).toEqual(before);
+  }, 30000);
+
+  // The check-your-answers page exists so the person can read back what they
+  // entered; a stored code ('cattle-mature', 'northwest') is not that. The
+  // generator is handed the label for every option and used to discard it.
+  it('renders coded answers as labels on the review page', async () => {
+    await generator(host, {
+      ...baseOptions,
+      steps: [
+        {
+          key: 'losses',
+          label: 'Losses',
+          fields: [
+            {
+              key: 'species',
+              label: 'Species',
+              type: 'select',
+              options: [{ value: 'cattle-mature', label: 'Cattle (mature)' }],
+            },
+          ],
+        },
+      ],
+    });
+    const review = host
+      .read('apps/test/src/views/ApplicationReviewView.vue')
+      .toString();
+    expect(review).toContain(
+      "optionLabel(fieldOptions['species'], record['species'])",
+    );
+    expect(review).toContain('Cattle (mature)');
   }, 30000);
 });

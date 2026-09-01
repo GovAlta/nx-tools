@@ -7,7 +7,23 @@ import {
 <% } -%>
   formatCurrency,
   formatDate,
+<% if (hasCodedColumns || hasBadgeColumns) { -%>
+  optionLabel,
+<% } -%>
+<% if (hasBadgeColumns) { -%>
+  badgeType,
+<% } -%>
 } from '<%= goaImportPath %>';
+<% if (hasCodedColumns || hasBadgeColumns) { -%>
+import type {
+<% if (hasCodedColumns || hasBadgeColumns) { -%>
+  DisplayOption,
+<% } -%>
+<% if (hasBadgeColumns) { -%>
+  BadgeType,
+<% } -%>
+} from '<%= goaImportPath %>';
+<% } -%>
 import { useApi } from '../composables/useApi';
 
 const { list } = useApi();
@@ -17,6 +33,31 @@ const columns = [
   { key: '<%= column.key %>', label: '<%= column.label %>', sortable: <%= !!column.sortable %> },
 <% }); -%>
 ];
+<% if (hasCodedColumns || hasBadgeColumns) { -%>
+
+// Value -> label for coded columns, so the table shows 'Cattle (mature)' rather
+// than the stored 'cattle-mature'. Keyed by column so one lookup covers them all.
+const columnOptions: Record<string, DisplayOption[]> = {
+<% columns.forEach(function (column) { -%>
+<% if (column.options && column.options.length) { -%>
+  '<%= column.key %>': <%- JSON.stringify(column.options) %>,
+<% } -%>
+<% }); -%>
+};
+<% } -%>
+<% if (hasBadgeColumns) { -%>
+
+// Value -> badge type, so a status carries the right colour. Anything unmapped
+// falls back to the neutral 'information' rather than being asserted as good or
+// bad.
+const columnBadgeTypes: Record<string, Record<string, BadgeType>> = {
+<% columns.forEach(function (column) { -%>
+<% if (column.type === 'badge') { -%>
+  '<%= column.key %>': <%- JSON.stringify(column.badgeMap || {}) %>,
+<% } -%>
+<% }); -%>
+};
+<% } -%>
 
 // The fetched rows' shape isn't known to this generator -- read fields
 // defensively rather than declaring (and likely getting wrong) a fake interface.
@@ -186,7 +227,14 @@ onUnmounted(() => {
 <% columns.forEach(function (column) { -%>
 <% if (column.type === 'badge') { -%>
       <template #cell-<%= column.key %>="{ row }">
-        <goa-badge type="information" :content="String(row['<%= column.key %>'] ?? '—')" />
+        <goa-badge
+          :type="badgeType(columnBadgeTypes['<%= column.key %>'], row['<%= column.key %>'])"
+          :content="optionLabel(columnOptions['<%= column.key %>'], row['<%= column.key %>'])"
+        />
+      </template>
+<% } else if (column.options && column.options.length) { -%>
+      <template #cell-<%= column.key %>="{ row }">
+        {{ optionLabel(columnOptions['<%= column.key %>'], row['<%= column.key %>']) }}
       </template>
 <% } else if (column.type === 'date') { -%>
       <template #cell-<%= column.key %>="{ row }">

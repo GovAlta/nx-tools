@@ -33,7 +33,7 @@
     },
     "columns": {
       "type": "string",
-      "description": "JSON array of table columns, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\",\"sortable\":true}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\"), sortable?: boolean }. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
+      "description": "JSON array of table columns, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\",\"sortable\":true}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\"), sortable?: boolean, options?: [{value,label}], badgeMap?: {value: badgeType} }. Supply `options` for any column whose stored value is a code, or the table renders the raw code. Supply `badgeMap` on a `badge` column to give each status its colour (e.g. {\"approved\":\"success\",\"declined\":\"emergency\"}); unmapped values render neutral. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
     },
     "filters": {
       "type": "string",

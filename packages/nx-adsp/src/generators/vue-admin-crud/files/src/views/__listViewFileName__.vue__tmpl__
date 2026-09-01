@@ -1,11 +1,32 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useKeycloak } from '@dsb-norge/vue-keycloak-js';
-import { WorkspaceTable } from '<%= goaImportPath %>';
+import {
+  WorkspaceTable,
+<% if (hasCodedFields) { -%>
+  optionLabel,
+<% } -%>
+<% if (hasDateFields) { -%>
+  formatDate,
+<% } -%>
+} from '<%= goaImportPath %>';
+<% if (hasCodedFields) { -%>
+import type { DisplayOption } from '<%= goaImportPath %>';
+<% } -%>
 import { useApi } from '../composables/useApi';
 
-const kc = useKeycloak();
 const { list } = useApi();
+<% if (hasCodedFields) { -%>
+
+// Value -> label for coded fields, so the table shows the same prose the edit
+// form's dropdown does rather than the stored code.
+const fieldOptions: Record<string, DisplayOption[]> = {
+<% fields.forEach(function (field) { -%>
+<% if (field.options && field.options.length) { -%>
+  '<%= field.key %>': <%- JSON.stringify(field.options) %>,
+<% } -%>
+<% }); -%>
+};
+<% } -%>
 
 const columns = [
 <% fields.forEach(function (field) { -%>
@@ -38,7 +59,7 @@ onMounted(load);
   <div>
     <div class="admin-crud-topbar">
       <h1><%= heading %></h1>
-      <router-link v-if="kc.authenticated" to="<%= route %>/new">
+      <router-link to="<%= route %>/new">
         <goa-button type="primary">Create <%= singularLabel %></goa-button>
       </router-link>
     </div>
@@ -52,6 +73,14 @@ onMounted(load);
 <% if (field.type === 'checkbox') { -%>
       <template #cell-<%= field.key %>="{ row }">
         <goa-badge :type="row['<%= field.key %>'] ? 'success' : 'midtone'" :content="row['<%= field.key %>'] ? 'Yes' : 'No'" />
+      </template>
+<% } else if (field.options && field.options.length) { -%>
+      <template #cell-<%= field.key %>="{ row }">
+        {{ optionLabel(fieldOptions['<%= field.key %>'], row['<%= field.key %>']) }}
+      </template>
+<% } else if (field.type === 'date') { -%>
+      <template #cell-<%= field.key %>="{ row }">
+        {{ formatDate(row['<%= field.key %>']) }}
       </template>
 <% } -%>
 <% }); -%>

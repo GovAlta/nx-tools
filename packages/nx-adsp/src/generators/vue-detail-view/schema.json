@@ -33,7 +33,7 @@
     },
     "fields": {
       "type": "string",
-      "description": "JSON array of fields rendered in the record's info list, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\"}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\") }. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
+      "description": "JSON array of fields rendered in the record's info list, in display order -- e.g. '[{\"key\":\"status\",\"label\":\"Status\",\"type\":\"badge\"}]'. Each item: { key, label, type?: \"text\"|\"date\"|\"currency\"|\"badge\" (default \"text\"), options?: [{value,label}], badgeMap?: {value: badgeType} }. Supply `options` for any field whose stored value is a code, or the view renders the raw code. Supply `badgeMap` on a `badge` field to give each status its colour; unmapped values render neutral. A plain array is also accepted when this generator is invoked programmatically. Nx's CLI option coercion only supports comma-separated primitive lists for array-typed schema properties, not JSON -- a JSON string is the only CLI syntax that actually survives Nx's own arg parsing for a structured list like this."
     },
     "heading": {
       "type": "string",

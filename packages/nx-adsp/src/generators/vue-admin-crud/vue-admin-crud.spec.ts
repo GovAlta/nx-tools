@@ -64,7 +64,9 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).toContain("await list('regions')");
     // The envelope shape is the adapter's business, not the view's.
     expect(view).not.toContain('data.results');
-    expect(view).toContain("import { WorkspaceTable } from '@proj/vue-components';");
+    expect(view).toContain(
+      "import { WorkspaceTable } from '@proj/vue-components';",
+    );
     expect(view).toContain('<WorkspaceTable');
     // No pagination props bound -- this is the "reused without its pagination/
     // filter props" case, unlike vue-workspace-view (the WorkspaceTable tag
@@ -76,7 +78,7 @@ describe('Vue Admin CRUD Generator', () => {
     expect(view).toContain('Create Regions');
     expect(view).toContain(':to="`/regions/${row.id}`"');
     // Checkbox field renders as a Yes/No badge in the list.
-    expect(view).toContain("#cell-active=\"{ row }\"");
+    expect(view).toContain('#cell-active="{ row }"');
     expect(view).toContain("row['active'] ? 'Yes' : 'No'");
   }, 30000);
 
@@ -87,8 +89,10 @@ describe('Vue Admin CRUD Generator', () => {
       .read('apps/test/src/views/RegionsEditView.vue')
       .toString();
     expect(view).toContain("idParam.value === 'new' || idParam.value === ''");
-    expect(view).toContain("import { GoabInput, GoabCheckbox } from '@proj/vue-components';");
-    expect(view).toContain("name.trim()");
+    expect(view).toContain(
+      "import { GoabInput, GoabCheckbox } from '@proj/vue-components';",
+    );
+    expect(view).toContain('name.trim()');
     expect(view).toContain("errors.name = 'Name is required.';");
     // Checkbox has no required-validation block.
     expect(view).not.toContain('errors.active');
@@ -149,7 +153,9 @@ describe('Vue Admin CRUD Generator', () => {
       expect(view).toContain('type="number"');
       expect(view).toContain('<GoabDatePicker v-model="form.effective"');
       expect(view).toContain('<GoabDropdown v-model="form.region"');
-      expect(view).toContain('<goa-dropdown-item value="north" label="North" />');
+      expect(view).toContain(
+        '<goa-dropdown-item value="north" label="North" />',
+      );
       expect(view).toContain('<GoabCheckbox v-model="form.active"');
     });
 
@@ -172,8 +178,12 @@ describe('Vue Admin CRUD Generator', () => {
       const view = host
         .read('apps/test/src/views/RegionsEditView.vue')
         .toString();
-      expect(view).toContain("quota: form.quota === '' ? null : Number(form.quota)");
-      expect(view).toContain('effective: toIsoDateString(form.effective) || null');
+      expect(view).toContain(
+        "quota: form.quota === '' ? null : Number(form.quota)",
+      );
+      expect(view).toContain(
+        'effective: toIsoDateString(form.effective) || null',
+      );
       // A stored YYYY-MM-DD comes back as a Date the picker can redisplay.
       expect(view).toContain("fromIsoDateString(data['effective'])");
     });
@@ -225,8 +235,12 @@ describe('Vue Admin CRUD Generator', () => {
       heading: 'Regions',
       singularLabel: 'Region',
     });
-    const list = host.read('apps/test/src/views/RegionsListView.vue').toString();
-    const edit = host.read('apps/test/src/views/RegionsEditView.vue').toString();
+    const list = host
+      .read('apps/test/src/views/RegionsListView.vue')
+      .toString();
+    const edit = host
+      .read('apps/test/src/views/RegionsEditView.vue')
+      .toString();
     expect(list).toContain('<h1>Regions</h1>');
     expect(list).toContain('Create Region');
     expect(edit).toContain('Create Region');
@@ -238,7 +252,9 @@ describe('Vue Admin CRUD Generator', () => {
       ...baseOptions,
       fields: [{ key: 'name', label: 'Name', required: false }],
     });
-    const edit = host.read('apps/test/src/views/RegionsEditView.vue').toString();
+    const edit = host
+      .read('apps/test/src/views/RegionsEditView.vue')
+      .toString();
     expect(edit).not.toContain("errors.name = 'Name is required.'");
     expect(edit).not.toContain('requirement="required"');
   }, 30000);
@@ -278,9 +294,7 @@ describe('Vue Admin CRUD Generator', () => {
     expect(routerTs).toContain(
       "component: () => import('../views/RegionsEditView.vue')",
     );
-    expect(
-      routerTs.split('requiresAuth: true').length - 1,
-    ).toBe(2);
+    expect(routerTs.split('requiresAuth: true').length - 1).toBe(2);
     // The existing route is untouched, not replaced.
     expect(routerTs).toContain("{ path: '/', component: HomeView }");
   }, 30000);
@@ -303,5 +317,52 @@ describe('Vue Admin CRUD Generator', () => {
     await generator(host, baseOptions);
     const after = readProjectConfiguration(host, 'test');
     expect(after).toEqual(before);
+  }, 30000);
+
+  // Regression: both actions were gated on `kc.authenticated` unconditionally,
+  // ignoring --requiresAuth. With --requiresAuth=false a consumer got a fillable
+  // form whose only button was Cancel, and a list with no Create button, and no
+  // message explaining why. Access control belongs to the route guard (which
+  // already honours requiresAuth via route meta), not to markup in the view --
+  // and vue-intake-view never had this gate, so the two disagreed.
+  it('does not gate its actions on kc.authenticated', async () => {
+    await generator(host, { ...baseOptions, requiresAuth: false });
+    const list = host
+      .read('apps/test/src/views/RegionsListView.vue')
+      .toString();
+    const edit = host
+      .read('apps/test/src/views/RegionsEditView.vue')
+      .toString();
+    for (const view of [list, edit]) {
+      expect(view).not.toContain('kc.authenticated');
+      expect(view).not.toContain('useKeycloak');
+    }
+    // The actions themselves are still there, unconditionally. Matched loosely
+    // because formatFiles reflows the long button tag across lines.
+    expect(list).toContain('<router-link to="/regions/new">');
+    expect(edit).toMatch(/<goa-button[\s\S]{0,120}type="primary"/);
+    expect(edit).toContain('@_click="onSubmit"');
+  }, 30000);
+
+  it('renders a coded field using its label, not the stored code', async () => {
+    await generator(host, {
+      ...baseOptions,
+      fields: [
+        { key: 'name', label: 'Name' },
+        {
+          key: 'species',
+          label: 'Species',
+          type: 'select',
+          options: [{ value: 'cattle-mature', label: 'Cattle (mature)' }],
+        },
+      ],
+    });
+    const list = host
+      .read('apps/test/src/views/RegionsListView.vue')
+      .toString();
+    expect(list).toContain(
+      "optionLabel(fieldOptions['species'], row['species'])",
+    );
+    expect(list).toContain('Cattle (mature)');
   }, 30000);
 });
