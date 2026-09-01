@@ -381,6 +381,44 @@ Key wiring to preserve when editing:
 
 ---
 
+### Vue template spacing
+
+`.vue__tmpl__` templates have no shared spacing convention, and the gap between two stacked
+elements is the thing most easily got wrong here: it looks correct in the template and only
+shows up once the view is rendered. Use whichever of these fits, and don't invent a fourth:
+
+| Between                                                      | Use                                                                | Not                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Page-level sections (heading, filter bar, table, pagination) | `<goa-spacer vspacing="…">` — the existing pattern in 11 templates | a margin-only `<div>`, or scoped CSS                                           |
+| Stacked `goa-form-item`s                                     | `mb="l"` on each item                                              | nothing — `mb` defaults to none, so they render **flush**                      |
+| A horizontal group                                           | `<goa-block gap="…" direction="row">`                              | `mb` on the children as well — the block already spaces them (see `FilterBar`) |
+| A genuine two-column grid, e.g. a label/value list           | scoped CSS `display: grid` + `gap`                                 | a bare `<dl>`, whose terms and values also render flush                        |
+
+Two rules that come from real defects, not theory:
+
+- **`goa-form-item` and a bare `<dl>` are the two things that do not space themselves.**
+  Everything else in the catalog carries its own margins, which is why the "drop a
+  `goa-spacer` between blocks and let children sort themselves out" habit works until you
+  hit one of those two. `vue-admin-crud`'s edit view and every `vue-intake-view` step
+  shipped with fields touching; the intake review page — the check-your-answers page —
+  shipped with every answer running into the next.
+- **If you fix spacing in one view, check the sibling generator that renders the same
+  shape.** `vue-detail-view` styled its label/value list; the intake review page rendering
+  the same label/value pairs did not, and stayed unstyled for exactly that reason. The
+  eslint slot rule and the side-menu icon defaults had the same history.
+
+Verify by rendering, not by reading. The measurement that found both defects was
+`getBoundingClientRect()` on consecutive siblings in a real browser — a 0px gap between two
+block children with no `goa-spacer` between them is the signal. Note that a 0px gap is
+_correct_ next to a `goa-spacer` (the spacer **is** the gap) and between adjacent `<li>`s
+(line-height separates text), so don't fix those.
+
+Consuming-workspace guidance for the same trap lives in the generated
+`vue-components/AGENTS.md` catalog — that file is for someone writing app code, this section
+is for someone editing a template here. Both need it; they are different readers.
+
+---
+
 ## OpenShift Notes
 
 - `nx-oc` generators produce `.openshift/` YAML manifests from EJS templates named `*.yml__tmpl__`.
