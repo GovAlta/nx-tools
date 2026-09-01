@@ -1,0 +1,32 @@
+import { describe, it, expect } from 'vitest';
+import { mount } from '@vue/test-utils';
+import AppLayout from './AppLayout.vue';
+
+// Note on how width is asserted: in this test environment goa-page-block is not
+// a defined custom element, so Vue falls back to setting the width as an
+// ATTRIBUTE. In a real browser the element defines the property, so Vue sets it
+// as a property and getAttribute('width') returns null -- verified against a
+// running app, where the element then applies --max-width correctly. These tests
+// therefore guard the variant -> width mapping, which is the part that can
+// regress; they are not evidence about attribute-vs-property binding.
+describe('AppLayout', () => {
+  const widthFor = (variant?: 'page' | 'wide' | 'form') =>
+    mount(AppLayout, { props: variant ? { variant } : {} })
+      .find('goa-page-block')
+      .attributes('width');
+
+  it('delegates the content gutter to goa-page-block', () => {
+    expect(mount(AppLayout).find('goa-page-block').exists()).toBe(true);
+  });
+
+  it('maps each variant to the width the element expects', () => {
+    expect(widthFor('form')).toBe('640px');
+    expect(widthFor()).toBe('1000px');
+    expect(widthFor('wide')).toBe('1200px');
+  });
+
+  it('renders slotted content inside the block', () => {
+    const w = mount(AppLayout, { slots: { default: '<p>hello</p>' } });
+    expect(w.find('goa-page-block').html()).toContain('<p>hello</p>');
+  });
+});
