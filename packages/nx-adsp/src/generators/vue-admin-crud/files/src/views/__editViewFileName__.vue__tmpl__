@@ -205,11 +205,11 @@ onUnmounted(() => {
 <% if (field.type === 'checkbox') { -%>
       <!-- The checkbox carries its own label via `text`; goa-form-item must not
            repeat it, or it renders twice. -->
-      <goa-form-item>
+      <goa-form-item mb="l">
         <GoabCheckbox v-model="form.<%= field.key %>" name="<%= field.key %>" text="<%= field.label %>" />
       </goa-form-item>
 <% } else { -%>
-      <goa-form-item label="<%= field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %> :error="errors.<%= field.key %>">
+      <goa-form-item mb="l" label="<%= field.label %>"<% if (field.required !== false) { %> requirement="required"<% } %> :error="errors.<%= field.key %>">
 <% if (field.type === 'textarea') { -%>
         <GoabTextarea v-model="form.<%= field.key %>" name="<%= field.key %>" />
 <% } else if (field.type === 'number') { -%>

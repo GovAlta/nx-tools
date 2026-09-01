@@ -98,7 +98,7 @@ async function onSubmit() {
             Edit
           </goa-button>
         </div>
-        <dl>
+        <dl class="review-fields">
 <% step.fields.forEach(function (field) { -%>
           <dt><%- field.label %></dt>
 <% if (field.type === 'date') { -%>
@@ -145,5 +145,20 @@ async function onSubmit() {
   justify-content: space-between;
   align-items: center;
   gap: var(--goa-space-m);
+}
+
+/* A bare <dl> stacks its terms and values flush, so every answer ran into the
+   next one on the page whose whole job is being read back. Two columns, label
+   distinguished by weight -- matching vue-detail-view's .detail-fields, since
+   both render a record as label/value pairs and should not look different. */
+.review-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--goa-space-xs) var(--goa-space-l);
+  margin: 0;
+}
+
+.review-fields dt {
+  font-weight: 600;
 }
 </style>

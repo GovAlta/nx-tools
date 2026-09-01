@@ -343,4 +343,36 @@ describe('Vue Intake View Generator', () => {
     );
     expect(review).toContain('Cattle (mature)');
   }, 30000);
+
+  it('spaces stacked form items in each step', async () => {
+    await generator(host, baseOptions);
+    const step = host
+      .read('apps/test/src/views/PersonalInfoStepView.vue')
+      .toString();
+    // Counted per tag rather than as a contiguous string: formatFiles reflows a
+    // multi-attribute tag across lines, so `<goa-form-item mb="l"` is not a
+    // reliable substring.
+    const tags = step
+      .split('<goa-form-item')
+      .slice(1)
+      .map((fragment) => fragment.slice(0, fragment.indexOf('>')));
+    expect(tags.length).toBeGreaterThan(0);
+    for (const tag of tags) {
+      expect(tag).toContain('mb="l"');
+    }
+  }, 30000);
+
+  // Regression: the review page's <dl> was unstyled, so terms and values stacked
+  // flush -- every answer ran into the next on the page whose entire purpose is
+  // being read back before submitting. vue-detail-view already styled its
+  // equivalent list; this is the same fix, not a new idea.
+  it('gives the review page label/value list real spacing', async () => {
+    await generator(host, baseOptions);
+    const review = host
+      .read('apps/test/src/views/ApplicationReviewView.vue')
+      .toString();
+    expect(review).toContain('<dl class="review-fields">');
+    expect(review).toContain('grid-template-columns: auto 1fr');
+    expect(review).toContain('gap: var(--goa-space-xs) var(--goa-space-l)');
+  }, 30000);
 });

@@ -60,7 +60,7 @@ inline styles.
 | A styled status pill | `<goa-badge type="…">` | |
 | A hand-built alert/notice box | `<goa-callout type="…" heading="…">` | |
 | A loading `<div>` or spinner markup | `<goa-skeleton type="…">` or `<goa-spinner>` | Skeletons match the shape they replace (`card`, `text`, `table`) |
-| A `<label>` + error `<span>` around an input | `<goa-form-item label="…" error="…">` | Wrap the `Goab*` input in this, don't restyle it |
+| A `<label>` + error `<span>` around an input | `<goa-form-item label="…" error="…" mb="l">` | Wrap the `Goab*` input in this, don't restyle it. `mb` defaults to none, so stacked items sit flush against each other — pass `mb="l"` (the design system's own convention for vertical forms). Omit it when the items are inside a `goa-block`, which supplies its own gap |
 | A row of buttons with flex styling | `<goa-button-group alignment="…">` | |
 | A hand-built multi-select (checkbox list, chips) | `<goa-dropdown-multiselect>` | Added in web-components 2.4.0 |
 | A hand-built filter row above a table | `<FilterBar>` (this library) | Controls, collapse, active-filter chips and clear-all. It emits a query-ready values object; the *view* owns resetting the page, debouncing, and URL sync |

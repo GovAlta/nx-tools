@@ -365,4 +365,26 @@ describe('Vue Admin CRUD Generator', () => {
     );
     expect(list).toContain('Cattle (mature)');
   }, 30000);
+
+  // Regression: goa-form-item's `mb` defaults to none, so stacked items rendered
+  // flush against each other -- a field's label sat directly on the previous
+  // field's input. `l` is the design system's own convention for vertical forms
+  // (110 uses against 11 of `xl` in GoA's reference app).
+  it('spaces stacked form items so fields do not sit flush', async () => {
+    await generator(host, baseOptions);
+    const edit = host
+      .read('apps/test/src/views/RegionsEditView.vue')
+      .toString();
+    // Counted per tag rather than as a contiguous string: formatFiles reflows a
+    // multi-attribute tag across lines, so `<goa-form-item mb="l"` is not a
+    // reliable substring.
+    const tags = edit
+      .split('<goa-form-item')
+      .slice(1)
+      .map((fragment) => fragment.slice(0, fragment.indexOf('>')));
+    expect(tags.length).toBeGreaterThan(0);
+    for (const tag of tags) {
+      expect(tag).toContain('mb="l"');
+    }
+  }, 30000);
 });
