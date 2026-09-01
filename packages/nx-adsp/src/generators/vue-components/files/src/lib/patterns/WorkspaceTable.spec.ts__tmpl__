@@ -31,3 +31,50 @@ describe('WorkspaceTable pagination wiring', () => {
     }
   });
 });
+
+const sortProps = {
+  columns: [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'plain', label: 'Plain' },
+  ],
+  rows: [{ name: 'a', plain: 'b' }],
+  loading: false,
+  error: null,
+  sortBy: 'name',
+  sortDir: 'desc' as const,
+};
+
+describe('WorkspaceTable native sorting', () => {
+  it('renders goa-table-sort-header only for sortable columns', () => {
+    const w = mount(WorkspaceTable, { props: sortProps });
+    expect(w.findAll('goa-table-sort-header')).toHaveLength(1);
+    expect(w.find('goa-table-sort-header').attributes('name')).toBe('name');
+  });
+
+  it('tells the header the current direction, and none for other columns', () => {
+    const w = mount(WorkspaceTable, { props: sortProps });
+    expect(w.find('goa-table-sort-header').attributes('direction')).toBe('desc');
+    const other = mount(WorkspaceTable, { props: { ...sortProps, sortBy: 'plain' } });
+    expect(other.find('goa-table-sort-header').attributes('direction')).toBe('none');
+  });
+
+  it('enables single sort mode on the table', () => {
+    expect(mount(WorkspaceTable, { props: sortProps }).find('goa-table').attributes('sort-mode')).toBe('single');
+  });
+
+  it("translates goa-table's numeric sortDir to asc/desc", async () => {
+    const w = mount(WorkspaceTable, { props: sortProps });
+    const table = w.find('goa-table').element;
+    table.dispatchEvent(new CustomEvent('_sort', { detail: { sortBy: 'name', sortDir: -1 } }));
+    table.dispatchEvent(new CustomEvent('_sort', { detail: { sortBy: 'name', sortDir: 1 } }));
+    expect(w.emitted('sort')).toEqual([['name', 'desc'], ['name', 'asc']]);
+  });
+
+  it('ignores an unsorted (0) event with no column', async () => {
+    const w = mount(WorkspaceTable, { props: sortProps });
+    w.find('goa-table').element.dispatchEvent(
+      new CustomEvent('_sort', { detail: { sortBy: '', sortDir: 0 } }),
+    );
+    expect(w.emitted('sort')).toBeUndefined();
+  });
+});

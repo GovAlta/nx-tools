@@ -104,6 +104,9 @@ describe('Vue Workspace View Generator', () => {
     expect(view).toContain("await list('applications', {");
     expect(view).toContain('pageSize: PAGE_SIZE');
     expect(view).toContain('rows.value = result.rows');
+    // The element decides the direction, so the view records rather than toggles.
+    expect(view).toContain("function onSort(key: string, dir: 'asc' | 'desc')");
+    expect(view).not.toContain("sortDir.value === 'asc' ? 'desc' : 'asc'");
     expect(view).toContain('itemCount.value = result.total');
     expect(view).not.toContain('apiFetch');
     expect(view).not.toContain('URLSearchParams');
