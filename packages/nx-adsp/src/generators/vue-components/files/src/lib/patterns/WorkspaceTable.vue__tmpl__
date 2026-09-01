@@ -88,12 +88,25 @@ function onNativeSort(event: Event) {
       <!-- sort-mode="single" makes goa-table aggregate its sort headers and
            emit one _sort event; the headers own their own aria-sort and
            direction cycling, which this component used to hand-roll. -->
-      <goa-table width="100%" sort-mode="single" @_sort="onNativeSort">
+      <!-- The V2 flag is set on both the table and its sort headers: each
+           defaults to version 1, and this workspace is on the V2 design system
+           (the same reason goa-app-header and goa-pagination carry it). Without
+           it the table and its headers render V1 styling inside a V2 app.
+           sort-mode="single" is goa-table's default but stated explicitly: it
+           decides whether the table emits _sort or _multisort, so the listener
+           below only makes sense alongside it. -->
+      <goa-table
+        width="100%"
+        version="2"
+        sort-mode="single"
+        @_sort="onNativeSort"
+      >
         <thead>
           <tr>
             <th v-for="column in columns" :key="column.key">
               <goa-table-sort-header
                 v-if="column.sortable"
+                version="2"
                 :name="column.key"
                 :direction="column.key === sortBy ? sortDir : 'none'"
               >
