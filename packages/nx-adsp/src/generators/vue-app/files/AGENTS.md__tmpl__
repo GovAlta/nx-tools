@@ -304,6 +304,17 @@ await save('my-resource', id, payload)     // an id = update
 await action('my-resource', id, 'submit')  // POST /:id/submit
 ```
 
+These build their URL through `apiConvention.path()`, which resolves to
+`/api/v1/<resource>`. `/api/` is the dev-proxy and nginx location; `v1` is the version the
+paired `express-service` mounts its routers under (`/<service>/v1`), and the proxy rewrites
+`/api/` to `/<service>/`. If your API is versioned differently — or not at all — change
+`apiConvention` and nothing else: the views only ever call through that seam, so no view
+needs editing.
+
+In dev the rewrite lives in `vite.proxy.cjs`. That file is a CommonJS module rather than
+JSON on purpose: Vite rewrites a proxied path with a `rewrite` function, and a JSON config
+cannot hold a function. Add a route by appending a row to its `routes` array.
+
 Every wire-level detail these hide — the base path, whether paging is `page`/`limit` or
 `limit`/`offset`, whether rows arrive bare or under `results`/`entries`, whether an update is PUT
 or PATCH — lives in the **API convention adapter** at the top of

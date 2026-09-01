@@ -78,21 +78,21 @@ Creates a Node/Express backend service configured for ADSP.
 npx nx g @abgov/nx-adsp:express-service my-service --env dev --tenant my-tenant
 ```
 
-| Option        | Alias | Required | Description                                                                         |
-| ------------- | ----- | -------- | ----------------------------------------------------------------------------------- |
-| `name`        | —     | Yes      | Name of the service                                                                 |
-| `env`         | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                          |
-| `tenant`      | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login      |
-| `tenantRealm` | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                   |
-| `accessToken` | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                    |
-| `database`      | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose) |
-| `skipAgent`     | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                |
+| Option          | Alias | Required | Description                                                                                                                                                                                                              |
+| --------------- | ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`          | —     | Yes      | Name of the service                                                                                                                                                                                                      |
+| `env`           | `-e`  | Yes      | ADSP environment: `dev`, `test`, or `prod`                                                                                                                                                                               |
+| `tenant`        | `-t`  | No       | ADSP tenant name; looks up the Keycloak realm and opens a single browser login                                                                                                                                           |
+| `tenantRealm`   | `-tr` | No       | Keycloak realm UUID; overrides the realm resolved from `--tenant`                                                                                                                                                        |
+| `accessToken`   | `-at` | No       | Access token for non-interactive retrieval of ADSP configuration                                                                                                                                                         |
+| `database`      | —     | No       | Database to scaffold: `none` (default), `postgres` (Drizzle), or `mongo` (Mongoose)                                                                                                                                      |
+| `skipAgent`     | —     | No       | Skip the consultAgent interaction and generate base scaffolding only                                                                                                                                                     |
 | `cors`          | —     | No       | Add CORS middleware (`Access-Control-Allow-Origin: *`). Defaults to `true`; set to `false` when the service is paired with a frontend via a same-origin nginx reverse proxy (composite generators do this automatically) |
-| `pairedProject` | —     | No       | Name of an existing Vue, React, or Angular frontend to pair with this service — wires its nginx proxy, dev-server proxy file, serve target, and `adsp:proxy-service:` tag automatically |
+| `pairedProject` | —     | No       | Name of an existing Vue, React, or Angular frontend to pair with this service — wires its nginx proxy, dev-server proxy file, serve target, and `adsp:proxy-service:` tag automatically                                  |
 
 Running this generator after the frontend is already scaffolded? Pass
 `--pairedProject <frontend-name>` and the generator automatically updates the
-frontend's nginx proxy config, `vite.proxy.json` or `proxy.conf.json`, serve
+frontend's nginx proxy config, `vite.proxy.cjs` (Vue) or `proxy.conf.json` (React/Angular), serve
 target `proxyConfig`, and `adsp:proxy-service:` tag — the same wiring the
 composite generators (`mern`, `mevn`, `pern`, `pean`, `pevn`) apply when they
 run the two generators together. You can also do it the other direction: run the
@@ -303,19 +303,19 @@ Adds a staff-facing, paginated list view (a debounced search filter bar + sortab
 npx nx g @abgov/nx-adsp:vue-workspace-view my-app --name=applications --resource=applications --route=/applications --detailRoute=/applications --columns='[{"key":"status","label":"Status","type":"badge","sortable":true}]'
 ```
 
-| Option         | Required | Description                                                                                                                                             |
-| -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                |
-| `name`         | Yes      | View name, e.g. `applications` generates `src/views/ApplicationsListView.vue`                                                                           |
-| `resource`     | Yes      | API resource path segment — fetches `/api/<resource>?page=&limit=&search=&sortBy=&sortDir=`                                                             |
-| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications`                                                                                             |
-| `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable? }` (a JSON string — see note below) |
-| `detailRoute`  | No       | If set, each row gets a "View" action linking to `${detailRoute}/${row.id}` — typically a `vue-detail-view`'s route with the `:id` segment dropped      |
-| `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                        |
+| Option         | Required | Description                                                                                                                                                                                                                                             |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                                                                                                                |
+| `name`         | Yes      | View name, e.g. `applications` generates `src/views/ApplicationsListView.vue`                                                                                                                                                                           |
+| `resource`     | Yes      | API resource path segment — fetches `/api/<resource>?page=&limit=&search=&sortBy=&sortDir=`                                                                                                                                                             |
+| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications`                                                                                                                                                                                             |
+| `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable? }` (a JSON string — see note below)                                                                                                 |
+| `detailRoute`  | No       | If set, each row gets a "View" action linking to `${detailRoute}/${row.id}` — typically a `vue-detail-view`'s route with the `:id` segment dropped                                                                                                      |
+| `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                                                                                                                        |
 | `filters`      | No       | JSON array of filter controls rendered above the table by `FilterBar`, beyond the search box — `[{key,label,type:"dropdown"\|"date",options?,anyLabel?}]`. Values are sent as query parameters alongside `search`/`page`/`sort`. Omit for no filter bar |
-| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                    |
-| `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                         |
-| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                 |
+| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                                                                                                                    |
+| `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                                                                                                                         |
+| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                                                                                                                 |
 
 ---
 
@@ -327,16 +327,16 @@ Adds a simple admin CRUD screen pair (a `WorkspaceTable` list view with a Create
 npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions --route=/regions --fields='[{"key":"name","label":"Name"},{"key":"active","label":"Active","type":"checkbox"}]'
 ```
 
-| Option          | Required | Description                                                                                                                                                         |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`       | Yes      | The `vue-app` project to add the views to                                                                                                                           |
-| `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                             |
-| `resource`      | Yes      | API resource path segment — fetches `/api/<resource>` (list), `/api/<resource>/:id` (load one), `POST /api/<resource>` (create), `PUT /api/<resource>/:id` (update) |
-| `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `${route}/:id` (visiting `${route}/new` creates)                     |
-| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"textarea"\|"number"\|"date"\|"select"\|"checkbox", options? (select), required? }` (a JSON string — see note below)                                |
-| `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                           |
-| `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                               |
-| `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                             |
+| Option          | Required | Description                                                                                                                                                                                     |
+| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`       | Yes      | The `vue-app` project to add the views to                                                                                                                                                       |
+| `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                                                         |
+| `resource`      | Yes      | API resource path segment — fetches `/api/<resource>` (list), `/api/<resource>/:id` (load one), `POST /api/<resource>` (create), `PUT /api/<resource>/:id` (update)                             |
+| `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `${route}/:id` (visiting `${route}/new` creates)                                                 |
+| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"textarea"\|"number"\|"date"\|"select"\|"checkbox", options? (select), required? }` (a JSON string — see note below) |
+| `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                                                       |
+| `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                                                           |
+| `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                                                         |
 
 ---
 

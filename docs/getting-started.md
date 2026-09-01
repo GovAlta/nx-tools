@@ -266,7 +266,9 @@ npx nx run my-app-service:serve
 npx nx run my-app-app:serve
 ```
 
-The Vue dev server proxies `/api/` to the local Express service automatically via `vite.proxy.json`.
+The Vue dev server proxies `/api/` to the local Express service automatically via
+`vite.proxy.cjs`. It is a CommonJS module rather than JSON because Vite rewrites a proxied
+path with a `rewrite` function, which JSON cannot express.
 
 ---
 

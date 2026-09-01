@@ -1,4 +1,9 @@
-import { addProjectConfiguration, readJson, readProjectConfiguration, writeJson } from '@nx/devkit';
+import {
+  addProjectConfiguration,
+  readJson,
+  readProjectConfiguration,
+  writeJson,
+} from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 
 import * as utils from '@abgov/nx-oc';
@@ -375,7 +380,7 @@ http {
 }
 `;
 
-    it('writes vite.proxy.json and patches serve target and nginx.conf for a Vue frontend', async () => {
+    it('writes vite.proxy.cjs and patches serve target and nginx.conf for a Vue frontend', async () => {
       const host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
       addProjectConfiguration(host, 'my-vue-app', {
         root: 'apps/my-vue-app',
@@ -393,23 +398,33 @@ http {
 
       await generator(host, { ...options, pairedProject: 'my-vue-app' });
 
-      // Dev proxy file written at the Vue location.
-      expect(host.exists('apps/my-vue-app/vite.proxy.json')).toBeTruthy();
-      const proxyConf = readJson(host, 'apps/my-vue-app/vite.proxy.json');
+      // Dev proxy module written at the Vue location -- a .cjs module, because
+      // Vite rewrites with a function and ignores JSON's `pathRewrite`.
+      expect(host.exists('apps/my-vue-app/vite.proxy.cjs')).toBeTruthy();
+      const source = host.read('apps/my-vue-app/vite.proxy.cjs').toString();
+      const proxyModule = { exports: {} };
+      new Function('module', 'exports', source)(
+        proxyModule,
+        proxyModule.exports,
+      );
+      const proxyConf = proxyModule.exports as Record<
+        string,
+        { target: string; rewrite: (path: string) => string }
+      >;
       expect(proxyConf['/api/']).toBeDefined();
       expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
-      expect(proxyConf['/api/'].pathRewrite['^/api/']).toBe('/test/');
+      expect(proxyConf['/api/'].rewrite('/api/v1/things')).toBe(
+        '/test/v1/things',
+      );
 
       // serve target updated with proxyConfig.
       const frontendConfig = readProjectConfiguration(host, 'my-vue-app');
       expect(frontendConfig.targets.serve.options.proxyConfig).toBe(
-        'apps/my-vue-app/vite.proxy.json',
+        'apps/my-vue-app/vite.proxy.cjs',
       );
 
       // nginx.conf updated with the proxy block.
-      const nginx = host
-        .read('apps/my-vue-app/public/nginx.conf')
-        .toString();
+      const nginx = host.read('apps/my-vue-app/public/nginx.conf').toString();
       expect(nginx).toContain('location /api/');
       expect(nginx).toContain('proxy_pass http://test:3333/test/');
 
@@ -482,9 +497,7 @@ http {
             executor: '@angular-devkit/build-angular:browser',
             options: {
               outputPath: 'dist/apps/my-angular-app',
-              assets: [
-                `apps/my-angular-app/src/silent-check-sso.html`,
-              ],
+              assets: [`apps/my-angular-app/src/silent-check-sso.html`],
             },
           },
         },

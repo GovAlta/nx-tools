@@ -32,9 +32,21 @@ export interface ListResult<T = Record<string, unknown>> {
 }
 
 export const apiConvention = {
-  /** Path to a collection, one record, or a named action on a record. */
+  /**
+   * Path to a collection, one record, or a named action on a record.
+   *
+   * `/api/` is the dev-proxy and nginx location; `v1` is the API version the
+   * paired express-service mounts its routers under (`/<service>/v1`), and the
+   * proxy rewrites `/api/` to `/<service>/`. Dropping the version segment here
+   * (an earlier version of this file did) makes every list/get/save 404 against
+   * a generated backend, while HomeView and AGENTS.md -- which spell out
+   * `/api/v1/...` by hand -- keep working, so the mismatch is easy to miss.
+   *
+   * This is the one place to change if your API is versioned differently, or not
+   * at all: the views only ever call through this seam.
+   */
   path(resource: string, id?: string | number, action?: string): string {
-    const base = `/api/${resource}`
+    const base = `/api/v1/${resource}`
     if (id === undefined || id === null) return base
     return action ? `${base}/${id}/${action}` : `${base}/${id}`
   },

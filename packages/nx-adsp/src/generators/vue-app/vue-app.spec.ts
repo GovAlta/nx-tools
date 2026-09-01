@@ -510,17 +510,36 @@ describe('Vue App Generator', () => {
     expect(nginxConf).toContain('http://test-service2:3333/');
   });
 
-  it('writes vite dev proxy config when proxy is configured', async () => {
+  // Regression: this was a JSON file carrying `pathRewrite`, which is
+  // webpack-dev-server syntax. Vite has no such key and ignores unknown ones
+  // silently, so the dev server proxied to the right host and forwarded the path
+  // unrewritten -- every generated API call 404'd, with no warning. The fix has
+  // to be a module because the thing Vite needs is a function.
+  it('writes an executable vite dev proxy module whose rewrite actually rewrites', async () => {
     await generator(host, {
       ...options,
       proxy: { location: '/test/', proxyPass: 'http://test-service:3333/api/' },
     });
-    expect(host.exists('apps/test/vite.proxy.json')).toBeTruthy();
-    const proxyConf = JSON.parse(
-      host.read('apps/test/vite.proxy.json').toString(),
-    );
-    expect(proxyConf['/test/'].target).toBe('http://localhost:3333');
-    expect(proxyConf['/test/'].pathRewrite['^/test/']).toBe('/api/');
+    expect(host.exists('apps/test/vite.proxy.cjs')).toBeTruthy();
+    // The inert JSON form must not be left beside it.
+    expect(host.exists('apps/test/vite.proxy.json')).toBeFalsy();
+
+    const source = host.read('apps/test/vite.proxy.cjs').toString();
+    expect(source).not.toContain('pathRewrite');
+
+    // Evaluate it the way @nx/vite does (require) and exercise the function,
+    // rather than asserting on the text of a config that has to *behave*.
+    const module = { exports: {} };
+    new Function('module', 'exports', source)(module, module.exports);
+    const proxy = module.exports as Record<
+      string,
+      { target: string; rewrite: (path: string) => string }
+    >;
+    expect(proxy['/test/'].target).toBe('http://localhost:3333');
+    expect(typeof proxy['/test/'].rewrite).toBe('function');
+    expect(proxy['/test/'].rewrite('/test/v1/things')).toBe('/api/v1/things');
+    // Only the leading location is replaced, not a later occurrence of it.
+    expect(proxy['/test/'].rewrite('/test/a/test/b')).toBe('/api/a/test/b');
   });
 
   it('derives the nginx/dev proxy and the sandbox tag from --pairedProject alone', async () => {
@@ -532,10 +551,19 @@ describe('Vue App Generator', () => {
     const nginxConf = host.read('apps/test/public/nginx.conf').toString();
     expect(nginxConf).toContain('http://test-service:3333/test-service/');
 
-    const proxyConf = JSON.parse(
-      host.read('apps/test/vite.proxy.json').toString(),
+    const source = host.read('apps/test/vite.proxy.cjs').toString();
+    const module = { exports: {} };
+    new Function('module', 'exports', source)(module, module.exports);
+    const proxy = module.exports as Record<
+      string,
+      { target: string; rewrite: (path: string) => string }
+    >;
+    expect(proxy['/api/'].target).toBe('http://localhost:3333');
+    // /api/v1/... must reach the service's own mount point, which is what
+    // useApi's base path is built against.
+    expect(proxy['/api/'].rewrite('/api/v1/claims')).toBe(
+      '/test-service/v1/claims',
     );
-    expect(proxyConf['/api/'].target).toBe('http://localhost:3333');
 
     const config = readProjectConfiguration(host, 'test');
     expect(config.tags).toContain('adsp:proxy-service:test-service:3333');
