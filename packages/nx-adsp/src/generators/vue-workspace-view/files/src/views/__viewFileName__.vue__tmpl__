@@ -111,13 +111,11 @@ function onPageChange(newPage: number) {
   void load();
 }
 
-function onSort(key: string) {
-  if (sortBy.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortBy.value = key;
-    sortDir.value = 'asc';
-  }
+// goa-table-sort-header owns the direction cycling and reports both parts, so
+// this no longer toggles anything -- it just records what the table decided.
+function onSort(key: string, dir: 'asc' | 'desc') {
+  sortBy.value = key;
+  sortDir.value = dir;
   page.value = 1;
   void load();
 }

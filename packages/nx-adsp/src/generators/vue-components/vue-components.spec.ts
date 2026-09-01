@@ -81,6 +81,20 @@ describe('Vue Components Generator', () => {
     const table = host
       .read('libs/vue-components/src/lib/patterns/WorkspaceTable.vue')
       .toString();
+    // Sorting is the native element's job: goa-table-sort-header inside a
+    // goa-table with sort-mode="single". The hand-rolled button + manual
+    // aria-sort is gone, and the comment that claimed no native component
+    // existed is corrected.
+    expect(table).toContain('<goa-table-sort-header');
+    expect(table).toContain('sort-mode="single"');
+    expect(table).toContain('@_sort="onNativeSort"');
+    // Binding forms, not bare words -- the component's own comment explains that
+    // the element owns aria-sort, so the word legitimately appears in it.
+    expect(table).not.toContain(':aria-sort=');
+    expect(table).not.toContain('class="sort-button"');
+    // goa-table reports 1/-1/0; the rest of the stack speaks asc/desc.
+    expect(table).toContain("detail.sortDir < 0 ? 'desc' : 'asc'");
+
     for (const prop of [':pagenumber=', ':itemcount=', ':perpagecount=']) {
       expect(table).toContain(prop);
     }

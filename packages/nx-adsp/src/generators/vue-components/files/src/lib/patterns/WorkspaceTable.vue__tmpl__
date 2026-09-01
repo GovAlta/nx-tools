@@ -5,9 +5,13 @@
 // consuming view can render badges, formatted values, or action buttons per
 // column without this component knowing anything about the domain.
 //
-// No native GoA sortable-header component exists (checked -- there isn't
-// one), so a sortable column header is hand-rolled here using the standard
-// WAI-ARIA "sortable table header" pattern (aria-sort + a real button), not
+// Sortable headers use the native goa-table-sort-header inside a goa-table with
+// sort-mode="single": the element owns the aria-sort, the direction cycling and
+// the visual affordance. An earlier version of this comment asserted no native
+// sortable-header component existed -- it had shipped since 2.0.0. Check the
+// installed package's registered elements rather than trusting a note like that.
+//
+// The superseded hand-rolled version used the standard
 // invented from scratch.
 import { useSlots } from 'vue';
 import GoabButton from '../primitives/GoabButton.vue';
@@ -44,19 +48,23 @@ withDefaults(
 const emit = defineEmits<{
   retry: [];
   pageChange: [page: number];
-  sort: [key: string];
+  /**
+   * goa-table owns the direction cycling, so both parts arrive together and the
+   * consuming view no longer toggles a direction itself.
+   */
+  sort: [sortBy: string, sortDir: 'asc' | 'desc'];
 }>();
 
 const slots = useSlots();
 
-function ariaSort(
-  column: WorkspaceTableColumn,
-  sortBy?: string,
-  sortDir?: 'asc' | 'desc',
-): 'ascending' | 'descending' | 'none' | undefined {
-  if (!column.sortable) return undefined;
-  if (sortBy !== column.key) return 'none';
-  return sortDir === 'desc' ? 'descending' : 'ascending';
+// goa-table reports direction numerically -- 1 ascending, -1 descending, 0
+// unsorted -- while useApi's ListQuery and every generated view speak
+// 'asc' | 'desc'. Translating here keeps that difference in one place.
+function onNativeSort(event: Event) {
+  const detail = (event as CustomEvent<{ sortBy: string; sortDir: number }>)
+    .detail;
+  if (!detail?.sortBy) return;
+  emit('sort', detail.sortBy, detail.sortDir < 0 ? 'desc' : 'asc');
 }
 </script>
 
@@ -77,25 +85,20 @@ function ariaSort(
     </goa-callout>
 
     <template v-else>
-      <goa-table width="100%">
+      <!-- sort-mode="single" makes goa-table aggregate its sort headers and
+           emit one _sort event; the headers own their own aria-sort and
+           direction cycling, which this component used to hand-roll. -->
+      <goa-table width="100%" sort-mode="single" @_sort="onNativeSort">
         <thead>
           <tr>
-            <th
-              v-for="column in columns"
-              :key="column.key"
-              :aria-sort="ariaSort(column, sortBy, sortDir)"
-            >
-              <button
+            <th v-for="column in columns" :key="column.key">
+              <goa-table-sort-header
                 v-if="column.sortable"
-                type="button"
-                class="sort-button"
-                @click="emit('sort', column.key)"
+                :name="column.key"
+                :direction="column.key === sortBy ? sortDir : 'none'"
               >
                 {{ column.label }}
-                <span aria-hidden="true">{{
-                  sortBy === column.key ? (sortDir === 'desc' ? '▼' : '▲') : ''
-                }}</span>
-              </button>
+              </goa-table-sort-header>
               <template v-else>{{ column.label }}</template>
             </th>
             <th v-if="slots.actions" />
@@ -133,17 +136,3 @@ function ariaSort(
   </div>
 </template>
 
-<style scoped>
-.sort-button {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-weight: inherit;
-  color: inherit;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--goa-space-2xs, 0.25rem);
-}
-</style>
