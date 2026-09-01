@@ -129,6 +129,22 @@ describe('MyFeature', () => {
 });
 ```
 
+### Accessibility check — expand its route list
+
+The generated e2e project ships `src/a11y.spec.ts`: an axe-core check scoped to WCAG 2.1
+A/AA, run as part of the normal `e2e` target. **It only covers the routes named in its own
+`ROUTES` array, which ships as `['/']`.**
+
+Add an entry whenever you add a route — whether a generator added it or you hand-edited the
+router. Nothing does this for you: no generator writes to that file (it is left alone once it
+exists so your edits survive), so a router that has grown past `/` while `ROUTES` has not is
+a check that has quietly stopped covering the app. `/` is mostly app shell, so it exercises
+almost none of the elements the rest of the app is built from.
+
+Expect real failures when you expand it, and triage before fixing: some violations originate
+inside `@abgov/web-components`' own shadow DOM and cannot be addressed from app code. Those
+need an upstream fix or a documented exclusion, not a workaround in your view.
+
 ## OpenShift targets
 
 ```bash

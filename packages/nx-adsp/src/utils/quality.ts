@@ -162,17 +162,51 @@ import AxeBuilder from '@axe-core/playwright';
 // here means the WCAG 2.1 A/AA baseline, not full accessibility conformance.
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-test('has no WCAG 2.1 A/AA accessibility violations', async ({ page }) => {
-  await page.goto('/');
+// ADD YOUR ROUTES HERE. Coverage is exactly this list — a route that is not in
+// it is never checked, so this array, not the spec, is what decides how much of
+// the app is actually held to the WCAG baseline.
+//
+// It ships with only '/' because that is the sole route a freshly generated app
+// has. Do not read a green run against it as a meaningful result: the landing
+// page is mostly app shell, so it exercises almost none of the goa-* elements
+// the rest of the app is built from — tables, dropdowns, date pickers,
+// steppers, side-menu items, form steps. Those are where accessibility defects
+// actually live.
+//
+// Nothing keeps this list in sync for you. Routes arrive both from the
+// \`nx g @abgov/nx-adsp:vue-*-view\` generators and from hand-editing the router,
+// and no generator writes to this file — it is deliberately left alone once it
+// exists so your edits survive re-running them. Adding a route to the router and
+// not adding it here is the normal way this check silently stops covering the
+// app.
+//
+// Two things to watch when you add one:
+//
+//  - Point at a path that renders real content. A detail or edit route needs an
+//    id that resolves against whatever the dev server talks to; otherwise the
+//    view renders its error state and the check passes against an empty screen.
+//  - Triage a failure before assuming it is yours. Some violations come from
+//    inside @abgov/web-components' own shadow DOM (a decorative icon with
+//    \`role="img"\` and an empty \`aria-label\`, a \`role="menuitem"\` with no menu
+//    parent) and cannot be fixed from app code. Those need an upstream fix or a
+//    documented exclusion — not a workaround in your view.
+const ROUTES = ['/'];
 
-  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+for (const route of ROUTES) {
+  test(\`has no WCAG 2.1 A/AA accessibility violations: \${route}\`, async ({
+    page,
+  }) => {
+    await page.goto(route);
 
-  const summary = results.violations.map(
-    (v) =>
-      \`[\${v.impact}] \${v.id}: \${v.help} (\${v.nodes.length} node(s)) \${v.helpUrl}\`,
-  );
-  expect(summary, summary.join('\\n')).toEqual([]);
-});
+    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+
+    const summary = results.violations.map(
+      (v) =>
+        \`[\${v.impact}] \${v.id}: \${v.help} (\${v.nodes.length} node(s)) \${v.helpUrl}\`,
+    );
+    expect(summary, \`\${route}\\n\${summary.join('\\n')}\`).toEqual([]);
+  });
+}
 `;
 
 /**
