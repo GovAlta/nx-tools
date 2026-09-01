@@ -68,4 +68,104 @@ describe('insertSideMenuItem', () => {
       insertSideMenuItem(host, 'apps/missing', { label: 'X', to: '/x' }),
     ).not.toThrow();
   });
+
+  // The original spec asserted both items were present but never their relative
+  // order, so it passed while the function prepended and pushed Home to the
+  // bottom of every generated app's nav.
+  it("appends after the shell's own Home entry rather than before it", () => {
+    host.write('apps/staff/src/App.vue', INTERNAL_APP);
+    insertSideMenuItem(host, 'apps/staff', {
+      label: 'Review queue',
+      to: '/queue',
+    });
+    const app = host.read('apps/staff/src/App.vue')?.toString() ?? '';
+    expect(app.indexOf("to: '/'")).toBeLessThan(app.indexOf("to: '/queue'"));
+  });
+
+  it('accumulates multiple items in the order they were added', () => {
+    host.write('apps/staff/src/App.vue', INTERNAL_APP);
+    insertSideMenuItem(host, 'apps/staff', { label: 'Queue', to: '/queue' });
+    insertSideMenuItem(host, 'apps/staff', {
+      label: 'Livestock categories',
+      to: '/livestock',
+    });
+    const app = host.read('apps/staff/src/App.vue')?.toString() ?? '';
+    expect(app.indexOf("to: '/'")).toBeLessThan(app.indexOf("to: '/queue'"));
+    expect(app.indexOf("to: '/queue'")).toBeLessThan(
+      app.indexOf("to: '/livestock'"),
+    );
+  });
+
+  it('emits the icon, which the element needs to render a non-blank item', () => {
+    host.write('apps/staff/src/App.vue', INTERNAL_APP);
+    insertSideMenuItem(host, 'apps/staff', {
+      label: 'Queue',
+      to: '/queue',
+      icon: 'list',
+    });
+    expect(host.read('apps/staff/src/App.vue')?.toString()).toContain(
+      "{ label: 'Queue', to: '/queue', icon: 'list' },",
+    );
+  });
+
+  it('appends validly when the array literal has no trailing comma', () => {
+    host.write(
+      'apps/staff/src/App.vue',
+      `<script setup lang="ts">
+const primaryItems = [{ label: 'Home', to: '/' }];
+</script>
+`,
+    );
+    insertSideMenuItem(host, 'apps/staff', { label: 'Queue', to: '/queue' });
+    const app = host.read('apps/staff/src/App.vue')?.toString() ?? '';
+    expect(app).toContain("{ label: 'Home', to: '/' },");
+    expect(app.indexOf("to: '/'")).toBeLessThan(app.indexOf("to: '/queue'"));
+  });
+
+  it('does not end its scan early on a bracket inside a label', () => {
+    host.write(
+      'apps/staff/src/App.vue',
+      `<script setup lang="ts">
+const primaryItems = [
+  { label: 'Reports [beta]', to: '/reports' },
+];
+</script>
+`,
+    );
+    insertSideMenuItem(host, 'apps/staff', { label: 'Queue', to: '/queue' });
+    const app = host.read('apps/staff/src/App.vue')?.toString() ?? '';
+    expect(app.indexOf("to: '/reports'")).toBeLessThan(
+      app.indexOf("to: '/queue'"),
+    );
+  });
+
+  it('is a silent no-op on an unterminated array literal', () => {
+    const broken = `<script setup lang="ts">
+const primaryItems = [
+</script>
+`;
+    host.write('apps/staff/src/App.vue', broken);
+    insertSideMenuItem(host, 'apps/staff', { label: 'Queue', to: '/queue' });
+    expect(host.read('apps/staff/src/App.vue')?.toString()).toBe(broken);
+  });
+
+  it('does not leave blank lines between accumulated entries', () => {
+    host.write('apps/staff/src/App.vue', INTERNAL_APP);
+    insertSideMenuItem(host, 'apps/staff', {
+      label: 'A',
+      to: '/a',
+      icon: 'list',
+    });
+    insertSideMenuItem(host, 'apps/staff', {
+      label: 'B',
+      to: '/b',
+      icon: 'list',
+    });
+    const app = host.read('apps/staff/src/App.vue')?.toString() ?? '';
+    const array = app.slice(
+      app.indexOf('const primaryItems = ['),
+      app.indexOf('];') + 2,
+    );
+    expect(array).not.toMatch(/\n\s*\n/);
+  });
 });

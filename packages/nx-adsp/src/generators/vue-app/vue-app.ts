@@ -36,6 +36,7 @@ import {
   resolvePairedProjectProxy,
 } from '../../utils/paired-project';
 import { generateNginxConf } from '../../utils/nginx';
+import { disableSlotAttributeRule } from '../../utils/vue-eslint';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -98,7 +99,10 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
   host.write(
     `${options.projectRoot}/public/nginx.conf`,
-    generateNginxConf({ proxyLocations: options.nginxProxies, silentCheckSso: true }),
+    generateNginxConf({
+      proxyLocations: options.nginxProxies,
+      silentCheckSso: true,
+    }),
   );
 
   const addProxyConf = options.nginxProxies.length > 0;
@@ -149,6 +153,18 @@ export default async function (host: Tree, options: Schema) {
   // real current alternative — and GoA's own design-system docs don't list Vue
   // as a supported framework at all.
   await vueComponentsGenerator(host);
+
+  // The shell projects into goa-one-column-layout's native `header`/`footer`
+  // slots, and app authors composing goa-* elements need the same attribute
+  // (goa-modal's `actions`, goa-app-header's `utilities`). Applied to both
+  // layouts, not just the one whose template emits it today -- scoping this to
+  // the single known call site is what let `nx lint` start failing on
+  // unmodified output when the shell adopted goa-one-column-layout.
+  disableSlotAttributeRule(
+    host,
+    normalizedOptions.projectRoot,
+    "The app shell projects into goa-one-column-layout's native `slot`",
+  );
 
   addDependenciesToPackageJson(
     host,

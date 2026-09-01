@@ -95,18 +95,24 @@ export default async function (host: Tree, options: Schema) {
     },
   );
 
-  insertVueRoute(host, normalizedOptions.projectRoot, normalizedOptions.project, {
-    path: normalizedOptions.route,
-    componentImportPath: `../views/${normalizedOptions.viewFileName}.vue`,
-    requiresAuth: normalizedOptions.requiresAuth,
-    // A multi-column table at the 1000px default wraps every cell.
-    layout: 'wide',
-  });
+  insertVueRoute(
+    host,
+    normalizedOptions.projectRoot,
+    normalizedOptions.project,
+    {
+      path: normalizedOptions.route,
+      componentImportPath: `../views/${normalizedOptions.viewFileName}.vue`,
+      requiresAuth: normalizedOptions.requiresAuth,
+      // A multi-column table at the 1000px default wraps every cell.
+      layout: 'wide',
+    },
+  );
 
   // No-op on a header-layout app, which has no side menu.
   insertSideMenuItem(host, normalizedOptions.projectRoot, {
     label: normalizedOptions.heading,
     to: normalizedOptions.route,
+    icon: normalizedOptions.icon ?? 'list',
   });
 
   await formatFiles(host);

@@ -39,7 +39,9 @@ const FIELD_TYPES = [
   'checkbox',
 ] as const;
 
-function assertFieldTypes(fields: { key: string; type?: string; options?: unknown }[]) {
+function assertFieldTypes(
+  fields: { key: string; type?: string; options?: unknown }[],
+) {
   for (const field of fields) {
     if (field.type && !FIELD_TYPES.includes(field.type as never)) {
       throw new Error(
@@ -60,7 +62,8 @@ function normalizeOptions(host: Tree, options: Schema): NormalizedSchema {
   const className = names(options.name).className;
   // className is PascalCase (e.g. "Regions") -- space it out for a readable
   // default heading ("Regions").
-  const heading = options.heading ?? className.replace(/([A-Z])/g, ' $1').trim();
+  const heading =
+    options.heading ?? className.replace(/([A-Z])/g, ' $1').trim();
   return {
     ...options,
     projectRoot,
@@ -98,23 +101,34 @@ export default async function (host: Tree, options: Schema) {
   // The edit route also serves create: visiting `${route}/new` matches the
   // same `:id` param (id === 'new'), same convention the real reference
   // implementation this was modeled on uses -- no separate create route.
-  insertVueRoute(host, normalizedOptions.projectRoot, normalizedOptions.project, {
-    path: `${normalizedOptions.route}/:id`,
-    componentImportPath: `../views/${normalizedOptions.editViewFileName}.vue`,
-    requiresAuth: normalizedOptions.requiresAuth,
-    layout: 'form',
-  });
-  insertVueRoute(host, normalizedOptions.projectRoot, normalizedOptions.project, {
-    path: normalizedOptions.route,
-    componentImportPath: `../views/${normalizedOptions.listViewFileName}.vue`,
-    requiresAuth: normalizedOptions.requiresAuth,
-    layout: 'wide',
-  });
+  insertVueRoute(
+    host,
+    normalizedOptions.projectRoot,
+    normalizedOptions.project,
+    {
+      path: `${normalizedOptions.route}/:id`,
+      componentImportPath: `../views/${normalizedOptions.editViewFileName}.vue`,
+      requiresAuth: normalizedOptions.requiresAuth,
+      layout: 'form',
+    },
+  );
+  insertVueRoute(
+    host,
+    normalizedOptions.projectRoot,
+    normalizedOptions.project,
+    {
+      path: normalizedOptions.route,
+      componentImportPath: `../views/${normalizedOptions.listViewFileName}.vue`,
+      requiresAuth: normalizedOptions.requiresAuth,
+      layout: 'wide',
+    },
+  );
 
   // The list is the nav destination; the edit form is reached from it.
   insertSideMenuItem(host, normalizedOptions.projectRoot, {
     label: normalizedOptions.heading,
     to: normalizedOptions.route,
+    icon: normalizedOptions.icon ?? 'settings',
   });
 
   await formatFiles(host);

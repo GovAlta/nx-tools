@@ -20,6 +20,8 @@ export interface Schema {
   fields: string | AdminCrudField[];
   heading?: string;
   singularLabel?: string;
+  /** Ionicon name for the side-menu entry. Defaults per generator. */
+  icon?: string;
   requiresAuth?: boolean;
 }
 

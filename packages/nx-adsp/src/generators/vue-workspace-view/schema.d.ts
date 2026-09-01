@@ -32,6 +32,8 @@ export interface Schema {
   heading?: string;
   pageSize?: number;
   filterable?: boolean;
+  /** Ionicon name for the side-menu entry. Defaults per generator. */
+  icon?: string;
   requiresAuth?: boolean;
 }
 
