@@ -87,6 +87,18 @@ describe('Vue Components Generator', () => {
     // existed is corrected.
     expect(table).toContain('<goa-table-sort-header');
     expect(table).toContain('sort-mode="single"');
+    // goa-table and goa-table-sort-header both default to V1 styling; this
+    // workspace is on V2, the same reason goa-app-header and goa-pagination
+    // carry version="2".
+    // Asserted per element rather than by counting: a count is hostage to the
+    // literal appearing in a comment, which is how this assertion first broke.
+    const compactTable = table.replace(/\s+/g, ' ');
+    expect(compactTable).toContain(
+      '<goa-table width="100%" version="2" sort-mode="single"',
+    );
+    expect(compactTable).toContain(
+      '<goa-table-sort-header v-if="column.sortable" version="2"',
+    );
     expect(table).toContain('@_sort="onNativeSort"');
     // Binding forms, not bare words -- the component's own comment explains that
     // the element owns aria-sort, so the word legitimately appears in it.
