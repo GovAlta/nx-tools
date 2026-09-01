@@ -172,6 +172,12 @@ The generated Playwright e2e project includes an axe-core accessibility check (`
 scoped to WCAG 2.1 A/AA, that runs automatically as part of the `e2e` target — no separate command
 needed. `angular-app` and `vue-app` include the same check.
 
+Its coverage is the `ROUTES` array inside that spec, which ships as `['/']` — the only route a
+freshly generated app has. **Add to it as the app gains routes**, from a generator or by hand; no
+generator maintains the list, and `/` is mostly app shell, so it exercises little of what the app
+is actually built from. Expect genuine failures once expanded: some come from inside
+`@abgov/web-components`' shadow DOM and need an upstream fix rather than an app-side change.
+
 ---
 
 ### `angular-app`

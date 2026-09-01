@@ -239,8 +239,10 @@ describe('addAxeAccessibilityCheck', () => {
     expect(spec).toContain("import AxeBuilder from '@axe-core/playwright'");
     expect(spec).toContain("['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']");
     expect(spec).toContain('.withTags(WCAG_TAGS).analyze()');
-    expect(spec).toContain("await page.goto('/')");
-    expect(spec).toContain('expect(summary, summary.join');
+    // Navigation and the failure message are asserted by the ROUTES tests below
+    // -- both are now per-route rather than a single hardcoded '/'.
+    expect(spec).toContain('await page.goto(route)');
+    expect(spec).toContain('summary.join');
   });
 
   it('is idempotent — a second call does not clobber a manually-edited file', () => {
@@ -251,5 +253,36 @@ describe('addAxeAccessibilityCheck', () => {
     addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
 
     expect(tree.read(specPath).toString()).toBe('// manually edited\n');
+  });
+
+  // The spec is a seed, not a finished gate: its coverage is exactly its ROUTES
+  // array, and no generator maintains that list. It shipped with a hardcoded
+  // `page.goto('/')` and no hint of that, so a consumer reasonably read a green
+  // run as "accessibility is covered" while it checked one route -- the one route
+  // that exercises almost none of the goa-* elements the app is built from.
+  it('drives its coverage from an editable ROUTES list, seeded with /', () => {
+    addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
+    const spec = tree.read('apps/my-app-e2e/src/a11y.spec.ts').toString();
+
+    expect(spec).toContain("const ROUTES = ['/']");
+    // A route the list doesn't name is never checked, so the list has to be the
+    // thing that's iterated -- not one hardcoded navigation.
+    expect(spec).toContain('for (const route of ROUTES)');
+    expect(spec).toContain('await page.goto(route)');
+    expect(spec).not.toContain("page.goto('/')");
+    // The failure has to name the route, or a multi-route run can't be triaged.
+    expect(spec).toContain('violations: ${route}');
+  });
+
+  it('tells the reader to expand the route list, and what to expect when they do', () => {
+    addAxeAccessibilityCheck(tree, 'apps/my-app-e2e');
+    const spec = tree.read('apps/my-app-e2e/src/a11y.spec.ts').toString();
+
+    expect(spec).toContain('ADD YOUR ROUTES HERE');
+    // Routes arrive by hand as well as from generators -- the reader has to know
+    // nothing keeps the list in sync.
+    expect(spec).toContain('hand-editing the router');
+    // And that a failure may not be theirs to fix.
+    expect(spec).toContain('shadow DOM');
   });
 });
