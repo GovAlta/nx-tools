@@ -28,15 +28,17 @@ import {
   readProjectConfiguration,
   Tree,
   updateProjectConfiguration,
-  writeJson,
 } from '@nx/devkit';
 import * as path from 'path';
 import {
-  buildDevProxyConf,
+  buildViteDevProxyModule,
+  viteDevProxyRoutes,
+  VITE_PROXY_FILENAME,
   resolvePairedProjectProxy,
 } from '../../utils/paired-project';
 import { generateNginxConf } from '../../utils/nginx';
 import { disableSlotAttributeRule } from '../../utils/vue-eslint';
+import { ensureBundlerModuleOption } from '../../utils/vue-tsconfig';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
 } from '../vue-components/vue-components';
@@ -107,10 +109,11 @@ function addFiles(host: Tree, options: NormalizedSchema) {
 
   const addProxyConf = options.nginxProxies.length > 0;
   if (addProxyConf) {
-    writeJson(
-      host,
-      `${options.projectRoot}/vite.proxy.json`,
-      buildDevProxyConf(options.nginxProxies),
+    // A .cjs module, not JSON: Vite rewrites a proxied path with a `rewrite`
+    // function and silently ignores the `pathRewrite` key JSON would carry.
+    host.write(
+      `${options.projectRoot}/${VITE_PROXY_FILENAME}`,
+      buildViteDevProxyModule(viteDevProxyRoutes(options.nginxProxies)),
     );
   }
   return addProxyConf;
@@ -166,6 +169,13 @@ export default async function (host: Tree, options: Schema) {
     "The app shell projects into goa-one-column-layout's native `slot`",
   );
 
+  // @nx/vue can leave the app's tsconfig with a bundler moduleResolution and no
+  // `module`, which is invalid against a TS-solution base -- see the util.
+  ensureBundlerModuleOption(
+    host,
+    `${normalizedOptions.projectRoot}/tsconfig.json`,
+  );
+
   addDependenciesToPackageJson(
     host,
     {
@@ -201,6 +211,10 @@ export default async function (host: Tree, options: Schema) {
     'src/components/AppLayout.vue',
     'src/views/AboutView.vue',
     'vite.config.mts',
+    // Superseded by vite.proxy.cjs. The JSON form could not express Vite's
+    // `rewrite` function, so it was inert -- leaving it would strand a file
+    // that looks like live proxy config but isn't referenced.
+    'vite.proxy.json',
   ]) {
     if (host.exists(`${normalizedOptions.projectRoot}/${f}`)) {
       host.delete(`${normalizedOptions.projectRoot}/${f}`);
@@ -221,7 +235,7 @@ export default async function (host: Tree, options: Schema) {
   if (addedProxy && config.targets.serve?.options) {
     config.targets.serve.options = {
       ...config.targets.serve.options,
-      proxyConfig: `${normalizedOptions.projectRoot}/vite.proxy.json`,
+      proxyConfig: `${normalizedOptions.projectRoot}/${VITE_PROXY_FILENAME}`,
     };
   }
 

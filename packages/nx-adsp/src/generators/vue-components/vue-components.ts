@@ -7,6 +7,7 @@ import {
 } from '@nx/devkit';
 import * as path from 'path';
 import { disableSlotAttributeRule } from '../../utils/vue-eslint';
+import { ensureBundlerModuleOption } from '../../utils/vue-tsconfig';
 
 // Backfills package.json module-resolution fields for the library. In a TS-solution
 // workspace @nx/vue's library resolves via package.json `exports`, but its
@@ -92,6 +93,7 @@ export default async function (host: Tree) {
       "GoabModal uses goa-modal's native `slot` attribute",
     );
     ensurePackageExports(host, libRoot);
+    ensureBundlerModuleOption(host, `${libRoot}/tsconfig.json`);
   }
 
   generateFiles(host, path.join(__dirname, 'files'), libRoot, { tmpl: '' });

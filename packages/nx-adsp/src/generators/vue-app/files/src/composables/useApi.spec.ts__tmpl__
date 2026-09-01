@@ -7,9 +7,11 @@ import { apiConvention } from './useApi'
 // it -- a failure here means a generated view's assumptions moved.
 describe('apiConvention', () => {
   it('builds collection, record, and action paths', () => {
-    expect(apiConvention.path('widgets')).toBe('/api/widgets')
-    expect(apiConvention.path('widgets', 7)).toBe('/api/widgets/7')
-    expect(apiConvention.path('widgets', 7, 'submit')).toBe('/api/widgets/7/submit')
+    expect(apiConvention.path('widgets')).toBe('/api/v1/widgets')
+    expect(apiConvention.path('widgets', 7)).toBe('/api/v1/widgets/7')
+    expect(apiConvention.path('widgets', 7, 'submit')).toBe(
+      '/api/v1/widgets/7/submit',
+    )
   })
 
   it('maps a domain page/pageSize onto this API page/limit parameters', () => {

@@ -1,4 +1,10 @@
-import { readProjectConfiguration, Tree } from '@nx/devkit';
+import {
+  readJson,
+  readProjectConfiguration,
+  Tree,
+  updateJson,
+  writeJson,
+} from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import generator, {
   ensurePackageExports,
@@ -351,5 +357,40 @@ describe('Vue Components Generator', () => {
     // And an unmapped badge value stays neutral rather than being asserted good
     // or bad.
     expect(formatters).toContain("fallback: BadgeType = 'information'");
+  }, 30000);
+
+  // Regression: @nx/vue writes `moduleResolution: "bundler"` into the lib's
+  // tsconfig but leaves `module` inherited. Against a create-nx-workspace base
+  // (`module: "nodenext"`) that pair is invalid -- TS5095 and TS5109 -- so
+  // `nx build` failed on completely unmodified generator output.
+  it('gives the lib a module setting compatible with its bundler moduleResolution', async () => {
+    writeJson(host, 'tsconfig.base.json', {
+      compilerOptions: {
+        module: 'nodenext',
+        moduleResolution: 'nodenext',
+        target: 'es2022',
+      },
+    });
+    await generator(host);
+    const compilerOptions = readJson(
+      host,
+      'libs/vue-components/tsconfig.json',
+    ).compilerOptions;
+    expect(compilerOptions.moduleResolution).toBe('bundler');
+    expect(compilerOptions.module).toBe('esnext');
+  }, 30000);
+
+  it('leaves a tsconfig that already declares module alone', async () => {
+    await generator(host);
+    // Pin something deliberate, then re-run: the backfill must not overwrite it.
+    updateJson(host, 'libs/vue-components/tsconfig.json', (tsconfig) => {
+      tsconfig.compilerOptions.module = 'preserve';
+      return tsconfig;
+    });
+    await generator(host);
+    expect(
+      readJson(host, 'libs/vue-components/tsconfig.json').compilerOptions
+        .module,
+    ).toBe('preserve');
   }, 30000);
 });
