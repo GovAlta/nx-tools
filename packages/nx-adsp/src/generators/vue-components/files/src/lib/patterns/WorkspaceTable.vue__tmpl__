@@ -143,7 +143,13 @@ function onNativeSort(event: Event) {
         :pagenumber="page"
         :itemcount="itemCount"
         :perpagecount="perPageCount"
-        @_change="(e) => emit('pageChange', (e as CustomEvent<{ page: number }>).detail?.page ?? 1)"
+        @_change="
+          (e: Event) =>
+            emit(
+              'pageChange',
+              (e as CustomEvent<{ page: number }>).detail?.page ?? 1,
+            )
+        "
       />
     </template>
   </div>
