@@ -120,10 +120,17 @@ describe('Vue App Generator', () => {
     const layoutPath = 'libs/vue-components/src/lib/patterns/AppLayout.vue';
     expect(host.exists(layoutPath)).toBeTruthy();
     const layout = host.read(layoutPath).toString();
-    // Three named width variants, token-driven padding.
-    expect(layout).toContain('form-content');
-    expect(layout).toContain('wide-content');
+    // The gutter is goa-page-block's job now: it supplies the centering, the
+    // max-width and a responsive horizontal gutter. The named variants stay the
+    // public API, mapped to the widths the element takes.
+    expect(layout).toContain('<goa-page-block');
+    expect(layout).toContain("form: '640px'");
+    expect(layout).toContain("page: '1000px'");
+    expect(layout).toContain("wide: '1200px'");
+    // Vertical padding is not part of goa-page-block, so this component keeps it
+    // -- the same thing GoA's own public-form reference does.
     expect(layout).toContain('--goa-space');
+    expect(layout).toContain('padding-block');
     // AppLayout must NOT own the skip-to-main-content landmark itself: it nests
     // inside AppSideMenu for --layout=internal, which already provides one, and
     // a second <main id="main-content"> would duplicate the landmark/id.
@@ -137,8 +144,16 @@ describe('Vue App Generator', () => {
     const app = host.read('apps/test/src/App.vue').toString();
     expect(app).toContain('AppLayout');
     expect(app).not.toContain('main > section');
+    // The public shell is goa-one-column-layout, which owns the page's flex
+    // column, sticky footer and <main> landmark. That <main> is in its shadow
+    // DOM, so the skip link targets an id'd wrapper in the slotted content --
+    // a plain div, so the page still has exactly one main landmark.
+    expect(app).toContain('<goa-one-column-layout>');
+    expect(app).toContain('<section slot="header">');
+    expect(app).toContain('<section slot="footer">');
     expect(app).toContain('href="#main-content"');
-    expect(app).toContain('id="main-content"');
+    expect(app).toContain('<div id="main-content">');
+    expect(app).not.toContain('<main id="main-content">');
   });
 
   it('provisions the shared GoA wrapper library and points the app at it', async () => {

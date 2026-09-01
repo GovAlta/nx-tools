@@ -171,6 +171,7 @@ describe('Vue Components Generator', () => {
       'libs/vue-components/src/lib/primitives/GoabDatePicker.spec.ts',
       'libs/vue-components/src/lib/patterns/WorkspaceTable.spec.ts',
       'libs/vue-components/src/lib/patterns/Stepper.spec.ts',
+      'libs/vue-components/src/lib/patterns/AppLayout.spec.ts',
     ]) {
       expect(host.exists(spec)).toBeTruthy();
     }

@@ -78,6 +78,13 @@ function onItemClick(item: { to?: string }) {
     </AppLayout>
   </AppSideMenu>
 <% } else { %>
+  <!-- goa-one-column-layout owns the page's flex column, the sticky footer and
+       the <main> landmark. That <main> lives in the element's shadow DOM, so the
+       skip link targets an id'd wrapper in the slotted (light DOM) content
+       instead -- the wrapper is a plain div, so there is still exactly one main
+       landmark on the page. -->
+  <goa-one-column-layout>
+  <section slot="header">
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <AppHeader heading="<%= projectName %>">
     <template #utilities>
@@ -100,12 +107,18 @@ function onItemClick(item: { to?: string }) {
     @sign-in="signInAgain"
     @dismiss="session.dismiss"
   />
-  <main id="main-content">
+  </section>
+
+  <div id="main-content">
     <AppLayout :variant="contentWidth">
       <RouterView />
     </AppLayout>
-  </main>
-  <AppFooter />
+  </div>
+
+  <section slot="footer">
+    <AppFooter />
+  </section>
+  </goa-one-column-layout>
 <% } %>
 </template>
 

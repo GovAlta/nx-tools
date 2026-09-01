@@ -14,36 +14,43 @@
 // copy would duplicate the anchor screen readers/keyboard nav jump to. The
 // top-level shell (App.vue for --layout=header, AppSideMenu for --layout=internal)
 // owns that landmark instead.
-withDefaults(defineProps<{ variant?: 'page' | 'wide' | 'form' }>(), {
-  variant: 'page',
-});
+import { computed } from 'vue';
+
+const props = withDefaults(
+  defineProps<{ variant?: 'page' | 'wide' | 'form' }>(),
+  { variant: 'page' },
+);
+
+// goa-page-block takes a CSS dimension (or "full"); the variant names stay the
+// public API so a view says what kind of page it is, not how wide it should be.
+const WIDTHS = {
+  form: '640px',
+  page: '1000px',
+  wide: '1200px',
+} as const;
+
+const maxWidth = computed(() => WIDTHS[props.variant]);
 </script>
 
 <template>
-  <div :class="`${variant}-content`">
-    <slot />
-  </div>
+  <goa-page-block :width="maxWidth">
+    <!-- goa-page-block supplies the centering, the max-width and a responsive
+         HORIZONTAL gutter, but no vertical padding -- GoA's own public-form
+         reference does the same thing, wrapping the block's children to add it. -->
+    <div class="app-layout-inset">
+      <slot />
+    </div>
+  </goa-page-block>
 </template>
 
 <style scoped>
-.page-content,
-.wide-content,
-.form-content {
-  margin-inline: auto;
-  box-sizing: border-box;
-  /* Design-token gutter; fallbacks apply only if tokens aren't loaded. */
-  padding: var(--goa-space-xl, 2.5rem) var(--goa-space-l, 1.5rem);
+.app-layout-inset {
+  padding-block: var(--goa-space-xl, 2.5rem);
 }
 
-.form-content { max-width: 640px; }
-.page-content { max-width: 1000px; }
-.wide-content { max-width: 1200px; }
-
 @media (max-width: 623.98px) {
-  .page-content,
-  .wide-content,
-  .form-content {
-    padding: var(--goa-space-m, 1rem);
+  .app-layout-inset {
+    padding-block: var(--goa-space-m, 1rem);
   }
 }
 </style>
