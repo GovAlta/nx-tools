@@ -25,7 +25,7 @@
     },
     "resource": {
       "type": "string",
-      "description": "API resource path segment -- the view fetches /api/<resource>?page=&limit=&search=&sortBy=&sortDir=."
+      "description": "API resource path segment -- the view fetches /api/v1/<resource>?page=&limit=&search=&sortBy=&sortDir=."
     },
     "route": {
       "type": "string",

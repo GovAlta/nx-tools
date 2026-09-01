@@ -42,6 +42,19 @@ export const LIB_NAME = 'vue-components';
 // scope so it mirrors the eventual official `@abgov/vue-components` (same tail —
 // swapping to it is a scope change). Falls back to a scope built from the root
 // package name when the workspace isn't scoped.
+// Workspace-relative root of the shared wrapper lib, for docs that need to name a
+// path rather than an import specifier. Reads the project graph first so it is
+// correct in a TS-solution/flat workspace (where the lib sits at the root, not under
+// libs/) and only falls back to the layout when the lib hasn't been generated yet.
+export function vueComponentsLibRoot(host: Tree): string {
+  try {
+    return readProjectConfiguration(host, LIB_NAME).root;
+  } catch {
+    const { libsDir } = getWorkspaceLayout(host);
+    return libsDir && libsDir !== '.' ? `${libsDir}/${LIB_NAME}` : LIB_NAME;
+  }
+}
+
 export function vueComponentsImportPath(host: Tree): string {
   let name = 'workspace';
   try {

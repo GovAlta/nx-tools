@@ -25,7 +25,7 @@
     },
     "resource": {
       "type": "string",
-      "description": "API resource path segment -- fetches /api/<resource> (list), /api/<resource>/:id (load one), POST /api/<resource> (create), PUT /api/<resource>/:id (update)."
+      "description": "API resource path segment -- fetches /api/v1/<resource> (list), /api/v1/<resource>/:id (load one), POST /api/v1/<resource> (create), PUT /api/v1/<resource>/:id (update)."
     },
     "route": {
       "type": "string",

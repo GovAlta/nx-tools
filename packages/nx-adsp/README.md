@@ -279,7 +279,7 @@ npx nx g @abgov/nx-adsp:vue-detail-view my-app --name=application-detail --resou
 | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                                                                  |
 | `name`         | Yes      | View name, e.g. `application-detail` generates `src/views/ApplicationDetailView.vue`                                                                                                                      |
-| `resource`     | Yes      | API resource path segment — the view fetches `/api/<resource>/:id`                                                                                                                                        |
+| `resource`     | Yes      | API resource path segment — the view fetches `/api/v1/<resource>/:id`                                                                                                                                     |
 | `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications/:id`. Must contain a `:id` param                                                                                                               |
 | `fields`       | Yes      | JSON array of fields rendered in the record's info list, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge" }` — a JSON string, not a comma-separated CLI array (see note below) |
 | `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                                                                      |
@@ -296,18 +296,19 @@ an existing `vue-app` project, built on the shared `WorkspaceTable` pattern comp
 npx nx g @abgov/nx-adsp:vue-workspace-view my-app --name=applications --resource=applications --route=/applications --detailRoute=/applications --columns='[{"key":"status","label":"Status","type":"badge","sortable":true}]'
 ```
 
-| Option         | Required | Description                                                                                                                                              |
-| -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                 |
-| `name`         | Yes      | View name, e.g. `applications` generates `src/views/ApplicationsListView.vue`                                                                            |
-| `resource`     | Yes      | API resource path segment — fetches `/api/<resource>?page=&limit=&search=&sortBy=&sortDir=`                                                              |
-| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications`                                                                                              |
-| `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable? }` — a JSON string (see note below)  |
-| `detailRoute`  | No       | If set, each row gets a "View" action linking to `` `${detailRoute}/${row.id}` `` — typically a `vue-detail-view`'s route with the `:id` segment dropped |
-| `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                         |
-| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                     |
-| `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                          |
-| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                  |
+| Option         | Required | Description                                                                                                                                                                                                                                                                                                                                                           |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`      | Yes      | The `vue-app` project to add the view to                                                                                                                                                                                                                                                                                                                              |
+| `name`         | Yes      | View name, e.g. `applications` generates `src/views/ApplicationsListView.vue`                                                                                                                                                                                                                                                                                         |
+| `resource`     | Yes      | API resource path segment — fetches `/api/v1/<resource>?page=&limit=&search=&sortBy=&sortDir=`                                                                                                                                                                                                                                                                        |
+| `route`        | Yes      | Route path added to `router/index.ts`, e.g. `/applications`                                                                                                                                                                                                                                                                                                           |
+| `columns`      | Yes      | JSON array of table columns, in display order: `{ key, label, type?: "text"\|"date"\|"currency"\|"badge", sortable?, options?: [{value,label}], badgeMap?: {value: badgeType} }` — supply `options` for any column stored as a code (or the table shows the code), and `badgeMap` on a `badge` column to give each status its colour — a JSON string (see note below) |
+| `detailRoute`  | No       | If set, each row gets a "View" action linking to `` `${detailRoute}/${row.id}` `` — typically a `vue-detail-view`'s route with the `:id` segment dropped                                                                                                                                                                                                              |
+| `filterable`   | No       | Whether to generate a debounced search input above the table. Defaults to `true`                                                                                                                                                                                                                                                                                      |
+| `heading`      | No       | Page heading. Defaults to the view name, title-cased                                                                                                                                                                                                                                                                                                                  |
+| `pageSize`     | No       | Rows per page. Defaults to `20`                                                                                                                                                                                                                                                                                                                                       |
+| `icon`         | No       | Ionicon name for the generated side-menu entry. Defaults to `list`. `goa-work-side-menu-item` renders a blank item without one                                                                                                                                                                                                                                        |
+| `requiresAuth` | No       | Whether the generated route requires authentication. Defaults to `true`                                                                                                                                                                                                                                                                                               |
 
 ---
 
@@ -322,16 +323,17 @@ that).
 npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions --route=/regions --fields='[{"key":"name","label":"Name"},{"key":"active","label":"Active","type":"checkbox"}]'
 ```
 
-| Option          | Required | Description                                                                                                                                                         |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`       | Yes      | The `vue-app` project to add the views to                                                                                                                           |
-| `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                             |
-| `resource`      | Yes      | API resource path segment — fetches `/api/<resource>` (list), `/api/<resource>/:id` (load one), `POST /api/<resource>` (create), `PUT /api/<resource>/:id` (update) |
-| `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `` `${route}/:id` `` (visiting `${route}/new` creates)               |
-| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"checkbox", required? }` — a JSON string (see note below)                                |
-| `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                           |
-| `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                               |
-| `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                             |
+| Option          | Required | Description                                                                                                                                                                     |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`       | Yes      | The `vue-app` project to add the views to                                                                                                                                       |
+| `name`          | Yes      | View name, e.g. `regions` generates `src/views/RegionsListView.vue` and `src/views/RegionsEditView.vue`                                                                         |
+| `resource`      | Yes      | API resource path segment — fetches `/api/v1/<resource>` (list), `/api/v1/<resource>/:id` (load one), `POST /api/v1/<resource>` (create), `PUT /api/v1/<resource>/:id` (update) |
+| `route`         | Yes      | List route path added to `router/index.ts`, e.g. `/regions`. The edit/create route is added as `` `${route}/:id` `` (visiting `${route}/new` creates)                           |
+| `fields`        | Yes      | JSON array of fields, in display/form order: `{ key, label, type?: "text"\|"checkbox", required? }` — a JSON string (see note below)                                            |
+| `heading`       | No       | List page heading. Defaults to the view name, title-cased                                                                                                                       |
+| `singularLabel` | No       | Singular label used in "Create <label>"/"Edit <label>" headings and buttons. Defaults to `--heading` (override for irregular plurals)                                           |
+| `icon`          | No       | Ionicon name for the generated side-menu entry. Defaults to `settings`. `goa-work-side-menu-item` renders a blank item without one                                              |
+| `requiresAuth`  | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                                         |
 
 ---
 
@@ -339,21 +341,22 @@ npx nx g @abgov/nx-adsp:vue-admin-crud my-app --name=regions --resource=regions 
 
 Adds a route-per-step intake wizard (`Stepper` + `StepErrorSummary`, a required read-only
 review step, and a confirmation page) to an existing `vue-app` project. Cross-step state is
-server-persisted — each step PUTs/POSTs to `/api/<resource>/:id` and refetches on mount, so
+server-persisted — each step PUTs/POSTs to `/api/v1/<resource>/:id` and refetches on mount, so
 there's no client-side draft caching. Every field is currently a plain text input.
 
 ```bash
 npx nx g @abgov/nx-adsp:vue-intake-view my-app --name=application --resource=applications --route=/applications --steps='[{"key":"personal-info","label":"Personal information","fields":[{"key":"fullName","label":"Full name"}]}]'
 ```
 
-| Option         | Required | Description                                                                                                                                                                   |
-| -------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`      | Yes      | The `vue-app` project to add the views to                                                                                                                                     |
-| `name`         | Yes      | Base name for the generated views, e.g. `application` generates `<Step>StepView.vue` per step plus `ApplicationReviewView.vue`/`ApplicationConfirmationView.vue`              |
-| `resource`     | Yes      | API resource path segment. Each step fetches/saves `/api/<resource>/:id`; the review step's Submit posts `/api/<resource>/:id/submit`                                         |
-| `route`        | Yes      | Base route, e.g. `/applications`. Steps become `/applications/:id/<step-key>`, plus `/review` and `/confirmation`. Start a new intake at `/applications/new/<first-step-key>` |
-| `steps`        | Yes      | JSON array of steps, in order: `{ key, label, fields: [{ key, label, required? }] }` — a JSON string (see note below)                                                         |
-| `requiresAuth` | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                                       |
+| Option           | Required | Description                                                                                                                                                                   |
+| ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`        | Yes      | The `vue-app` project to add the views to                                                                                                                                     |
+| `name`           | Yes      | Base name for the generated views, e.g. `application` generates `<Step>StepView.vue` per step plus `ApplicationReviewView.vue`/`ApplicationConfirmationView.vue`              |
+| `resource`       | Yes      | API resource path segment. Each step fetches/saves `/api/v1/<resource>/:id`; the review step's Submit posts `/api/v1/<resource>/:id/submit`                                   |
+| `route`          | Yes      | Base route, e.g. `/applications`. Steps become `/applications/:id/<step-key>`, plus `/review` and `/confirmation`. Start a new intake at `/applications/new/<first-step-key>` |
+| `steps`          | Yes      | JSON array of steps, in order: `{ key, label, fields: [{ key, label, required? }] }` — a JSON string (see note below)                                                         |
+| `referenceField` | No       | Field on the submitted record holding the business reference shown on the confirmation page. Defaults to `reference`; falls back to the route id when absent                  |
+| `requiresAuth`   | No       | Whether the generated routes require authentication. Defaults to `true`                                                                                                       |
 
 ---
 

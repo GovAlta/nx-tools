@@ -41,6 +41,7 @@ import { disableSlotAttributeRule } from '../../utils/vue-eslint';
 import { ensureBundlerModuleOption } from '../../utils/vue-tsconfig';
 import vueComponentsGenerator, {
   vueComponentsImportPath,
+  vueComponentsLibRoot,
 } from '../vue-components/vue-components';
 import { NormalizedSchema, Schema } from './schema';
 
@@ -90,6 +91,13 @@ function addFiles(host: Tree, options: NormalizedSchema) {
     pairedProject: options.pairedProject ?? null,
     // Import specifier for the shared GoA wrapper lib (AGENTS.md references it).
     goaImportPath: vueComponentsImportPath(host),
+    // Real workspace-relative roots, so AGENTS.md can point at files that exist.
+    // Hardcoding `libs/`/`apps/` made every path in the generated guidance wrong
+    // in a TS-solution workspace, where projects sit at the workspace root.
+    goaLibRoot: vueComponentsLibRoot(host),
+    pairedProjectRoot: options.pairedProject
+      ? readProjectConfiguration(host, options.pairedProject).root
+      : null,
     tmpl: '',
   };
   generateFiles(

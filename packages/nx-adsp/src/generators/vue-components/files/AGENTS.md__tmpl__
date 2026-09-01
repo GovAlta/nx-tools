@@ -10,22 +10,18 @@ invoked automatically by `vue-app` and by every `vue-*-view` generator.
 | `src/lib/patterns/` | Composite, app-shell components (`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`, `RecordDetailShell`, `WorkspaceTable`, `Stepper`, `StepErrorSummary`, `FilterBar`) | **Permanent** |
 | `src/lib/formatters.ts` | Shared value formatting for views (`formatDate`, `formatDateTime`, `formatNumber`, `formatPercent`, `optionLabel`, `badgeType`) | **Permanent** |
 
-**Not every pattern component is present in every app.** `AppLayout`, `AppHeader`,
-`AppFooter`, `AppSideMenu`, and `SessionExpiredBanner` are base app-shell — `vue-app`
-provisions and wires all five into `App.vue` for every generated app, unconditionally.
-The rest are on-demand: they only exist in a given app's `src/lib/patterns/` if that
-app has run the matching view generator at least once.
+**Every pattern component listed above is present in every app.** This lib is generated
+in one shot, so all of `primitives/` and all of `patterns/` exist as soon as any Vue app
+has been generated — there is no per-component provisioning step and nothing to check for
+before building on one.
 
-| Component | Provisioned by |
-|---|---|
-| `RecordDetailShell` | `vue-detail-view` |
-| `WorkspaceTable` | `vue-workspace-view`, `vue-admin-crud` |
-| `Stepper`, `StepErrorSummary` | `vue-intake-view` |
-
-Don't assume one of these on-demand components exists in a given app — check whether
-its generator has actually been run (e.g. `nx list @abgov/nx-adsp` won't tell you;
-look for the component file itself, or the view file that would import it) before
-building on it.
+Which components are *wired up* does vary: `vue-app` mounts the shell components
+(`AppLayout`, `AppHeader`, `AppFooter`, `AppSideMenu`, `SessionExpiredBanner`) in
+`App.vue`, while the rest are imported by whichever view generator uses them —
+`RecordDetailShell` by `vue-detail-view`, `WorkspaceTable` by `vue-workspace-view` and
+`vue-admin-crud`, `Stepper`/`StepErrorSummary` by `vue-intake-view`, `FilterBar` by a
+filterable workspace view. An unused component is idle, not missing: import it directly
+in a hand-authored view rather than running a generator to "provision" it.
 
 > **⚠️ `primitives/` is interim — do not invest in it as permanent.** It exists
 > only because GoA DS has not yet published an official Vue wrapper package. When
