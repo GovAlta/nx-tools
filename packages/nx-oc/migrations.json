@@ -5,6 +5,12 @@
       "version": "13.0.0-beta.3",
       "description": "Convert generated sandbox `nx:run-commands` targets to the @abgov/nx-oc:sandbox executor.",
       "implementation": "./src/migrations/convert-sandbox-target/convert-sandbox-target"
+    },
+    "split-pipeline-workflows": {
+      "version": "13.12.0",
+      "description": "Split the generated pipeline workflow into a check-only pull-request.yml and a deploy-only pipeline.yml, so an in-flight deploy is queued rather than cancelled by a later push.",
+      "implementation": "./src/migrations/split-pipeline-workflows/split-pipeline-workflows",
+      "prompt": "./src/migrations/split-pipeline-workflows/split-pipeline-workflows.md"
     }
   }
 }

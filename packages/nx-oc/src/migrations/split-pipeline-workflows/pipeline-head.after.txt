@@ -1,0 +1,29 @@
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      SELECTED_BASE:
+        description: Value for --base= in nx affected commands
+        required: false
+
+# Deny all permissions by default; each job grants only what it needs.
+permissions: {}
+
+# Serialize runs for the same branch — queue, never cancel. A run here is a
+# whole promotion chain that can sit for hours waiting on an environment
+# approval, and cancelling it mid-chain is not state-safe: the deploy jobs
+# bracket their rollout in `oc set triggers --auto` / `--manual`, so a run
+# killed inside that window leaves the Deployment on --auto, auto-rolling-out
+# on any later ImageStream tag. Queuing costs a wait; cancelling loses an
+# approval and can leave the namespace misconfigured.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
