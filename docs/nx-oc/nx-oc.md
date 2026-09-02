@@ -57,12 +57,21 @@ npx nx g @abgov/nx-oc:pipeline my-pipeline \
 The generator creates the following files:
 
 ```
-.github/
+.github/workflows/
+  ├─ pull-request.yml
   └─ pipeline.yml
 .openshift/
   ├─ environment.infra.yml
   └─ environments.yml
 ```
+
+The two workflows are deliberately separate. `pull-request.yml` checks a pull request
+(lint, test, build, audit, Semgrep, TruffleHog, hadolint) and needs no credentials;
+`pipeline.yml` builds, publishes, and promotes through the environments on push to
+`main`. A workflow carries one `concurrency` block and the two need opposite policies —
+a superseded check run is cancelled, while a deploy run is queued, because it can wait
+hours on an environment approval and cancelling it mid-rollout leaves the Deployment on
+`oc set triggers --auto`.
 
 When `--apply` is set, the generator also:
 
@@ -154,14 +163,14 @@ npx nx g @abgov/nx-oc:sandbox my-app --sandboxProject my-sandbox-ns
 npx nx g @abgov/nx-oc:sandbox my-app-service --sandboxProject my-sandbox-ns --database postgres
 ```
 
-| Option           | Alias | Required | Description                                                                                                                                                 |
-| ---------------- | ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `project`        | —     | Yes      | Name of the existing Nx project                                                                                                                             |
-| `sandboxProject` | `-s`  | Yes      | OpenShift namespace to deploy the sandbox into (expected to be per-user)                                                                                    |
-| `appType`        | `-t`  | No       | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided.                                              |
-| `database`       | —     | No       | Database type: `postgres`, `mongo`, or `none` (default). `postgres` provisions via the **CloudNativePG operator** when the CRD is present and falls back to a plain Deployment otherwise; `mongo` always uses a plain Deployment.                              |
-| `env`            | —     | No       | ADSP environment to target for configuration: `dev` (default), `test`, or `prod`                                                                            |
-| `registry`       | `-r`  | No       | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided. |
+| Option           | Alias | Required | Description                                                                                                                                                                                                                       |
+| ---------------- | ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project`        | —     | Yes      | Name of the existing Nx project                                                                                                                                                                                                   |
+| `sandboxProject` | `-s`  | Yes      | OpenShift namespace to deploy the sandbox into (expected to be per-user)                                                                                                                                                          |
+| `appType`        | `-t`  | No       | Application type: `frontend`, `dotnet`, or `node`. Inferred from the project build executor when not provided.                                                                                                                    |
+| `database`       | —     | No       | Database type: `postgres`, `mongo`, or `none` (default). `postgres` provisions via the **CloudNativePG operator** when the CRD is present and falls back to a plain Deployment otherwise; `mongo` always uses a plain Deployment. |
+| `env`            | —     | No       | ADSP environment to target for configuration: `dev` (default), `test`, or `prod`                                                                                                                                                  |
+| `registry`       | `-r`  | No       | Container registry for sandbox images (e.g. `ghcr.io/my-org`). Resolved once and **persisted to `nx.json`**; derived from the git remote when not provided.                                                                       |
 
 **Prerequisites** (local build, one-time):
 

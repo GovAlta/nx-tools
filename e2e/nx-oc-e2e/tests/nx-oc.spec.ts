@@ -36,6 +36,7 @@ describe('nx-oc e2e', () => {
           `.openshift/environment.infra.yml`,
           `.openshift/environments.yml`,
           `.github/workflows/pipeline.yml`,
+          `.github/workflows/pull-request.yml`,
         ),
       ).not.toThrow();
     }, 60000);
