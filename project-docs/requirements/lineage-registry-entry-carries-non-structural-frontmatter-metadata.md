@@ -26,6 +26,11 @@ rules:
          When: the registry entry is built;
          Then: metadata is {}"
     questions: []
-questions:
-  - "lineage.json is committed to the repository; should any class of frontmatter field be excluded from metadata on the grounds that project-docs/ artifacts could inadvertently contain sensitive content (e.g. an internal endpoint URL or credential pasted into a notes field)? Current proposal: pass all non-structural fields verbatim with no filtering. Advisory for development-tooling context."
+  - rule: no class of non-structural field is withheld from metadata on sensitive-content grounds
+    examples:
+      - "Given: a registered artifact whose frontmatter carries a notes field holding an internal endpoint URL;
+         When: the registry entry is built;
+         Then: metadata contains notes verbatim, neither filtered nor redacted"
+    questions: []
+questions: []
 ---
