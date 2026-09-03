@@ -95,7 +95,7 @@ describe('Express Service Generator', () => {
     const mcp = readJson(host, '.mcp.json');
     expect(mcp.mcpServers['adsp-sdk']).toEqual({
       command: 'npx',
-      args: ['-y', '@abgov/adsp-sdk-mcp-server'],
+      args: ['--no', '@abgov/adsp-sdk-mcp-server'],
     });
     // Agents are pointed at the tools, not left to guess the SDK.
     const agents = host.read('apps/test/AGENTS.md').toString();

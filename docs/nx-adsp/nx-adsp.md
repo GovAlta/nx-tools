@@ -50,8 +50,9 @@ Some generators require additional peer dependencies:
 
 ### init
 
-Sets up nx-adsp's own workspace-root concerns: registers the ADSP SDK MCP server
-(`@abgov/adsp-sdk-mcp-server`) in `.mcp.json`, and shared VS Code settings. Every app/service
+Sets up nx-adsp's own workspace-root concerns: installs the ADSP SDK MCP server
+(`@abgov/adsp-sdk-mcp-server`) as a dev dependency and registers it in `.mcp.json`, and shared
+VS Code settings. Every app/service
 generator below already runs this as one of its own steps — always run it directly right after
 installing the plugin, too, so grounded ADSP platform knowledge (tenant/realm/role model,
 `@abgov/adsp-service-sdk` reference) is available immediately, not only once you've scaffolded
@@ -63,10 +64,22 @@ npx nx g @abgov/nx-adsp:init
 ```
 
 No options. Idempotent — merges into existing `.mcp.json`/`.vscode/settings.json` without
-clobbering another server, a customized `adsp-sdk` entry, or unrelated settings; safe to re-run.
-Project-scoped MCP servers only load at session start, so reconnect (or restart) your MCP client
-after running this before relying on the new tools — the generator's own output says so as a
-reminder.
+clobbering another server, a customized `adsp-sdk` entry, a version you've pinned yourself, or
+unrelated settings; safe to re-run. Project-scoped MCP servers only load at session start, so
+install dependencies and then reconnect (or restart) your MCP client after running this before
+relying on the new tools — the generator's own output says so as a reminder.
+
+The server is a dev dependency rather than an on-demand `npx -y` fetch so that the version your
+agent executes is the one your lockfile resolved and `npm audit` can see — along with its
+transitive dependencies. The `.mcp.json` entry uses `npx --no`, which prefers the local install
+over anything in npm's `_npx` cache, and refuses to reach the registry for a version you haven't
+installed. Plain `npx` would fetch and run one silently, because npm assumes `--yes` whenever
+stdin isn't a TTY, as it never is for a stdio MCP server.
+
+One caveat worth knowing: `--no` treats an already-populated `_npx` cache entry as satisfying the
+request, so on a machine that previously ran the `npx -y` form it will use that cached copy rather
+than erroring. Run `npm install` before relying on the pin — with the dependency present, the
+local copy always wins.
 
 ---
 

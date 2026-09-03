@@ -1,4 +1,4 @@
-import { Tree, formatFiles } from '@nx/devkit';
+import { Tree, formatFiles, installPackagesTask } from '@nx/devkit';
 import { addAdspMcpServer, addVsCodeSettings } from '../../utils/quality';
 
 // express-service writes CLIENT_SECRET, DATABASE_URL, and MONGODB_URI to
@@ -38,4 +38,10 @@ export default async function (host: Tree) {
   addAdspMcpServer(host);
   addVsCodeSettings(host);
   await formatFiles(host);
+  // addAdspMcpServer adds a dev dependency, so standalone runs need the install.
+  // App/service generators discard this and return their own install task —
+  // same package.json in the same Tree, so the dependency still lands.
+  return () => {
+    installPackagesTask(host);
+  };
 }

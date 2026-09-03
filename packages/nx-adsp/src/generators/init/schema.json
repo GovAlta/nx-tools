@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/schema",
   "id": "NxAdspInit",
   "title": "nx-adsp workspace setup",
-  "description": "Sets up nx-adsp's own workspace-root concerns: registers the @abgov/adsp-sdk-mcp-server MCP server in .mcp.json, and shared VS Code settings. Run once per workspace, right after installing @abgov/nx-adsp — every app/service generator (express-service, react-app, angular-app, vue-app) already calls this as one of its own steps, but running it standalone lets grounded ADSP platform knowledge be available before any app exists, e.g. during a design pass. Idempotent — safe to re-run, never clobbers a customized entry.",
+  "description": "Sets up nx-adsp's own workspace-root concerns: installs the @abgov/adsp-sdk-mcp-server MCP server as a dev dependency and registers it in .mcp.json, and shared VS Code settings. Run once per workspace, right after installing @abgov/nx-adsp — every app/service generator (express-service, react-app, angular-app, vue-app) already calls this as one of its own steps, but running it standalone lets grounded ADSP platform knowledge be available before any app exists, e.g. during a design pass. Idempotent — safe to re-run, never clobbers a customized entry or a version you've pinned yourself.",
   "type": "object",
   "properties": {},
   "required": [],
