@@ -415,14 +415,35 @@ retrospective that already exists throws rather than silently overwriting or dup
 Scans the whole workspace for `project-docs/` artifacts and `project-docs-ancestors` references —
 across both doc frontmatter and code comments — and writes the resulting graph to
 `.nx-agent/lineage.json` (gitignored automatically; it's fully derived from other files, so
-committing it would just create a second, driftable source of truth). Throws if it finds a
-reference that doesn't resolve to anything; reports an artifact nothing references yet (an orphan)
-without failing, since that's a normal, temporary state, not a mistake.
+committing it would just create a second, driftable source of truth). Every violation it finds is
+**recorded in the output rather than aborting the write** — the consumer that acts on one is a
+script reading that file (`agent-delivery`'s task-identification), not a human reading this
+console, so aborting would take every unrelated fact in the graph down over one dangling reference
+and disable the very mechanism that reports it.
+
+Five violation categories, three of which `--strict` fails on:
+
+| Category          | What it is                                                       | Under `--strict` |
+| ----------------- | ---------------------------------------------------------------- | ---------------- |
+| `brokenRefs`      | a reference whose target doesn't exist                           | **fails**        |
+| `unparseableRefs` | a reference token that doesn't fit the `<type>[:<id>]` grammar   | **fails**        |
+| `yamlErrors`      | frontmatter that doesn't parse as YAML                           | **fails**        |
+| `orphans`         | nothing references it yet (see below)                            | reported only    |
+| `unscoped`        | missing an _expected_ ancestor type (see `artifact-schema.json`) | reported only    |
+
+The bottom two never fail, in either mode: an artifact nothing implements yet is a normal,
+temporary state, not a mistake. `resolutionStatus` is reported alongside them but is a status
+rather than a violation.
 
 ```bash
 npx nx g @abgov/nx-agent:project-docs-lineage
 npx nx g @abgov/nx-agent:project-docs-lineage --dry-run   # compute and report, write nothing
+npx nx g @abgov/nx-agent:project-docs-lineage --strict     # non-zero exit on a violation, for a gate
 ```
+
+Use `--strict` as a gate, not to build the graph: Nx rolls a generator's staged write back when it
+throws, so a failing `--strict` run deliberately produces no `lineage.json` at all. Anything that
+needs both the graph and the exit code has to run it twice.
 
 The `project-docs-ancestors` convention itself: a directive used identically in frontmatter (a YAML
 list) and code comments (comma-separated on one line), shaped `<type>[:<id>][#fragment]`. `type` is
@@ -435,8 +456,9 @@ An optional project qualifier (`<project>/type:id`) scopes the reference to that
 `project-docs/` instead of the workspace root's — never implicit, even from within that same
 project, so a reference's meaning never depends on where it's found.
 
-Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself (or `--dry-run`
-it in your own CI) after adding or changing a reference.
+Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself after adding or
+changing a reference, and `--strict` it in your own CI if you want a broken reference to fail the
+build (`--dry-run` alone reports without affecting the exit code).
 
 Also reports which `open-question`/`blocker` artifacts are still open versus resolved — see
 `resolutionStatus` below.
@@ -507,9 +529,14 @@ prose, same as an `orphan` doesn't try to distinguish "temporary" from "abandone
 
 `@abgov/nx-agent` also exports two read functions — its first public, importable API; everything
 else in the package is consumed only via `nx g @abgov/nx-agent:x`. Meant for a caller that needs a
-stable contract (an ESLint rule, an agent resolving context for a file it's about to touch), not
-one that wants to parse `.nx-agent/lineage.json` directly — that file's exact shape stays an
-internal implementation detail, free to change as long as these signatures don't.
+stable contract in JS — an ESLint rule, or a build step resolving context for a file it's about to
+touch — not one that wants to parse `.nx-agent/lineage.json` directly, since that file's exact
+shape stays an internal implementation detail, free to change as long as these signatures don't.
+
+An **agent** is not that caller, deliberately: the generated `design`, `develop` and `discover`
+skills all instruct the agent to run the generator and read `lineage.json`'s `index` and
+`violations` instead, on the grounds that calling a JS API isn't something an agent does mid-task.
+So the split is agents read the file, JS callers use these functions, gates use `--strict`.
 
 ```typescript
 import { getAncestors, getDescendants } from '@abgov/nx-agent';
