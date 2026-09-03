@@ -1,5 +1,6 @@
 import { Tree, formatFiles, installPackagesTask } from '@nx/devkit';
-import { addAdspMcpServer, addVsCodeSettings } from '../../utils/quality';
+import { addVsCodeSettings } from '../../utils/quality';
+import { addAdspMcpServer } from '../../utils/mcp';
 
 // express-service writes CLIENT_SECRET, DATABASE_URL, and MONGODB_URI to
 // .env.local — these must be gitignored before any generator run can commit.
