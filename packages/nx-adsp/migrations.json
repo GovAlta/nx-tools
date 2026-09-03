@@ -6,6 +6,12 @@
       "description": "Wrap express-service's generated src/migrate.ts drizzle migrate() call in a Postgres advisory lock, so concurrent init containers serialize instead of racing.",
       "implementation": "./src/migrations/add-migrate-advisory-lock/add-migrate-advisory-lock",
       "prompt": "./src/migrations/add-migrate-advisory-lock/add-migrate-advisory-lock.md"
+    },
+    "pin-adsp-mcp-server": {
+      "version": "13.33.0",
+      "description": "Pin the adsp-sdk MCP server in .mcp.json to an @abgov/adsp-sdk-mcp-server dev dependency, so the version an agent executes is the one the lockfile resolved rather than whatever npx fetches at session start.",
+      "implementation": "./src/migrations/pin-adsp-mcp-server/pin-adsp-mcp-server",
+      "prompt": "./src/migrations/pin-adsp-mcp-server/pin-adsp-mcp-server.md"
     }
   }
 }

@@ -16,7 +16,7 @@ describe('nx-adsp init generator', () => {
     const mcp = readJson(host, '.mcp.json');
     expect(mcp.mcpServers['adsp-sdk']).toEqual({
       command: 'npx',
-      args: ['-y', '@abgov/adsp-sdk-mcp-server'],
+      args: ['--no', '@abgov/adsp-sdk-mcp-server'],
     });
   });
 
@@ -36,6 +36,32 @@ describe('nx-adsp init generator', () => {
       command: 'node',
       args: ['/local/build/main.js'],
     });
+  });
+
+  it('adds the MCP server as a dev dependency, so the lockfile pins what runs', async () => {
+    await generator(host);
+
+    const packageJson = readJson(host, 'package.json');
+    expect(
+      packageJson.devDependencies['@abgov/adsp-sdk-mcp-server'],
+    ).toBeDefined();
+    expect(
+      packageJson.dependencies?.['@abgov/adsp-sdk-mcp-server'],
+    ).toBeUndefined();
+  });
+
+  it('does not bump a version a team has already pinned', async () => {
+    writeJson(host, 'package.json', {
+      name: 'test-workspace',
+      devDependencies: { '@abgov/adsp-sdk-mcp-server': '1.11.0' },
+    });
+
+    await generator(host);
+
+    const packageJson = readJson(host, 'package.json');
+    expect(packageJson.devDependencies['@abgov/adsp-sdk-mcp-server']).toBe(
+      '1.11.0',
+    );
   });
 
   it('reminds that a session reconnect is needed before the MCP server is usable', async () => {
