@@ -4,7 +4,7 @@ import { addProjectConfiguration, Tree } from '@nx/devkit';
 import {
   buildIndex,
   buildRegistry,
-  computeViolations,
+  computeFindings,
   extractCommentAncestorRefs,
   extractFrontmatterAncestorRefs,
   extractFrontmatterMetadata,
@@ -477,11 +477,11 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
 
     const registry = buildRegistry(host);
     const index = buildIndex(host);
-    const violations = computeViolations(registry, index);
+    const findings = computeFindings(registry, index);
 
     expect(registry.has('domain-terms:collision-report')).toBe(true);
-    expect(violations.brokenRefs).toEqual([]);
-    expect(violations.orphans).toEqual([]);
+    expect(findings.integrity.brokenRefs).toEqual([]);
+    expect(findings.status.orphans).toEqual([]);
   });
 
   it('flags a reference to a nonexistent artifact as broken', () => {
@@ -490,9 +490,9 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+    const findings = computeFindings(buildRegistry(host), buildIndex(host));
 
-    expect(violations.brokenRefs).toEqual([
+    expect(findings.integrity.brokenRefs).toEqual([
       {
         ref: 'domain-terms:typo-id',
         referencedFrom: 'apps/test/src/routes/collision-reports.ts',
@@ -506,10 +506,10 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'term: Unused', '---'].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+    const findings = computeFindings(buildRegistry(host), buildIndex(host));
 
-    expect(violations.orphans).toEqual(['domain-terms:unused']);
-    expect(violations.brokenRefs).toEqual([]);
+    expect(findings.status.orphans).toEqual(['domain-terms:unused']);
+    expect(findings.integrity.brokenRefs).toEqual([]);
   });
 
   it('does not flag a hand-authored resolution as an orphan, even without duplicating the ref into project-docs-ancestors', () => {
@@ -535,9 +535,9 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'name: Some requirement', '---'].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+    const findings = computeFindings(buildRegistry(host), buildIndex(host));
 
-    expect(violations.orphans).not.toContain('blockers:some-blocker');
+    expect(findings.status.orphans).not.toContain('blockers:some-blocker');
   });
 
   it('excludes a terminal-typed artifact from orphans even with zero descendants', () => {
@@ -546,7 +546,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'project-docs-ancestors: []', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -557,7 +557,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.orphans).not.toContain('iteration-retrospectives:first');
+    expect(findings.status.orphans).not.toContain('iteration-retrospectives:first');
   });
 
   it('still flags a non-terminal artifact with zero descendants as an orphan, alongside a terminal one with none', () => {
@@ -570,7 +570,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'name: Unpicked up', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -581,7 +581,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.orphans).toEqual(['domain-models:unpicked-up']);
+    expect(findings.status.orphans).toEqual(['domain-models:unpicked-up']);
   });
 
   it('handles a multi-ref file deriving from more than one artifact', () => {
@@ -598,10 +598,10 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       '// project-docs-ancestors: domain-terms:a, bounded-contexts:b\nexport {};',
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+    const findings = computeFindings(buildRegistry(host), buildIndex(host));
 
-    expect(violations.brokenRefs).toEqual([]);
-    expect(violations.orphans).toEqual([]);
+    expect(findings.integrity.brokenRefs).toEqual([]);
+    expect(findings.status.orphans).toEqual([]);
   });
 
   it("does not treat a type folder's own README.md as an artifact", () => {
@@ -618,9 +618,9 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'term: A', '---'].join('\n'),
     );
 
-    const violations = computeViolations(buildRegistry(host), buildIndex(host));
+    const findings = computeFindings(buildRegistry(host), buildIndex(host));
 
-    expect(violations.unscoped).toEqual([]);
+    expect(findings.status.unscoped).toEqual([]);
   });
 
   it('flags an artifact missing an expected ancestor type as unscoped', () => {
@@ -629,7 +629,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'term: A', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -637,7 +637,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.unscoped).toEqual(['domain-terms:a']);
+    expect(findings.status.unscoped).toEqual(['domain-terms:a']);
   });
 
   it('does not flag an artifact that has one of the expected ancestor types', () => {
@@ -655,7 +655,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -663,7 +663,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.unscoped).toEqual([]);
+    expect(findings.status.unscoped).toEqual([]);
   });
 
   it('does not check a type with no schema entry, or one with an empty expectation', () => {
@@ -676,7 +676,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'name: B', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -684,7 +684,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.unscoped).toEqual([]);
+    expect(findings.status.unscoped).toEqual([]);
   });
 
   it('flags an artifact with only some of several expected ancestor types (all-of, not any-of)', () => {
@@ -702,7 +702,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -712,7 +712,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.unscoped).toEqual(['domain-models:m']);
+    expect(findings.status.unscoped).toEqual(['domain-models:m']);
   });
 
   it('does not flag an artifact that has all of several expected ancestor types', () => {
@@ -734,7 +734,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -744,7 +744,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.unscoped).toEqual([]);
+    expect(findings.status.unscoped).toEqual([]);
   });
 
   const OPEN_QUESTIONS_SCHEMA = {
@@ -757,13 +757,13 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'project-docs-ancestors: []', 'resolves: []', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       OPEN_QUESTIONS_SCHEMA,
     );
 
-    expect(violations.resolutionStatus).toEqual({
+    expect(findings.status.resolution).toEqual({
       open: ['open-questions:q'],
       resolved: [],
     });
@@ -785,13 +785,13 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       OPEN_QUESTIONS_SCHEMA,
     );
 
-    expect(violations.resolutionStatus).toEqual({
+    expect(findings.status.resolution).toEqual({
       open: [],
       resolved: ['open-questions:q'],
     });
@@ -823,7 +823,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -835,8 +835,8 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.resolutionStatus.open).toContain('open-questions:q');
-    expect(violations.resolutionStatus.resolved).not.toContain(
+    expect(findings.status.resolution.open).toContain('open-questions:q');
+    expect(findings.status.resolution.resolved).not.toContain(
       'open-questions:q',
     );
   });
@@ -847,7 +847,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       ['---', 'term: T', '---'].join('\n'),
     );
 
-    const violations = computeViolations(
+    const findings = computeFindings(
       buildRegistry(host),
       buildIndex(host),
       {
@@ -855,7 +855,7 @@ describe('buildRegistry / buildIndex / computeViolations', () => {
       },
     );
 
-    expect(violations.resolutionStatus).toEqual({ open: [], resolved: [] });
+    expect(findings.status.resolution).toEqual({ open: [], resolved: [] });
   });
 });
 
@@ -938,14 +938,14 @@ describe('unparseableRefs', () => {
 
     const registry = buildRegistry(host, [], unparseableRefs);
     const index = buildIndex(host, registry, unparseableRefs);
-    const violations = computeViolations(registry, index, {}, [], unparseableRefs);
+    const findings = computeFindings(registry, index, {}, [], unparseableRefs);
 
-    expect(violations.unparseableRefs).toEqual([
+    expect(findings.integrity.unparseableRefs).toEqual([
       { ref: 'open-questions:otel-1.23.0', foundIn: 'apps/test/src/telemetry.ts' },
     ]);
     // Not a broken reference — it never parsed, so there was never a key to
     // look up in the registry.
-    expect(violations.brokenRefs).toEqual([]);
+    expect(findings.integrity.brokenRefs).toEqual([]);
   });
 
   // extractCommentAncestorRefs matches the bare token anywhere in a source
@@ -980,10 +980,10 @@ describe('unparseableRefs', () => {
 
     const registry = buildRegistry(host, [], unparseableRefs);
     const index = buildIndex(host, registry, unparseableRefs);
-    const violations = computeViolations(registry, index, {}, [], unparseableRefs);
+    const findings = computeFindings(registry, index, {}, [], unparseableRefs);
 
-    expect(violations.unparseableRefs).toEqual([]);
-    expect(violations.brokenRefs).toEqual([]);
+    expect(findings.integrity.unparseableRefs).toEqual([]);
+    expect(findings.integrity.brokenRefs).toEqual([]);
   });
 });
 

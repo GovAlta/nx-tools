@@ -99,7 +99,24 @@ if (!existsSync(LINEAGE_PATH)) {
 }
 
 const lineage = JSON.parse(readFileSync(LINEAGE_PATH, 'utf-8'));
-const { registry, index, violations } = lineage;
+
+// What the schemaVersion in lineage.json is for. This script is generated
+// write-if-missing, so a workspace can end up running an older copy of it
+// against a newer graph (or the reverse, off a stale gitignored file) -- fail
+// here, naming both versions, rather than 40 lines down with a TypeError on a
+// container that moved.
+const EXPECTED_LINEAGE_SCHEMA_VERSION = 1;
+if (lineage.schemaVersion !== EXPECTED_LINEAGE_SCHEMA_VERSION) {
+  console.error(
+    `[task-identification] ${LINEAGE_PATH} is schemaVersion ${lineage.schemaVersion ?? '(absent)'}, ` +
+      `this script expects ${EXPECTED_LINEAGE_SCHEMA_VERSION}. Re-run ` +
+      `\`npx nx g @abgov/nx-agent:project-docs-lineage\`; if that doesn't fix it, this copy of ` +
+      `the script is older than the installed @abgov/nx-agent and needs updating.`,
+  );
+  process.exit(1);
+}
+
+const { registry, index, integrity, status } = lineage;
 
 const descendantTypes = (key) => (index[key] ?? []).map((e) => e.type).filter(Boolean);
 const hasUntypedDescendant = (key) => (index[key] ?? []).some((e) => !e.type);
@@ -109,7 +126,7 @@ const designArtifactsOf = (key) => (index[key] ?? []).filter((e) => DESIGN_TYPES
 
 const signals = [];
 
-for (const yamlError of violations.yamlErrors ?? []) {
+for (const yamlError of integrity.yamlErrors ?? []) {
   signals.push({
     key: `yaml-error:${yamlError.path}`,
     stage: 'unknown',
@@ -117,7 +134,7 @@ for (const yamlError of violations.yamlErrors ?? []) {
   });
 }
 
-for (const unparseable of violations.unparseableRefs ?? []) {
+for (const unparseable of integrity.unparseableRefs ?? []) {
   signals.push({
     key: `unparseable:${unparseable.ref}`,
     stage: 'unknown',
@@ -129,7 +146,7 @@ for (const unparseable of violations.unparseableRefs ?? []) {
   });
 }
 
-for (const broken of violations.brokenRefs ?? []) {
+for (const broken of integrity.brokenRefs ?? []) {
   signals.push({
     key: `broken:${broken.ref}`,
     stage: 'unknown',
@@ -137,7 +154,7 @@ for (const broken of violations.brokenRefs ?? []) {
   });
 }
 
-for (const openKey of violations.resolutionStatus?.open ?? []) {
+for (const openKey of status.resolution?.open ?? []) {
   const entry = registry[openKey];
   signals.push({
     key: `open:${openKey}`,
@@ -146,7 +163,7 @@ for (const openKey of violations.resolutionStatus?.open ?? []) {
   });
 }
 
-for (const unscopedKey of violations.unscoped ?? []) {
+for (const unscopedKey of status.unscoped ?? []) {
   signals.push({
     key: `unscoped:${unscopedKey}`,
     stage: stageFor(typeOf(unscopedKey)),
@@ -210,7 +227,7 @@ for (const key of Object.keys(registry)) {
 }
 
 // api-design/ux-design with no implementing code, and no unresolved blocker/open-question naming it.
-const openKeys = violations.resolutionStatus?.open ?? [];
+const openKeys = status.resolution?.open ?? [];
 for (const key of Object.keys(registry)) {
   if (!isDesignKey(key)) continue;
   if (hasUntypedDescendant(key)) continue; // already has implementing code
@@ -375,7 +392,7 @@ if (process.env.PEEK_ONLY !== 'true') {
   // nothing to stall on, and 'none' entries corrupt the stall-detection window when
   // a real signal recurs across a no-work gap.
   if (topSignal) {
-    const lineageFingerprint = JSON.stringify(violations);
+    const lineageFingerprint = JSON.stringify({ integrity, status });
     history.push({ key: topSignal.key, lineageFingerprint });
     history = history.slice(-HISTORY_KEEP);
     writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');

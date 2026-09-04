@@ -8,10 +8,10 @@ import {
 import { ensureGitignoreEntries } from '../../utils/gitignore';
 import {
   Registry,
-  Violations,
+  Integrity,
   buildIndex,
   buildRegistry,
-  computeViolations,
+  computeFindings,
   parseAncestorRef,
   refKey,
 } from '../../utils/project-docs-refs';
@@ -632,7 +632,7 @@ function buildArtifactList(
   return sections.join('\n');
 }
 
-function buildBrokenRefsSection(brokenRefs: Violations['brokenRefs']): string {
+function buildBrokenRefsSection(brokenRefs: Integrity['brokenRefs']): string {
   if (brokenRefs.length === 0) {
     return '';
   }
@@ -898,7 +898,9 @@ function buildArtifactDetails(
       const content = host.read(entry.path, 'utf-8') ?? '';
       const body = stripFrontmatter(content);
       const fmYaml = extractFrontmatterYaml(content);
-      const bodyHtml = body ? (marked.parse(body, { async: false }) as string) : '';
+      const bodyHtml = body
+        ? (marked.parse(body, { async: false }) as string)
+        : '';
       const fmHtml = fmYaml
         ? `<details class="fm-details"${!body ? ' open' : ''}><summary>Frontmatter</summary><pre class="fm-pre">${escapeHtml(fmYaml)}</pre></details>`
         : '';
@@ -1107,7 +1109,11 @@ export default async function (host: Tree, options: Schema) {
   const registry = buildRegistry(host);
   const index = buildIndex(host, registry);
   const artifactSchema = readArtifactSchema(host);
-  const violations = computeViolations(registry, index, artifactSchema);
+  const { integrity, status } = computeFindings(
+    registry,
+    index,
+    artifactSchema,
+  );
 
   const allKeys = [...registry.keys()];
   const inScopeKeys = options.project
@@ -1138,9 +1144,9 @@ export default async function (host: Tree, options: Schema) {
   }
   const renderedKeys = [...inScopeKeys, ...contextKeys];
 
-  const resolvedKeySet = new Set(violations.resolutionStatus.resolved);
-  const openKeySet = new Set(violations.resolutionStatus.open);
-  const orphanKeySet = new Set(violations.orphans);
+  const resolvedKeySet = new Set(status.resolution.resolved);
+  const openKeySet = new Set(status.resolution.open);
+  const orphanKeySet = new Set(status.orphans);
 
   const byType: Record<string, number> = {};
   for (const key of inScopeKeys) {
@@ -1158,10 +1164,10 @@ export default async function (host: Tree, options: Schema) {
   // missing) — scope by the ref token's own project, not registry
   // membership.
   const inScopeBrokenRefs = options.project
-    ? violations.brokenRefs.filter(
+    ? integrity.brokenRefs.filter(
         (b) => parseAncestorRef(b.ref)?.project === options.project,
       )
-    : violations.brokenRefs;
+    : integrity.brokenRefs;
 
   const counts: StatusCounts = {
     totalArtifacts: inScopeKeys.length,
