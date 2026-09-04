@@ -337,6 +337,8 @@ describe('nx-agent project-docs-lineage generator', () => {
       const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
       expect(Object.keys(lineage.integrity).sort()).toEqual([
         'brokenRefs',
+        'cycles',
+        'schemaErrors',
         'unparseableRefs',
         'yamlErrors',
       ]);
@@ -385,6 +387,212 @@ describe('nx-agent project-docs-lineage generator', () => {
       const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
       expect(lineage.status.orphans).toEqual(['domain-terms:unused']);
       expect(lineage.integrity.brokenRefs).toEqual([]);
+    });
+  });
+
+  describe('cycles', () => {
+    function writeMutualPair(host: Tree) {
+      host.write(
+        'project-docs/domain-terms/a.md',
+        [
+          '---',
+          'term: A',
+          'project-docs-ancestors:',
+          '  - domain-terms:b',
+          '---',
+        ].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/b.md',
+        [
+          '---',
+          'term: B',
+          'project-docs-ancestors:',
+          '  - domain-terms:a',
+          '---',
+        ].join('\n'),
+      );
+    }
+
+    it('reports two artifacts deriving from each other', async () => {
+      writeMutualPair(host);
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.cycles).toEqual([
+        ['domain-terms:a', 'domain-terms:b'],
+      ]);
+    });
+
+    // Reachable from either member, so without canonicalisation the same loop
+    // would be reported once per node in it.
+    it('reports a cycle once, not once per member', async () => {
+      writeMutualPair(host);
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.cycles).toHaveLength(1);
+    });
+
+    it('reports an artifact naming itself as its own ancestor', async () => {
+      host.write(
+        'project-docs/domain-terms/self.md',
+        [
+          '---',
+          'term: Self',
+          'project-docs-ancestors:',
+          '  - domain-terms:self',
+          '---',
+        ].join('\n'),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.cycles).toEqual([['domain-terms:self']]);
+    });
+
+    it('fails --strict on a cycle, since the graph is contradictory', async () => {
+      writeMutualPair(host);
+
+      await expect(generator(host, { strict: true })).rejects.toThrow(
+        /reference cycle/,
+      );
+    });
+
+    it('does not mistake a diamond for a cycle', async () => {
+      host.write(
+        'project-docs/domain-terms/root.md',
+        ['---', 'term: Root', '---'].join('\n'),
+      );
+      for (const side of ['left', 'right']) {
+        host.write(
+          `project-docs/domain-terms/${side}.md`,
+          [
+            '---',
+            `term: ${side}`,
+            'project-docs-ancestors:',
+            '  - domain-terms:root',
+            '---',
+          ].join('\n'),
+        );
+      }
+      host.write(
+        'project-docs/domain-terms/join.md',
+        [
+          '---',
+          'term: Join',
+          'project-docs-ancestors:',
+          '  - domain-terms:left',
+          '  - domain-terms:right',
+          '---',
+        ].join('\n'),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.cycles).toEqual([]);
+    });
+  });
+
+  describe('schemaErrors', () => {
+    it('catches a singular expectedAncestorTypes value and names the fix', async () => {
+      host.write(
+        'project-docs/bounded-contexts/bc.md',
+        ['---', 'name: BC', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'bounded-contexts': { expectedAncestorTypes: [] },
+          // The slip: singular, where every real type name is plural.
+          'domain-terms': { expectedAncestorTypes: ['bounded-context'] },
+        }),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.schemaErrors).toEqual([
+        {
+          type: 'domain-terms',
+          expectedAncestorType: 'bounded-context',
+          didYouMean: 'bounded-contexts',
+        },
+      ]);
+    });
+
+    // The defect this fixes: one bad schema value made every artifact of its
+    // type report unscoped, pointing at artifacts that are correct.
+    it('does not also report every artifact of that type as unscoped', async () => {
+      host.write(
+        'project-docs/bounded-contexts/bc.md',
+        ['---', 'name: BC', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'bounded-contexts': { expectedAncestorTypes: [] },
+          'domain-terms': { expectedAncestorTypes: ['bounded-context'] },
+        }),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.unscoped).toEqual([]);
+    });
+
+    // A type nothing has been written for yet is indistinguishable from a
+    // misspelling, so it must not be flagged — that would fail --strict on a
+    // correct schema, and in a fresh workspace on most of it.
+    it('stays silent on an unknown type that is not a near-miss', async () => {
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+        }),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.schemaErrors).toEqual([]);
+      // Still checked, because the expectation may yet be satisfiable.
+      expect(lineage.status.unscoped).toEqual(['domain-terms:a']);
+    });
+
+    it('fails --strict on a misspelled expectation', async () => {
+      host.write(
+        'project-docs/bounded-contexts/bc.md',
+        ['---', 'name: BC', '---'].join('\n'),
+      );
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'bounded-contexts': { expectedAncestorTypes: [] },
+          'domain-terms': { expectedAncestorTypes: ['bounded-context'] },
+        }),
+      );
+
+      await expect(generator(host, { strict: true })).rejects.toThrow(
+        /misspelled expectedAncestorTypes/,
+      );
     });
   });
 });

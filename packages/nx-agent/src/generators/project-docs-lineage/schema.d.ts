@@ -1,4 +1,4 @@
 export interface Schema {
-  strict?: boolean
-  json?: boolean
+  strict?: boolean;
+  json?: boolean;
 }

@@ -25,6 +25,9 @@ const INTEGRITY_FAILURES: Record<keyof Integrity, (count: number) => string> = {
   brokenRefs: (n) => `${n} broken project-docs-ancestors reference(s)`,
   unparseableRefs: (n) => `${n} unparseable project-docs reference(s)`,
   yamlErrors: (n) => `${n} YAML parse error(s) in project-docs frontmatter`,
+  cycles: (n) => `${n} project-docs-ancestors reference cycle(s)`,
+  schemaErrors: (n) =>
+    `${n} misspelled expectedAncestorTypes entry/entries in artifact-schema.json`,
 };
 
 export default async function (host: Tree, options: Schema = {}) {
@@ -64,6 +67,8 @@ export default async function (host: Tree, options: Schema = {}) {
       brokenRefs: integrity.brokenRefs,
       unparseableRefs: integrity.unparseableRefs,
       yamlErrors: integrity.yamlErrors,
+      cycles: integrity.cycles,
+      schemaErrors: integrity.schemaErrors,
       orphans: status.orphans,
       unscoped: status.unscoped,
       resolutionStatus: status.resolution,
@@ -88,6 +93,26 @@ export default async function (host: Tree, options: Schema = {}) {
       // eslint-disable-next-line no-console
       console.log(
         `[nx-agent] broken reference "${broken.ref}" in ${broken.referencedFrom}`,
+      );
+    }
+    for (const schemaError of integrity.schemaErrors) {
+      // Names the schema key as well as the value: the value alone doesn't say
+      // which entry to go fix, and one bad value affects every artifact of its
+      // type at once.
+      // eslint-disable-next-line no-console
+      console.log(
+        `[nx-agent] artifact-schema.json: "${schemaError.type}" expects ancestor type ` +
+          `"${schemaError.expectedAncestorType}" — did you mean "${schemaError.didYouMean}"? ` +
+          `Nothing can satisfy it as written, so every ${schemaError.type} artifact would ` +
+          `report unscoped.`,
+      );
+    }
+    for (const cycle of integrity.cycles) {
+      // Closed back to the first node when printing, so the loop reads as one
+      // — the stored form leaves that implicit.
+      // eslint-disable-next-line no-console
+      console.log(
+        `[nx-agent] reference cycle: ${[...cycle, cycle[0]].join(' -> ')}`,
       );
     }
     for (const unparseable of integrity.unparseableRefs) {

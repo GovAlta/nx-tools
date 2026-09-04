@@ -549,6 +549,17 @@ export interface Integrity {
   brokenRefs: { ref: string; referencedFrom: string }[];
   unparseableRefs: UnparseableRef[];
   yamlErrors: YamlError[];
+  // Each cycle as its own node sequence, first node repeated only implicitly:
+  // ['a', 'b'] means a derives from b and b derives from a. A single-element
+  // cycle is an artifact naming itself.
+  cycles: string[][];
+  // An expectedAncestorTypes entry that differs from a real type only by
+  // pluralization or case, so `didYouMean` always names the type it meant.
+  schemaErrors: {
+    type: string;
+    expectedAncestorType: string;
+    didYouMean: string;
+  }[];
 }
 
 // Status means the graph is sound and is telling you where the work stands.
@@ -565,6 +576,64 @@ export interface Status {
   resolution: { open: string[]; resolved: string[] };
   orphans: string[];
   unscoped: string[];
+}
+
+// project-docs-ancestors is a derivation relation: it declares what an artifact
+// was built *from*. So two artifacts each declaring the other are internally
+// contradictory — neither can precede the other — which makes a cycle a defect
+// in the graph rather than a fact about the work, however valid each individual
+// edge is. Traversal has always terminated safely on one (getAncestors skips a
+// revisited key rather than re-expanding it); what it never did was say so, so
+// getAncestors(..., Infinity) returned a correct-looking finite set that
+// quietly omitted the fact that the ancestry isn't a hierarchy at all.
+//
+// One cycle per back edge, not every elementary cycle — enumerating those is
+// exponential, and naming the nodes involved is what a reader needs to go fix
+// it. Edges to keys outside the registry aren't followed: an unresolvable
+// target has no outgoing edges of its own, so it can't close a loop, and it's
+// already reported as a broken or unparseable reference.
+function findCycles(registry: Registry): string[][] {
+  // Absent = unvisited, true = on the current DFS path, false = fully explored.
+  const onPath = new Map<string, boolean>();
+  const path: string[] = [];
+  const cycles: string[][] = [];
+  const recorded = new Set<string>();
+
+  const visit = (key: string): void => {
+    onPath.set(key, true);
+    path.push(key);
+    for (const raw of registry.get(key)?.ancestorRefs ?? []) {
+      const parsed = parseAncestorRef(raw);
+      const next = parsed ? refKey(parsed) : null;
+      if (!next || !registry.has(next)) {
+        continue;
+      }
+      if (onPath.get(next)) {
+        // Rotated so the lexicographically smallest node leads, so the same
+        // cycle reached from a different entry point is recognised as the one
+        // it already is rather than reported once per member.
+        const cycle = path.slice(path.indexOf(next));
+        const lowest = cycle.indexOf([...cycle].sort()[0]);
+        const canonical = [...cycle.slice(lowest), ...cycle.slice(0, lowest)];
+        const fingerprint = canonical.join('\u0000');
+        if (!recorded.has(fingerprint)) {
+          recorded.add(fingerprint);
+          cycles.push(canonical);
+        }
+      } else if (!onPath.has(next)) {
+        visit(next);
+      }
+    }
+    path.pop();
+    onPath.set(key, false);
+  };
+
+  for (const key of registry.keys()) {
+    if (!onPath.has(key)) {
+      visit(key);
+    }
+  }
+  return cycles;
 }
 
 export interface Findings {
@@ -609,11 +678,69 @@ export function computeFindings(
     return !parsedKey || !artifactSchema[parsedKey.type]?.terminal;
   });
 
+  // A type exists if the schema declares it or some artifact is of it — types
+  // are literal project-docs/ subfolder names, so a folder with artifacts in it
+  // is a real type whether or not it has a schema entry.
+  const knownTypes = new Set<string>(Object.keys(artifactSchema));
+  for (const key of registry.keys()) {
+    const parsedKey = parseAncestorRef(key);
+    if (parsedKey) {
+      knownTypes.add(parsedKey.type);
+    }
+  }
+
+  // Deliberately narrower than "names a type that doesn't exist". A type is a
+  // literal project-docs/ subfolder name, with no authoritative list of valid
+  // ones, so an unknown type is genuinely ambiguous: `requirements` expecting
+  // `product-briefs` before the first product brief is written looks identical
+  // to a misspelling. Flagging that would fail --strict on a correct schema —
+  // and in a fresh workspace, on most of it.
+  //
+  // What *is* decidable is a value that differs from a real type only by
+  // pluralization or case, which is the slip that actually happens (every type
+  // name here is plural, so `bounded-context` for `bounded-contexts` is one
+  // keystroke). High confidence, so it can name the fix — and a typo that
+  // isn't a near-miss of any known type stays unreported, which is the honest
+  // outcome for a case nothing can distinguish from a not-yet-populated type.
+  //
+  // Validated here rather than where an entry is written, because hand-editing
+  // artifact-schema.json is a supported path by design ("a hand-added entry for
+  // a custom artifact kind gets the same checks for free") — and a check that
+  // runs only when someone remembers to run a generator is a check that doesn't
+  // run. One implementation covers hand-edited, generator-written and migrated
+  // entries.
+  const loosely = (type: string) => type.toLowerCase().replace(/s$/, '');
+  const byLooseName = new Map<string, string>();
+  for (const type of knownTypes) {
+    byLooseName.set(loosely(type), type);
+  }
+
+  const schemaErrors: Integrity['schemaErrors'] = [];
+  const misspelled = new Set<string>();
+  for (const [type, entry] of Object.entries(artifactSchema)) {
+    for (const expected of entry.expectedAncestorTypes ?? []) {
+      if (knownTypes.has(expected)) {
+        continue;
+      }
+      const didYouMean = byLooseName.get(loosely(expected));
+      if (didYouMean) {
+        schemaErrors.push({ type, expectedAncestorType: expected, didYouMean });
+        misspelled.add(expected);
+      }
+    }
+  }
+
   const unscoped: string[] = [];
   for (const [key, entry] of registry) {
     const parsedKey = parseAncestorRef(key);
-    const expected =
+    const declared =
       parsedKey && artifactSchema[parsedKey.type]?.expectedAncestorTypes;
+    // Only a *confirmed* misspelling is dropped. It can never be satisfied, so
+    // checking it would report every artifact of this type as unscoped forever,
+    // pointing at artifacts that are correct — the schema is what's wrong, and
+    // schemaErrors says so with the fix. An expectation that's merely unknown
+    // is still checked, since it may well be a real type nothing populates yet.
+    const expected = declared?.filter((type) => !misspelled.has(type));
     if (!expected || expected.length === 0) {
       continue;
     }
@@ -653,7 +780,13 @@ export function computeFindings(
   }
 
   return {
-    integrity: { brokenRefs, unparseableRefs, yamlErrors },
+    integrity: {
+      brokenRefs,
+      unparseableRefs,
+      yamlErrors,
+      cycles: findCycles(registry),
+      schemaErrors,
+    },
     status: { resolution, orphans, unscoped },
   };
 }
