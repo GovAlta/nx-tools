@@ -428,11 +428,13 @@ _in_ the graph, or is it a fact the graph is correctly reporting?**
 isn't configurable — a consumer asking "was this graph even constructible" isn't expressing a
 preference.
 
-| `integrity`       | What it is                                                          |
-| ----------------- | ------------------------------------------------------------------- |
-| `brokenRefs`      | a declared edge whose endpoint doesn't exist                        |
-| `unparseableRefs` | a token that doesn't fit the `<type>[:<id>]` grammar at all         |
-| `yamlErrors`      | a node whose frontmatter couldn't be read, so its edges are unknown |
+| `integrity`       | What it is                                                             |
+| ----------------- | ---------------------------------------------------------------------- |
+| `brokenRefs`      | a declared edge whose endpoint doesn't exist                           |
+| `unparseableRefs` | a token that doesn't fit the `<type>[:<id>]` grammar at all            |
+| `yamlErrors`      | a node whose frontmatter couldn't be read, so its edges are unknown    |
+| `cycles`          | artifacts deriving from each other, so the ancestry is not a hierarchy |
+| `schemaErrors`    | an `expectedAncestorTypes` value misspelled from a real type           |
 
 `status` means the graph is sound and is telling you where the work stands. None of it fails
 `--strict`; gating on any of it is a project policy and belongs to you.
@@ -442,6 +444,21 @@ preference.
 | `resolution` | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
 | `orphans`    | no inbound edges: nothing derives from it yet                         |
 | `unscoped`   | every edge resolves, but an expected ancestor type is missing         |
+
+`cycles` matters because `project-docs-ancestors` is a _derivation_ relation — two artifacts each
+declaring the other is contradictory, since neither can precede the other. Traversal always
+terminated safely on one; what it never did was say so, so `getAncestors(…, Infinity)` returned a
+correct-looking finite set that quietly omitted the fact that the ancestry wasn't a hierarchy.
+
+`schemaErrors` is deliberately narrow. A type is a literal `project-docs/` subfolder name with no
+authoritative list of valid ones, so an _unknown_ type is ambiguous — `requirements` expecting
+`product-briefs` before the first product brief exists looks identical to a misspelling, and
+flagging it would fail `--strict` on a correct schema. What is decidable is a value differing from a
+real type only by pluralization or case, which is the slip that actually happens (every type name is
+plural, so `bounded-context` is one keystroke from `bounded-contexts`). Those are reported with the
+type they meant, and are the only ones dropped from the `unscoped` check — one bad value would
+otherwise report every artifact of its type as unscoped, forever, pointing at artifacts that are
+correct.
 
 `status` is computed from **structure only** — edges and schema expectations. Status an artifact
 declares about itself in frontmatter (a `questions` list, a `status:` field) deliberately stays in
@@ -477,6 +494,8 @@ implementation detail and may change without a bump.
 | `integrity.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
 | `integrity.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
 | `integrity.yamlErrors[]`      | `{ path, error }`                                                                              |
+| `integrity.cycles[]`          | arrays of ref strings — one cycle each, first node not repeated                                |
+| `integrity.schemaErrors[]`    | `{ type, expectedAncestorType, didYouMean }`                                                   |
 | `status.resolution`           | `{ open[], resolved[] }`                                                                       |
 | `status.orphans[]`            | ref strings                                                                                    |
 | `status.unscoped[]`           | ref strings                                                                                    |
