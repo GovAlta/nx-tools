@@ -439,11 +439,41 @@ rather than a violation.
 npx nx g @abgov/nx-agent:project-docs-lineage
 npx nx g @abgov/nx-agent:project-docs-lineage --dry-run   # compute and report, write nothing
 npx nx g @abgov/nx-agent:project-docs-lineage --strict     # non-zero exit on a violation, for a gate
+npx nx g @abgov/nx-agent:project-docs-lineage --json --quiet   # print the graph to stdout
 ```
 
-Use `--strict` as a gate, not to build the graph: Nx rolls a generator's staged write back when it
-throws, so a failing `--strict` run deliberately produces no `lineage.json` at all. Anything that
-needs both the graph and the exit code has to run it twice.
+`--strict` on its own is a gate, not a way to build the graph: Nx rolls a generator's staged write
+back when it throws, so a failing `--strict` run deliberately produces no `lineage.json` at all.
+
+`--json` prints the same object to stdout instead of the human-readable summary — and because
+stdout isn't subject to that rollback, **`--json --strict` is the one invocation that yields both
+the graph and a failing exit code in a single run**. Pair it with `--quiet`, or Nx's own
+`NX Generating ...` banner lands on stdout ahead of the document.
+
+### The consumed shape
+
+`schemaVersion` versions the paths below, and only those. Everything else in the file is
+implementation detail and may change without a bump.
+
+| Path                           | Shape                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `schemaVersion`                | number — `1` today                                                                             |
+| `registry[<ref>]`              | `{ path, ancestorRefs[], resolves[], metadata }`                                               |
+| `index[<ref>][]`               | `{ file, type?, metadata? }` — `type` only when the descendant is itself a registered artifact |
+| `violations.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
+| `violations.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
+| `violations.yamlErrors[]`      | `{ path, error }`                                                                              |
+| `violations.orphans[]`         | ref strings                                                                                    |
+| `violations.unscoped[]`        | ref strings                                                                                    |
+| `violations.resolutionStatus`  | `{ open[], resolved[] }`                                                                       |
+
+This records what is already load-bearing rather than adding a new promise. `agent-delivery`'s
+`task-identification.mjs` reads every one of those `violations` keys plus `registry[].ancestorRefs`,
+`registry[].path` and `index[].type`; the `design` and `develop` skills read `index` entries, and
+`discover` reads `violations.resolutionStatus`. All of them are generated **write-if-missing**, so a
+workspace keeps its own copy and re-running the generator cannot repair a shape change — only a
+migration can. So pin `schemaVersion` and fail on an unexpected value rather than reading around a
+field that may have been renamed.
 
 The `project-docs-ancestors` convention itself: a directive used identically in frontmatter (a YAML
 list) and code comments (comma-separated on one line), shaped `<type>[:<id>][#fragment]`. `type` is

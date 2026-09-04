@@ -242,4 +242,86 @@ describe('nx-agent project-docs-lineage generator', () => {
     );
     logSpy.mockRestore();
   });
+  describe('schemaVersion and --json', () => {
+    // A minimal graph with one resolving reference and one broken one, so both
+    // halves of the payload are non-empty in the assertions below.
+    function seedGraph(host: Tree) {
+      host.write(
+        'project-docs/domain-terms/collision-report.md',
+        ['---', 'term: Collision Report', '---'].join('\n'),
+      );
+      host.write(
+        'apps/test/src/routes/collision-reports.ts',
+        '// project-docs-ancestors: domain-terms:collision-report\nexport {};',
+      );
+    }
+
+    it('declares a schemaVersion in the written graph', async () => {
+      seedGraph(host);
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.schemaVersion).toBe(1);
+    });
+
+    it('prints the graph to stdout as one parseable document with --json', async () => {
+      seedGraph(host);
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await generator(host, { json: true });
+
+      const printed = logSpy.mock.calls.map((c) => c[0]);
+      expect(printed).toHaveLength(1);
+      const streamed = JSON.parse(printed[0]);
+      expect(streamed.schemaVersion).toBe(1);
+      expect(streamed.registry['domain-terms:collision-report']).toBeDefined();
+      logSpy.mockRestore();
+    });
+
+    it('streams exactly what it writes, so the two surfaces cannot diverge', async () => {
+      seedGraph(host);
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await generator(host, { json: true });
+
+      const streamed = JSON.parse(logSpy.mock.calls[0][0]);
+      const written = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(streamed).toEqual(written);
+      logSpy.mockRestore();
+    });
+
+    it('suppresses the human-readable summary under --json', async () => {
+      host.write(
+        'apps/test/src/routes/collision-reports.ts',
+        '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
+      );
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await generator(host, { json: true });
+
+      const printed = logSpy.mock.calls.map((c) => c[0]).join('\n');
+      expect(printed).not.toContain('[nx-agent]');
+      expect(JSON.parse(printed).violations.brokenRefs).toHaveLength(1);
+      logSpy.mockRestore();
+    });
+
+    // The reason --json exists: --strict alone rolls its own write back, so a
+    // gate could have the exit code or the graph but never both in one run.
+    it('prints the graph before --strict throws, so a gate gets both', async () => {
+      host.write(
+        'apps/test/src/routes/collision-reports.ts',
+        '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
+      );
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await expect(
+        generator(host, { json: true, strict: true }),
+      ).rejects.toThrow(/broken project-docs-ancestors reference/);
+
+      const streamed = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(streamed.violations.brokenRefs).toHaveLength(1);
+      logSpy.mockRestore();
+    });
+  });
 });

@@ -2,13 +2,18 @@
   "$schema": "http://json-schema.org/schema",
   "id": "NxAgentProjectDocsLineage",
   "title": "Build the project-docs lineage graph",
-  "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references across code and docs, and writes the resulting graph to .nx-agent/lineage.json (gitignored). Broken references and YAML parse errors are recorded in the output rather than aborting the write. Run with --dry-run to check without writing, or --strict to fail the command on a violation.",
+  "description": "Scans the workspace for project-docs/ artifacts and project-docs-ancestors references across code and docs, and writes the resulting graph to .nx-agent/lineage.json (gitignored). Broken references and YAML parse errors are recorded in the output rather than aborting the write. Run with --dry-run to check without writing, --strict to fail the command on a violation, or --json to print the graph to stdout for a machine consumer.",
   "type": "object",
   "properties": {
     "strict": {
       "type": "boolean",
       "default": false,
-      "description": "Fail the command when a reference is broken or frontmatter is unparseable, instead of only recording it in the output. Nx rolls a generator's staged write back when it throws, so a failing --strict run deliberately produces no lineage.json — use it as a gate, not to build the graph."
+      "description": "Fail the command when a reference is broken or frontmatter is unparseable, instead of only recording it in the output. Nx rolls a generator's staged write back when it throws, so a failing --strict run deliberately produces no lineage.json \u2014 use it as a gate, not to build the graph."
+    },
+    "json": {
+      "type": "boolean",
+      "default": false,
+      "description": "Print the graph to stdout as one JSON document instead of the human-readable summary, for a machine consumer. Pair it with --quiet, or Nx's own \"NX Generating ...\" banner lands on stdout ahead of the document. Same object that's written to the file, and printed before --strict throws, so --json --strict is the one invocation that yields both the graph and a failing exit code in a single run."
     }
   },
   "additionalProperties": false
