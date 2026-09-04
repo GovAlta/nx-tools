@@ -74,8 +74,8 @@ describe('nx-agent project-docs-report generator', () => {
       'project-docs/domain-terms/unused.md',
       ['---', 'term: Unused', '---'].join('\n'),
     );
-    // References both m and still-open, so neither is left as an orphan —
-    // isolates domain-terms:unused as the one deliberate orphan.
+    // References both m and still-open, so neither is left unreferenced —
+    // isolates domain-terms:unused as the one deliberate case.
     host.write(
       'src/feature.ts',
       '// project-docs-ancestors: domain-models:m, open-questions:still-open\nexport {};',
@@ -99,11 +99,11 @@ describe('nx-agent project-docs-report generator', () => {
     expect(html).toContain(
       '<div class="count">1</div><div class="label">Open</div>',
     );
-    // domain-terms:unused is the only real orphan — iteration-retrospectives:
+    // domain-terms:unused is the only genuinely unreferenced one — iteration-retrospectives:
     // closed-out has zero descendants too, but is terminal, so it must not
     // inflate this count.
     expect(html).toContain(
-      '<div class="count">1</div><div class="label">Orphaned</div>',
+      '<div class="count">1</div><div class="label">Unreferenced</div>',
     );
     expect(html).toContain(
       '<div class="count">1</div><div class="label">Broken references</div>',
@@ -125,7 +125,7 @@ describe('nx-agent project-docs-report generator', () => {
     expect(html).toContain('mermaid.initialize');
 
     // a terminal artifact (zero descendants by design) gets its own distinct
-    // graph style and table badge, rather than looking like a plain orphan
+    // graph style and table badge, rather than looking like plainly unreferenced
     expect(html).toContain(
       '✓ iteration-retrospectives:closed-out&quot;]:::terminal',
     );
@@ -236,16 +236,16 @@ describe('nx-agent project-docs-report generator', () => {
       expect(html).not.toContain('shipping/domain-terms:shipment');
     });
 
-    it('does not misclassify a cross-project reference as an orphan', async () => {
+    it('does not misclassify a cross-project reference as unreferenced', async () => {
       await generator(host, { project: 'billing', noSynthesis: true });
       const html = host.read('apps/billing/project-docs/report.html', 'utf-8');
 
       // billing/bounded-contexts:invoicing IS referenced — from shipping,
       // outside the billing scope — so a report that (incorrectly) built
       // its violations only from billing's own files would flag it as an
-      // orphan. Computing violations workspace-wide first prevents that.
+      // unreferenced. Computing findings workspace-wide first prevents that.
       expect(html).toContain(
-        '<div class="count">0</div><div class="label">Orphaned</div>',
+        '<div class="count">0</div><div class="label">Unreferenced</div>',
       );
     });
   });

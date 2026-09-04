@@ -64,7 +64,7 @@ export interface StatusCounts {
   byType: Record<string, number>;
   open: number;
   resolved: number;
-  orphans: number;
+  unreferenced: number;
   brokenRefs: number;
 }
 
@@ -83,9 +83,9 @@ export function buildDeterministicSummary(counts: StatusCounts): string {
   if (counts.open > 0 || counts.resolved > 0) {
     sentences.push(`${counts.resolved} resolved, ${counts.open} still open.`);
   }
-  if (counts.orphans > 0) {
+  if (counts.unreferenced > 0) {
     sentences.push(
-      `${counts.orphans} orphaned (nothing derives from them yet).`,
+      `${counts.unreferenced} unreferenced (nothing derives from them yet).`,
     );
   }
   if (counts.brokenRefs > 0) {

@@ -407,7 +407,7 @@ resolves: [blockers:no-write-packages-credential-for-ghcr-sandbox-push]
 
 Self-registers its own `project-docs/artifact-schema.json` entry as `terminal: true` (see
 `project-docs-lineage` below) — a correctly-closed-out retrospective has zero descendants by design,
-so it's excluded from the orphan report rather than flagged alongside a genuine dead-end. Re-adding a
+so it's excluded from the `unreferenced` report rather than flagged alongside a genuine dead-end. Re-adding a
 retrospective that already exists throws rather than silently overwriting or duplicating it.
 
 ## `project-docs-lineage`
@@ -439,11 +439,11 @@ preference.
 `status` means the graph is sound and is telling you where the work stands. None of it fails
 `--strict`; gating on any of it is a project policy and belongs to you.
 
-| `status`     | What it is                                                            |
-| ------------ | --------------------------------------------------------------------- |
-| `resolution` | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
-| `orphans`    | no inbound edges: nothing derives from it yet                         |
-| `unscoped`   | every edge resolves, but an expected ancestor type is missing         |
+| `status`       | What it is                                                            |
+| -------------- | --------------------------------------------------------------------- |
+| `resolution`   | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
+| `unreferenced` | nothing derives from it yet (no inbound edges)                        |
+| `unscoped`     | every edge resolves, but an expected ancestor type is missing         |
 
 `cycles` matters because `project-docs-ancestors` is a _derivation_ relation — two artifacts each
 declaring the other is contradictory, since neither can precede the other. Traversal always
@@ -497,7 +497,7 @@ implementation detail and may change without a bump.
 | `integrity.cycles[]`          | arrays of ref strings — one cycle each, first node not repeated                                |
 | `integrity.schemaErrors[]`    | `{ type, expectedAncestorType, didYouMean }`                                                   |
 | `status.resolution`           | `{ open[], resolved[] }`                                                                       |
-| `status.orphans[]`            | ref strings                                                                                    |
+| `status.unreferenced[]`       | ref strings                                                                                    |
 | `status.unscoped[]`           | ref strings                                                                                    |
 | `violations`                  | **deprecated** — see below                                                                     |
 
@@ -565,23 +565,30 @@ and gets settled by another artifact) gets the same open/resolved report for fre
 
 `terminal: true` marks a type where zero descendants is what correct looks like, not a sign of
 neglect — a close-out/retrospective artifact, working exactly as intended, still has nothing ever
-built on top of it. See `orphans` below.
+built on top of it. See `unreferenced` below.
 
-### `orphans`
+### `unreferenced`
 
-`violations.orphans` lists every registered artifact nothing in the workspace references — the
+`status.unreferenced` lists every registered artifact nothing in the workspace references — the
 "nothing derives from it yet" case, distinct from `unscoped` (missing an _expected_ ancestor,
-the opposite direction). Two things feed correctly into what counts as "referenced":
+the opposite direction).
+
+Named for the mechanism rather than called `orphans`, which inverted the metaphor: references are
+backward-only, so this is an artifact with no _descendants_, while an orphan conventionally has no
+parents. In the direction derivation flows it's a leaf, minus the `terminal` types. The parentless
+case is `unscoped`.
+
+Two things feed correctly into what counts as "referenced":
 
 - A reference counts whether it's a plain `project-docs-ancestors` citation or a `resolves` one —
   a resolution is a real reference too, even when it's the only field naming the target (the normal
   shape for a hand-authored artifact, before its type earns a generator with a `--resolves` flag
   that would otherwise duplicate the ref into `project-docs-ancestors` for you).
-- A type with `terminal: true` is excluded from `orphans` entirely, regardless of descendant count.
+- A type with `terminal: true` is excluded from `unreferenced` entirely, regardless of descendant count.
 
-### `resolutionStatus`
+### `status.resolution`
 
-`violations.resolutionStatus` in `.nx-agent/lineage.json` splits every artifact whose type has
+`status.resolution` in `.nx-agent/lineage.json` splits every artifact whose type has
 `tracksResolution: true` into `open` and `resolved`:
 
 ```json
@@ -593,7 +600,7 @@ references it via `project-docs-ancestors`. That distinction matters: a `blocker
 `open-question` citing an existing one _because_ it's still unresolved would, under a looser
 "anything references it" test, get misread as having resolved it. A deferral (explicitly punted, not
 decided) isn't a third computed bucket — it stays `open`, with the _why_ left to the artifact's own
-prose, same as an `orphan` doesn't try to distinguish "temporary" from "abandoned."
+prose, same as `unreferenced` doesn't try to distinguish "temporary" from "abandoned."
 
 ### Programmatic access
 
@@ -645,7 +652,7 @@ getAncestors(tree, 'apps/my-service/src/routes/collision-reports.ts', Infinity);
 Builds a single, self-contained HTML status report from the same data `project-docs-lineage`
 computes — a lineage graph (rendered with [Mermaid](https://mermaid.js.org/), inlined so the report
 needs nothing from `node_modules` to open), a status summary (counts per type, open vs. resolved,
-orphans, broken references), and a per-artifact table. Not committed — like `lineage.json`, it's
+unreferenced artifacts, broken references), and a per-artifact table. Not committed — like `lineage.json`, it's
 100% derived from other files, so it's gitignored automatically at wherever it's actually written.
 
 ```bash
@@ -661,10 +668,10 @@ actually reporting on rather than in a new top-level directory. `--outputPath` o
 Unlike `project-docs-lineage`, this never throws on a broken reference — surfacing exactly that kind
 of bad news is the point of a status report, not something to gate on.
 
-Graph nodes and table rows are colored by status — resolved, open, orphaned, or (a distinct style,
+Graph nodes and table rows are colored by status — resolved, open, unreferenced, or (a distinct style,
 with a "Closed out" badge and a `✓` in the graph) a `terminal`-typed artifact like an
 `iteration-retrospective`, so a permanently-zero-descendant close-out reads as done rather than
-looking like an ordinary orphan.
+looking like ordinarily unreferenced.
 
 Each artifact's own markdown body — rendered to real HTML via [marked](https://marked.js.org/), not
 shown as raw source — is one click away: both its table row and its graph node link to an in-page
@@ -674,7 +681,7 @@ part of the same single file.
 ### `--project` scoping
 
 `registry`/`index`/`violations` are always computed over the full workspace first, unconditionally —
-an artifact's orphan/resolved status is a workspace-wide fact, and building the index from only one
+an artifact's unreferenced/resolved status is a workspace-wide fact, and building the index from only one
 project's files would misclassify anything referenced across a project boundary (a cross-project
 reference is real, not a mistake). `--project` filters what's _rendered_, not what's computed: the
 summary/counts/table include only that project's own artifacts; the graph additionally shows each

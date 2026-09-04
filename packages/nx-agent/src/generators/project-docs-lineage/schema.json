@@ -8,7 +8,7 @@
     "strict": {
       "type": "boolean",
       "default": false,
-      "description": "Fail the command on any integrity finding (a broken reference, an unparseable reference, or frontmatter that won't parse) instead of only recording it in the output. Never fails on a status finding (orphans, unscoped, resolution) -- those mean the graph is sound and reporting incomplete work. Nx rolls a generator's staged write back when it throws, so a failing --strict run deliberately produces no lineage.json; pair it with --json to get the graph anyway."
+      "description": "Fail the command on any integrity finding (a broken reference, an unparseable reference, or frontmatter that won't parse) instead of only recording it in the output. Never fails on a status finding (unreferenced, unscoped, resolution) -- those mean the graph is sound and reporting incomplete work. Nx rolls a generator's staged write back when it throws, so a failing --strict run deliberately produces no lineage.json; pair it with --json to get the graph anyway."
     },
     "json": {
       "type": "boolean",

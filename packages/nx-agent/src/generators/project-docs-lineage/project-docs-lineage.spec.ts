@@ -127,7 +127,7 @@ describe('nx-agent project-docs-lineage generator', () => {
     );
   });
 
-  it('reports an orphan without throwing', async () => {
+  it('reports an unreferenced artifact without throwing', async () => {
     host.write(
       'project-docs/domain-terms/unused.md',
       ['---', 'term: Unused', '---'].join('\n'),
@@ -343,8 +343,8 @@ describe('nx-agent project-docs-lineage generator', () => {
         'yamlErrors',
       ]);
       expect(Object.keys(lineage.status).sort()).toEqual([
-        'orphans',
         'resolution',
+        'unreferenced',
         'unscoped',
       ]);
       expect(lineage.integrity.brokenRefs).toHaveLength(1);
@@ -369,7 +369,7 @@ describe('nx-agent project-docs-lineage generator', () => {
       expect(l.violations.brokenRefs).toEqual(l.integrity.brokenRefs);
       expect(l.violations.unparseableRefs).toEqual(l.integrity.unparseableRefs);
       expect(l.violations.yamlErrors).toEqual(l.integrity.yamlErrors);
-      expect(l.violations.orphans).toEqual(l.status.orphans);
+      expect(l.violations.orphans).toEqual(l.status.unreferenced);
       expect(l.violations.unscoped).toEqual(l.status.unscoped);
       expect(l.violations.resolutionStatus).toEqual(l.status.resolution);
     });
@@ -385,7 +385,7 @@ describe('nx-agent project-docs-lineage generator', () => {
       await expect(generator(host, { strict: true })).resolves.toBeUndefined();
 
       const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
-      expect(lineage.status.orphans).toEqual(['domain-terms:unused']);
+      expect(lineage.status.unreferenced).toEqual(['domain-terms:unused']);
       expect(lineage.integrity.brokenRefs).toEqual([]);
     });
   });

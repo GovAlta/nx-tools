@@ -32,7 +32,7 @@ or blocker as resolved specifically, rather than mistaking any artifact that mer
 context as having settled it. Hand-authoring a resolution for a type with no generator yet (the
 normal state before one exists) doesn't need that duplication done by hand — a `resolves:` entry
 alone is enough; lineage traversal unions it in for you, so the resolved artifact doesn't also need
-to appear in `project-docs-ancestors` to avoid being misreported as an orphan.
+to appear in `project-docs-ancestors` to avoid being misreported as unreferenced.
 
 **Where an artifact belongs**, one level below the format above: a bounded context, domain model, or
 domain term can be scoped to a specific project (`--project <p>`) instead of the workspace root, and
@@ -54,5 +54,5 @@ knowledge of any specific type baked in, and reports — never fails, since this
 rather than a hard rule — an artifact of a scoped type missing one of its expected ancestors as
 "unscoped." The same file also supports `"terminal": true` for a type meant purely as a close-out
 record (a retrospective, for instance) — nothing is ever expected to derive from it, so it's excluded
-from the "orphan" report (zero descendants) that would otherwise flag it identically to a
+from the `unreferenced` report (zero descendants) that would otherwise flag it identically to a
 domain-model nobody's built on yet.

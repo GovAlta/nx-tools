@@ -154,7 +154,7 @@ export function extractFrontmatterField(
 // to write without remembering to duplicate the ref into
 // project-docs-ancestors too — nothing enforces that duplication. Unioning
 // here, in the one function every ancestor-ref reader (the registry, the
-// index buildIndex uses for orphans/brokenRefs, and getAncestors at depth 1)
+// index buildIndex uses for unreferenced/brokenRefs, and getAncestors at depth 1)
 // already shares, makes the invariant true unconditionally instead of only
 // for generator-produced content.
 export function extractFrontmatterAncestorRefs(
@@ -450,7 +450,7 @@ function registerArtifact(
   const key = refKey(ref);
   // An artifact whose own key can't be parsed back is still registered — it
   // exists, and hiding it would be the very failure this records. But every
-  // parse-dependent check below degrades on it: orphans counts it as an orphan
+  // parse-dependent check below degrades on it: it counts as unreferenced
   // regardless, and resolutionStatus skips it entirely, so a tracked artifact
   // silently stops being reported open or resolved. Since 7b777dd the
   // generators reject these at creation time, so this only catches a
@@ -512,7 +512,7 @@ export function buildIndex(
       if (!parsed) {
         // Recorded rather than skipped: a grammar will always meet an id it
         // didn't expect, and dropping it silently turns that into a wrong
-        // report (the target looks unreferenced, so it reads as an orphan)
+        // report (the target looks unreferenced, so it reads as a leaf)
         // instead of a loud one.
         recordUnparseable(unparseableRefs, raw, file);
         continue;
@@ -574,7 +574,13 @@ export interface Integrity {
 // workflow-agnostic is the property that makes it consumable from outside.
 export interface Status {
   resolution: { open: string[]; resolved: string[] };
-  orphans: string[];
+  // Nothing derives from it. Named for the mechanism — the index, which is the
+  // computed "what references this" inverse, has no entry — rather than
+  // "orphan", which inverts the metaphor: references are backward-only, so
+  // this is an artifact with no *descendants*, whereas an orphan conventionally
+  // has no parents. That case is `unscoped`, and only when a type declares an
+  // expectation it fails to meet.
+  unreferenced: string[];
   unscoped: string[];
 }
 
@@ -668,9 +674,9 @@ export function computeFindings(
   // A terminal type (declared, same as expectedAncestorTypes/tracksResolution,
   // by its own generator — no hardcoded type name here either) always has
   // zero descendants by design once it's closed out correctly: that's what
-  // correct looks like, not neglect, so it's excluded from orphans rather
+  // correct looks like, not neglect, so it's excluded from unreferenced rather
   // than reported alongside a domain-model nobody's designed against yet.
-  const orphans = [...registry.keys()].filter((key) => {
+  const unreferenced = [...registry.keys()].filter((key) => {
     if (index.has(key)) {
       return false;
     }
@@ -787,7 +793,7 @@ export function computeFindings(
       cycles: findCycles(registry),
       schemaErrors,
     },
-    status: { resolution, orphans, unscoped },
+    status: { resolution, unreferenced, unscoped },
   };
 }
 

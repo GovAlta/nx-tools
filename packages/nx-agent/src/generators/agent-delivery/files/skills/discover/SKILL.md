@@ -132,7 +132,7 @@ These check different things:
 - `project-docs-lineage`'s broken-reference check always blocks, regardless of mode — `--strict`
   is what turns a recorded broken reference into a failing command, and composes with
   `--dry-run` to check without writing anything. Its
-  `orphans` report is a graph fact (has Design picked this requirement up yet), not an
+  `unreferenced` report is a graph fact (has Design picked this requirement up yet), not an
   example-mapping check — it stays true even after perfect example-mapping, since nothing
   downstream exists yet.
 - `check-example-mapping.mjs` is the actual example-mapping gate: every `rules:` entry needs a

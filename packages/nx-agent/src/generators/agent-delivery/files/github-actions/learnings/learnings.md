@@ -1,7 +1,7 @@
 # DDD flow — cross-iteration learnings
 
 Not a project-docs artifact — no frontmatter, no lineage tracking, nothing here participates in
-`resolutionStatus`/`orphans`/readiness signals. This file exists for exactly one gap those
+`status.resolution`/`unreferenced`/readiness signals. This file exists for exactly one gap those
 mechanisms don't cover: something found once (a tool gotcha, an environment quirk, a skill-process
 gap) that would recur for *any* future iteration regardless of which requirement it's working on,
 so filing it in a requirement-scoped `iteration-retrospectives/*.md` entry means a differently-

@@ -69,7 +69,7 @@ export default async function (host: Tree, options: Schema = {}) {
       yamlErrors: integrity.yamlErrors,
       cycles: integrity.cycles,
       schemaErrors: integrity.schemaErrors,
-      orphans: status.orphans,
+      orphans: status.unreferenced,
       unscoped: status.unscoped,
       resolutionStatus: status.resolution,
     },
@@ -79,9 +79,9 @@ export default async function (host: Tree, options: Schema = {}) {
   // of the document. Nx prints its own "NX Generating ..." banner to stdout too;
   // pair --json with --quiet to suppress it and get a parseable stream.
   if (!options.json) {
-    for (const orphan of status.orphans) {
+    for (const key of status.unreferenced) {
       // eslint-disable-next-line no-console
-      console.log(`[nx-agent] orphan (nothing derives from it yet): ${orphan}`);
+      console.log(`[nx-agent] unreferenced (nothing derives from it yet): ${key}`);
     }
     for (const unscoped of status.unscoped) {
       // eslint-disable-next-line no-console
