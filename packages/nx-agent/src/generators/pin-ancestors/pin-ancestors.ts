@@ -1,10 +1,15 @@
 import { Tree, formatFiles, logger } from '@nx/devkit';
 import {
+  artifactDigest,
   buildRegistry,
   parseAncestorRef,
   refKey,
   Registry,
 } from '../../utils/project-docs-refs';
+import {
+  ArtifactSchema,
+  readArtifactSchema,
+} from '../../utils/artifact-schema';
 import { Schema } from './schema';
 
 // Records each resolved ancestor's current body digest on the reference that
@@ -36,6 +41,7 @@ const FLOW_LIST = /^(project-docs-ancestors:\s*\[)([^\]]*)(\]\s*)$/;
 function pinFile(
   host: Tree,
   registry: Registry,
+  artifactSchema: ArtifactSchema,
   path: string,
   options: Schema,
 ): string[] {
@@ -64,12 +70,19 @@ function pinFile(
     if (options.ancestor && options.ancestor !== key) {
       return token;
     }
-    if (parsed.digest === ancestor.bodyDigest) {
+    // Through artifactDigest, never bodyDigest directly: the type may declare
+    // digestFields, and a pin computed any other way would read as stale the
+    // moment project-docs-lineage looked at it.
+    const digest = artifactDigest(
+      ancestor,
+      artifactSchema[parsed.type]?.digestFields,
+    );
+    if (parsed.digest === digest) {
       return token;
     }
     pinned.push(key);
     const fragment = parsed.fragment ? `#${parsed.fragment}` : '';
-    return `${key}@${ancestor.bodyDigest}${fragment}`;
+    return `${key}@${digest}${fragment}`;
   };
 
   let inAncestors = false;
@@ -125,6 +138,7 @@ function pinFile(
 
 export default async function (host: Tree, options: Schema = {}) {
   const registry = buildRegistry(host);
+  const artifactSchema = readArtifactSchema(host);
 
   for (const scoped of [options.artifact, options.ancestor]) {
     if (scoped && !registry.has(scoped)) {
@@ -140,7 +154,7 @@ export default async function (host: Tree, options: Schema = {}) {
     if (options.artifact && options.artifact !== key) {
       continue;
     }
-    const pinned = pinFile(host, registry, entry.path, options);
+    const pinned = pinFile(host, registry, artifactSchema, entry.path, options);
     if (pinned.length > 0) {
       updated += pinned.length;
       logger.info(`[nx-agent] ${key}: pinned ${pinned.join(', ')}`);

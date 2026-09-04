@@ -123,6 +123,50 @@ export function digestBody(content: string): string {
     .slice(0, 12);
 }
 
+// Recursively key-sorted, so a frontmatter reorder — which YAML tooling and
+// Prettier are both free to do — can't masquerade as a content change. The
+// whole point of a digest is that it moves only when meaning does.
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonical).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map(
+        (k) =>
+          `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`,
+      )
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+// The digest a reference is compared against — the single way to compute one,
+// so a caller can't accidentally derive a different value and manufacture
+// staleness. Body-only unless the type declares digestFields, and when it
+// declares none this returns bodyDigest untouched rather than a hash of it, so
+// adding the feature left every pin already recorded still valid.
+//
+// A declared field that the artifact doesn't have contributes `null` rather
+// than being skipped, so *removing* the field is a change the digest sees.
+export function artifactDigest(
+  entry: Pick<RegistryEntry, 'bodyDigest' | 'metadata'>,
+  digestFields: string[] = [],
+): string {
+  if (digestFields.length === 0) {
+    return entry.bodyDigest;
+  }
+  const selected = [...digestFields]
+    .sort()
+    .map((field) => `${field}=${canonical(entry.metadata[field] ?? null)}`)
+    .join('\n');
+  return createHash('sha256')
+    .update(`${entry.bodyDigest}\n${selected}`)
+    .digest('hex')
+    .slice(0, 12);
+}
+
 // The closed set of frontmatter fields the graph already models as structural
 // relationships — excluded from Artifact Metadata so the metadata map never
 // duplicates what the registry's own ancestorRefs/resolves fields already
@@ -765,15 +809,24 @@ export function computeFindings(
       if (!parsed?.digest) {
         continue;
       }
-      const ancestor = registry.get(refKey(parsed));
-      if (!ancestor || ancestor.bodyDigest === parsed.digest) {
+      const ancestorKey = refKey(parsed);
+      const ancestor = registry.get(ancestorKey);
+      if (!ancestor) {
+        continue;
+      }
+      const ancestorType = parseAncestorRef(ancestorKey)?.type;
+      const currentDigest = artifactDigest(
+        ancestor,
+        ancestorType ? artifactSchema[ancestorType]?.digestFields : undefined,
+      );
+      if (currentDigest === parsed.digest) {
         continue;
       }
       stale.push({
         artifact: key,
-        ancestor: refKey(parsed),
+        ancestor: ancestorKey,
         pinnedDigest: parsed.digest,
-        currentDigest: ancestor.bodyDigest,
+        currentDigest,
       });
     }
   }

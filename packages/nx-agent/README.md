@@ -608,9 +608,30 @@ whether its kind has a resolution lifecycle at all:
   "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] },
   "open-questions": { "expectedAncestorTypes": [], "tracksResolution": true },
   "blockers": { "expectedAncestorTypes": [], "tracksResolution": true },
-  "iteration-retrospectives": { "expectedAncestorTypes": [], "terminal": true }
+  "iteration-retrospectives": { "expectedAncestorTypes": [], "terminal": true },
+  "requirements": {
+    "expectedAncestorTypes": ["product-briefs"],
+    "digestFields": ["rules"]
+  }
 }
 ```
+
+`digestFields` names the frontmatter fields that carry a type's **content** rather than its
+bookkeeping, so they count toward its digest alongside the body (see `stale` above). It's a
+structural fact about where a type keeps its meaning, not a switch for whether the check runs.
+
+`requirements` is the only type that needs it, and measurably so: every other artifact kind has a
+639–6857 character body, while requirements have **none** — their `rules` _are_ the artifact, and
+they live in frontmatter deliberately so a real YAML parser can read them. So a change to `rules`
+marks descendants stale, while a `title` fix or an answered `question` does not. Absent or empty
+means body-only, which is right for every type that explains itself in prose, and a type with no
+`digestFields` keeps exactly the digest it had before this existed.
+
+One consequence worth knowing: because declared fields are hashed _alongside_ the body rather than
+instead of it, editing a requirement's rationale prose also marks its descendants stale. That
+over-fires slightly — rationale is explanatory, not contractual — but rationale is written once at
+creation, a requirement has few descendants, and the alternative (declared fields _replacing_ the
+body) would silently drop body coverage for any type that has meaningful content in both.
 
 `project-docs-lineage` reads this generically — it has no knowledge of any specific type baked in, so
 a hand-added entry for a custom artifact kind gets the same checks for free. `expectedAncestorTypes` is

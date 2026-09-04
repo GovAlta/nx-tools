@@ -66,7 +66,7 @@ export default async function (host: Tree, options: Schema) {
   // No fixed expected ancestor type — an open question can ground on any
   // artifact kind. tracksResolution: true is what makes project-docs-lineage
   // report this question as open/resolved.
-  ensureArtifactSchemaEntry(host, 'open-questions', [], true);
+  ensureArtifactSchemaEntry(host, 'open-questions', [], { tracksResolution: true });
 
   const content = [
     '---',

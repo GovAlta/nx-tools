@@ -757,4 +757,161 @@ describe('nx-agent project-docs-lineage generator', () => {
       logSpy.mockRestore();
     });
   });
+
+  // requirements are the one type whose meaning lives in frontmatter (`rules`),
+  // so the schema declares digestFields for them and the digest covers those
+  // fields alongside the body.
+  describe('declared digest fields', () => {
+    function writeSchema(host: Tree, digestFields?: string[]) {
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'product-briefs': { expectedAncestorTypes: [] },
+          requirements: {
+            expectedAncestorTypes: [],
+            ...(digestFields ? { digestFields } : {}),
+          },
+          'domain-models': { expectedAncestorTypes: [] },
+        }),
+      );
+    }
+    function writeRequirement(
+      host: Tree,
+      frontmatter: string[],
+      body = 'Rationale.',
+    ) {
+      host.write(
+        'project-docs/requirements/r.md',
+        [
+          '---',
+          'title: R',
+          'id: req-001',
+          ...frontmatter,
+          '---',
+          '',
+          body,
+        ].join('\n'),
+      );
+    }
+    function pinDescendant(host: Tree, digest: string) {
+      host.write(
+        'project-docs/domain-models/m.md',
+        [
+          '---',
+          'name: M',
+          'project-docs-ancestors:',
+          `  - requirements:r@${digest}`,
+          '---',
+          'M body',
+        ].join('\n'),
+      );
+    }
+    async function currentDigest(host: Tree) {
+      await generator(host);
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      return l.status.stale[0]?.currentDigest;
+    }
+
+    it('marks descendants stale when a declared field changes', async () => {
+      writeSchema(host, ['rules']);
+      writeRequirement(host, ['rules:', '  - rule: original']);
+      pinDescendant(host, 'aaaaaaaaaaaa');
+      const before = await currentDigest(host);
+
+      writeRequirement(host, ['rules:', '  - rule: substantively different']);
+      pinDescendant(host, before);
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.status.stale).toHaveLength(1);
+      expect(l.status.stale[0].ancestor).toBe('requirements:r');
+    });
+
+    it('does not mark descendants stale for bookkeeping frontmatter', async () => {
+      writeSchema(host, ['rules']);
+      writeRequirement(host, ['rules:', '  - rule: original', 'questions: []']);
+      pinDescendant(host, 'aaaaaaaaaaaa');
+      const pinned = await currentDigest(host);
+      pinDescendant(host, pinned);
+
+      // title changed, an open question answered — neither is of any interest
+      // to something derived from the rules.
+      host.write(
+        'project-docs/requirements/r.md',
+        [
+          '---',
+          'title: R, retitled',
+          'id: req-001',
+          'rules:',
+          '  - rule: original',
+          'questions: []',
+          '---',
+          '',
+          'Rationale.',
+        ].join('\n'),
+      );
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.status.stale).toEqual([]);
+    });
+
+    it('ignores a frontmatter key reorder', async () => {
+      writeSchema(host, ['rules']);
+      writeRequirement(host, ['rules:', '  - rule: a', '  - rule: b']);
+      pinDescendant(host, 'aaaaaaaaaaaa');
+      const pinned = await currentDigest(host);
+      pinDescendant(host, pinned);
+
+      host.write(
+        'project-docs/requirements/r.md',
+        [
+          '---',
+          'id: req-001',
+          'rules:',
+          '  - rule: a',
+          '  - rule: b',
+          'title: R',
+          '---',
+          '',
+          'Rationale.',
+        ].join('\n'),
+      );
+      await generator(host);
+
+      expect(
+        JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).status.stale,
+      ).toEqual([]);
+    });
+
+    it('sees a declared field being removed entirely', async () => {
+      writeSchema(host, ['rules']);
+      writeRequirement(host, ['rules:', '  - rule: original']);
+      pinDescendant(host, 'aaaaaaaaaaaa');
+      const pinned = await currentDigest(host);
+      pinDescendant(host, pinned);
+
+      writeRequirement(host, []);
+      await generator(host);
+
+      expect(
+        JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).status.stale,
+      ).toHaveLength(1);
+    });
+
+    // Guarantee that adding digestFields to the schema didn't invalidate pins
+    // recorded before it existed.
+    it('leaves the digest equal to bodyDigest when no fields are declared', async () => {
+      writeSchema(host);
+      writeRequirement(host, ['rules:', '  - rule: original']);
+      pinDescendant(host, 'aaaaaaaaaaaa');
+
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.status.stale[0].currentDigest).toBe(
+        l.registry['requirements:r'].bodyDigest,
+      );
+    });
+  });
 });

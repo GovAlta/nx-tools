@@ -88,7 +88,12 @@ export default async function (host: Tree, options: Schema) {
 
   const readmeContent = readFileSync(README_TEMPLATE_PATH, 'utf-8');
   ensureReadme(host, containerDir, readmeContent);
-  ensureArtifactSchemaEntry(host, 'requirements', ['product-briefs']);
+  // rules is the requirement; the body is rationale prose. So a rules change
+  // is what should mark descendants stale, and a title fix or an answered
+  // question should not.
+  ensureArtifactSchemaEntry(host, 'requirements', ['product-briefs'], {
+    digestFields: ['rules'],
+  });
 
   const content = [
     '---',
@@ -99,6 +104,20 @@ export default async function (host: Tree, options: Schema) {
     'rules: []',
     'questions: []',
     '---',
+    '',
+    // The body is rationale — *why* this requirement exists — deliberately
+    // separate from `rules`, which is *what* must be true and how you'd test
+    // it. Rules stay structured frontmatter because three consumers parse them
+    // (check-example-mapping, task-identification's refinement signal, and the
+    // lineage metadata passthrough), and prose in the body is where the
+    // constraint behind them can be explained at the point someone reads it.
+    // Scaffolded as a prompt rather than left blank so the gap is visible.
+    '## Rationale',
+    '',
+    '<!-- Why this requirement exists: the constraint, obligation, or user need',
+    '     behind it. What breaks, or who is blocked, without it. The product brief',
+    '     this derives from carries the wider goal; this is the part specific to',
+    '     this requirement. Replace this comment. -->',
     '',
   ].join('\n');
   host.write(requirementPath, content);

@@ -72,7 +72,7 @@ export default async function (host: Tree, options: Schema) {
   // open-question/blocker: an iteration-retrospective's --resolves once a
   // fix lands (often a pure code change, producing no new project-docs
   // artifact of its own to carry the reference instead).
-  ensureArtifactSchemaEntry(host, 'bugs', [], true);
+  ensureArtifactSchemaEntry(host, 'bugs', [], { tracksResolution: true });
 
   const content = [
     '---',
