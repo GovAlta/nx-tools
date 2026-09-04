@@ -31,5 +31,5 @@ Add one with `nx g @abgov/nx-agent:iteration-retrospective "<title>" --project-d
   invocation. Always present, empty if nothing was resolved.
 
 A correctly-closed-out retrospective has zero descendants forever — nothing is ever expected to
-build on a close-out record — so it's excluded from `project-docs-lineage`'s orphan report rather
+build on a close-out record — so it's excluded from `project-docs-lineage`'s `unreferenced` report rather
 than flagged alongside a genuine dead-end.

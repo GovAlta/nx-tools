@@ -74,7 +74,7 @@ export default async function (host: Tree, options: Schema) {
   // coverage varies pass to pass by design, unlike domain-terms/domain-models
   // which always expect the same fixed ancestor types. terminal: true is what
   // keeps a correctly-closed-out retrospective (zero descendants by design)
-  // from being reported as an orphan alongside a genuine dead-end.
+  // from being reported as unreferenced alongside a genuine dead-end.
   ensureArtifactSchemaEntry(
     host,
     'iteration-retrospectives',

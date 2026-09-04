@@ -137,13 +137,13 @@ describe('synthesize', () => {
 });
 
 describe('buildDeterministicSummary', () => {
-  it('states the total and type breakdown with no open/orphan/broken activity', () => {
+  it('states the total and type breakdown with no open/unreferenced/broken activity', () => {
     const summary = buildDeterministicSummary({
       totalArtifacts: 3,
       byType: { 'domain-terms': 2, 'bounded-contexts': 1 },
       open: 0,
       resolved: 0,
-      orphans: 0,
+      unreferenced: 0,
       brokenRefs: 0,
     });
     expect(summary).toBe(
@@ -151,17 +151,17 @@ describe('buildDeterministicSummary', () => {
     );
   });
 
-  it('includes open/resolved, orphan, and broken-ref sentences when present', () => {
+  it('includes open/resolved, unreferenced, and broken-ref sentences when present', () => {
     const summary = buildDeterministicSummary({
       totalArtifacts: 5,
       byType: { 'open-questions': 2 },
       open: 1,
       resolved: 1,
-      orphans: 2,
+      unreferenced: 2,
       brokenRefs: 1,
     });
     expect(summary).toContain('1 resolved, 1 still open.');
-    expect(summary).toContain('2 orphaned (nothing derives from them yet).');
+    expect(summary).toContain('2 unreferenced (nothing derives from them yet).');
     expect(summary).toContain('1 broken reference(s).');
   });
 
@@ -171,7 +171,7 @@ describe('buildDeterministicSummary', () => {
       byType: {},
       open: 0,
       resolved: 0,
-      orphans: 0,
+      unreferenced: 0,
       brokenRefs: 0,
     });
     expect(summary).toBe('0 project-docs artifact(s) tracked.');

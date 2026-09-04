@@ -260,7 +260,7 @@ function buildStyles(): string {
     }
     .badge-resolved { background: ${TOKENS.success.bg}; border: 1px solid ${TOKENS.success.border}; color: ${TOKENS.success.text}; }
     .badge-open { background: ${TOKENS.important.bg}; border: 1px solid ${TOKENS.important.border}; color: ${TOKENS.important.text}; }
-    .badge-orphan { background: ${TOKENS.interactive.bg}; border: 1px solid ${TOKENS.interactive.border}; color: ${TOKENS.interactive.text}; }
+    .badge-unreferenced { background: ${TOKENS.interactive.bg}; border: 1px solid ${TOKENS.interactive.border}; color: ${TOKENS.interactive.text}; }
     .badge-terminal { background: ${TOKENS.background}; border: 1px solid ${TOKENS.textMuted}; color: ${TOKENS.textMuted}; }
     .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.875rem; color: ${TOKENS.textMuted}; margin-top: 0.75rem; }
     .legend-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; margin-right: 0.375rem; vertical-align: middle; }
@@ -389,7 +389,7 @@ function buildMermaidFlowchart(
   inScopeSet: Set<string>,
   resolvedKeys: Set<string>,
   openKeys: Set<string>,
-  orphanKeys: Set<string>,
+  unreferencedKeys: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
   const nodeIds = new Map<string, string>();
@@ -399,7 +399,7 @@ function buildMermaidFlowchart(
     'flowchart TD',
     `classDef resolved fill:${TOKENS.success.bg},stroke:${TOKENS.success.border},color:${TOKENS.success.text}`,
     `classDef open fill:${TOKENS.important.bg},stroke:${TOKENS.important.border},color:${TOKENS.important.text}`,
-    `classDef orphan fill:${TOKENS.interactive.bg},stroke:${TOKENS.interactive.border},color:${TOKENS.interactive.text}`,
+    `classDef unreferenced fill:${TOKENS.interactive.bg},stroke:${TOKENS.interactive.border},color:${TOKENS.interactive.text}`,
     `classDef terminal fill:${TOKENS.background},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted}`,
     `classDef context fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted},stroke-dasharray: 4 4`,
   ];
@@ -414,8 +414,8 @@ function buildMermaidFlowchart(
         ? 'resolved'
         : openKeys.has(key)
           ? 'open'
-          : orphanKeys.has(key)
-            ? 'orphan'
+          : unreferencedKeys.has(key)
+            ? 'unreferenced'
             : isTerminal
               ? 'terminal'
               : '';
@@ -471,7 +471,7 @@ const MAX_SYNTHESIS_BODIES = 30;
 
 // The counts alone tell an LLM (or a reader) what happened, not why it
 // matters — including the free-text bodies of exactly the artifacts worth a
-// second look (open, unresolved; orphaned, nothing built on them yet) gives
+// second look (open, unresolved; unreferenced, nothing built on them yet) gives
 // the synthesis something to actually narrate. Bounded to a fixed cap so an
 // unusually large workspace never turns this into an unbounded prompt.
 function buildSynthesisPrompt(
@@ -479,9 +479,9 @@ function buildSynthesisPrompt(
   counts: StatusCounts,
   registry: Registry,
   openKeys: string[],
-  orphanKeys: string[],
+  unreferencedKeys: string[],
 ): string {
-  const bodies = [...new Set([...openKeys, ...orphanKeys])]
+  const bodies = [...new Set([...openKeys, ...unreferencedKeys])]
     .slice(0, MAX_SYNTHESIS_BODIES)
     .map((key) => {
       const entry = registry.get(key);
@@ -504,8 +504,8 @@ function buildSynthesisPrompt(
     `Status counts: ${JSON.stringify(counts)}`,
     '',
     bodies
-      ? `Open/orphaned artifact bodies:\n\n${bodies}`
-      : 'No open or orphaned artifacts.',
+      ? `Open/unreferenced artifact bodies:\n\n${bodies}`
+      : 'No open or unreferenced artifacts.',
   ].join('\n');
 }
 
@@ -521,7 +521,7 @@ function buildSummaryCards(counts: StatusCounts): string {
     ${typeCards}
     <div class="card"><div class="count">${counts.resolved}</div><div class="label">Resolved</div></div>
     <div class="card"><div class="count">${counts.open}</div><div class="label">Open</div></div>
-    <div class="card"><div class="count">${counts.orphans}</div><div class="label">Orphaned</div></div>
+    <div class="card"><div class="count">${counts.unreferenced}</div><div class="label">Unreferenced</div></div>
     <div class="card"><div class="count">${counts.brokenRefs}</div><div class="label">Broken references</div></div>
   </div>`;
 }
@@ -530,7 +530,7 @@ function statusBadge(
   key: string,
   resolvedSet: Set<string>,
   openSet: Set<string>,
-  orphanSet: Set<string>,
+  unreferencedSet: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
   if (resolvedSet.has(key)) {
@@ -539,8 +539,8 @@ function statusBadge(
   if (openSet.has(key)) {
     return '<span class="badge badge-open">Open</span>';
   }
-  if (orphanSet.has(key)) {
-    return '<span class="badge badge-orphan">Orphan</span>';
+  if (unreferencedSet.has(key)) {
+    return '<span class="badge badge-unreferenced">Unreferenced</span>';
   }
   if (isTerminalKey(key, artifactSchema)) {
     return '<span class="badge badge-terminal">Closed out</span>';
@@ -558,7 +558,7 @@ function buildArtifactList(
   registry: Registry,
   resolvedSet: Set<string>,
   openSet: Set<string>,
-  orphanSet: Set<string>,
+  unreferencedSet: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
   const byType = new Map<string, string[]>();
@@ -594,7 +594,7 @@ function buildArtifactList(
         return `<tr>
         <td><a href="#${toAnchorId(key)}">${escapeHtml(key)}</a></td>
         <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
-        <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
+        <td>${statusBadge(key, resolvedSet, openSet, unreferencedSet, artifactSchema)}</td>
       </tr>`;
       })
       .join('');
@@ -616,7 +616,7 @@ function buildArtifactList(
         return `<tr>
         <td><a href="#${toAnchorId(key)}">${escapeHtml(key)}</a></td>
         <td>${escapeHtml(entry?.ancestorRefs.join(', ') ?? '')}</td>
-        <td>${statusBadge(key, resolvedSet, openSet, orphanSet, artifactSchema)}</td>
+        <td>${statusBadge(key, resolvedSet, openSet, unreferencedSet, artifactSchema)}</td>
       </tr>`;
       })
       .join('');
@@ -690,7 +690,7 @@ function miniCard(
   childrenMap: Map<string, string[]>,
   resolvedSet: Set<string>,
   openSet: Set<string>,
-  orphanSet: Set<string>,
+  unreferencedSet: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
   const parsed = parseAncestorRef(key);
@@ -706,7 +706,7 @@ function miniCard(
     key,
     resolvedSet,
     openSet,
-    orphanSet,
+    unreferencedSet,
     artifactSchema,
   );
   return `<a class="mini-card" href="#${toAnchorId(key)}"><span class="mc-type">${escapeHtml(toDisplayName(type))}</span><span class="mc-name">${escapeHtml(toDisplayName(name))}</span><span class="mc-slug">${escapeHtml(name)}</span><span class="mc-meta">${badge}${childCountHtml}</span></a>`;
@@ -719,7 +719,7 @@ function buildHomePanel(params: {
   childrenMap: Map<string, string[]>;
   resolvedSet: Set<string>;
   openSet: Set<string>;
-  orphanSet: Set<string>;
+  unreferencedSet: Set<string>;
   artifactSchema: ArtifactSchema;
   synthesis: SynthesisResult;
   synthesisNote: string;
@@ -768,7 +768,7 @@ function buildHomePanel(params: {
             key,
             params.resolvedSet,
             params.openSet,
-            params.orphanSet,
+            params.unreferencedSet,
             params.artifactSchema,
           );
           const children = params.childrenMap.get(key) ?? [];
@@ -800,7 +800,7 @@ function buildHomePanel(params: {
           key,
           params.resolvedSet,
           params.openSet,
-          params.orphanSet,
+          params.unreferencedSet,
           params.artifactSchema,
         );
         return `<a class="root-card" href="#${toAnchorId(key)}"><div class="rc-type">${escapeHtml(toDisplayName(type))}</div><div class="rc-name">${escapeHtml(toDisplayName(name))}</div><div class="rc-slug">${escapeHtml(name)}</div><div class="rc-meta">${badge}</div></a>`;
@@ -864,7 +864,7 @@ function buildArtifactDetails(
   inScopeSet: Set<string>,
   resolvedSet: Set<string>,
   openSet: Set<string>,
-  orphanSet: Set<string>,
+  unreferencedSet: Set<string>,
   artifactSchema: ArtifactSchema,
 ): string {
   return renderedKeys
@@ -909,7 +909,7 @@ function buildArtifactDetails(
         key,
         resolvedSet,
         openSet,
-        orphanSet,
+        unreferencedSet,
         artifactSchema,
       );
 
@@ -963,7 +963,7 @@ function buildArtifactDetails(
               childrenMap,
               resolvedSet,
               openSet,
-              orphanSet,
+              unreferencedSet,
               artifactSchema,
             ),
           )
@@ -982,7 +982,7 @@ function buildArtifactDetails(
               childrenMap,
               resolvedSet,
               openSet,
-              orphanSet,
+              unreferencedSet,
               artifactSchema,
             ),
           )
@@ -1001,7 +1001,7 @@ function buildArtifactDetails(
               childrenMap,
               resolvedSet,
               openSet,
-              orphanSet,
+              unreferencedSet,
               artifactSchema,
             ),
           )
@@ -1101,7 +1101,7 @@ export default async function (host: Tree, options: Schema) {
     options.outputPath ??
     joinPathFragments(targetRoot, 'project-docs', 'report.html');
 
-  // Computed workspace-wide, unconditionally — an artifact's orphan/resolved
+  // Computed workspace-wide, unconditionally — an artifact's unreferenced/resolved
   // status is a workspace-wide fact, and building the index from only one
   // project's files would misclassify anything referenced across a project
   // boundary. --project filters what's rendered below, never what's
@@ -1146,7 +1146,7 @@ export default async function (host: Tree, options: Schema) {
 
   const resolvedKeySet = new Set(status.resolution.resolved);
   const openKeySet = new Set(status.resolution.open);
-  const orphanKeySet = new Set(status.orphans);
+  const unreferencedKeySet = new Set(status.unreferenced);
 
   const byType: Record<string, number> = {};
   for (const key of inScopeKeys) {
@@ -1159,7 +1159,9 @@ export default async function (host: Tree, options: Schema) {
   const inScopeResolved = [...resolvedKeySet].filter((key) =>
     inScopeSet.has(key),
   );
-  const inScopeOrphans = [...orphanKeySet].filter((key) => inScopeSet.has(key));
+  const inScopeUnreferenced = [...unreferencedKeySet].filter((key) =>
+    inScopeSet.has(key),
+  );
   // brokenRefs' own `ref` is by definition NOT a registry key (it's what's
   // missing) — scope by the ref token's own project, not registry
   // membership.
@@ -1174,7 +1176,7 @@ export default async function (host: Tree, options: Schema) {
     byType,
     open: inScopeOpen.length,
     resolved: inScopeResolved.length,
-    orphans: inScopeOrphans.length,
+    unreferenced: inScopeUnreferenced.length,
     brokenRefs: inScopeBrokenRefs.length,
   };
 
@@ -1183,7 +1185,7 @@ export default async function (host: Tree, options: Schema) {
     counts,
     registry,
     inScopeOpen,
-    inScopeOrphans,
+    inScopeUnreferenced,
   );
   const deterministicSummary = buildDeterministicSummary(counts);
   const synthesis = synthesize(
@@ -1203,7 +1205,7 @@ export default async function (host: Tree, options: Schema) {
     inScopeSet,
     resolvedKeySet,
     openKeySet,
-    orphanKeySet,
+    unreferencedKeySet,
     artifactSchema,
   );
 
@@ -1216,7 +1218,7 @@ export default async function (host: Tree, options: Schema) {
     childrenMap,
     resolvedSet: resolvedKeySet,
     openSet: openKeySet,
-    orphanSet: orphanKeySet,
+    unreferencedSet: unreferencedKeySet,
     artifactSchema,
     synthesis,
     synthesisNote,
@@ -1226,7 +1228,7 @@ export default async function (host: Tree, options: Schema) {
       registry,
       resolvedKeySet,
       openKeySet,
-      orphanKeySet,
+      unreferencedKeySet,
       artifactSchema,
     ),
     flowchart,
@@ -1241,7 +1243,7 @@ export default async function (host: Tree, options: Schema) {
     inScopeSet,
     resolvedKeySet,
     openKeySet,
-    orphanKeySet,
+    unreferencedKeySet,
     artifactSchema,
   );
 

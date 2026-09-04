@@ -119,7 +119,7 @@ describe('nx-agent agent-delivery generator', () => {
           integrity: { brokenRefs: [], unparseableRefs: [], yamlErrors: [] },
           status: {
             resolution: { open: [], resolved: [] },
-            orphans: [],
+            unreferenced: [],
             unscoped: [],
           },
         }),

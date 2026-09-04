@@ -3,7 +3,7 @@
 // example or question, and every example must actually be Given/When/Then-shaped, not just
 // any text — a vague sentence shouldn't satisfy the same bar as a concrete, testable scenario.
 //
-// project-docs-lineage's `orphans` check does NOT cover any of this — it's a graph check on
+// project-docs-lineage's `unreferenced` check does NOT cover any of this — it's a graph check on
 // backward references between files, and rules/examples/questions are structured content
 // inside a single requirement file, not separate artifacts. This fills that specific gap.
 //
