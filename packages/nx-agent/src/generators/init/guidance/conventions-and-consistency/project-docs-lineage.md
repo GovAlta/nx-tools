@@ -56,3 +56,19 @@ rather than a hard rule — an artifact of a scoped type missing one of its expe
 record (a retrospective, for instance) — nothing is ever expected to derive from it, so it's excluded
 from the `unreferenced` report (zero descendants) that would otherwise flag it identically to a
 domain-model nobody's built on yet.
+
+**Two kinds of finding, and only one of them blocks.** `project-docs-lineage` splits what it reports
+into `integrity` — a reference whose target doesn't exist, a token that isn't a reference at all,
+frontmatter that won't parse, a cycle, a schema entry naming a type that doesn't exist — and
+`status`, which is a sound graph telling you where the work stands (nothing derives from it yet, an
+expected ancestor is missing, an ancestor was revised after this derived from it). `--strict` fails
+on integrity and never on status, so use it as a gate freely: it can't be tripped by work merely
+being incomplete.
+
+**Recording that you've read an ancestor.** A reference may carry the ancestor's body digest —
+`domain-terms:case@a3f9c2e1b004` — and `project-docs-lineage` then reports it as `stale` once that
+ancestor is revised, meaning your artifact may no longer reflect what it was built from. An
+unpinned reference is never reported, so this costs nothing until you opt a reference in with
+`nx g @abgov/nx-agent:pin-ancestors`. Re-pin only after actually re-reading the ancestor — the
+digest is an assertion that you have, it lands in your own diff, and a blind bulk re-pin just
+records existing drift as the new floor.

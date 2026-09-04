@@ -348,7 +348,7 @@ export function resolveRefFromPath(host: Tree, rawPath: string): string {
 // traversal sees it regardless of which flag added it — while keeping the
 // resolved refs available separately so the caller can also write the
 // distinct `resolves` frontmatter field project-docs-lineage's
-// resolutionStatus actually reads.
+// status.resolution actually reads.
 export function resolveAncestorsAndResolves(
   host: Tree,
   projectDocsAncestors: string[] | undefined,
@@ -555,7 +555,7 @@ function registerArtifact(
   // An artifact whose own key can't be parsed back is still registered — it
   // exists, and hiding it would be the very failure this records. But every
   // parse-dependent check below degrades on it: it counts as unreferenced
-  // regardless, and resolutionStatus skips it entirely, so a tracked artifact
+  // regardless, and status.resolution skips it entirely, so a tracked artifact
   // silently stops being reported open or resolved. Since 7b777dd the
   // generators reject these at creation time, so this only catches a
   // hand-authored or pre-existing file.

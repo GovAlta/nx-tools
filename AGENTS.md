@@ -737,7 +737,7 @@ is left or the `MAX_ITERATIONS` cap is hit.
 | Branch prefix | Signal types eligible                                               | Typical use                                                                                         |
 | ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `feature/**`  | All (discover → design → develop → deploy)                          | Advancing a new capability from a `features:` artifact through to Deploy                            |
-| `fix/**`      | Resolution only (`broken:`, `unparseable:`, `yaml-error:`, `open:`) | Resolving a specific blocker, open question, broken/unparseable reference, or malformed frontmatter |
+| `fix/**`      | Resolution only (`broken:`, `unparseable:`, `yaml-error:`, `cycle:`, `schema-error:`, `open:`) | Resolving a specific blocker, open question, broken/unparseable reference, reference cycle, misspelled schema expectation, or malformed frontmatter |
 
 Both branch types derive artifact scope from the first commit (see below). The `fix/**`
 restriction is enforced independently of scope — a scoped fix branch only sees resolution
