@@ -421,19 +421,33 @@ script reading that file (`agent-delivery`'s task-identification), not a human r
 console, so aborting would take every unrelated fact in the graph down over one dangling reference
 and disable the very mechanism that reports it.
 
-Five violation categories, three of which `--strict` fails on:
+Findings are split on a property intrinsic to the graph rather than on severity: **is the defect
+_in_ the graph, or is it a fact the graph is correctly reporting?**
 
-| Category          | What it is                                                       | Under `--strict` |
-| ----------------- | ---------------------------------------------------------------- | ---------------- |
-| `brokenRefs`      | a reference whose target doesn't exist                           | **fails**        |
-| `unparseableRefs` | a reference token that doesn't fit the `<type>[:<id>]` grammar   | **fails**        |
-| `yamlErrors`      | frontmatter that doesn't parse as YAML                           | **fails**        |
-| `orphans`         | nothing references it yet (see below)                            | reported only    |
-| `unscoped`        | missing an _expected_ ancestor type (see `artifact-schema.json`) | reported only    |
+`integrity` means the graph can't be trusted as a graph. `--strict` fails on any of it, and that
+isn't configurable — a consumer asking "was this graph even constructible" isn't expressing a
+preference.
 
-The bottom two never fail, in either mode: an artifact nothing implements yet is a normal,
-temporary state, not a mistake. `resolutionStatus` is reported alongside them but is a status
-rather than a violation.
+| `integrity`       | What it is                                                          |
+| ----------------- | ------------------------------------------------------------------- |
+| `brokenRefs`      | a declared edge whose endpoint doesn't exist                        |
+| `unparseableRefs` | a token that doesn't fit the `<type>[:<id>]` grammar at all         |
+| `yamlErrors`      | a node whose frontmatter couldn't be read, so its edges are unknown |
+
+`status` means the graph is sound and is telling you where the work stands. None of it fails
+`--strict`; gating on any of it is a project policy and belongs to you.
+
+| `status`     | What it is                                                            |
+| ------------ | --------------------------------------------------------------------- |
+| `resolution` | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
+| `orphans`    | no inbound edges: nothing derives from it yet                         |
+| `unscoped`   | every edge resolves, but an expected ancestor type is missing         |
+
+`status` is computed from **structure only** — edges and schema expectations. Status an artifact
+declares about itself in frontmatter (a `questions` list, a `status:` field) deliberately stays in
+`metadata`, passed through verbatim for you to interpret. The moment this computed a finding from
+one of those, it would have taken a position on your workflow, and being workflow-agnostic is what
+makes it consumable from outside.
 
 ```bash
 npx nx g @abgov/nx-agent:project-docs-lineage
@@ -455,17 +469,18 @@ the graph and a failing exit code in a single run**. Pair it with `--quiet`, or 
 `schemaVersion` versions the paths below, and only those. Everything else in the file is
 implementation detail and may change without a bump.
 
-| Path                           | Shape                                                                                          |
-| ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `schemaVersion`                | number — `1` today                                                                             |
-| `registry[<ref>]`              | `{ path, ancestorRefs[], resolves[], metadata }`                                               |
-| `index[<ref>][]`               | `{ file, type?, metadata? }` — `type` only when the descendant is itself a registered artifact |
-| `violations.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
-| `violations.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
-| `violations.yamlErrors[]`      | `{ path, error }`                                                                              |
-| `violations.orphans[]`         | ref strings                                                                                    |
-| `violations.unscoped[]`        | ref strings                                                                                    |
-| `violations.resolutionStatus`  | `{ open[], resolved[] }`                                                                       |
+| Path                          | Shape                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `schemaVersion`               | number — `1` today                                                                             |
+| `registry[<ref>]`             | `{ path, ancestorRefs[], resolves[], metadata }`                                               |
+| `index[<ref>][]`              | `{ file, type?, metadata? }` — `type` only when the descendant is itself a registered artifact |
+| `integrity.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
+| `integrity.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
+| `integrity.yamlErrors[]`      | `{ path, error }`                                                                              |
+| `status.resolution`           | `{ open[], resolved[] }`                                                                       |
+| `status.orphans[]`            | ref strings                                                                                    |
+| `status.unscoped[]`           | ref strings                                                                                    |
+| `violations`                  | **deprecated** — see below                                                                     |
 
 This records what is already load-bearing rather than adding a new promise. `agent-delivery`'s
 `task-identification.mjs` reads every one of those `violations` keys plus `registry[].ancestorRefs`,
@@ -473,7 +488,13 @@ This records what is already load-bearing rather than adding a new promise. `age
 `discover` reads `violations.resolutionStatus`. All of them are generated **write-if-missing**, so a
 workspace keeps its own copy and re-running the generator cannot repair a shape change — only a
 migration can. So pin `schemaVersion` and fail on an unexpected value rather than reading around a
-field that may have been renamed.
+field that may have been renamed — `task-identification.mjs` does exactly that, and names both
+versions when they disagree.
+
+`violations` is a **deprecated** flat view of both containers, kept because those generated files
+can't be repaired by re-running the generator. It's assembled from the very same arrays as
+`integrity` and `status`, so it can't drift from them, and it will be removed at `schemaVersion` 2.
+Read the two containers instead.
 
 The `project-docs-ancestors` convention itself: a directive used identically in frontmatter (a YAML
 list) and code comments (comma-separated on one line), shaped `<type>[:<id>][#fragment]`. `type` is

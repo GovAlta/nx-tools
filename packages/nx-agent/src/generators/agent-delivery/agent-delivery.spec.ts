@@ -1,7 +1,14 @@
 import { Tree } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import generator from './agent-delivery';
@@ -97,9 +104,65 @@ describe('nx-agent agent-delivery generator', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-test-'));
     try {
       writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
-      symlinkSync(join(process.cwd(), 'node_modules'), join(tmpDir, 'node_modules'));
+      symlinkSync(
+        join(process.cwd(), 'node_modules'),
+        join(tmpDir, 'node_modules'),
+      );
 
       mkdirSync(join(tmpDir, '.nx-agent'));
+      writeFileSync(
+        join(tmpDir, '.nx-agent', 'lineage.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          registry: {},
+          index: {},
+          integrity: { brokenRefs: [], unparseableRefs: [], yamlErrors: [] },
+          status: {
+            resolution: { open: [], resolved: [] },
+            orphans: [],
+            unscoped: [],
+          },
+        }),
+      );
+
+      const outputFile = join(tmpDir, 'github-output');
+      writeFileSync(outputFile, '');
+      execSync('node task-identification.mjs', {
+        cwd: tmpDir,
+        env: {
+          ...process.env,
+          GITHUB_OUTPUT: outputFile,
+          GITHUB_REF_NAME: 'feature/test',
+        },
+      });
+
+      expect(
+        existsSync(
+          join(tmpDir, '.github', 'agent-delivery-iteration', 'history.json'),
+        ),
+      ).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true });
+    }
+  });
+
+  // The reason lineage.json carries a schemaVersion. This script is generated
+  // write-if-missing, so a workspace can run a copy that disagrees with the
+  // graph shape; it must say so, not die on a container that moved.
+  it('task-identification fails with both versions named on a shape mismatch', async () => {
+    await generator(host, { githubActions: true });
+
+    const script = host.read('scripts/task-identification.mjs').toString();
+    const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-version-'));
+    try {
+      writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
+      symlinkSync(
+        join(process.cwd(), 'node_modules'),
+        join(tmpDir, 'node_modules'),
+      );
+
+      mkdirSync(join(tmpDir, '.nx-agent'));
+      // A graph written before schemaVersion existed: the pre-split shape.
       writeFileSync(
         join(tmpDir, '.nx-agent', 'lineage.json'),
         JSON.stringify({
@@ -116,14 +179,27 @@ describe('nx-agent agent-delivery generator', () => {
 
       const outputFile = join(tmpDir, 'github-output');
       writeFileSync(outputFile, '');
-      execSync('node task-identification.mjs', {
-        cwd: tmpDir,
-        env: { ...process.env, GITHUB_OUTPUT: outputFile, GITHUB_REF_NAME: 'feature/test' },
-      });
+      let stderr = '';
+      expect(() => {
+        try {
+          execSync('node task-identification.mjs', {
+            cwd: tmpDir,
+            env: {
+              ...process.env,
+              GITHUB_OUTPUT: outputFile,
+              GITHUB_REF_NAME: 'feature/test',
+            },
+            stdio: ['ignore', 'ignore', 'pipe'],
+          });
+        } catch (e) {
+          stderr = (e.stderr ?? '').toString();
+          throw e;
+        }
+      }).toThrow();
 
-      expect(
-        existsSync(join(tmpDir, '.github', 'agent-delivery-iteration', 'history.json')),
-      ).toBe(false);
+      expect(stderr).toContain('schemaVersion (absent)');
+      expect(stderr).toContain('expects 1');
+      expect(stderr).not.toContain('TypeError');
     } finally {
       rmSync(tmpDir, { recursive: true });
     }

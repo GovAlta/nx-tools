@@ -324,4 +324,67 @@ describe('nx-agent project-docs-lineage generator', () => {
       logSpy.mockRestore();
     });
   });
+
+  describe('integrity and status containers', () => {
+    it('splits findings into integrity and status', async () => {
+      host.write(
+        'apps/test/src/routes/collision-reports.ts',
+        '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(Object.keys(lineage.integrity).sort()).toEqual([
+        'brokenRefs',
+        'unparseableRefs',
+        'yamlErrors',
+      ]);
+      expect(Object.keys(lineage.status).sort()).toEqual([
+        'orphans',
+        'resolution',
+        'unscoped',
+      ]);
+      expect(lineage.integrity.brokenRefs).toHaveLength(1);
+    });
+
+    // The deprecated alias exists only so an existing workspace's
+    // write-if-missing script keeps working; it must never be a second source
+    // of truth, so it's built from the same arrays rather than recomputed.
+    it('keeps a deprecated violations alias carrying identical data', async () => {
+      host.write(
+        'project-docs/domain-terms/unused.md',
+        ['---', 'term: Unused', '---'].join('\n'),
+      );
+      host.write(
+        'apps/test/src/routes/collision-reports.ts',
+        '// project-docs-ancestors: domain-terms:typo-id\nexport {};',
+      );
+
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.violations.brokenRefs).toEqual(l.integrity.brokenRefs);
+      expect(l.violations.unparseableRefs).toEqual(l.integrity.unparseableRefs);
+      expect(l.violations.yamlErrors).toEqual(l.integrity.yamlErrors);
+      expect(l.violations.orphans).toEqual(l.status.orphans);
+      expect(l.violations.unscoped).toEqual(l.status.unscoped);
+      expect(l.violations.resolutionStatus).toEqual(l.status.resolution);
+    });
+
+    // The whole point of the split: --strict is a validity check on the graph,
+    // so a sound graph reporting incomplete work must not fail it.
+    it('does not fail --strict on a status-only finding', async () => {
+      host.write(
+        'project-docs/domain-terms/unused.md',
+        ['---', 'term: Unused', '---'].join('\n'),
+      );
+
+      await expect(generator(host, { strict: true })).resolves.toBeUndefined();
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.orphans).toEqual(['domain-terms:unused']);
+      expect(lineage.integrity.brokenRefs).toEqual([]);
+    });
+  });
 });

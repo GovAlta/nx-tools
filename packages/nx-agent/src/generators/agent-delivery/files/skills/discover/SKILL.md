@@ -96,7 +96,7 @@ written by a generator's own `--resolves <path>` flag (`feature`/`domain-term`/`
 `domain-model`) or by hand for a type with no generator yet (`api-design`, `ux-design`). Never a
 separate edit on the open-question/blocker file itself, and an unrelated later edit to the target
 doesn't count as resolving anything. `project-docs-lineage` reports resolution status directly
-(`violations.resolutionStatus.open`/`.resolved`) — nothing to compute or register by hand.
+(`status.resolution.open`/`.resolved`) — nothing to compute or register by hand.
 
 **`bug` also tracks open/resolved status this same generic way, but is resolved differently** — see
 `develop/SKILL.md`'s own bug-handling section; Discover never resolves one directly.

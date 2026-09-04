@@ -4,21 +4,21 @@ import { ArtifactSchema } from './artifact-schema';
 
 // The allowed character set for project-docs slugs — used by both the
 // lineage parser and generator validation so they cannot drift apart.
-export const SLUG_CHARS = 'a-zA-Z0-9_-'
+export const SLUG_CHARS = 'a-zA-Z0-9_-';
 
-const SLUG_INVALID_RE = new RegExp(`[^${SLUG_CHARS}]`, 'g')
+const SLUG_INVALID_RE = new RegExp(`[^${SLUG_CHARS}]`, 'g');
 
 export function validateProjectDocsSlug(
   slug: string,
   originalInput: string,
 ): void {
-  const invalid = slug.match(SLUG_INVALID_RE)
-  if (!invalid) return
-  const chars = [...new Set(invalid)].map((c) => `"${c}"`).join(', ')
+  const invalid = slug.match(SLUG_INVALID_RE);
+  if (!invalid) return;
+  const chars = [...new Set(invalid)].map((c) => `"${c}"`).join(', ');
   throw new Error(
     `[nx-agent] "${originalInput}" produces slug "${slug}" containing invalid character(s): ${chars}. ` +
       `Project-docs slugs must contain only letters, digits, hyphens, and underscores.`,
-  )
+  );
 }
 
 // project-docs-ancestors convention: <type>[:<id>][#fragment], optionally
@@ -38,7 +38,7 @@ export interface AncestorRef {
 
 const ANCESTOR_REF_TOKEN = new RegExp(
   `^(?:([^/]+)/)?([${SLUG_CHARS}]+)(?::([${SLUG_CHARS}]+))?(?:#([${SLUG_CHARS}]+))?$`,
-)
+);
 
 export function parseAncestorRef(token: string): AncestorRef | null {
   const trimmed = token.trim();
@@ -65,7 +65,7 @@ export function refKey(
   return `${prefix}${ref.type}${suffix}`;
 }
 
-const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/
+const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
 // The closed set of frontmatter fields the graph already models as structural
 // relationships — excluded from Artifact Metadata so the metadata map never
@@ -75,7 +75,7 @@ const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/
 const STRUCTURAL_FRONTMATTER_FIELDS = new Set([
   'project-docs-ancestors',
   'resolves',
-])
+]);
 
 // Returns all frontmatter fields that are not structural (i.e. not already
 // modelled by the registry's ancestorRefs/resolves). Values are verbatim —
@@ -86,27 +86,27 @@ export function extractFrontmatterMetadata(
   content: string,
   sourcePath?: string,
 ): Record<string, unknown> {
-  const block = FRONTMATTER_BLOCK.exec(content)
-  if (!block) return {}
-  let frontmatter: unknown
+  const block = FRONTMATTER_BLOCK.exec(content);
+  if (!block) return {};
+  let frontmatter: unknown;
   try {
-    frontmatter = yaml.parse(block[1])
+    frontmatter = yaml.parse(block[1]);
   } catch (e) {
     console.warn(
       `[project-docs] YAML parse error${sourcePath ? ` in ${sourcePath}` : ''}: ${e instanceof Error ? e.message : String(e)}`,
-    )
-    return {}
+    );
+    return {};
   }
-  if (!frontmatter || typeof frontmatter !== 'object') return {}
-  const metadata: Record<string, unknown> = {}
+  if (!frontmatter || typeof frontmatter !== 'object') return {};
+  const metadata: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(
     frontmatter as Record<string, unknown>,
   )) {
     if (!STRUCTURAL_FRONTMATTER_FIELDS.has(key)) {
-      metadata[key] = value
+      metadata[key] = value;
     }
   }
-  return metadata
+  return metadata;
 }
 
 // Real YAML parsing, not hand-rolled per-shape regexes — frontmatter is YAML,
@@ -134,7 +134,7 @@ export function extractFrontmatterField(
   } catch (e) {
     console.warn(
       `[project-docs] YAML parse error${sourcePath ? ` in ${sourcePath}` : ''}: ${e instanceof Error ? e.message : String(e)}`,
-    )
+    );
     return [];
   }
 
@@ -161,7 +161,11 @@ export function extractFrontmatterAncestorRefs(
   content: string,
   sourcePath?: string,
 ): string[] {
-  const ancestors = extractFrontmatterField(content, 'project-docs-ancestors', sourcePath);
+  const ancestors = extractFrontmatterField(
+    content,
+    'project-docs-ancestors',
+    sourcePath,
+  );
   const resolves = extractFrontmatterField(content, 'resolves', sourcePath);
   return [...new Set([...ancestors, ...resolves])];
 }
@@ -267,7 +271,7 @@ export interface RegistryEntry {
   ancestorRefs: string[];
   // Refs this artifact explicitly claims to resolve (via --resolves), not
   // just build on — a strict subset of ancestorRefs, since a resolved ref is
-  // also written there for traversal. See computeViolations' resolutionStatus.
+  // also written there for traversal. See computeFindings' status.resolution.
   resolves: string[];
   // All non-structural frontmatter fields, verbatim. Never undefined — an
   // artifact with no parseable frontmatter block has metadata: {}. Excludes
@@ -303,7 +307,15 @@ function buildPathToKeyMap(registry: Registry): Map<string, string> {
   return pathToKey;
 }
 
-const REF_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.vue', '.cs', '.md'];
+const REF_SOURCE_EXTENSIONS = [
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.vue',
+  '.cs',
+  '.md',
+];
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.nx']);
 
 function walk(host: Tree, dir: string): string[] {
@@ -337,8 +349,8 @@ function projectDocsRoots(host: Tree): string[] {
 // comment or frontmatter), or an artifact's own path-derived key, where the
 // offending characters are in the filename itself and the fix is a rename.
 export interface UnparseableRef {
-  ref: string
-  foundIn: string
+  ref: string;
+  foundIn: string;
 }
 
 // Whether a scanned token was plausibly *meant* to be a reference, and so is
@@ -350,7 +362,7 @@ export interface UnparseableRef {
 // noise (35 such matches in this repo alone). Code punctuation is the tell, so
 // this admits only the grammar's own charset plus the characters that
 // realistically slip into a hand-written id: a period, a stray slash, a space.
-const PLAUSIBLE_REF = /^[\w .:/#-]+$/
+const PLAUSIBLE_REF = /^[\w .:/#-]+$/;
 
 function recordUnparseable(
   unparseableRefs: UnparseableRef[],
@@ -358,7 +370,7 @@ function recordUnparseable(
   foundIn: string,
 ): void {
   if (PLAUSIBLE_REF.test(ref)) {
-    unparseableRefs.push({ ref, foundIn })
+    unparseableRefs.push({ ref, foundIn });
   }
 }
 
@@ -435,7 +447,7 @@ function registerArtifact(
   yamlErrors: YamlError[],
   unparseableRefs: UnparseableRef[],
 ): void {
-  const key = refKey(ref)
+  const key = refKey(ref);
   // An artifact whose own key can't be parsed back is still registered — it
   // exists, and hiding it would be the very failure this records. But every
   // parse-dependent check below degrades on it: orphans counts it as an orphan
@@ -444,20 +456,20 @@ function registerArtifact(
   // generators reject these at creation time, so this only catches a
   // hand-authored or pre-existing file.
   if (!parseAncestorRef(key)) {
-    unparseableRefs.push({ ref: key, foundIn: path })
+    unparseableRefs.push({ ref: key, foundIn: path });
   }
-  const content = host.read(path, 'utf-8') ?? ''
-  const block = FRONTMATTER_BLOCK.exec(content)
+  const content = host.read(path, 'utf-8') ?? '';
+  const block = FRONTMATTER_BLOCK.exec(content);
   if (block) {
     try {
-      yaml.parse(block[1])
+      yaml.parse(block[1]);
     } catch (e) {
-      const error = e instanceof Error ? e.message : String(e)
-      yamlErrors.push({ path, error })
+      const error = e instanceof Error ? e.message : String(e);
+      yamlErrors.push({ path, error });
       // eslint-disable-next-line no-console
-      console.log(`[nx-agent] YAML parse error in ${path}: ${error}`)
-      registry.set(key, { path, ancestorRefs: [], resolves: [], metadata: {} })
-      return
+      console.log(`[nx-agent] YAML parse error in ${path}: ${error}`);
+      registry.set(key, { path, ancestorRefs: [], resolves: [], metadata: {} });
+      return;
     }
   }
   registry.set(key, {
@@ -465,7 +477,7 @@ function registerArtifact(
     ancestorRefs: extractFrontmatterAncestorRefs(content, path),
     resolves: extractFrontmatterField(content, 'resolves', path),
     metadata: extractFrontmatterMetadata(content, path),
-  })
+  });
 }
 
 // Every project-docs-ancestors reference found anywhere in the workspace's
@@ -520,17 +532,44 @@ export function buildIndex(
 }
 
 export interface YamlError {
-  path: string
-  error: string
+  path: string;
+  error: string;
 }
 
-export interface Violations {
+// Two containers, split on a property intrinsic to the graph rather than on
+// severity: is the defect *in* the graph, or is it a fact the graph is
+// correctly reporting?
+//
+// Integrity means the graph cannot be trusted as a graph — an edge whose
+// endpoint doesn't exist, a token that isn't an edge at all, a node whose
+// edges couldn't be read. That's a validity claim, not a threshold, which is
+// why --strict fails on it and why that isn't configurable: a consumer asking
+// "was this graph even constructible" isn't expressing a preference.
+export interface Integrity {
   brokenRefs: { ref: string; referencedFrom: string }[];
   unparseableRefs: UnparseableRef[];
+  yamlErrors: YamlError[];
+}
+
+// Status means the graph is sound and is telling you where the work stands.
+// Nothing here is malformed, so none of it fails --strict; gating on any of it
+// is a project policy and belongs to the consumer.
+//
+// Computed from *structure* only — edges and schema expectations. Status an
+// artifact declares about itself in frontmatter (a `questions` list, a
+// `status:` field) deliberately stays in `metadata`, passed through verbatim
+// for the consumer to interpret: the moment this computed a finding from one,
+// the library would have taken a position on somebody's workflow, and being
+// workflow-agnostic is the property that makes it consumable from outside.
+export interface Status {
+  resolution: { open: string[]; resolved: string[] };
   orphans: string[];
   unscoped: string[];
-  resolutionStatus: { open: string[]; resolved: string[] };
-  yamlErrors: YamlError[];
+}
+
+export interface Findings {
+  integrity: Integrity;
+  status: Status;
 }
 
 // `artifactSchema` is plain data the workspace owns (see utils/artifact-schema.ts)
@@ -541,14 +580,14 @@ export interface Violations {
 // expects both a bounded-contexts and a domain-terms ancestor, not either —
 // a model with only the former is still missing the vocabulary it should be
 // built from, so it's still worth flagging.
-export function computeViolations(
+export function computeFindings(
   registry: Registry,
   index: Index,
   artifactSchema: ArtifactSchema = {},
   yamlErrors: YamlError[] = [],
   unparseableRefs: UnparseableRef[] = [],
-): Violations {
-  const brokenRefs: Violations['brokenRefs'] = [];
+): Findings {
+  const brokenRefs: Integrity['brokenRefs'] = [];
   for (const [key, entries] of index) {
     if (!registry.has(key)) {
       for (const entry of entries) {
@@ -601,7 +640,7 @@ export function computeViolations(
     }
   }
 
-  const resolutionStatus: Violations['resolutionStatus'] = {
+  const resolution: Status['resolution'] = {
     open: [],
     resolved: [],
   };
@@ -610,19 +649,12 @@ export function computeViolations(
     if (!parsedKey || !artifactSchema[parsedKey.type]?.tracksResolution) {
       continue;
     }
-    (resolvedKeys.has(key)
-      ? resolutionStatus.resolved
-      : resolutionStatus.open
-    ).push(key);
+    (resolvedKeys.has(key) ? resolution.resolved : resolution.open).push(key);
   }
 
   return {
-    brokenRefs,
-    unparseableRefs,
-    orphans,
-    unscoped,
-    resolutionStatus,
-    yamlErrors,
+    integrity: { brokenRefs, unparseableRefs, yamlErrors },
+    status: { resolution, orphans, unscoped },
   };
 }
 

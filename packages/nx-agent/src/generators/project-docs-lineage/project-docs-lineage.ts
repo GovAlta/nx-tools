@@ -4,7 +4,8 @@ import { ensureGitignoreEntries } from '../../utils/gitignore';
 import {
   buildIndex,
   buildRegistry,
-  computeViolations,
+  computeFindings,
+  Integrity,
   UnparseableRef,
   YamlError,
 } from '../../utils/project-docs-refs';
@@ -20,6 +21,12 @@ const LINEAGE_PATH = '.nx-agent/lineage.json';
 // write-if-missing, so a workspace keeps its copy and no re-run can repair it.
 const LINEAGE_SCHEMA_VERSION = 1;
 
+const INTEGRITY_FAILURES: Record<keyof Integrity, (count: number) => string> = {
+  brokenRefs: (n) => `${n} broken project-docs-ancestors reference(s)`,
+  unparseableRefs: (n) => `${n} unparseable project-docs reference(s)`,
+  yamlErrors: (n) => `${n} YAML parse error(s) in project-docs frontmatter`,
+};
+
 export default async function (host: Tree, options: Schema = {}) {
   // 100% mechanically derived from other files — committing it would create
   // a second, driftable source of truth the moment anyone adds a reference
@@ -32,7 +39,7 @@ export default async function (host: Tree, options: Schema = {}) {
   const registry = buildRegistry(host, yamlErrors, unparseableRefs);
   const index = buildIndex(host, registry, unparseableRefs);
   const artifactSchema = readArtifactSchema(host);
-  const violations = computeViolations(
+  const { integrity, status } = computeFindings(
     registry,
     index,
     artifactSchema,
@@ -44,41 +51,57 @@ export default async function (host: Tree, options: Schema = {}) {
     schemaVersion: LINEAGE_SCHEMA_VERSION,
     registry: Object.fromEntries(registry),
     index: Object.fromEntries(index),
-    violations,
+    integrity,
+    status,
+    // DEPRECATED, removed at schemaVersion 2. Kept because agent-delivery's
+    // scripts and skills are generated write-if-missing: an existing workspace
+    // keeps the copy that reads these paths, and no generator re-run can
+    // repair it — only a migration, which isn't worth ~1000 lines of verbatim
+    // fixtures for a field rename while the old paths can simply keep working.
+    // Assembled from the very same arrays as integrity/status above, so the
+    // two views cannot drift apart.
+    violations: {
+      brokenRefs: integrity.brokenRefs,
+      unparseableRefs: integrity.unparseableRefs,
+      yamlErrors: integrity.yamlErrors,
+      orphans: status.orphans,
+      unscoped: status.unscoped,
+      resolutionStatus: status.resolution,
+    },
   };
 
   // --json is a machine surface, so the human lines would be noise in the middle
   // of the document. Nx prints its own "NX Generating ..." banner to stdout too;
   // pair --json with --quiet to suppress it and get a parseable stream.
   if (!options.json) {
-    for (const orphan of violations.orphans) {
+    for (const orphan of status.orphans) {
       // eslint-disable-next-line no-console
       console.log(`[nx-agent] orphan (nothing derives from it yet): ${orphan}`);
     }
-    for (const unscoped of violations.unscoped) {
+    for (const unscoped of status.unscoped) {
       // eslint-disable-next-line no-console
       console.log(
         `[nx-agent] unscoped (missing an expected ancestor type): ${unscoped}`,
       );
     }
-    for (const broken of violations.brokenRefs) {
+    for (const broken of integrity.brokenRefs) {
       // eslint-disable-next-line no-console
       console.log(
         `[nx-agent] broken reference "${broken.ref}" in ${broken.referencedFrom}`,
       );
     }
-    for (const unparseable of violations.unparseableRefs) {
+    for (const unparseable of integrity.unparseableRefs) {
       // eslint-disable-next-line no-console
       console.log(
         `[nx-agent] unparseable reference "${unparseable.ref}" in ${unparseable.foundIn} — ` +
           `an id may contain only letters, digits, hyphens, and underscores`,
       );
     }
-    for (const open of violations.resolutionStatus.open) {
+    for (const open of status.resolution.open) {
       // eslint-disable-next-line no-console
       console.log(`[nx-agent] open (unresolved): ${open}`);
     }
-    for (const resolved of violations.resolutionStatus.resolved) {
+    for (const resolved of status.resolution.resolved) {
       // eslint-disable-next-line no-console
       console.log(`[nx-agent] resolved: ${resolved}`);
     }
@@ -108,22 +131,15 @@ export default async function (host: Tree, options: Schema = {}) {
   // gitignored, so locally the previous run's file survives the rollback and
   // the next reader silently consumes a stale graph. Neither is a graph that
   // can't be trusted — it's a complete graph with a known, enumerated gap.
-  const failures: string[] = [];
-  if (violations.brokenRefs.length > 0) {
-    failures.push(
-      `${violations.brokenRefs.length} broken project-docs-ancestors reference(s)`,
+  // Keyed on `keyof Integrity`, so a category added to that interface won't
+  // compile until it also has a --strict message here. That's the invariant
+  // worth enforcing rather than restating in prose: everything in `integrity`
+  // fails --strict, and nothing in `status` does.
+  const failures = (Object.keys(INTEGRITY_FAILURES) as (keyof Integrity)[])
+    .filter((category) => integrity[category].length > 0)
+    .map((category) =>
+      INTEGRITY_FAILURES[category](integrity[category].length),
     );
-  }
-  if (violations.unparseableRefs.length > 0) {
-    failures.push(
-      `${violations.unparseableRefs.length} unparseable project-docs reference(s)`,
-    );
-  }
-  if (violations.yamlErrors.length > 0) {
-    failures.push(
-      `${violations.yamlErrors.length} YAML parse error(s) in project-docs frontmatter`,
-    );
-  }
   if (failures.length === 0) {
     return;
   }
