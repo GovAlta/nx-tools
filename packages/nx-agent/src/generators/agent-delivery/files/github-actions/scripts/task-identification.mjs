@@ -160,6 +160,8 @@ for (const cycle of integrity.cycles ?? []) {
     // so the smallest node leads — otherwise the same loop would produce a
     // different key each run and stall detection would never see a repeat.
     key: `cycle:${cycle.join(',')}`,
+    // Every node in the cycle, so the signal is in scope when any member is.
+    artifacts: cycle,
     stage: 'unknown',
     reason:
       `Reference cycle: ${[...cycle, cycle[0]].join(' -> ')}. project-docs-ancestors is a ` +
@@ -170,14 +172,23 @@ for (const cycle of integrity.cycles ?? []) {
 }
 
 for (const schemaError of integrity.schemaErrors ?? []) {
+  // Keyed on all three of type/property/value: two bad values on one type are
+  // two things to fix, and collapsing them would let stall detection read the
+  // second as a repeat of the first.
   signals.push({
-    key: `schema-error:${schemaError.type}:${schemaError.expectedAncestorType}`,
+    key: `schema-error:${schemaError.type}:${schemaError.property}:${schemaError.value}`,
+    // Explicitly no artifact: the schema is what's wrong, so no artifact scope
+    // should exclude it.
+    artifacts: null,
     stage: 'unknown',
     reason:
-      `project-docs/artifact-schema.json: "${schemaError.type}" expects ancestor type ` +
-      `"${schemaError.expectedAncestorType}", which is not a known artifact type — did you mean ` +
-      `"${schemaError.didYouMean}"? Nothing can satisfy it as written, so every ` +
-      `${schemaError.type} artifact would report unscoped. Fix the schema, not the artifacts.`,
+      schemaError.problem === 'structural-field'
+        ? `project-docs/artifact-schema.json: "${schemaError.type}".${schemaError.property} names ` +
+          `"${schemaError.value}", a structural field the graph already models as a relationship. ` +
+          `It is excluded from metadata, so the declaration does nothing — remove it.`
+        : `project-docs/artifact-schema.json: "${schemaError.type}".${schemaError.property} names ` +
+          `"${schemaError.value}" — did you mean "${schemaError.didYouMean}"? Nothing can satisfy ` +
+          `it as written. Fix the schema, not the artifacts.`,
   });
 }
 
@@ -205,6 +216,7 @@ for (const unscopedKey of status.unscoped ?? []) {
 for (const entry of status.stale ?? []) {
   signals.push({
     key: `stale:${entry.artifact}:${entry.ancestor}`,
+    artifacts: [entry.artifact],
     stage: stageFor(typeOf(entry.artifact)),
     reason:
       `${entry.ancestor} was revised after ${entry.artifact} derived from it, so ${entry.artifact} ` +
@@ -361,37 +373,63 @@ if (scopedPaths.length > 0 && scopedKeys.size === 0) {
   );
 }
 
-function isInArtifactScope(signalKey) {
+// A reference token can carry an @digest and/or a #fragment, neither of which is
+// part of the target's identity, so strip both before using one as a registry
+// key. Without this, ancestor-scope traversal silently stopped at the first
+// pinned reference: registry['domain-terms:a@a3f9c2e1b004'] is undefined, so a
+// descendant of a scoped artifact stopped being recognised as in scope.
+function refKeyOf(token) {
+  return String(token).split('@')[0].split('#')[0];
+}
+
+function isInArtifactScope(signal) {
   if (openScope) return true;             // explicit * → unfiltered
   if (noScope) return false;             // first commit touched no project-docs files → nothing in scope
   if (scopedKeys.size === 0) return true; // paths specified but unresolvable → fall back to unfiltered (warn already printed)
-  // Signal keys look like 'open:features:x', 'unrefined:requirements:x', etc. -- the artifact
-  // registry key is everything after the first colon-prefix segment.
-  const artifactKey = signalKey.includes(':') ? signalKey.replace(/^[^:]+:/, '') : signalKey;
+
   function ancestorInScope(key, visited = new Set()) {
     if (visited.has(key)) return false;
     visited.add(key);
     if (scopedKeys.has(key)) return true;
     for (const anc of registry[key]?.ancestorRefs ?? []) {
-      if (ancestorInScope(anc, visited)) return true;
+      if (ancestorInScope(refKeyOf(anc), visited)) return true;
     }
     return false;
   }
+
+  // Most signal keys are 'prefix:artifactKey', so the artifact is recoverable
+  // from the string. The keys added for cycles, staleness and schema errors are
+  // not: a cycle names every node in it, a stale edge names both ends, and a
+  // schema error names no artifact at all. Those signals therefore declare
+  // `artifacts` outright. Recovering by string would have derived
+  // 'domain-models:m:domain-terms:t' from a stale signal, matched nothing in the
+  // registry, and dropped the signal on every branch except ARTIFACT_SCOPE='*'.
+  if (signal.artifacts === null) {
+    // About the workspace's own configuration rather than any artifact, so no
+    // artifact scope can legitimately exclude it.
+    return true;
+  }
+  if (Array.isArray(signal.artifacts)) {
+    return signal.artifacts.some((key) => ancestorInScope(refKeyOf(key)));
+  }
+  const artifactKey = signal.key.includes(':')
+    ? signal.key.replace(/^[^:]+:/, '')
+    : signal.key;
   return ancestorInScope(artifactKey);
 }
 
 const eligibleSignals = isFixBranch
   ? signals.filter(
-      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s.key),
+      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s),
     )
-  : signals.filter((s) => isInArtifactScope(s.key));
+  : signals.filter((s) => isInArtifactScope(s));
 const excludedCount = signals.length - eligibleSignals.length;
 
 // Diagnostic breakdown — computed only when filtering produced nothing, so the log doesn't
 // just say "nothing to do" when the real answer is "scope and branch type disagree."
 let noEligibleNote = null;
 if (eligibleSignals.length === 0 && signals.length > 0) {
-  const inScope = scopedKeys.size > 0 ? signals.filter((s) => isInArtifactScope(s.key)) : signals;
+  const inScope = scopedKeys.size > 0 ? signals.filter((s) => isInArtifactScope(s)) : signals;
   const inBranchType = isFixBranch
     ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
     : signals;

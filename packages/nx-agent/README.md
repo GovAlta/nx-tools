@@ -653,7 +653,7 @@ an all-of list, not any-of: `domain-models` above requires an ancestor of _both_
 and `domain-terms`, not either — a model with only one is still missing part of the vocabulary it
 should be built from. An artifact whose type has an entry here but is missing an ancestor of one of
 the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
-as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
+as `unscoped` in `.nx-agent/lineage.json`'s `status`.
 
 `tracksResolution: true` is what makes `open-questions`/`blockers` show up in `status.resolution`
 (below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking
