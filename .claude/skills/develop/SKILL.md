@@ -145,7 +145,7 @@ blocking status depends on whether this project has a CI backstop yet — see be
   already present in scaffolding before this pass touched anything is drift to flag, not a reason
   to block.
 - **`project-docs-lineage --strict`** blocks on a broken reference, as always — `--strict` is what
-  makes it fail the command rather than just record the reference in `lineage.json`. Its orphan/unscoped report
+  makes it fail the command rather than just record the reference in `lineage.json`. Its `status` report (unreferenced, unscoped)
   should be empty by the time a resource's code exists and correctly references its api-design.
 
 ### Independent code review — every pass

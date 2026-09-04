@@ -474,6 +474,48 @@ describe('nx-agent agent-delivery generator', () => {
     );
   });
 
+  // Two more raw-token comparisons: an ancestorRef carrying an @digest never
+  // equals the bare key, so a pinned open question stopped blocking Develop.
+  it('lets a pinned open question still block its design', async () => {
+    await generator(host, { githubActions: true });
+
+    const out = runTaskIdentification(
+      host,
+      {
+        schemaVersion: 1,
+        registry: {
+          'api-designs:d': {
+            path: 'project-docs/api-designs/d.md',
+            bodyDigest: 'aaaaaaaaaaaa',
+            ancestorRefs: [],
+            resolves: [],
+            metadata: {},
+          },
+          'open-questions:q': {
+            path: 'project-docs/open-questions/q.md',
+            bodyDigest: 'bbbbbbbbbbbb',
+            // Pinned: the raw token is not equal to 'api-designs:d'.
+            ancestorRefs: ['api-designs:d@aaaaaaaaaaaa'],
+            resolves: [],
+            metadata: {},
+          },
+        },
+        index: {},
+        ...emptyFindings,
+        status: {
+          ...emptyFindings.status,
+          resolution: { open: ['open-questions:q'], resolved: [] },
+        },
+      },
+      { GITHUB_REF_NAME: 'feature/x', ARTIFACT_SCOPE: '*' },
+    );
+
+    const keys = out.signals.map((sig: { key: string }) => sig.key);
+    expect(keys).toContain('open:open-questions:q');
+    // Blocked by the unresolved question, so Develop must not be offered.
+    expect(keys).not.toContain('undeveloped:api-designs:d');
+  });
+
   it('never overwrites a file a team has already edited', async () => {
     await generator(host, { githubActions: true });
 

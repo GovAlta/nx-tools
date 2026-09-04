@@ -143,7 +143,7 @@ pass genuinely resolved. Captures two things nothing else durably records:
 
 One file, written once this iteration's own work concludes, not a new checkpoint with its own
 gate — the generator self-registers the type (`expectedAncestorTypes: []`, `terminal: true`) so
-this type's own correctly-having-zero-descendants doesn't get reported as an orphan alongside a
+this type's own correctly-having-zero-descendants doesn't get reported as unreferenced alongside a
 genuine dead-end.
 
 ### Commit, when this pass actually generates something
