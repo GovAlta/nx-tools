@@ -504,7 +504,7 @@ preference.
 | `unparseableRefs` | a token that doesn't fit the `<type>[:<id>]` grammar at all            |
 | `yamlErrors`      | a node whose frontmatter couldn't be read, so its edges are unknown    |
 | `cycles`          | artifacts deriving from each other, so the ancestry is not a hierarchy |
-| `schemaErrors`    | an `expectedAncestorTypes` value misspelled from a real type           |
+| `schemaErrors`    | an `artifact-schema.json` entry that can never do what it says         |
 
 `status` means the graph is sound and is telling you where the work stands. None of it fails
 `--strict`; gating on any of it is a project policy and belongs to you.
@@ -521,7 +521,10 @@ declaring the other is contradictory, since neither can precede the other. Trave
 terminated safely on one; what it never did was say so, so `getAncestors(…, Infinity)` returned a
 correct-looking finite set that quietly omitted the fact that the ancestry wasn't a hierarchy.
 
-`schemaErrors` is deliberately narrow. A type is a literal `project-docs/` subfolder name with no
+`schemaErrors` covers both declarations in `artifact-schema.json` that can never do what they say,
+and it is deliberately narrow about which it will claim.
+
+For `expectedAncestorTypes`: a type is a literal `project-docs/` subfolder name with no
 authoritative list of valid ones, so an _unknown_ type is ambiguous — `requirements` expecting
 `product-briefs` before the first product brief exists looks identical to a misspelling, and
 flagging it would fail `--strict` on a correct schema. What is decidable is a value differing from a
@@ -530,6 +533,17 @@ plural, so `bounded-context` is one keystroke from `bounded-contexts`). Those ar
 type they meant, and are the only ones dropped from the `unscoped` check — one bad value would
 otherwise report every artifact of its type as unscoped, forever, pointing at artifacts that are
 correct.
+
+For `digestFields`, the same two failures appear one property over, and both are otherwise silent:
+
+- a **structural field** (`project-docs-ancestors`, `resolves`) is excluded from `metadata` by
+  design, so declaring it contributes nothing and the digest quietly ignores it. Always wrong, so
+  always reported.
+- a **misspelled field** contributes `null` for every artifact, leaving the digest stable while it
+  stops tracking the field that was meant. Checked against the fields artifacts of that type
+  actually carry, and reported only on the same pluralization-or-case basis — a field nothing
+  carries yet is indistinguishable from one that will, and a substitution typo from a deliberate
+  choice.
 
 `stale` is the ancestor-digest mechanism. A reference may optionally record the ancestor's body
 digest at the time it was written — `domain-terms:case@a3f9c2e1b004` — and three states follow:
@@ -596,7 +610,7 @@ implementation detail and may change without a bump.
 | `integrity.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
 | `integrity.yamlErrors[]`      | `{ path, error }`                                                                              |
 | `integrity.cycles[]`          | arrays of ref strings — one cycle each, first node not repeated                                |
-| `integrity.schemaErrors[]`    | `{ type, expectedAncestorType, didYouMean }`                                                   |
+| `integrity.schemaErrors[]`    | `{ type, property, value, problem, didYouMean? }`                                              |
 | `status.resolution`           | `{ open[], resolved[] }`                                                                       |
 | `status.unreferenced[]`       | ref strings                                                                                    |
 | `status.unscoped[]`           | ref strings                                                                                    |
