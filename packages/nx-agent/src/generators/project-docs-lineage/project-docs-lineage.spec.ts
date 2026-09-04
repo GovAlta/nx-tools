@@ -198,7 +198,7 @@ describe('nx-agent project-docs-lineage generator', () => {
     expect(lineage.violations.unscoped).toEqual([]);
   });
 
-  it('reports resolutionStatus without throwing, console-logging open and resolved keys', async () => {
+  it('reports status.resolution without throwing, console-logging open and resolved keys', async () => {
     host.write(
       'project-docs/artifact-schema.json',
       JSON.stringify({

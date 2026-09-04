@@ -154,6 +154,33 @@ for (const broken of integrity.brokenRefs ?? []) {
   });
 }
 
+for (const cycle of integrity.cycles ?? []) {
+  signals.push({
+    // Keyed on the canonical cycle, which project-docs-lineage already rotates
+    // so the smallest node leads — otherwise the same loop would produce a
+    // different key each run and stall detection would never see a repeat.
+    key: `cycle:${cycle.join(',')}`,
+    stage: 'unknown',
+    reason:
+      `Reference cycle: ${[...cycle, cycle[0]].join(' -> ')}. project-docs-ancestors is a ` +
+      `derivation relation, so these artifacts each claim to be built from the other and ` +
+      `neither can precede it. Break the cycle by removing whichever reference is not a real ` +
+      `derivation — fix this before anything else.`,
+  });
+}
+
+for (const schemaError of integrity.schemaErrors ?? []) {
+  signals.push({
+    key: `schema-error:${schemaError.type}:${schemaError.expectedAncestorType}`,
+    stage: 'unknown',
+    reason:
+      `project-docs/artifact-schema.json: "${schemaError.type}" expects ancestor type ` +
+      `"${schemaError.expectedAncestorType}", which is not a known artifact type — did you mean ` +
+      `"${schemaError.didYouMean}"? Nothing can satisfy it as written, so every ` +
+      `${schemaError.type} artifact would report unscoped. Fix the schema, not the artifacts.`,
+  });
+}
+
 for (const openKey of status.resolution?.open ?? []) {
   const entry = registry[openKey];
   signals.push({
@@ -168,6 +195,21 @@ for (const unscopedKey of status.unscoped ?? []) {
     key: `unscoped:${unscopedKey}`,
     stage: stageFor(typeOf(unscopedKey)),
     reason: `${unscopedKey} is missing one of its kind's expected ancestors.`,
+  });
+}
+
+// Staleness is a status finding, not integrity: the graph is sound and reporting
+// that an ancestor moved after this artifact derived from it. So it's ordinary
+// work at the descendant's own stage, not a repair — which is also why it stays
+// out of RESOLUTION_PREFIXES below, same as 'unscoped:'.
+for (const entry of status.stale ?? []) {
+  signals.push({
+    key: `stale:${entry.artifact}:${entry.ancestor}`,
+    stage: stageFor(typeOf(entry.artifact)),
+    reason:
+      `${entry.ancestor} was revised after ${entry.artifact} derived from it, so ${entry.artifact} ` +
+      `may no longer reflect it. Read both, revise ${entry.artifact} if it needs it, then record ` +
+      `that you have by re-pinning: nx g @abgov/nx-agent:pin-ancestors --artifact=${entry.artifact}.`,
   });
 }
 
@@ -285,10 +327,16 @@ const isFixBranch = branchName.startsWith('fix/');
 // each names one specific thing to repair, not new work to start. Both only became reachable
 // once project-docs-lineage stopped aborting its write on them; without them here, a fix/**
 // branch would see the signal and then be told it isn't eligible to act on it.
+//
+// 'cycle:' and 'schema-error:' join them on the same test: both are integrity findings naming
+// one specific thing to repair. 'stale:' deliberately does not — it's a status finding, so
+// revisiting the descendant is ordinary work at its own stage, same as 'unscoped:'.
 const RESOLUTION_PREFIXES = [
   'broken:',
   'unparseable:',
   'yaml-error:',
+  'cycle:',
+  'schema-error:',
   'open:',
 ];
 

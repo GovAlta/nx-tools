@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -204,6 +205,88 @@ describe('nx-agent agent-delivery generator', () => {
       rmSync(tmpDir, { recursive: true });
     }
   });
+
+  // A finding nothing acts on is half-delivered. integrity.cycles and
+  // integrity.schemaErrors fail --strict, so the loop has to be able to pick
+  // them up as work — and on a fix/** branch, which only sees resolution
+  // signals.
+  it.each([
+    [
+      'cycle',
+      { cycles: [['domain-terms:a', 'domain-terms:b']] },
+      'cycle:domain-terms:a,domain-terms:b',
+    ],
+    [
+      'schemaError',
+      {
+        schemaErrors: [
+          {
+            type: 'domain-terms',
+            expectedAncestorType: 'bounded-context',
+            didYouMean: 'bounded-contexts',
+          },
+        ],
+      },
+      'schema-error:domain-terms:bounded-context',
+    ],
+  ])(
+    'task-identification raises a %s as a resolution signal on a fix branch',
+    async (_name, integrityOverride, expectedKey) => {
+      await generator(host, { githubActions: true });
+
+      const script = host.read('scripts/task-identification.mjs').toString();
+      const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-signal-'));
+      try {
+        writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
+        symlinkSync(
+          join(process.cwd(), 'node_modules'),
+          join(tmpDir, 'node_modules'),
+        );
+        mkdirSync(join(tmpDir, '.nx-agent'));
+        writeFileSync(
+          join(tmpDir, '.nx-agent', 'lineage.json'),
+          JSON.stringify({
+            schemaVersion: 1,
+            registry: {},
+            index: {},
+            integrity: {
+              brokenRefs: [],
+              unparseableRefs: [],
+              yamlErrors: [],
+              cycles: [],
+              schemaErrors: [],
+              ...integrityOverride,
+            },
+            status: {
+              resolution: { open: [], resolved: [] },
+              unreferenced: [],
+              unscoped: [],
+              stale: [],
+            },
+          }),
+        );
+
+        const outputFile = join(tmpDir, 'github-output');
+        writeFileSync(outputFile, '');
+        const stdout = execSync('node task-identification.mjs', {
+          cwd: tmpDir,
+          env: {
+            ...process.env,
+            GITHUB_OUTPUT: outputFile,
+            GITHUB_REF_NAME: 'fix/some-repair',
+            ARTIFACT_SCOPE: '*',
+          },
+        }).toString();
+
+        expect(JSON.parse(stdout).signals.map((s) => s.key)).toContain(
+          expectedKey,
+        );
+        expect(readFileSync(outputFile, 'utf-8')).toContain('ready=true');
+      } finally {
+        rmSync(tmpDir, { recursive: true });
+      }
+    },
+  );
 
   it('never overwrites a file a team has already edited', async () => {
     await generator(host, { githubActions: true });

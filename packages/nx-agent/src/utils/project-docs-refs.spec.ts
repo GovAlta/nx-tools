@@ -904,7 +904,7 @@ describe('unparseableRefs', () => {
 
   // The other direction: the offending characters are in the artifact's own
   // filename, so its key can't be parsed back. It stays registered — hiding it
-  // is the failure being fixed — but resolutionStatus silently skipped it, so a
+  // is the failure being fixed — but status.resolution silently skipped it, so a
   // tracked question stopped being reported either open or resolved.
   it('records an artifact whose own path-derived key cannot be parsed, and still registers it', () => {
     host.write(

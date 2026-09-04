@@ -195,7 +195,7 @@ resolves: []
 | `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this bug relates to, if already known — often genuinely empty until triaged      |
 
 A bug tracks open/resolved status the same generic way as `open-question`/`blocker`
-(`resolutionStatus.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
+(`status.resolution.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
 section in the `agent-delivery` output below. Investigating a bug and finding the _spec_ itself was
 wrong escalates to a real `blocker` against the implicated artifact; filing that blocker does not
 itself resolve the bug — only an `iteration-retrospective --resolves` naming the bug's own path does.
@@ -451,19 +451,171 @@ retrospective that already exists throws rather than silently overwriting or dup
 
 ---
 
+## `pin-ancestors`
+
+```bash
+npx nx g @abgov/nx-agent:pin-ancestors                              # whole workspace
+npx nx g @abgov/nx-agent:pin-ancestors --ancestor=domain-terms:case  # just this ancestor's descendants
+npx nx g @abgov/nx-agent:pin-ancestors --artifact=domain-models:x    # just this artifact's references
+```
+
+Records each resolved ancestor's current body digest on the `project-docs-ancestors` reference that
+names it, so `project-docs-lineage` can later report `status.stale`. Handles both YAML sequence
+styles the generators emit (block lists and flow lists) and **warns rather than skipping** on a
+form it can't rewrite — a silently unpinned reference is indistinguishable from a deliberately
+unpinned one, and would report nothing forever. A reference that doesn't resolve is left alone;
+that's a broken reference, and `project-docs-lineage` reports it as one.
+
+**Run it by hand. Never from a hook, a CI step, or a clean-run path.** A pin asserts _"I have read
+this ancestor as it stands"_ — a claim only a person can make. A blind bulk re-pin bakes in whatever
+drift already exists and then reports it as the floor. It's a separate generator rather than a
+`--repin` flag on `project-docs-lineage` for the same reason: that command reads and reports, and a
+mutation living next to `--strict` is how the check ends up silently dead in a workflow.
+
+Prefer `--ancestor`. "I revised one term, re-pin its descendants" is an act you can justify in a
+commit message; re-pinning the workspace is only ever "make the report stop." Because digests live
+in the committed artifact, either way the re-pin shows up in your own diff — which is what makes it
+reviewable, unlike a central baseline that re-seals where nobody looks.
+
+`resolves` lists are untouched: resolving an open question isn't a derivation, so the question's
+content moving doesn't invalidate the resolver.
+
 ## `project-docs-lineage`
 
 Scans the whole workspace for `project-docs/` artifacts and `project-docs-ancestors` references —
 across both doc frontmatter and code comments — and writes the resulting graph to
 `.nx-agent/lineage.json` (gitignored automatically; it's fully derived from other files, so
-committing it would just create a second, driftable source of truth). Throws if it finds a
-reference that doesn't resolve to anything; reports an artifact nothing references yet (an orphan)
-without failing, since that's a normal, temporary state, not a mistake.
+committing it would just create a second, driftable source of truth). Every violation it finds is
+**recorded in the output rather than aborting the write** — the consumer that acts on one is a
+script reading that file (`agent-delivery`'s task-identification), not a human reading this
+console, so aborting would take every unrelated fact in the graph down over one dangling reference
+and disable the very mechanism that reports it.
+
+Findings are split on a property intrinsic to the graph rather than on severity: **is the defect
+_in_ the graph, or is it a fact the graph is correctly reporting?**
+
+`integrity` means the graph can't be trusted as a graph. `--strict` fails on any of it, and that
+isn't configurable — a consumer asking "was this graph even constructible" isn't expressing a
+preference.
+
+| `integrity`       | What it is                                                             |
+| ----------------- | ---------------------------------------------------------------------- |
+| `brokenRefs`      | a declared edge whose endpoint doesn't exist                           |
+| `unparseableRefs` | a token that doesn't fit the `<type>[:<id>]` grammar at all            |
+| `yamlErrors`      | a node whose frontmatter couldn't be read, so its edges are unknown    |
+| `cycles`          | artifacts deriving from each other, so the ancestry is not a hierarchy |
+| `schemaErrors`    | an `expectedAncestorTypes` value misspelled from a real type           |
+
+`status` means the graph is sound and is telling you where the work stands. None of it fails
+`--strict`; gating on any of it is a project policy and belongs to you.
+
+| `status`       | What it is                                                            |
+| -------------- | --------------------------------------------------------------------- |
+| `resolution`   | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
+| `unreferenced` | nothing derives from it yet (no inbound edges)                        |
+| `unscoped`     | every edge resolves, but an expected ancestor type is missing         |
+| `stale`        | a pinned ancestor was revised after this artifact derived from it     |
+
+`cycles` matters because `project-docs-ancestors` is a _derivation_ relation — two artifacts each
+declaring the other is contradictory, since neither can precede the other. Traversal always
+terminated safely on one; what it never did was say so, so `getAncestors(…, Infinity)` returned a
+correct-looking finite set that quietly omitted the fact that the ancestry wasn't a hierarchy.
+
+`schemaErrors` is deliberately narrow. A type is a literal `project-docs/` subfolder name with no
+authoritative list of valid ones, so an _unknown_ type is ambiguous — `requirements` expecting
+`product-briefs` before the first product brief exists looks identical to a misspelling, and
+flagging it would fail `--strict` on a correct schema. What is decidable is a value differing from a
+real type only by pluralization or case, which is the slip that actually happens (every type name is
+plural, so `bounded-context` is one keystroke from `bounded-contexts`). Those are reported with the
+type they meant, and are the only ones dropped from the `unscoped` check — one bad value would
+otherwise report every artifact of its type as unscoped, forever, pointing at artifacts that are
+correct.
+
+`stale` is the ancestor-digest mechanism. A reference may optionally record the ancestor's body
+digest at the time it was written — `domain-terms:case@a3f9c2e1b004` — and three states follow:
+
+| digest           | meaning                                             | report     |
+| ---------------- | --------------------------------------------------- | ---------- |
+| absent           | hand-authored, or predates adoption                 | **silent** |
+| present, matches | current                                             | silent     |
+| present, differs | the ancestor was revised after this derived from it | reported   |
+
+The silent first state is what makes it adoptable: turning this on reports nothing until something
+is deliberately pinned. Pin with `nx g @abgov/nx-agent:pin-ancestors`.
+
+**The digest covers the body only**, not frontmatter, and that isn't a shortcut. Recording a pin
+edits `project-docs-ancestors`, so a whole-file hash would make re-pinning a content change — one
+edit to a root would cascade staleness through the entire transitive descendancy in waves, each
+wave's fix triggering the next. A body digest stops at depth 1, and propagates one hop further
+exactly when a re-pin came _with_ a real revision, which is when descendants should look. It also
+keeps the hash independent of where a digest is stored, and avoids canonicalising a parsed YAML
+object to keep it stable.
+
+The cost is permanent rather than a wart to fix later: **a type that keeps its meaning in
+frontmatter is not covered at all.** `requirements` is that type — its `rules` _are_ the artifact —
+and they live there deliberately so a real YAML parser can read them (`check-example-mapping.mjs`
+had two regex-parsing bugs before the move). For those, a material change is a different artifact,
+not an edit.
+
+The body is normalised for line endings, trailing whitespace, and the blank line Prettier inserts
+after the frontmatter delimiter — that last one matters, since `formatFiles()` runs at the end of
+every generator and would otherwise invalidate a pin immediately after writing it.
+
+`status` is computed from **structure only** — edges and schema expectations. Status an artifact
+declares about itself in frontmatter (a `questions` list, a `status:` field) deliberately stays in
+`metadata`, passed through verbatim for you to interpret. The moment this computed a finding from
+one of those, it would have taken a position on your workflow, and being workflow-agnostic is what
+makes it consumable from outside.
 
 ```bash
 npx nx g @abgov/nx-agent:project-docs-lineage
 npx nx g @abgov/nx-agent:project-docs-lineage --dry-run   # compute and report, write nothing
+npx nx g @abgov/nx-agent:project-docs-lineage --strict     # non-zero exit on a violation, for a gate
+npx nx g @abgov/nx-agent:project-docs-lineage --json --quiet   # print the graph to stdout
 ```
+
+`--strict` on its own is a gate, not a way to build the graph: Nx rolls a generator's staged write
+back when it throws, so a failing `--strict` run deliberately produces no `lineage.json` at all.
+
+`--json` prints the same object to stdout instead of the human-readable summary — and because
+stdout isn't subject to that rollback, **`--json --strict` is the one invocation that yields both
+the graph and a failing exit code in a single run**. Pair it with `--quiet`, or Nx's own
+`NX Generating ...` banner lands on stdout ahead of the document.
+
+### The consumed shape
+
+`schemaVersion` versions the paths below, and only those. Everything else in the file is
+implementation detail and may change without a bump.
+
+| Path                          | Shape                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `schemaVersion`               | number — `1` today                                                                             |
+| `registry[<ref>]`             | `{ path, bodyDigest, ancestorRefs[], resolves[], metadata }`                                   |
+| `index[<ref>][]`              | `{ file, type?, metadata? }` — `type` only when the descendant is itself a registered artifact |
+| `integrity.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
+| `integrity.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
+| `integrity.yamlErrors[]`      | `{ path, error }`                                                                              |
+| `integrity.cycles[]`          | arrays of ref strings — one cycle each, first node not repeated                                |
+| `integrity.schemaErrors[]`    | `{ type, expectedAncestorType, didYouMean }`                                                   |
+| `status.resolution`           | `{ open[], resolved[] }`                                                                       |
+| `status.unreferenced[]`       | ref strings                                                                                    |
+| `status.unscoped[]`           | ref strings                                                                                    |
+| `status.stale[]`              | `{ artifact, ancestor, pinnedDigest, currentDigest }`                                          |
+| `violations`                  | **deprecated** — see below                                                                     |
+
+This records what is already load-bearing rather than adding a new promise. `agent-delivery`'s
+`task-identification.mjs` reads every one of those `violations` keys plus `registry[].ancestorRefs`,
+`registry[].path` and `index[].type`; the `design` and `develop` skills read `index` entries, and
+`discover` reads `status.resolution`. All of them are generated **write-if-missing**, so a
+workspace keeps its own copy and re-running the generator cannot repair a shape change — only a
+migration can. So pin `schemaVersion` and fail on an unexpected value rather than reading around a
+field that may have been renamed — `task-identification.mjs` does exactly that, and names both
+versions when they disagree.
+
+`violations` is a **deprecated** flat view of both containers, kept because those generated files
+can't be repaired by re-running the generator. It's assembled from the very same arrays as
+`integrity` and `status`, so it can't drift from them, and it will be removed at `schemaVersion` 2.
+Read the two containers instead.
 
 The `project-docs-ancestors` convention itself: a directive used identically in frontmatter (a YAML
 list) and code comments (comma-separated on one line), shaped `<type>[:<id>][#fragment]`. `type` is
@@ -476,11 +628,12 @@ An optional project qualifier (`<project>/type:id`) scopes the reference to that
 `project-docs/` instead of the workspace root's — never implicit, even from within that same
 project, so a reference's meaning never depends on where it's found.
 
-Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself (or `--dry-run`
-it in your own CI) after adding or changing a reference.
+Not yet wired into the pre-commit hook or an Nx inferred plugin — run it yourself after adding or
+changing a reference, and `--strict` it in your own CI if you want a broken reference to fail the
+build (`--dry-run` alone reports without affecting the exit code).
 
 Also reports which `open-question`/`blocker` artifacts are still open versus resolved — see
-`resolutionStatus` below.
+`status.resolution` below.
 
 ### `project-docs/artifact-schema.json`
 
@@ -496,9 +649,30 @@ whether its kind has a resolution lifecycle at all:
   "domain-models": { "expectedAncestorTypes": ["bounded-contexts", "domain-terms"] },
   "open-questions": { "expectedAncestorTypes": [], "tracksResolution": true },
   "blockers": { "expectedAncestorTypes": [], "tracksResolution": true },
-  "iteration-retrospectives": { "expectedAncestorTypes": [], "terminal": true }
+  "iteration-retrospectives": { "expectedAncestorTypes": [], "terminal": true },
+  "requirements": {
+    "expectedAncestorTypes": ["product-briefs"],
+    "digestFields": ["rules"]
+  }
 }
 ```
+
+`digestFields` names the frontmatter fields that carry a type's **content** rather than its
+bookkeeping, so they count toward its digest alongside the body (see `stale` above). It's a
+structural fact about where a type keeps its meaning, not a switch for whether the check runs.
+
+`requirements` is the only type that needs it, and measurably so: every other artifact kind has a
+639–6857 character body, while requirements have **none** — their `rules` _are_ the artifact, and
+they live in frontmatter deliberately so a real YAML parser can read them. So a change to `rules`
+marks descendants stale, while a `title` fix or an answered `question` does not. Absent or empty
+means body-only, which is right for every type that explains itself in prose, and a type with no
+`digestFields` keeps exactly the digest it had before this existed.
+
+One consequence worth knowing: because declared fields are hashed _alongside_ the body rather than
+instead of it, editing a requirement's rationale prose also marks its descendants stale. That
+over-fires slightly — rationale is explanatory, not contractual — but rationale is written once at
+creation, a requirement has few descendants, and the alternative (declared fields _replacing_ the
+body) would silently drop body coverage for any type that has meaningful content in both.
 
 `project-docs-lineage` reads this generically — it has no knowledge of any specific type baked in, so
 a hand-added entry for a custom artifact kind gets the same checks for free. `expectedAncestorTypes` is
@@ -508,29 +682,36 @@ should be built from. An artifact whose type has an entry here but is missing an
 the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
 as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
 
-`tracksResolution: true` is what makes `open-questions`/`blockers` show up in `resolutionStatus`
+`tracksResolution: true` is what makes `open-questions`/`blockers` show up in `status.resolution`
 (below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking
 and gets settled by another artifact) gets the same open/resolved report for free by declaring it.
 
 `terminal: true` marks a type where zero descendants is what correct looks like, not a sign of
 neglect — a close-out/retrospective artifact, working exactly as intended, still has nothing ever
-built on top of it. See `orphans` below.
+built on top of it. See `unreferenced` below.
 
-### `orphans`
+### `unreferenced`
 
-`violations.orphans` lists every registered artifact nothing in the workspace references — the
+`status.unreferenced` lists every registered artifact nothing in the workspace references — the
 "nothing derives from it yet" case, distinct from `unscoped` (missing an _expected_ ancestor,
-the opposite direction). Two things feed correctly into what counts as "referenced":
+the opposite direction).
+
+Named for the mechanism rather than called `orphans`, which inverted the metaphor: references are
+backward-only, so this is an artifact with no _descendants_, while an orphan conventionally has no
+parents. In the direction derivation flows it's a leaf, minus the `terminal` types. The parentless
+case is `unscoped`.
+
+Two things feed correctly into what counts as "referenced":
 
 - A reference counts whether it's a plain `project-docs-ancestors` citation or a `resolves` one —
   a resolution is a real reference too, even when it's the only field naming the target (the normal
   shape for a hand-authored artifact, before its type earns a generator with a `--resolves` flag
   that would otherwise duplicate the ref into `project-docs-ancestors` for you).
-- A type with `terminal: true` is excluded from `orphans` entirely, regardless of descendant count.
+- A type with `terminal: true` is excluded from `unreferenced` entirely, regardless of descendant count.
 
-### `resolutionStatus`
+### `status.resolution`
 
-`violations.resolutionStatus` in `.nx-agent/lineage.json` splits every artifact whose type has
+`status.resolution` in `.nx-agent/lineage.json` splits every artifact whose type has
 `tracksResolution: true` into `open` and `resolved`:
 
 ```json
@@ -542,15 +723,20 @@ references it via `project-docs-ancestors`. That distinction matters: a `blocker
 `open-question` citing an existing one _because_ it's still unresolved would, under a looser
 "anything references it" test, get misread as having resolved it. A deferral (explicitly punted, not
 decided) isn't a third computed bucket — it stays `open`, with the _why_ left to the artifact's own
-prose, same as an `orphan` doesn't try to distinguish "temporary" from "abandoned."
+prose, same as `unreferenced` doesn't try to distinguish "temporary" from "abandoned."
 
 ### Programmatic access
 
 `@abgov/nx-agent` also exports two read functions — its first public, importable API; everything
 else in the package is consumed only via `nx g @abgov/nx-agent:x`. Meant for a caller that needs a
-stable contract (an ESLint rule, an agent resolving context for a file it's about to touch), not
-one that wants to parse `.nx-agent/lineage.json` directly — that file's exact shape stays an
-internal implementation detail, free to change as long as these signatures don't.
+stable contract in JS — an ESLint rule, or a build step resolving context for a file it's about to
+touch — not one that wants to parse `.nx-agent/lineage.json` directly, since that file's exact
+shape stays an internal implementation detail, free to change as long as these signatures don't.
+
+An **agent** is not that caller, deliberately: the generated `design`, `develop` and `discover`
+skills all instruct the agent to run the generator and read `lineage.json`'s `index` and
+`violations` instead, on the grounds that calling a JS API isn't something an agent does mid-task.
+So the split is agents read the file, JS callers use these functions, gates use `--strict`.
 
 ```typescript
 import { getAncestors, getDescendants } from '@abgov/nx-agent';
@@ -589,7 +775,7 @@ getAncestors(tree, 'apps/my-service/src/routes/collision-reports.ts', Infinity);
 Builds a single, self-contained HTML status report from the same data `project-docs-lineage`
 computes — a lineage graph (rendered with [Mermaid](https://mermaid.js.org/), inlined so the report
 needs nothing from `node_modules` to open), a status summary (counts per type, open vs. resolved,
-orphans, broken references), and a per-artifact table. Not committed — like `lineage.json`, it's
+unreferenced artifacts, broken references), and a per-artifact table. Not committed — like `lineage.json`, it's
 100% derived from other files, so it's gitignored automatically at wherever it's actually written.
 
 ```bash
@@ -608,7 +794,7 @@ of bad news is the point of a status report, not something to gate on.
 ### `--project` scoping
 
 `registry`/`index`/`violations` are always computed over the full workspace first, unconditionally —
-an artifact's orphan/resolved status is a workspace-wide fact, and building the index from only one
+an artifact's unreferenced/resolved status is a workspace-wide fact, and building the index from only one
 project's files would misclassify anything referenced across a project boundary (a cross-project
 reference is real, not a mistake). `--project` filters what's _rendered_, not what's computed: the
 summary/counts/table include only that project's own artifacts; the graph additionally shows each

@@ -168,7 +168,7 @@ resolves: []
 | `projectDocsAncestors` | none                     | Paths to existing `project-docs/` artifacts this bug relates to, if already known — often genuinely empty until triaged      |
 
 A bug tracks open/resolved status the same generic way as `open-question`/`blocker`
-(`resolutionStatus.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
+(`status.resolution.open`/`.resolved`), but resolves differently — see `develop/SKILL.md`'s bug-fixing
 section in the `agent-delivery` output below. Investigating a bug and finding the _spec_ itself was
 wrong escalates to a real `blocker` against the implicated artifact; filing that blocker does not
 itself resolve the bug — only an `iteration-retrospective --resolves` naming the bug's own path does.
@@ -565,7 +565,7 @@ implementation detail and may change without a bump.
 This records what is already load-bearing rather than adding a new promise. `agent-delivery`'s
 `task-identification.mjs` reads every one of those `violations` keys plus `registry[].ancestorRefs`,
 `registry[].path` and `index[].type`; the `design` and `develop` skills read `index` entries, and
-`discover` reads `violations.resolutionStatus`. All of them are generated **write-if-missing**, so a
+`discover` reads `status.resolution`. All of them are generated **write-if-missing**, so a
 workspace keeps its own copy and re-running the generator cannot repair a shape change — only a
 migration can. So pin `schemaVersion` and fail on an unexpected value rather than reading around a
 field that may have been renamed — `task-identification.mjs` does exactly that, and names both
@@ -592,7 +592,7 @@ changing a reference, and `--strict` it in your own CI if you want a broken refe
 build (`--dry-run` alone reports without affecting the exit code).
 
 Also reports which `open-question`/`blocker` artifacts are still open versus resolved — see
-`resolutionStatus` below.
+`status.resolution` below.
 
 ### `project-docs/artifact-schema.json`
 
@@ -641,7 +641,7 @@ should be built from. An artifact whose type has an entry here but is missing an
 the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
 as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
 
-`tracksResolution: true` is what makes `open-questions`/`blockers` show up in `resolutionStatus`
+`tracksResolution: true` is what makes `open-questions`/`blockers` show up in `status.resolution`
 (below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking
 and gets settled by another artifact) gets the same open/resolved report for free by declaring it.
 
