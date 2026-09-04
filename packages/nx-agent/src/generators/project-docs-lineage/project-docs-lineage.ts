@@ -27,7 +27,7 @@ const INTEGRITY_FAILURES: Record<keyof Integrity, (count: number) => string> = {
   yamlErrors: (n) => `${n} YAML parse error(s) in project-docs frontmatter`,
   cycles: (n) => `${n} project-docs-ancestors reference cycle(s)`,
   schemaErrors: (n) =>
-    `${n} misspelled expectedAncestorTypes entry/entries in artifact-schema.json`,
+    `${n} unsatisfiable entry/entries in artifact-schema.json`,
 };
 
 export default async function (host: Tree, options: Schema = {}) {
@@ -116,16 +116,19 @@ export default async function (host: Tree, options: Schema = {}) {
       );
     }
     for (const schemaError of integrity.schemaErrors) {
-      // Names the schema key as well as the value: the value alone doesn't say
-      // which entry to go fix, and one bad value affects every artifact of its
-      // type at once.
+      // Names the schema key and property as well as the value: the value alone
+      // doesn't say which entry to go fix, and one bad value affects every
+      // artifact of its type at once.
+      const where = `artifact-schema.json: "${schemaError.type}".${schemaError.property}`;
+      const detail =
+        schemaError.problem === 'structural-field'
+          ? `"${schemaError.value}" is a structural field the graph already models as a ` +
+            `relationship, so it is excluded from metadata and this declaration does nothing. ` +
+            `Remove it.`
+          : `"${schemaError.value}" — did you mean "${schemaError.didYouMean}"? Nothing can ` +
+            `satisfy it as written.`;
       // eslint-disable-next-line no-console
-      console.log(
-        `[nx-agent] artifact-schema.json: "${schemaError.type}" expects ancestor type ` +
-          `"${schemaError.expectedAncestorType}" — did you mean "${schemaError.didYouMean}"? ` +
-          `Nothing can satisfy it as written, so every ${schemaError.type} artifact would ` +
-          `report unscoped.`,
-      );
+      console.log(`[nx-agent] ${where}: ${detail}`);
     }
     for (const cycle of integrity.cycles) {
       // Closed back to the first node when printing, so the loop reads as one

@@ -664,12 +664,18 @@ export interface Integrity {
   // ['a', 'b'] means a derives from b and b derives from a. A single-element
   // cycle is an artifact naming itself.
   cycles: string[][];
-  // An expectedAncestorTypes entry that differs from a real type only by
-  // pluralization or case, so `didYouMean` always names the type it meant.
+  // A declaration in artifact-schema.json that can never do what it says.
+  // `problem` discriminates: 'misspelled' names a value differing from a real
+  // one only by pluralization or case, so `didYouMean` is always present;
+  // 'structural-field' is a digestFields entry naming a field the graph already
+  // models as a relationship, which is excluded from metadata by design and so
+  // would silently contribute nothing.
   schemaErrors: {
     type: string;
-    expectedAncestorType: string;
-    didYouMean: string;
+    property: 'expectedAncestorTypes' | 'digestFields';
+    value: string;
+    problem: 'misspelled' | 'structural-field';
+    didYouMean?: string;
   }[];
 }
 
@@ -876,6 +882,22 @@ export function computeFindings(
     byLooseName.set(loosely(type), type);
   }
 
+  // Which non-structural frontmatter fields artifacts of each type actually
+  // carry, so a digestFields entry can be checked against observed reality
+  // rather than against a list nobody maintains.
+  const fieldsByType = new Map<string, Set<string>>();
+  for (const [key, entry] of registry) {
+    const type = parseAncestorRef(key)?.type;
+    if (!type) {
+      continue;
+    }
+    const seen = fieldsByType.get(type) ?? new Set<string>();
+    for (const field of Object.keys(entry.metadata)) {
+      seen.add(field);
+    }
+    fieldsByType.set(type, seen);
+  }
+
   const schemaErrors: Integrity['schemaErrors'] = [];
   const misspelled = new Set<string>();
   for (const [type, entry] of Object.entries(artifactSchema)) {
@@ -885,8 +907,51 @@ export function computeFindings(
       }
       const didYouMean = byLooseName.get(loosely(expected));
       if (didYouMean) {
-        schemaErrors.push({ type, expectedAncestorType: expected, didYouMean });
+        schemaErrors.push({
+          type,
+          property: 'expectedAncestorTypes',
+          value: expected,
+          problem: 'misspelled',
+          didYouMean,
+        });
         misspelled.add(expected);
+      }
+    }
+
+    // digestFields names frontmatter fields, so the type-name check above
+    // doesn't apply — but the same two things go wrong one property over, and
+    // both are silent: a structural field is excluded from metadata by design,
+    // and a misspelled one contributes null for every artifact, leaving the
+    // digest stable while it quietly stops tracking the field that was meant.
+    const observed = fieldsByType.get(type);
+    const byLooseField = new Map(
+      [...(observed ?? [])].map((field) => [loosely(field), field]),
+    );
+    for (const field of entry.digestFields ?? []) {
+      if (STRUCTURAL_FRONTMATTER_FIELDS.has(field)) {
+        schemaErrors.push({
+          type,
+          property: 'digestFields',
+          value: field,
+          problem: 'structural-field',
+        });
+        continue;
+      }
+      if (observed?.has(field)) {
+        continue;
+      }
+      // Same discipline as the type check: only a near-miss of a field these
+      // artifacts demonstrably carry is decidable. A field nothing has yet is
+      // indistinguishable from one that will exist, so it stays silent.
+      const didYouMean = byLooseField.get(loosely(field));
+      if (didYouMean) {
+        schemaErrors.push({
+          type,
+          property: 'digestFields',
+          value: field,
+          problem: 'misspelled',
+          didYouMean,
+        });
       }
     }
   }

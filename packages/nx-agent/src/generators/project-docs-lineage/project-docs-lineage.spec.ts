@@ -524,7 +524,9 @@ describe('nx-agent project-docs-lineage generator', () => {
       expect(lineage.integrity.schemaErrors).toEqual([
         {
           type: 'domain-terms',
-          expectedAncestorType: 'bounded-context',
+          property: 'expectedAncestorTypes',
+          value: 'bounded-context',
+          problem: 'misspelled',
           didYouMean: 'bounded-contexts',
         },
       ]);
@@ -592,8 +594,126 @@ describe('nx-agent project-docs-lineage generator', () => {
       );
 
       await expect(generator(host, { strict: true })).rejects.toThrow(
-        /misspelled expectedAncestorTypes/,
+        /unsatisfiable entry/,
       );
+    });
+    describe('digestFields', () => {
+      function writeWithDigestFields(host: Tree, digestFields: string[]) {
+        host.write(
+          'project-docs/requirements/r.md',
+          [
+            '---',
+            'title: R',
+            'id: req-001',
+            'rules:',
+            '  - rule: a',
+            '---',
+            '',
+            'Rationale.',
+          ].join('\n'),
+        );
+        host.write(
+          'project-docs/artifact-schema.json',
+          JSON.stringify({
+            requirements: { expectedAncestorTypes: [], digestFields },
+          }),
+        );
+      }
+
+      it('flags a structural field, which is excluded from metadata and so does nothing', async () => {
+        writeWithDigestFields(host, ['project-docs-ancestors']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors,
+        ).toEqual([
+          {
+            type: 'requirements',
+            property: 'digestFields',
+            value: 'project-docs-ancestors',
+            problem: 'structural-field',
+          },
+        ]);
+      });
+
+      it('flags a singular field against the fields those artifacts carry', async () => {
+        writeWithDigestFields(host, ['rule']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors,
+        ).toEqual([
+          {
+            type: 'requirements',
+            property: 'digestFields',
+            value: 'rule',
+            problem: 'misspelled',
+            didYouMean: 'rules',
+          },
+        ]);
+      });
+
+      it('flags a case mismatch', async () => {
+        writeWithDigestFields(host, ['Rules']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors[0],
+        ).toMatchObject({ value: 'Rules', didYouMean: 'rules' });
+      });
+
+      // The same limit the type check has, stated so it isn't mistaken for a
+      // bug: only pluralization and case are decidable. A substitution typo is
+      // indistinguishable from a field that will exist later, so it stays
+      // silent rather than failing --strict on a legitimate declaration.
+      it('does not flag a substitution typo', async () => {
+        writeWithDigestFields(host, ['rulez']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors,
+        ).toEqual([]);
+      });
+
+      it('accepts a field those artifacts actually carry', async () => {
+        writeWithDigestFields(host, ['rules']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors,
+        ).toEqual([]);
+      });
+
+      // Same discipline as the type check: a field nothing carries yet is
+      // indistinguishable from one that will, so it must not fail --strict.
+      it('stays silent on a field that is not a near-miss of an observed one', async () => {
+        writeWithDigestFields(host, ['acceptance-criteria']);
+
+        await generator(host);
+
+        expect(
+          JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8')).integrity
+            .schemaErrors,
+        ).toEqual([]);
+      });
+
+      it('fails --strict on a structural field', async () => {
+        writeWithDigestFields(host, ['resolves']);
+
+        await expect(generator(host, { strict: true })).rejects.toThrow(
+          /unsatisfiable entry/,
+        );
+      });
     });
   });
 
