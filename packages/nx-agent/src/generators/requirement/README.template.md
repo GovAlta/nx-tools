@@ -28,7 +28,7 @@ here, so the frontmatter shape and sequential ID stay consistent. Each file:
   skill's refinement pass; left empty at intake.
 - `questions` — open questions that don't attach to a specific rule.
 
-The **body** is rationale: *why* this requirement exists, as prose. `rules` is *what* must be true
+The **body** is rationale: _why_ this requirement exists, as prose. `rules` is _what_ must be true
 and how you'd test it; the body is the constraint or obligation behind them, explained where someone
 reading the requirement will see it. The product brief ancestor carries the wider goal — this is the
 part specific to this requirement.
