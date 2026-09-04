@@ -16,6 +16,14 @@ export interface ArtifactTypeSchema {
   expectedAncestorTypes: string[];
   tracksResolution?: boolean;
   terminal?: boolean;
+  // Frontmatter fields that carry this type's *content* rather than bookkeeping,
+  // and so belong in its digest alongside the body. A structural fact about
+  // where a type keeps its meaning, not a policy switch: `requirements` declare
+  // `rules` because their rules ARE the artifact (their body is rationale
+  // prose), while a `title` or an emptied `questions` list is of no interest to
+  // anything downstream. Absent or empty means body-only, which is right for
+  // every type that explains itself in prose.
+  digestFields?: string[];
 }
 
 export type ArtifactSchema = Record<string, ArtifactTypeSchema>;
@@ -34,14 +42,22 @@ export function ensureArtifactSchemaEntry(
   host: Tree,
   type: string,
   expectedAncestorTypes: string[],
-  tracksResolution?: boolean,
-  terminal?: boolean,
+  options: {
+    tracksResolution?: boolean;
+    terminal?: boolean;
+    digestFields?: string[];
+  } = {},
 ): void {
   const schema = readArtifactSchema(host);
   schema[type] = {
     expectedAncestorTypes,
-    ...(tracksResolution ? { tracksResolution } : {}),
-    ...(terminal ? { terminal } : {}),
+    ...(options.tracksResolution
+      ? { tracksResolution: options.tracksResolution }
+      : {}),
+    ...(options.terminal ? { terminal: options.terminal } : {}),
+    ...(options.digestFields?.length
+      ? { digestFields: options.digestFields }
+      : {}),
   };
   writeJson(host, ARTIFACT_SCHEMA_PATH, schema);
 }

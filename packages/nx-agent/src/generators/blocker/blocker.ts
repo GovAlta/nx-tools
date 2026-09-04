@@ -66,7 +66,7 @@ export default async function (host: Tree, options: Schema) {
   // No fixed expected ancestor type — a blocker can relate to any artifact
   // kind. tracksResolution: true is what makes project-docs-lineage report
   // this blocker as open/resolved.
-  ensureArtifactSchemaEntry(host, 'blockers', [], true);
+  ensureArtifactSchemaEntry(host, 'blockers', [], { tracksResolution: true });
 
   const content = [
     '---',

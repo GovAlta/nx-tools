@@ -75,13 +75,9 @@ export default async function (host: Tree, options: Schema) {
   // which always expect the same fixed ancestor types. terminal: true is what
   // keeps a correctly-closed-out retrospective (zero descendants by design)
   // from being reported as unreferenced alongside a genuine dead-end.
-  ensureArtifactSchemaEntry(
-    host,
-    'iteration-retrospectives',
-    [],
-    undefined,
-    true,
-  );
+  ensureArtifactSchemaEntry(host, 'iteration-retrospectives', [], {
+    terminal: true,
+  });
 
   const content = [
     '---',

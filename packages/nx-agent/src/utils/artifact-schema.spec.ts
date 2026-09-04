@@ -73,7 +73,9 @@ describe('ensureArtifactSchemaEntry', () => {
   });
 
   it('records tracksResolution when passed, and omits it when not', () => {
-    ensureArtifactSchemaEntry(host, 'open-questions', [], true);
+    ensureArtifactSchemaEntry(host, 'open-questions', [], {
+      tracksResolution: true,
+    });
     ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
 
     expect(readArtifactSchema(host)).toEqual({
@@ -83,13 +85,9 @@ describe('ensureArtifactSchemaEntry', () => {
   });
 
   it('records terminal when passed, and omits it when not', () => {
-    ensureArtifactSchemaEntry(
-      host,
-      'iteration-retrospectives',
-      [],
-      undefined,
-      true,
-    );
+    ensureArtifactSchemaEntry(host, 'iteration-retrospectives', [], {
+      terminal: true,
+    });
     ensureArtifactSchemaEntry(host, 'domain-terms', ['bounded-contexts']);
 
     expect(readArtifactSchema(host)).toEqual({
@@ -99,7 +97,10 @@ describe('ensureArtifactSchemaEntry', () => {
   });
 
   it('records both tracksResolution and terminal together when both are passed', () => {
-    ensureArtifactSchemaEntry(host, 'blockers', [], true, true);
+    ensureArtifactSchemaEntry(host, 'blockers', [], {
+      tracksResolution: true,
+      terminal: true,
+    });
 
     expect(readArtifactSchema(host)).toEqual({
       blockers: {

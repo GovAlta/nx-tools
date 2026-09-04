@@ -90,9 +90,9 @@ describe('nx-agent requirement generator', () => {
       .read('project-docs/requirements/create-matrix.md')
       .toString();
 
-    await expect(
-      generator(host, { title: 'Create matrix' }),
-    ).rejects.toThrow(/already exists/);
+    await expect(generator(host, { title: 'Create matrix' })).rejects.toThrow(
+      /already exists/,
+    );
 
     expect(
       host.read('project-docs/requirements/create-matrix.md').toString(),
@@ -124,9 +124,7 @@ describe('nx-agent requirement generator', () => {
     await expect(
       generator(host, {
         title: 'Create evaluation matrix',
-        projectDocsAncestors: [
-          'project-docs/product-briefs/does-not-exist.md',
-        ],
+        projectDocsAncestors: ['project-docs/product-briefs/does-not-exist.md'],
       }),
     ).rejects.toThrow(/not found/);
 
@@ -139,9 +137,7 @@ describe('nx-agent requirement generator', () => {
   it('creates the container README on first run', async () => {
     await generator(host, { title: 'Create matrix' });
 
-    const readme = host
-      .read('project-docs/requirements/README.md')
-      .toString();
+    const readme = host.read('project-docs/requirements/README.md').toString();
     expect(readme).toContain('# Requirements');
     expect(readme).toContain('nx g @abgov/nx-agent:requirement');
   });
@@ -221,12 +217,29 @@ describe('nx-agent requirement generator', () => {
     expect(content).toContain(
       'project-docs-ancestors: [open-questions:what-to-call-this]',
     );
-    expect(content).toContain(
-      'resolves: [open-questions:what-to-call-this]',
-    );
+    expect(content).toContain('resolves: [open-questions:what-to-call-this]');
     expect(logSpy).toHaveBeenCalledWith(
       '✓ this requirement resolves open-questions:what-to-call-this',
     );
     logSpy.mockRestore();
+  });
+
+  it('scaffolds a Rationale body, so the why has somewhere to live', async () => {
+    await generator(host, { title: 'Some requirement' });
+
+    const content = host
+      .read('project-docs/requirements/some-requirement.md', 'utf-8')
+      .toString();
+    expect(content).toContain('## Rationale');
+    expect(content).toContain('Why this requirement exists');
+  });
+
+  it('declares rules as the digest field for requirements', async () => {
+    await generator(host, { title: 'Some requirement' });
+
+    const schema = JSON.parse(
+      host.read('project-docs/artifact-schema.json', 'utf-8').toString(),
+    );
+    expect(schema.requirements.digestFields).toEqual(['rules']);
   });
 });
