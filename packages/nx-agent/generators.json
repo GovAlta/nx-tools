@@ -11,7 +11,7 @@
     "feature": {
       "factory": "./src/generators/feature/feature",
       "schema": "./src/generators/feature/schema.json",
-      "description": "Adds one feature request under project-docs/features/, with a project-docs-ancestors frontmatter list and a free-text body describing the capability wanted. This is how new work enters the DDDD workflow — Discover decomposes it into a service-description/requirement."
+      "description": "Adds one feature request under project-docs/features/, with a project-docs-ancestors frontmatter list and a free-text body describing the capability wanted. This is how new work enters the DDDD workflow \u2014 Discover decomposes it into a service-description/requirement."
     },
     "bug": {
       "factory": "./src/generators/bug/bug",
@@ -31,7 +31,7 @@
     "product-brief": {
       "factory": "./src/generators/product-brief/product-brief",
       "schema": "./src/generators/product-brief/schema.json",
-      "description": "Adds one product brief under project-docs/product-briefs/, with structured frontmatter (capability, audience, known-platforms, questions) and a free-text body. Persistent positioning artifact — create once, reference and extend directly thereafter."
+      "description": "Adds one product brief under project-docs/product-briefs/, with structured frontmatter (capability, audience, known-platforms, questions) and a free-text body. Persistent positioning artifact \u2014 create once, reference and extend directly thereafter."
     },
     "bounded-context": {
       "factory": "./src/generators/bounded-context/bounded-context",
@@ -72,6 +72,11 @@
       "factory": "./src/generators/agent-delivery/agent-delivery",
       "schema": "./src/generators/agent-delivery/schema.json",
       "description": "Copies the Discover/Design/Develop/Deploy skill files into .claude/skills/ and appends AGENTS.md guidance pointing at them. Existing files are never overwritten. --githubActions additionally scaffolds a self-dispatching GitHub Actions iteration loop."
+    },
+    "pin-ancestors": {
+      "factory": "./src/generators/pin-ancestors/pin-ancestors",
+      "schema": "./src/generators/pin-ancestors/schema.json",
+      "description": "Records each resolved ancestor\u2019s current body digest on the project-docs-ancestors reference naming it, so project-docs-lineage can report when the ancestor is later revised. Human-invoked only \u2014 never from a hook or CI."
     }
   }
 }

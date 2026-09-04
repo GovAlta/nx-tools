@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentPinAncestors",
+  "title": "Pin project-docs-ancestors references to their ancestors current body digest",
+  "description": "Records each resolved ancestor's current body digest on the project-docs-ancestors reference that names it, so project-docs-lineage can later report that the ancestor was revised and downstream review is pending. Run it by hand, never from a hook, a CI step, or a clean-run path: a pin asserts that you have read the ancestor as it stands, and a blind bulk re-pin bakes in whatever drift already exists and then reports it as the floor. Scope it with --artifact or --ancestor rather than re-pinning the whole workspace. References that don't resolve are left alone (project-docs-lineage reports those as broken).",
+  "type": "object",
+  "properties": {
+    "artifact": {
+      "type": "string",
+      "description": "Only pin references *in* this artifact, as <type>:<id> (e.g. domain-models:collision-reporting)."
+    },
+    "ancestor": {
+      "type": "string",
+      "description": "Only pin references *to* this ancestor, as <type>:<id>. The scoped case worth doing: you revised one artifact and want its direct descendants to record that they have seen it."
+    }
+  },
+  "additionalProperties": false
+}

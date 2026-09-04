@@ -1,4 +1,5 @@
 import { Tree, getProjects } from '@nx/devkit';
+import { createHash } from 'node:crypto';
 import * as yaml from 'yaml';
 import { ArtifactSchema } from './artifact-schema';
 
@@ -33,11 +34,21 @@ export interface AncestorRef {
   project?: string;
   type: string;
   id?: string;
+  // The ancestor's body digest at the time this reference was written — a
+  // provenance record, not part of the target's identity, so refKey drops it
+  // exactly as it drops `fragment`. Putting it in the key would mean the key
+  // changed whenever content changed, fragmenting the registry and index on
+  // every edit.
+  digest?: string;
   fragment?: string;
 }
 
+// `@digest` sits between the id and the fragment — version, then location, the
+// way a package spec then anchor reads. Hex-only rather than SLUG_CHARS so it
+// can't be confused with an id, and `@` isn't a SLUG char, so a bare id still
+// terminates cleanly against it.
 const ANCESTOR_REF_TOKEN = new RegExp(
-  `^(?:([^/]+)/)?([${SLUG_CHARS}]+)(?::([${SLUG_CHARS}]+))?(?:#([${SLUG_CHARS}]+))?$`,
+  `^(?:([^/]+)/)?([${SLUG_CHARS}]+)(?::([${SLUG_CHARS}]+))?(?:@([0-9a-f]+))?(?:#([${SLUG_CHARS}]+))?$`,
 );
 
 export function parseAncestorRef(token: string): AncestorRef | null {
@@ -49,14 +60,17 @@ export function parseAncestorRef(token: string): AncestorRef | null {
   if (!match) {
     return null;
   }
-  const [, project, type, id, fragment] = match;
-  return { project, type, id, fragment };
+  const [, project, type, id, digest, fragment] = match;
+  return { project, type, id, digest, fragment };
 }
 
 // The canonical string identity of a reference — everything parseAncestorRef
-// can recover except the fragment, which stays opaque/unparsed by design (a
-// hint for a human reader, not something this resolves) and so isn't part of
-// what makes two references "the same target."
+// can recover except the fragment and the digest. The fragment stays
+// opaque/unparsed by design (a hint for a human reader, not something this
+// resolves); the digest records which version of the target the reference was
+// written against. Neither is part of
+// what makes two references "the same target," and a
+// content-derived key would change on every edit.
 export function refKey(
   ref: Pick<AncestorRef, 'project' | 'type' | 'id'>,
 ): string {
@@ -66,6 +80,48 @@ export function refKey(
 }
 
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
+
+// Everything after the frontmatter block, or the whole file when there isn't
+// one. Deliberately the *body* only, which is what makes a digest usable at
+// all: recording one edits `project-docs-ancestors`, so a whole-file hash would
+// make re-pinning a content change and cascade staleness through the entire
+// transitive descendancy in waves, each wave's fix triggering the next. A body
+// digest stops at depth 1 — and propagates one more hop exactly when the
+// re-pin came *with* a real revision, which is when descendants should look.
+//
+// Excluding frontmatter wholesale, rather than only the two structural fields,
+// keeps this independent of where a digest is stored and avoids having to
+// canonicalise a parsed YAML object (key order, serialisation) to keep the hash
+// stable. The cost, recorded because it is permanent rather than a wart to fix
+// later: a type that keeps its meaning in frontmatter is not covered at all.
+// `requirements` is that type — its `rules` are the artifact — and they live
+// there deliberately, so a real YAML parser can read them (see
+// check-example-mapping.mjs, which had two regex-parsing bugs before the move).
+export function extractBody(content: string): string {
+  const block = FRONTMATTER_BLOCK.exec(content);
+  const body = block ? content.slice(block[0].length) : content;
+  // Normalised for the three things that vary without meaning: line endings,
+  // the blank line Prettier inserts between the frontmatter delimiter and the
+  // first line of prose, and trailing whitespace. The middle one is not
+  // cosmetic to get right — formatFiles() runs at the end of every generator,
+  // so a digest that counted that blank line would be invalidated by the very
+  // formatting pass that follows writing it. Leading *indentation* on the first
+  // real line is left alone, since that can be a code block.
+  return body
+    .replace(/\r\n/g, '\n')
+    .replace(/^(?:[ \t]*\n)+/, '')
+    .trimEnd();
+}
+
+// Truncated sha256. Not adversarial — a collision costs one missed staleness
+// report, not a security property — so 48 bits is ample margin over the 8 hex
+// characters the original proposal sketched.
+export function digestBody(content: string): string {
+  return createHash('sha256')
+    .update(extractBody(content))
+    .digest('hex')
+    .slice(0, 12);
+}
 
 // The closed set of frontmatter fields the graph already models as structural
 // relationships — excluded from Artifact Metadata so the metadata map never
@@ -268,6 +324,10 @@ export function resolveAncestorsAndResolves(
 
 export interface RegistryEntry {
   path: string;
+  // This artifact's own body digest, so a descendant's recorded pin can be
+  // checked without re-reading any file — buildRegistry already holds the
+  // content.
+  bodyDigest: string;
   ancestorRefs: string[];
   // Refs this artifact explicitly claims to resolve (via --resolves), not
   // just build on — a strict subset of ancestorRefs, since a resolved ref is
@@ -468,12 +528,19 @@ function registerArtifact(
       yamlErrors.push({ path, error });
       // eslint-disable-next-line no-console
       console.log(`[nx-agent] YAML parse error in ${path}: ${error}`);
-      registry.set(key, { path, ancestorRefs: [], resolves: [], metadata: {} });
+      registry.set(key, {
+        path,
+        bodyDigest: digestBody(content),
+        ancestorRefs: [],
+        resolves: [],
+        metadata: {},
+      });
       return;
     }
   }
   registry.set(key, {
     path,
+    bodyDigest: digestBody(content),
     ancestorRefs: extractFrontmatterAncestorRefs(content, path),
     resolves: extractFrontmatterField(content, 'resolves', path),
     metadata: extractFrontmatterMetadata(content, path),
@@ -574,6 +641,17 @@ export interface Integrity {
 // workflow-agnostic is the property that makes it consumable from outside.
 export interface Status {
   resolution: { open: string[]; resolved: string[] };
+  // A reference recording a digest that no longer matches the ancestor's body:
+  // the ancestor was revised after this artifact was written, so downstream
+  // review is pending. Three states, and the silent first one is what makes
+  // adoption survivable — an unpinned reference is never reported, so turning
+  // this on reports nothing until something is deliberately pinned.
+  stale: {
+    artifact: string;
+    ancestor: string;
+    pinnedDigest: string;
+    currentDigest: string;
+  }[];
   // Nothing derives from it. Named for the mechanism — the index, which is the
   // computed "what references this" inverse, has no entry — rather than
   // "orphan", which inverts the metaphor: references are backward-only, so
@@ -676,6 +754,30 @@ export function computeFindings(
   // zero descendants by design once it's closed out correctly: that's what
   // correct looks like, not neglect, so it's excluded from unreferenced rather
   // than reported alongside a domain-model nobody's designed against yet.
+  // Only a recorded digest that *disagrees* is a finding. Absent means unknown
+  // (hand-authored, or predates adoption) and stays silent; a digest recorded
+  // against an ancestor that isn't registered is a broken reference, already
+  // reported as one, so it isn't second-guessed here.
+  const stale: Status['stale'] = [];
+  for (const [key, entry] of registry) {
+    for (const raw of entry.ancestorRefs) {
+      const parsed = parseAncestorRef(raw);
+      if (!parsed?.digest) {
+        continue;
+      }
+      const ancestor = registry.get(refKey(parsed));
+      if (!ancestor || ancestor.bodyDigest === parsed.digest) {
+        continue;
+      }
+      stale.push({
+        artifact: key,
+        ancestor: refKey(parsed),
+        pinnedDigest: parsed.digest,
+        currentDigest: ancestor.bodyDigest,
+      });
+    }
+  }
+
   const unreferenced = [...registry.keys()].filter((key) => {
     if (index.has(key)) {
       return false;
@@ -793,7 +895,7 @@ export function computeFindings(
       cycles: findCycles(registry),
       schemaErrors,
     },
-    status: { resolution, unreferenced, unscoped },
+    status: { resolution, unreferenced, unscoped, stale },
   };
 }
 

@@ -344,6 +344,7 @@ describe('nx-agent project-docs-lineage generator', () => {
       ]);
       expect(Object.keys(lineage.status).sort()).toEqual([
         'resolution',
+        'stale',
         'unreferenced',
         'unscoped',
       ]);
@@ -593,6 +594,167 @@ describe('nx-agent project-docs-lineage generator', () => {
       await expect(generator(host, { strict: true })).rejects.toThrow(
         /misspelled expectedAncestorTypes/,
       );
+    });
+  });
+
+  describe('ancestor digests', () => {
+    // Pins b to a's *body* digest, so the fixtures below can move a's body
+    // (stale) or only its frontmatter (not stale) independently.
+    function writeAncestorWithBody(host: Tree, body: string) {
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---', body].join('\n'),
+      );
+    }
+    function pin(host: Tree, digest: string) {
+      host.write(
+        'project-docs/domain-terms/b.md',
+        [
+          '---',
+          'term: B',
+          'project-docs-ancestors:',
+          `  - domain-terms:a@${digest}`,
+          '---',
+          'B body',
+        ].join('\n'),
+      );
+    }
+    async function digestOfA(host: Tree) {
+      await generator(host);
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      return lineage.registry['domain-terms:a'].bodyDigest;
+    }
+
+    it('leaves an unpinned reference silent', async () => {
+      writeAncestorWithBody(host, 'original');
+      host.write(
+        'project-docs/domain-terms/b.md',
+        [
+          '---',
+          'term: B',
+          'project-docs-ancestors:',
+          '  - domain-terms:a',
+          '---',
+        ].join('\n'),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.stale).toEqual([]);
+    });
+
+    it('stays silent while the pin matches', async () => {
+      writeAncestorWithBody(host, 'original');
+      pin(host, await digestOfA(host));
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.stale).toEqual([]);
+    });
+
+    it('reports stale once the ancestor body moves', async () => {
+      writeAncestorWithBody(host, 'original');
+      const pinned = await digestOfA(host);
+      pin(host, pinned);
+      writeAncestorWithBody(host, 'revised substantively');
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.stale).toHaveLength(1);
+      expect(lineage.status.stale[0]).toMatchObject({
+        artifact: 'domain-terms:b',
+        ancestor: 'domain-terms:a',
+        pinnedDigest: pinned,
+      });
+      expect(lineage.status.stale[0].currentDigest).not.toBe(pinned);
+    });
+
+    // The property the body-only cut buys: re-pinning edits frontmatter, so it
+    // must not itself count as a content change, or one edit to a root would
+    // cascade through the whole descendancy in waves.
+    it('does not change an artifact digest when only its pins change', async () => {
+      writeAncestorWithBody(host, 'original');
+      pin(host, 'aaaaaaaaaaaa');
+      const before = JSON.parse(
+        (await generator(host), host.read('.nx-agent/lineage.json', 'utf-8')),
+      ).registry['domain-terms:b'].bodyDigest;
+
+      pin(host, 'bbbbbbbbbbbb');
+      await generator(host);
+
+      const after = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'))
+        .registry['domain-terms:b'].bodyDigest;
+      expect(after).toBe(before);
+    });
+
+    it('is not stale when only the ancestor frontmatter changes', async () => {
+      writeAncestorWithBody(host, 'original');
+      const pinned = await digestOfA(host);
+      pin(host, pinned);
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', 'aliases:', '  - Ay', '---', 'original'].join('\n'),
+      );
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.status.stale).toEqual([]);
+    });
+
+    it('does not fail --strict, since a sound graph is reporting pending review', async () => {
+      writeAncestorWithBody(host, 'original');
+      pin(host, await digestOfA(host));
+      writeAncestorWithBody(host, 'revised');
+
+      await expect(generator(host, { strict: true })).resolves.toBeUndefined();
+    });
+
+    // A digest is provenance, not identity: including it in the key would
+    // fragment the registry and index on every edit.
+    it('resolves a pinned reference to the same target as an unpinned one', async () => {
+      writeAncestorWithBody(host, 'original');
+      pin(host, 'aaaaaaaaaaaa');
+
+      await generator(host);
+
+      const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(lineage.integrity.brokenRefs).toEqual([]);
+      expect(lineage.index['domain-terms:a']).toHaveLength(1);
+      // a counts as referenced despite the pin; b is genuinely a leaf.
+      expect(lineage.status.unreferenced).toEqual(['domain-terms:b']);
+    });
+
+    it('groups the console report by ancestor rather than per stale edge', async () => {
+      writeAncestorWithBody(host, 'original');
+      const pinned = await digestOfA(host);
+      for (const id of ['b', 'c']) {
+        host.write(
+          `project-docs/domain-terms/${id}.md`,
+          [
+            '---',
+            `term: ${id}`,
+            'project-docs-ancestors:',
+            `  - domain-terms:a@${pinned}`,
+            '---',
+            `${id} body`,
+          ].join('\n'),
+        );
+      }
+      writeAncestorWithBody(host, 'revised');
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await generator(host);
+
+      const grouped = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((line) => line.includes('review pending'));
+      expect(grouped).toHaveLength(1);
+      expect(grouped[0]).toContain('2 artifact(s)');
+      logSpy.mockRestore();
     });
   });
 });

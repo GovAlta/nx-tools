@@ -410,6 +410,35 @@ Self-registers its own `project-docs/artifact-schema.json` entry as `terminal: t
 so it's excluded from the `unreferenced` report rather than flagged alongside a genuine dead-end. Re-adding a
 retrospective that already exists throws rather than silently overwriting or duplicating it.
 
+## `pin-ancestors`
+
+```bash
+npx nx g @abgov/nx-agent:pin-ancestors                              # whole workspace
+npx nx g @abgov/nx-agent:pin-ancestors --ancestor=domain-terms:case  # just this ancestor's descendants
+npx nx g @abgov/nx-agent:pin-ancestors --artifact=domain-models:x    # just this artifact's references
+```
+
+Records each resolved ancestor's current body digest on the `project-docs-ancestors` reference that
+names it, so `project-docs-lineage` can later report `status.stale`. Handles both YAML sequence
+styles the generators emit (block lists and flow lists) and **warns rather than skipping** on a
+form it can't rewrite — a silently unpinned reference is indistinguishable from a deliberately
+unpinned one, and would report nothing forever. A reference that doesn't resolve is left alone;
+that's a broken reference, and `project-docs-lineage` reports it as one.
+
+**Run it by hand. Never from a hook, a CI step, or a clean-run path.** A pin asserts _"I have read
+this ancestor as it stands"_ — a claim only a person can make. A blind bulk re-pin bakes in whatever
+drift already exists and then reports it as the floor. It's a separate generator rather than a
+`--repin` flag on `project-docs-lineage` for the same reason: that command reads and reports, and a
+mutation living next to `--strict` is how the check ends up silently dead in a workflow.
+
+Prefer `--ancestor`. "I revised one term, re-pin its descendants" is an act you can justify in a
+commit message; re-pinning the workspace is only ever "make the report stop." Because digests live
+in the committed artifact, either way the re-pin shows up in your own diff — which is what makes it
+reviewable, unlike a central baseline that re-seals where nobody looks.
+
+`resolves` lists are untouched: resolving an open question isn't a derivation, so the question's
+content moving doesn't invalidate the resolver.
+
 ## `project-docs-lineage`
 
 Scans the whole workspace for `project-docs/` artifacts and `project-docs-ancestors` references —
@@ -444,6 +473,7 @@ preference.
 | `resolution`   | `{ open, resolved }` — which `tracksResolution` artifacts are settled |
 | `unreferenced` | nothing derives from it yet (no inbound edges)                        |
 | `unscoped`     | every edge resolves, but an expected ancestor type is missing         |
+| `stale`        | a pinned ancestor was revised after this artifact derived from it     |
 
 `cycles` matters because `project-docs-ancestors` is a _derivation_ relation — two artifacts each
 declaring the other is contradictory, since neither can precede the other. Traversal always
@@ -459,6 +489,36 @@ plural, so `bounded-context` is one keystroke from `bounded-contexts`). Those ar
 type they meant, and are the only ones dropped from the `unscoped` check — one bad value would
 otherwise report every artifact of its type as unscoped, forever, pointing at artifacts that are
 correct.
+
+`stale` is the ancestor-digest mechanism. A reference may optionally record the ancestor's body
+digest at the time it was written — `domain-terms:case@a3f9c2e1b004` — and three states follow:
+
+| digest           | meaning                                             | report     |
+| ---------------- | --------------------------------------------------- | ---------- |
+| absent           | hand-authored, or predates adoption                 | **silent** |
+| present, matches | current                                             | silent     |
+| present, differs | the ancestor was revised after this derived from it | reported   |
+
+The silent first state is what makes it adoptable: turning this on reports nothing until something
+is deliberately pinned. Pin with `nx g @abgov/nx-agent:pin-ancestors`.
+
+**The digest covers the body only**, not frontmatter, and that isn't a shortcut. Recording a pin
+edits `project-docs-ancestors`, so a whole-file hash would make re-pinning a content change — one
+edit to a root would cascade staleness through the entire transitive descendancy in waves, each
+wave's fix triggering the next. A body digest stops at depth 1, and propagates one hop further
+exactly when a re-pin came _with_ a real revision, which is when descendants should look. It also
+keeps the hash independent of where a digest is stored, and avoids canonicalising a parsed YAML
+object to keep it stable.
+
+The cost is permanent rather than a wart to fix later: **a type that keeps its meaning in
+frontmatter is not covered at all.** `requirements` is that type — its `rules` _are_ the artifact —
+and they live there deliberately so a real YAML parser can read them (`check-example-mapping.mjs`
+had two regex-parsing bugs before the move). For those, a material change is a different artifact,
+not an edit.
+
+The body is normalised for line endings, trailing whitespace, and the blank line Prettier inserts
+after the frontmatter delimiter — that last one matters, since `formatFiles()` runs at the end of
+every generator and would otherwise invalidate a pin immediately after writing it.
 
 `status` is computed from **structure only** — edges and schema expectations. Status an artifact
 declares about itself in frontmatter (a `questions` list, a `status:` field) deliberately stays in
@@ -489,7 +549,7 @@ implementation detail and may change without a bump.
 | Path                          | Shape                                                                                          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------- |
 | `schemaVersion`               | number — `1` today                                                                             |
-| `registry[<ref>]`             | `{ path, ancestorRefs[], resolves[], metadata }`                                               |
+| `registry[<ref>]`             | `{ path, bodyDigest, ancestorRefs[], resolves[], metadata }`                                   |
 | `index[<ref>][]`              | `{ file, type?, metadata? }` — `type` only when the descendant is itself a registered artifact |
 | `integrity.brokenRefs[]`      | `{ ref, referencedFrom }`                                                                      |
 | `integrity.unparseableRefs[]` | `{ ref, foundIn }`                                                                             |
@@ -499,6 +559,7 @@ implementation detail and may change without a bump.
 | `status.resolution`           | `{ open[], resolved[] }`                                                                       |
 | `status.unreferenced[]`       | ref strings                                                                                    |
 | `status.unscoped[]`           | ref strings                                                                                    |
+| `status.stale[]`              | `{ artifact, ancestor, pinnedDigest, currentDigest }`                                          |
 | `violations`                  | **deprecated** — see below                                                                     |
 
 This records what is already load-bearing rather than adding a new promise. `agent-delivery`'s

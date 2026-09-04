@@ -71,6 +71,7 @@ export default async function (host: Tree, options: Schema = {}) {
       schemaErrors: integrity.schemaErrors,
       orphans: status.unreferenced,
       unscoped: status.unscoped,
+      stale: status.stale,
       resolutionStatus: status.resolution,
     },
   };
@@ -81,7 +82,26 @@ export default async function (host: Tree, options: Schema = {}) {
   if (!options.json) {
     for (const key of status.unreferenced) {
       // eslint-disable-next-line no-console
-      console.log(`[nx-agent] unreferenced (nothing derives from it yet): ${key}`);
+      console.log(
+        `[nx-agent] unreferenced (nothing derives from it yet): ${key}`,
+      );
+    }
+    // Grouped by ancestor, not one line per stale edge: editing one widely-cited
+    // artifact is a single act, and a flat list of N entries reads as a mess
+    // someone learns to skip rather than as the one thing that happened.
+    const staleByAncestor = new Map<string, string[]>();
+    for (const entry of status.stale) {
+      staleByAncestor.set(entry.ancestor, [
+        ...(staleByAncestor.get(entry.ancestor) ?? []),
+        entry.artifact,
+      ]);
+    }
+    for (const [ancestor, artifacts] of staleByAncestor) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[nx-agent] ${ancestor} was revised after ${artifacts.length} artifact(s) ` +
+          `derived from it — review pending: ${artifacts.join(', ')}`,
+      );
     }
     for (const unscoped of status.unscoped) {
       // eslint-disable-next-line no-console
