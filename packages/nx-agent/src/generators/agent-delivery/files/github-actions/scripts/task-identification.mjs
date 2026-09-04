@@ -124,6 +124,15 @@ const designArtifactsOf = (key) => (index[key] ?? []).filter((e) => DESIGN_TYPES
 
 // --- Signals, in priority order --------------------------------------------------------------
 
+// A reference token can carry an @digest and/or a #fragment, neither of which is
+// part of the target's identity, so strip both before using one as a registry
+// key. Without this, ancestor-scope traversal silently stopped at the first
+// pinned reference: registry['domain-terms:a@a3f9c2e1b004'] is undefined, so a
+// descendant of a scoped artifact stopped being recognised as in scope.
+function refKeyOf(token) {
+  return String(token).split('@')[0].split('#')[0];
+}
+
 const signals = [];
 
 for (const yamlError of integrity.yamlErrors ?? []) {
@@ -285,7 +294,11 @@ const openKeys = status.resolution?.open ?? [];
 for (const key of Object.keys(registry)) {
   if (!isDesignKey(key)) continue;
   if (hasUntypedDescendant(key)) continue; // already has implementing code
-  const blockedByOpen = openKeys.some((ok) => (registry[ok]?.ancestorRefs ?? []).includes(key));
+  // refKeyOf, not a raw includes(): an ancestorRef may carry an @digest, and the
+  // raw token never equals the bare key, so a pinned blocker stopped blocking.
+  const blockedByOpen = openKeys.some((ok) =>
+    (registry[ok]?.ancestorRefs ?? []).some((anc) => refKeyOf(anc) === key),
+  );
   if (blockedByOpen) continue;
   signals.push({
     key: `undeveloped:${key}`,
@@ -300,7 +313,9 @@ for (const path of mdFilesIn('project-docs/requirements')) {
   if ((fm.rules ?? []).length === 0) continue;
   const reqKey = `requirements:${slugOf(path)}`;
   const domainModelKeys = Object.keys(registry).filter(
-    (k) => k.startsWith('domain-models:') && (registry[k].ancestorRefs ?? []).includes(reqKey),
+    (k) =>
+      k.startsWith('domain-models:') &&
+      (registry[k].ancestorRefs ?? []).some((anc) => refKeyOf(anc) === reqKey),
   );
   if (domainModelKeys.length === 0) continue;
 
@@ -371,15 +386,6 @@ if (scopedPaths.length > 0 && scopedKeys.size === 0) {
     `these paths resolved to a registry key — running unfiltered. ` +
     `Check whether the scoped files were renamed or are not yet registered in project-docs/.`,
   );
-}
-
-// A reference token can carry an @digest and/or a #fragment, neither of which is
-// part of the target's identity, so strip both before using one as a registry
-// key. Without this, ancestor-scope traversal silently stopped at the first
-// pinned reference: registry['domain-terms:a@a3f9c2e1b004'] is undefined, so a
-// descendant of a scoped artifact stopped being recognised as in scope.
-function refKeyOf(token) {
-  return String(token).split('@')[0].split('#')[0];
 }
 
 function isInArtifactScope(signal) {

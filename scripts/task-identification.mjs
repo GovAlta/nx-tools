@@ -99,7 +99,24 @@ if (!existsSync(LINEAGE_PATH)) {
 }
 
 const lineage = JSON.parse(readFileSync(LINEAGE_PATH, 'utf-8'));
-const { registry, index, violations } = lineage;
+
+// What the schemaVersion in lineage.json is for. This script is generated
+// write-if-missing, so a workspace can end up running an older copy of it
+// against a newer graph (or the reverse, off a stale gitignored file) -- fail
+// here, naming both versions, rather than 40 lines down with a TypeError on a
+// container that moved.
+const EXPECTED_LINEAGE_SCHEMA_VERSION = 1;
+if (lineage.schemaVersion !== EXPECTED_LINEAGE_SCHEMA_VERSION) {
+  console.error(
+    `[task-identification] ${LINEAGE_PATH} is schemaVersion ${lineage.schemaVersion ?? '(absent)'}, ` +
+      `this script expects ${EXPECTED_LINEAGE_SCHEMA_VERSION}. Re-run ` +
+      `\`npx nx g @abgov/nx-agent:project-docs-lineage\`; if that doesn't fix it, this copy of ` +
+      `the script is older than the installed @abgov/nx-agent and needs updating.`,
+  );
+  process.exit(1);
+}
+
+const { registry, index, integrity, status } = lineage;
 
 const descendantTypes = (key) => (index[key] ?? []).map((e) => e.type).filter(Boolean);
 const hasUntypedDescendant = (key) => (index[key] ?? []).some((e) => !e.type);
@@ -107,9 +124,18 @@ const designArtifactsOf = (key) => (index[key] ?? []).filter((e) => DESIGN_TYPES
 
 // --- Signals, in priority order --------------------------------------------------------------
 
+// A reference token can carry an @digest and/or a #fragment, neither of which is
+// part of the target's identity, so strip both before using one as a registry
+// key. Without this, ancestor-scope traversal silently stopped at the first
+// pinned reference: registry['domain-terms:a@a3f9c2e1b004'] is undefined, so a
+// descendant of a scoped artifact stopped being recognised as in scope.
+function refKeyOf(token) {
+  return String(token).split('@')[0].split('#')[0];
+}
+
 const signals = [];
 
-for (const yamlError of violations.yamlErrors ?? []) {
+for (const yamlError of integrity.yamlErrors ?? []) {
   signals.push({
     key: `yaml-error:${yamlError.path}`,
     stage: 'unknown',
@@ -117,7 +143,7 @@ for (const yamlError of violations.yamlErrors ?? []) {
   });
 }
 
-for (const unparseable of violations.unparseableRefs ?? []) {
+for (const unparseable of integrity.unparseableRefs ?? []) {
   signals.push({
     key: `unparseable:${unparseable.ref}`,
     stage: 'unknown',
@@ -129,7 +155,7 @@ for (const unparseable of violations.unparseableRefs ?? []) {
   });
 }
 
-for (const broken of violations.brokenRefs ?? []) {
+for (const broken of integrity.brokenRefs ?? []) {
   signals.push({
     key: `broken:${broken.ref}`,
     stage: 'unknown',
@@ -137,7 +163,45 @@ for (const broken of violations.brokenRefs ?? []) {
   });
 }
 
-for (const openKey of violations.resolutionStatus?.open ?? []) {
+for (const cycle of integrity.cycles ?? []) {
+  signals.push({
+    // Keyed on the canonical cycle, which project-docs-lineage already rotates
+    // so the smallest node leads — otherwise the same loop would produce a
+    // different key each run and stall detection would never see a repeat.
+    key: `cycle:${cycle.join(',')}`,
+    // Every node in the cycle, so the signal is in scope when any member is.
+    artifacts: cycle,
+    stage: 'unknown',
+    reason:
+      `Reference cycle: ${[...cycle, cycle[0]].join(' -> ')}. project-docs-ancestors is a ` +
+      `derivation relation, so these artifacts each claim to be built from the other and ` +
+      `neither can precede it. Break the cycle by removing whichever reference is not a real ` +
+      `derivation — fix this before anything else.`,
+  });
+}
+
+for (const schemaError of integrity.schemaErrors ?? []) {
+  // Keyed on all three of type/property/value: two bad values on one type are
+  // two things to fix, and collapsing them would let stall detection read the
+  // second as a repeat of the first.
+  signals.push({
+    key: `schema-error:${schemaError.type}:${schemaError.property}:${schemaError.value}`,
+    // Explicitly no artifact: the schema is what's wrong, so no artifact scope
+    // should exclude it.
+    artifacts: null,
+    stage: 'unknown',
+    reason:
+      schemaError.problem === 'structural-field'
+        ? `project-docs/artifact-schema.json: "${schemaError.type}".${schemaError.property} names ` +
+          `"${schemaError.value}", a structural field the graph already models as a relationship. ` +
+          `It is excluded from metadata, so the declaration does nothing — remove it.`
+        : `project-docs/artifact-schema.json: "${schemaError.type}".${schemaError.property} names ` +
+          `"${schemaError.value}" — did you mean "${schemaError.didYouMean}"? Nothing can satisfy ` +
+          `it as written. Fix the schema, not the artifacts.`,
+  });
+}
+
+for (const openKey of status.resolution?.open ?? []) {
   const entry = registry[openKey];
   signals.push({
     key: `open:${openKey}`,
@@ -146,11 +210,27 @@ for (const openKey of violations.resolutionStatus?.open ?? []) {
   });
 }
 
-for (const unscopedKey of violations.unscoped ?? []) {
+for (const unscopedKey of status.unscoped ?? []) {
   signals.push({
     key: `unscoped:${unscopedKey}`,
     stage: stageFor(typeOf(unscopedKey)),
     reason: `${unscopedKey} is missing one of its kind's expected ancestors.`,
+  });
+}
+
+// Staleness is a status finding, not integrity: the graph is sound and reporting
+// that an ancestor moved after this artifact derived from it. So it's ordinary
+// work at the descendant's own stage, not a repair — which is also why it stays
+// out of RESOLUTION_PREFIXES below, same as 'unscoped:'.
+for (const entry of status.stale ?? []) {
+  signals.push({
+    key: `stale:${entry.artifact}:${entry.ancestor}`,
+    artifacts: [entry.artifact],
+    stage: stageFor(typeOf(entry.artifact)),
+    reason:
+      `${entry.ancestor} was revised after ${entry.artifact} derived from it, so ${entry.artifact} ` +
+      `may no longer reflect it. Read both, revise ${entry.artifact} if it needs it, then record ` +
+      `that you have by re-pinning: nx g @abgov/nx-agent:pin-ancestors --artifact=${entry.artifact}.`,
   });
 }
 
@@ -210,11 +290,15 @@ for (const key of Object.keys(registry)) {
 }
 
 // api-design/ux-design with no implementing code, and no unresolved blocker/open-question naming it.
-const openKeys = violations.resolutionStatus?.open ?? [];
+const openKeys = status.resolution?.open ?? [];
 for (const key of Object.keys(registry)) {
   if (!isDesignKey(key)) continue;
   if (hasUntypedDescendant(key)) continue; // already has implementing code
-  const blockedByOpen = openKeys.some((ok) => (registry[ok]?.ancestorRefs ?? []).includes(key));
+  // refKeyOf, not a raw includes(): an ancestorRef may carry an @digest, and the
+  // raw token never equals the bare key, so a pinned blocker stopped blocking.
+  const blockedByOpen = openKeys.some((ok) =>
+    (registry[ok]?.ancestorRefs ?? []).some((anc) => refKeyOf(anc) === key),
+  );
   if (blockedByOpen) continue;
   signals.push({
     key: `undeveloped:${key}`,
@@ -229,7 +313,9 @@ for (const path of mdFilesIn('project-docs/requirements')) {
   if ((fm.rules ?? []).length === 0) continue;
   const reqKey = `requirements:${slugOf(path)}`;
   const domainModelKeys = Object.keys(registry).filter(
-    (k) => k.startsWith('domain-models:') && (registry[k].ancestorRefs ?? []).includes(reqKey),
+    (k) =>
+      k.startsWith('domain-models:') &&
+      (registry[k].ancestorRefs ?? []).some((anc) => refKeyOf(anc) === reqKey),
   );
   if (domainModelKeys.length === 0) continue;
 
@@ -268,10 +354,16 @@ const isFixBranch = branchName.startsWith('fix/');
 // each names one specific thing to repair, not new work to start. Both only became reachable
 // once project-docs-lineage stopped aborting its write on them; without them here, a fix/**
 // branch would see the signal and then be told it isn't eligible to act on it.
+//
+// 'cycle:' and 'schema-error:' join them on the same test: both are integrity findings naming
+// one specific thing to repair. 'stale:' deliberately does not — it's a status finding, so
+// revisiting the descendant is ordinary work at its own stage, same as 'unscoped:'.
 const RESOLUTION_PREFIXES = [
   'broken:',
   'unparseable:',
   'yaml-error:',
+  'cycle:',
+  'schema-error:',
   'open:',
 ];
 
@@ -296,37 +388,54 @@ if (scopedPaths.length > 0 && scopedKeys.size === 0) {
   );
 }
 
-function isInArtifactScope(signalKey) {
+function isInArtifactScope(signal) {
   if (openScope) return true;             // explicit * → unfiltered
   if (noScope) return false;             // first commit touched no project-docs files → nothing in scope
   if (scopedKeys.size === 0) return true; // paths specified but unresolvable → fall back to unfiltered (warn already printed)
-  // Signal keys look like 'open:features:x', 'unrefined:requirements:x', etc. -- the artifact
-  // registry key is everything after the first colon-prefix segment.
-  const artifactKey = signalKey.includes(':') ? signalKey.replace(/^[^:]+:/, '') : signalKey;
+
   function ancestorInScope(key, visited = new Set()) {
     if (visited.has(key)) return false;
     visited.add(key);
     if (scopedKeys.has(key)) return true;
     for (const anc of registry[key]?.ancestorRefs ?? []) {
-      if (ancestorInScope(anc, visited)) return true;
+      if (ancestorInScope(refKeyOf(anc), visited)) return true;
     }
     return false;
   }
+
+  // Most signal keys are 'prefix:artifactKey', so the artifact is recoverable
+  // from the string. The keys added for cycles, staleness and schema errors are
+  // not: a cycle names every node in it, a stale edge names both ends, and a
+  // schema error names no artifact at all. Those signals therefore declare
+  // `artifacts` outright. Recovering by string would have derived
+  // 'domain-models:m:domain-terms:t' from a stale signal, matched nothing in the
+  // registry, and dropped the signal on every branch except ARTIFACT_SCOPE='*'.
+  if (signal.artifacts === null) {
+    // About the workspace's own configuration rather than any artifact, so no
+    // artifact scope can legitimately exclude it.
+    return true;
+  }
+  if (Array.isArray(signal.artifacts)) {
+    return signal.artifacts.some((key) => ancestorInScope(refKeyOf(key)));
+  }
+  const artifactKey = signal.key.includes(':')
+    ? signal.key.replace(/^[^:]+:/, '')
+    : signal.key;
   return ancestorInScope(artifactKey);
 }
 
 const eligibleSignals = isFixBranch
   ? signals.filter(
-      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s.key),
+      (s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)) && isInArtifactScope(s),
     )
-  : signals.filter((s) => isInArtifactScope(s.key));
+  : signals.filter((s) => isInArtifactScope(s));
 const excludedCount = signals.length - eligibleSignals.length;
 
 // Diagnostic breakdown — computed only when filtering produced nothing, so the log doesn't
 // just say "nothing to do" when the real answer is "scope and branch type disagree."
 let noEligibleNote = null;
 if (eligibleSignals.length === 0 && signals.length > 0) {
-  const inScope = scopedKeys.size > 0 ? signals.filter((s) => isInArtifactScope(s.key)) : signals;
+  const inScope = scopedKeys.size > 0 ? signals.filter((s) => isInArtifactScope(s)) : signals;
   const inBranchType = isFixBranch
     ? signals.filter((s) => RESOLUTION_PREFIXES.some((p) => s.key.startsWith(p)))
     : signals;
@@ -375,7 +484,7 @@ if (process.env.PEEK_ONLY !== 'true') {
   // nothing to stall on, and 'none' entries corrupt the stall-detection window when
   // a real signal recurs across a no-work gap.
   if (topSignal) {
-    const lineageFingerprint = JSON.stringify(violations);
+    const lineageFingerprint = JSON.stringify({ integrity, status });
     history.push({ key: topSignal.key, lineageFingerprint });
     history = history.slice(-HISTORY_KEEP);
     writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2) + '\n');

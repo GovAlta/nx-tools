@@ -96,7 +96,7 @@ written by a generator's own `--resolves <path>` flag (`feature`/`domain-term`/`
 `domain-model`) or by hand for a type with no generator yet (`api-design`, `ux-design`). Never a
 separate edit on the open-question/blocker file itself, and an unrelated later edit to the target
 doesn't count as resolving anything. `project-docs-lineage` reports resolution status directly
-(`violations.resolutionStatus.open`/`.resolved`) — nothing to compute or register by hand.
+(`status.resolution.open`/`.resolved`) — nothing to compute or register by hand.
 
 **`bug` also tracks open/resolved status this same generic way, but is resolved differently** — see
 `develop/SKILL.md`'s own bug-handling section; Discover never resolves one directly.
@@ -132,7 +132,7 @@ These check different things:
 - `project-docs-lineage`'s broken-reference check always blocks, regardless of mode — `--strict`
   is what turns a recorded broken reference into a failing command, and composes with
   `--dry-run` to check without writing anything. Its
-  `orphans` report is a graph fact (has Design picked this requirement up yet), not an
+  `unreferenced` report is a graph fact (has Design picked this requirement up yet), not an
   example-mapping check — it stays true even after perfect example-mapping, since nothing
   downstream exists yet.
 - `check-example-mapping.mjs` is the actual example-mapping gate: every `rules:` entry needs a

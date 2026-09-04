@@ -57,7 +57,7 @@ scope here.
    `resolves` frontmatter field, also mirrored into `project-docs-ancestors`) is what makes a
    resolution structural — describe the aggregate and its invariants, resolving each named
    Question in the model's own text, with the `resolves:` reference as what a fresh reader (or
-   `project-docs-lineage`'s `resolutionStatus` field) can check without reading that prose.
+   `project-docs-lineage`'s `status.resolution` field) can check without reading that prose.
 
    If a Question needs real information nobody in this pass has, don't guess — stop and ask, or
    write an explicitly-marked placeholder decision if told to keep moving; a placeholder still
