@@ -137,6 +137,15 @@ function pinFile(
 }
 
 export default async function (host: Tree, options: Schema = {}) {
+  // formatFiles() before anything is read, not only at the end. Digests cover
+  // the body, and Prettier rewrites bodies — list markers, heading style, table
+  // alignment, emphasis characters — none of which extractBody normalises. So a
+  // pin computed against an unformatted body was invalidated by the format pass
+  // that followed it: for any artifact that is both a pin target and itself
+  // pinned (a chain, i.e. the normal shape), project-docs-lineage reported it
+  // stale seconds after pinning, with no edit in between.
+  await formatFiles(host);
+
   const registry = buildRegistry(host);
   const artifactSchema = readArtifactSchema(host);
 
@@ -167,6 +176,8 @@ export default async function (host: Tree, options: Schema = {}) {
     );
     return;
   }
+  // Again, so the frontmatter just rewritten is itself formatted. Safe for the
+  // digests recorded above: they cover bodies, and nothing here touched one.
   await formatFiles(host);
   logger.info(
     `[nx-agent] pinned ${updated} reference(s). Each records that you have read the ` +

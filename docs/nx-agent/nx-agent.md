@@ -446,7 +446,7 @@ resolves: [blockers:no-write-packages-credential-for-ghcr-sandbox-push]
 
 Self-registers its own `project-docs/artifact-schema.json` entry as `terminal: true` — a
 correctly-closed-out retrospective has zero descendants by design, so it's excluded from
-`project-docs-lineage`'s orphan report rather than flagged alongside a genuine dead-end. Re-adding a
+`project-docs-lineage`'s `unreferenced` report rather than flagged alongside a genuine dead-end. Re-adding a
 retrospective that already exists throws rather than silently overwriting or duplicating it.
 
 ---
@@ -694,7 +694,7 @@ an all-of list, not any-of: `domain-models` above requires an ancestor of _both_
 and `domain-terms`, not either — a model with only one is still missing part of the vocabulary it
 should be built from. An artifact whose type has an entry here but is missing an ancestor of one of
 the expected types is reported (not thrown, since this is a convention nudge rather than a hard rule)
-as `unscoped` in `.nx-agent/lineage.json`'s `violations`.
+as `unscoped` in `.nx-agent/lineage.json`'s `status`.
 
 `tracksResolution: true` is what makes `open-questions`/`blockers` show up in `status.resolution`
 (below) — a custom artifact kind with the same lifecycle (something that starts undecided/blocking

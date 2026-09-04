@@ -222,12 +222,14 @@ describe('nx-agent agent-delivery generator', () => {
         schemaErrors: [
           {
             type: 'domain-terms',
-            expectedAncestorType: 'bounded-context',
+            property: 'expectedAncestorTypes',
+            value: 'bounded-context',
+            problem: 'misspelled',
             didYouMean: 'bounded-contexts',
           },
         ],
       },
-      'schema-error:domain-terms:bounded-context',
+      'schema-error:domain-terms:expectedAncestorTypes:bounded-context',
     ],
   ])(
     'task-identification raises a %s as a resolution signal on a fix branch',
@@ -287,6 +289,190 @@ describe('nx-agent agent-delivery generator', () => {
       }
     },
   );
+
+  // Both signal tests above use ARTIFACT_SCOPE='*', which bypasses the filter
+  // entirely — so neither would notice a signal whose artifact key can't be
+  // recovered from its key string. These run under a real scope.
+  function runTaskIdentification(
+    host: Tree,
+    lineage: object,
+    env: Record<string, string>,
+  ) {
+    const script = host.read('scripts/task-identification.mjs').toString();
+    const tmpDir = mkdtempSync(join(tmpdir(), 'nx-agent-task-id-scope-'));
+    try {
+      writeFileSync(join(tmpDir, 'task-identification.mjs'), script);
+      symlinkSync(
+        join(process.cwd(), 'node_modules'),
+        join(tmpDir, 'node_modules'),
+      );
+      mkdirSync(join(tmpDir, '.nx-agent'));
+      writeFileSync(
+        join(tmpDir, '.nx-agent', 'lineage.json'),
+        JSON.stringify(lineage),
+      );
+      const outputFile = join(tmpDir, 'github-output');
+      writeFileSync(outputFile, '');
+      const stdout = execSync('node task-identification.mjs', {
+        cwd: tmpDir,
+        env: { ...process.env, GITHUB_OUTPUT: outputFile, ...env },
+      }).toString();
+      return JSON.parse(stdout);
+    } finally {
+      rmSync(tmpDir, { recursive: true });
+    }
+  }
+
+  const emptyFindings = {
+    integrity: {
+      brokenRefs: [],
+      unparseableRefs: [],
+      yamlErrors: [],
+      cycles: [],
+      schemaErrors: [],
+    },
+    status: {
+      resolution: { open: [], resolved: [] },
+      unreferenced: [],
+      unscoped: [],
+      stale: [],
+    },
+  };
+
+  it('keeps a stale signal in scope when its own artifact is scoped', async () => {
+    await generator(host, { githubActions: true });
+
+    const out = runTaskIdentification(
+      host,
+      {
+        schemaVersion: 1,
+        registry: {
+          'domain-models:m': {
+            path: 'project-docs/domain-models/m.md',
+            bodyDigest: 'aaaaaaaaaaaa',
+            ancestorRefs: [],
+            resolves: [],
+            metadata: {},
+          },
+        },
+        index: {},
+        ...emptyFindings,
+        status: {
+          ...emptyFindings.status,
+          stale: [
+            {
+              artifact: 'domain-models:m',
+              ancestor: 'domain-terms:t',
+              pinnedDigest: 'aaaaaaaaaaaa',
+              currentDigest: 'bbbbbbbbbbbb',
+            },
+          ],
+        },
+      },
+      {
+        GITHUB_REF_NAME: 'feature/x',
+        ARTIFACT_SCOPE: 'project-docs/domain-models/m.md',
+      },
+    );
+
+    expect(out.signals.map((sig: { key: string }) => sig.key)).toContain(
+      'stale:domain-models:m:domain-terms:t',
+    );
+  });
+
+  // A schema error is about the workspace's configuration, not any artifact, so
+  // no artifact scope should be able to exclude it.
+  it('keeps a schema-error signal in scope under a narrow artifact scope', async () => {
+    await generator(host, { githubActions: true });
+
+    const out = runTaskIdentification(
+      host,
+      {
+        schemaVersion: 1,
+        registry: {
+          'domain-models:m': {
+            path: 'project-docs/domain-models/m.md',
+            bodyDigest: 'aaaaaaaaaaaa',
+            ancestorRefs: [],
+            resolves: [],
+            metadata: {},
+          },
+        },
+        index: {},
+        ...emptyFindings,
+        integrity: {
+          ...emptyFindings.integrity,
+          schemaErrors: [
+            {
+              type: 'requirements',
+              property: 'digestFields',
+              value: 'resolves',
+              problem: 'structural-field',
+            },
+          ],
+        },
+      },
+      {
+        GITHUB_REF_NAME: 'fix/repair',
+        ARTIFACT_SCOPE: 'project-docs/domain-models/m.md',
+      },
+    );
+
+    const keys = out.signals.map((sig: { key: string }) => sig.key);
+    expect(keys).toContain('schema-error:requirements:digestFields:resolves');
+    // And the reason renders the structural-field branch, not a "did you mean
+    // undefined?" built from the pre-reshape field names.
+    const reason = out.signals.find((sig: { key: string }) =>
+      sig.key.startsWith('schema-error:'),
+    ).reason;
+    expect(reason).toContain('structural field');
+    expect(reason).not.toContain('undefined');
+  });
+
+  // Ancestor-scope traversal walks raw ancestorRefs, which now may carry an
+  // @digest — looked up verbatim, the walk stopped at the first pinned edge.
+  it('walks a pinned ancestor reference when resolving artifact scope', async () => {
+    await generator(host, { githubActions: true });
+
+    const out = runTaskIdentification(
+      host,
+      {
+        schemaVersion: 1,
+        registry: {
+          'domain-terms:t': {
+            path: 'project-docs/domain-terms/t.md',
+            bodyDigest: 'bbbbbbbbbbbb',
+            ancestorRefs: [],
+            resolves: [],
+            metadata: {},
+          },
+          'domain-models:m': {
+            path: 'project-docs/domain-models/m.md',
+            bodyDigest: 'aaaaaaaaaaaa',
+            ancestorRefs: ['domain-terms:t@bbbbbbbbbbbb'],
+            resolves: [],
+            metadata: {},
+          },
+        },
+        index: {},
+        ...emptyFindings,
+        status: {
+          ...emptyFindings.status,
+          unscoped: ['domain-models:m'],
+        },
+      },
+      {
+        // Scoped on the *ancestor*; the descendant is in scope only if the walk
+        // can normalise the pinned token back to the ancestor's registry key.
+        GITHUB_REF_NAME: 'feature/x',
+        ARTIFACT_SCOPE: 'project-docs/domain-terms/t.md',
+      },
+    );
+
+    expect(out.signals.map((sig: { key: string }) => sig.key)).toContain(
+      'unscoped:domain-models:m',
+    );
+  });
 
   it('never overwrites a file a team has already edited', async () => {
     await generator(host, { githubActions: true });

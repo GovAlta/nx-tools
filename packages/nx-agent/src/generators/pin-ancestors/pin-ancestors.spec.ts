@@ -236,4 +236,43 @@ describe('nx-agent pin-ancestors generator', () => {
       warn.mockRestore();
     });
   });
+
+  // Digests were computed from a registry built before formatFiles, and
+  // Prettier rewrites bodies (list markers, heading style, table alignment) —
+  // none of which extractBody normalises. So an artifact that is both a pin
+  // target and itself pinned got a digest against its pre-format body and
+  // reported stale seconds later with no edit in between.
+  it('records a digest that survives its own formatting pass', async () => {
+    // '*' list markers: Prettier rewrites these to '-'.
+    host.write(
+      'project-docs/domain-terms/mid.md',
+      [
+        '---',
+        'term: Mid',
+        'project-docs-ancestors:',
+        '  - domain-terms:a',
+        '---',
+        '',
+        '* one',
+        '* two',
+      ].join('\n'),
+    );
+    host.write(
+      'project-docs/domain-terms/leaf.md',
+      [
+        '---',
+        'term: Leaf',
+        'project-docs-ancestors:',
+        '  - domain-terms:mid',
+        '---',
+        'Leaf body',
+      ].join('\n'),
+    );
+
+    await generator(host);
+    await lineage(host);
+
+    const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+    expect(l.status.stale).toEqual([]);
+  });
 });

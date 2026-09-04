@@ -1034,4 +1034,128 @@ describe('nx-agent project-docs-lineage generator', () => {
       );
     });
   });
+
+  describe('regressions found in review', () => {
+    // A malformed digest failed parseAncestorRef *and* the plausibility gate,
+    // so it was dropped in silence and its target read as unreferenced —
+    // verbatim the outcome recordUnparseable exists to prevent. Uppercase hex,
+    // straight off a SHA, is enough to trigger it.
+    it('reports a malformed digest instead of dropping the reference silently', async () => {
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---', 'A body'].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/b.md',
+        [
+          '---',
+          'term: B',
+          'project-docs-ancestors:',
+          '  - domain-terms:a@A3F9C2E1B004',
+          '---',
+          'B body',
+        ].join('\n'),
+      );
+
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.integrity.unparseableRefs).toEqual([
+        {
+          ref: 'domain-terms:a@A3F9C2E1B004',
+          foundIn: 'project-docs/domain-terms/b.md',
+        },
+      ]);
+      // The target still reads as unreferenced — an unparseable token can't be
+      // indexed as pointing anywhere, and that's the designed trade: record the
+      // bad token loudly rather than suppress the secondary report. What
+      // changed is that it's now recorded at all, and fails --strict, so the
+      // unreferenced entry has a stated cause instead of being a dead end.
+      expect(l.status.unreferenced).toContain('domain-terms:a');
+    });
+
+    it('fails --strict on a malformed digest', async () => {
+      host.write(
+        'project-docs/domain-terms/a.md',
+        ['---', 'term: A', '---', 'A body'].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/b.md',
+        [
+          '---',
+          'term: B',
+          'project-docs-ancestors:',
+          '  - domain-terms:a@NOTHEX',
+          '---',
+          'B body',
+        ].join('\n'),
+      );
+
+      await expect(generator(host, { strict: true })).rejects.toThrow(
+        /unparseable project-docs reference/,
+      );
+    });
+
+    // The YAML parse error went to stdout, so --json emitted two lines and the
+    // stream stopped being parseable in exactly the case a machine consumer
+    // wants it: when integrity.yamlErrors is non-empty.
+    it('keeps stdout parseable under --json when frontmatter will not parse', async () => {
+      host.write(
+        'project-docs/domain-terms/broken.md',
+        ['---', 'term: [unclosed', '---', 'body'].join('\n'),
+      );
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await generator(host, { json: true });
+
+      const printed = logSpy.mock.calls.map((c) => c[0]);
+      expect(printed).toHaveLength(1);
+      expect(JSON.parse(printed[0]).integrity.yamlErrors).toHaveLength(1);
+      expect(warnSpy.mock.calls.flat().join('\n')).toContain(
+        'YAML parse error',
+      );
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    // resolves entries were collected verbatim, so a pinned resolution never
+    // matched its registry key and the question silently reverted to open —
+    // which the delivery loop treats as a top-priority resolution signal.
+    it('counts a pinned resolves entry as resolving its target', async () => {
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          'open-questions': {
+            expectedAncestorTypes: [],
+            tracksResolution: true,
+          },
+          'domain-terms': { expectedAncestorTypes: [] },
+        }),
+      );
+      host.write(
+        'project-docs/open-questions/q.md',
+        ['---', 'title: Q', '---', 'Q body'].join('\n'),
+      );
+      host.write(
+        'project-docs/domain-terms/answer.md',
+        [
+          '---',
+          'term: Answer',
+          'project-docs-ancestors:',
+          '  - open-questions:q',
+          'resolves:',
+          '  - open-questions:q@aaaaaaaaaaaa',
+          '---',
+          'Answer body',
+        ].join('\n'),
+      );
+
+      await generator(host);
+
+      const l = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
+      expect(l.status.resolution.resolved).toContain('open-questions:q');
+      expect(l.status.resolution.open).not.toContain('open-questions:q');
+    });
+  });
 });

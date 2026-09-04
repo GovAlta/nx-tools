@@ -815,7 +815,7 @@ function buildHomePanel(params: {
   const legendHtml = `<div class="legend">
 <span><span class="legend-swatch" style="background:${TOKENS.success.bg};border:1px solid ${TOKENS.success.border}"></span>Resolved</span>
 <span><span class="legend-swatch" style="background:${TOKENS.important.bg};border:1px solid ${TOKENS.important.border}"></span>Open</span>
-<span><span class="legend-swatch" style="background:${TOKENS.interactive.bg};border:1px solid ${TOKENS.interactive.border}"></span>Orphaned</span>
+<span><span class="legend-swatch" style="background:${TOKENS.interactive.bg};border:1px solid ${TOKENS.interactive.border}"></span>Unreferenced</span>
 <span><span class="legend-swatch" style="background:${TOKENS.background};border:1px solid ${TOKENS.textMuted}"></span>Closed out (terminal)</span>
 <span><span class="legend-swatch" style="background:${TOKENS.backgroundSubtle};border:1px dashed ${TOKENS.textMuted}"></span>Context (out of scope)</span>
 </div>`;

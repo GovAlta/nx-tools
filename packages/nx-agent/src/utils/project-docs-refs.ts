@@ -466,7 +466,12 @@ export interface UnparseableRef {
 // noise (35 such matches in this repo alone). Code punctuation is the tell, so
 // this admits only the grammar's own charset plus the characters that
 // realistically slip into a hand-written id: a period, a stray slash, a space.
-const PLAUSIBLE_REF = /^[\w .:/#-]+$/;
+// '@' is in the charset because the grammar accepts a digest there, and a
+// malformed one is the likeliest bad token now that the README documents
+// hand-pinning `<type>:<id>@<digest>` — uppercase hex, straight off a SHA, is
+// enough. Without it such a ref failed the parse *and* this gate, so it was
+// dropped in silence and its target read as unreferenced.
+const PLAUSIBLE_REF = /^[\w .:/#@-]+$/;
 
 function recordUnparseable(
   unparseableRefs: UnparseableRef[],
@@ -570,8 +575,12 @@ function registerArtifact(
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       yamlErrors.push({ path, error });
+      // stderr, not stdout: --json prints one JSON document to stdout, and this
+      // line landing there made the stream unparseable in precisely the case a
+      // machine consumer cares about it. Matches the sibling helpers, which
+      // already warn.
       // eslint-disable-next-line no-console
-      console.log(`[nx-agent] YAML parse error in ${path}: ${error}`);
+      console.warn(`[nx-agent] YAML parse error in ${path}: ${error}`);
       registry.set(key, {
         path,
         bodyDigest: digestBody(content),
@@ -799,11 +808,6 @@ export function computeFindings(
     }
   }
 
-  // A terminal type (declared, same as expectedAncestorTypes/tracksResolution,
-  // by its own generator — no hardcoded type name here either) always has
-  // zero descendants by design once it's closed out correctly: that's what
-  // correct looks like, not neglect, so it's excluded from unreferenced rather
-  // than reported alongside a domain-model nobody's designed against yet.
   // Only a recorded digest that *disagrees* is a finding. Absent means unknown
   // (hand-authored, or predates adoption) and stays silent; a digest recorded
   // against an ancestor that isn't registered is a broken reference, already
@@ -837,6 +841,11 @@ export function computeFindings(
     }
   }
 
+  // A terminal type (declared, same as expectedAncestorTypes/tracksResolution,
+  // by its own generator — no hardcoded type name here either) always has
+  // zero descendants by design once it's closed out correctly: that's what
+  // correct looks like, not neglect, so it's excluded from unreferenced rather
+  // than reported alongside a domain-model nobody's designed against yet.
   const unreferenced = [...registry.keys()].filter((key) => {
     if (index.has(key)) {
       return false;
@@ -989,7 +998,12 @@ export function computeFindings(
   const resolvedKeys = new Set<string>();
   for (const entry of registry.values()) {
     for (const resolved of entry.resolves) {
-      resolvedKeys.add(resolved);
+      // Normalised through the grammar rather than taken verbatim: a resolves
+      // entry may now carry an @digest, and a raw token never matches the
+      // registry key, so a genuinely resolved question would silently revert to
+      // open — which the loop treats as a top-priority resolution signal.
+      const parsed = parseAncestorRef(resolved);
+      resolvedKeys.add(parsed ? refKey(parsed) : resolved);
     }
   }
 
