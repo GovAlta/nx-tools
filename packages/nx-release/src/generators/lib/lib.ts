@@ -49,7 +49,7 @@ export default async function (host: Tree, options: Schema) {
     host,
     {},
     {
-      'semantic-release': '^24.0.0',
+      'semantic-release': '^25.0.0',
     },
   );
 

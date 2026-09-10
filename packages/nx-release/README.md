@@ -79,15 +79,16 @@ Prerelease branches (those with `prerelease: true` in the semantic-release confi
 
 Semantic-release v24.2.7 introduced a performance optimisation ([#3732](https://github.com/semantic-release/semantic-release/pull/3732)) that replaced per-tag note reads with a single `git log` command using a glob (`--notes=refs/notes/semantic-release*`). When multiple projects release on the same commit, each tag has its own note ref but all notes land on the same commit object. The glob causes git to emit all matching notes for that commit in a single log line where only the first note retains its tag association — subsequent notes appear on continuation lines with no tag decoration and are discarded. After the first project is promoted to `latest` (its note updated to include `null` channel), the combined output maps all tags on that commit to that updated note, making every remaining project appear to already be on the latest channel.
 
-A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic-release/semantic-release/pull/4074). Until that merges and is released there are two workarounds:
+A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic-release/semantic-release/pull/4074), still open.
 
-**Option 1 — Pin semantic-release to the last unaffected version:**
+Pinning back to v24.2.6 — the last release before the regression — is **no longer an
+option**: this plugin peers `semantic-release ^25.0.0`. Every v24 line from 24.2.7 onward
+carries the regression anyway, so `^24` was not a way to avoid it either; the peer range was
+raised because v24's dependency on the npm CLI pulled in a vulnerable transitive tree
+(`pacote`, `sigstore`, `picomatch`, `brace-expansion`, `ip-address`), and v25 does not. Note
+that v25 requires Node `^22.14.0 || >= 24.10.0`.
 
-```json
-"semantic-release": "24.2.6"
-```
-
-v24.2.6 (released 2025-06-29) is the last version before the regression. v24.2.7 introduced it.
-
-**Option 2 — Ensure no two project tags share a commit on `next`:**
-Add a trivial commit between each project's release run on the `next` branch so that every release tag lands on a distinct commit.
+The workaround, if you release non-prerelease channels, is to ensure no two project tags
+share a commit on `next` — add a trivial commit between each project's release run so that
+every release tag lands on a distinct commit. Projects releasing only on prerelease channels
+need no workaround, for the reason above.
