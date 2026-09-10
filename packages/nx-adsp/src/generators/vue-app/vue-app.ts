@@ -188,12 +188,14 @@ export default async function (host: Tree, options: Schema) {
     host,
     {
       '@abgov/design-tokens': '2.12.8',
-      '@abgov/web-components': '2.4.0',
+      '@abgov/web-components': '2.5.0',
       // keycloak-js is a transitive dependency of @dsb-norge/vue-keycloak-js;
       // don't pin it directly or the versions diverge into two copies.
       '@dsb-norge/vue-keycloak-js': '^3.0.0',
       pinia: '^2.0.0',
-      'vue-router': '^4.0.0',
+      // @nx/vue's application generator (--routing) writes ^4.5.0; ours runs
+      // after it and wins, so keep the floor at or above Nx's choice.
+      'vue-router': '^4.5.0',
     },
     {
       '@axe-core/playwright': '^4.12.1',
