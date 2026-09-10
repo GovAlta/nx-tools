@@ -11,6 +11,11 @@
       "description": "Split the generated pipeline workflow into a check-only pull-request.yml and a deploy-only pipeline.yml, so an in-flight deploy is queued rather than cancelled by a later push.",
       "implementation": "./src/migrations/split-pipeline-workflows/split-pipeline-workflows",
       "prompt": "./src/migrations/split-pipeline-workflows/split-pipeline-workflows.md"
+    },
+    "parameterize-sandbox-image-tag": {
+      "version": "13.12.1",
+      "description": "Add an IMAGE_TAG parameter to generated sandbox manifests, so the sandbox executor's --imageTag reaches the Deployment instead of being ignored.",
+      "implementation": "./src/migrations/parameterize-sandbox-image-tag/parameterize-sandbox-image-tag"
     }
   }
 }

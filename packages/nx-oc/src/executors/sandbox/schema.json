@@ -36,7 +36,7 @@
     "imageTag": {
       "type": "string",
       "default": "sandbox",
-      "description": "Image tag pushed and imported into the namespace imagestream."
+      "description": "Image tag to push, import into the namespace imagestream, and deploy. Requires a manifest with an IMAGE_TAG parameter \u2014 re-run the sandbox generator or `nx migrate` if a non-default tag is rejected."
     },
     "skipBuild": {
       "type": "boolean",

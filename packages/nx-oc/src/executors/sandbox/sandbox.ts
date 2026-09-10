@@ -5,13 +5,17 @@ import {
   registerDirectoryService,
 } from '@abgov/adsp-cli';
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { detectApplicationType } from '../../utils/app-type';
 import { activeAccountScopes } from '../../utils/gh-utils';
 import { ensureOcLogin } from '../../utils/oc-utils';
 import { detectAdspTenant } from '../../adsp/adsp-utils';
 import { SandboxExecutorSchema } from './schema';
+
+// Mirrors the `default` in schema.json and the `value` of the manifest's
+// IMAGE_TAG parameter; the preflight guard below compares against it.
+const DEFAULT_IMAGE_TAG = 'sandbox';
 
 const PROXY_TAG_PREFIX = 'adsp:proxy-service:';
 
@@ -55,6 +59,24 @@ function resolveContainerfile(
     );
   }
   return found;
+}
+
+// Whether the manifest exposes IMAGE_TAG as an `oc process` parameter.
+//
+// It didn't always: the sandbox branch of the deployment templates baked the tag
+// in as the literal `:sandbox`, so a non-default --imageTag pushed and imported
+// one tag while the Deployment kept reading another. `oc process` hard-errors on
+// an unknown parameter name, so the flag can't simply be passed unconditionally
+// — a manifest generated before that fix would break on every deploy, including
+// the default path that works today.
+function manifestAcceptsImageTag(cwd: string, manifestPath: string): boolean {
+  if (!existsSync(join(cwd, manifestPath))) return false;
+  // Matching the parameter declaration, not any occurrence: `${IMAGE_TAG}` in an
+  // object body without the matching `parameters:` entry is exactly the
+  // half-migrated state that would still fail in `oc process`.
+  return /^\s*-\s*name:\s*IMAGE_TAG\s*$/m.test(
+    readFileSync(join(cwd, manifestPath), 'utf8'),
+  );
 }
 
 // Fail fast, with an actionable message, before the (slow) production build —
@@ -198,7 +220,7 @@ export default async function runExecutor(
   const {
     sandboxProject,
     registry,
-    imageTag = 'sandbox',
+    imageTag = DEFAULT_IMAGE_TAG,
     skipBuild = false,
     skipPush = false,
     deployBackend = false,
@@ -247,6 +269,22 @@ export default async function runExecutor(
     const containerfile = skipBuild
       ? undefined
       : resolveContainerfile(cwd, projectName, options.dockerfile);
+
+    // Same reasoning as the containerfile above: a --imageTag that cannot reach
+    // the Deployment should stop the run here, not after it has pushed an image
+    // and provisioned a database. Silently deploying the previously-imported
+    // `:sandbox` tag is the defect this replaces.
+    const manifestPath = `.openshift/${projectName}/${projectName}.sandbox.yml`;
+    const imageTagIsParameter = manifestAcceptsImageTag(cwd, manifestPath);
+    if (!imageTagIsParameter && imageTag !== DEFAULT_IMAGE_TAG) {
+      throw new Error(
+        `--imageTag=${imageTag} cannot take effect: ${manifestPath} has no IMAGE_TAG ` +
+          `parameter, so its Deployment reads a hard-coded '${DEFAULT_IMAGE_TAG}' tag and would ` +
+          `run whatever was imported last, not the image this run pushes.\n` +
+          `Regenerate the manifest with \`nx g @abgov/nx-oc:sandbox ${projectName}\`, ` +
+          `or run \`nx migrate\` to pick up the parameterize-sandbox-image-tag migration.`,
+      );
+    }
 
     // ---- service client secret (node services authenticate to ADSP) ----
     // Upserted from the current .env.local so re-runs pick up a rotated secret.
@@ -559,7 +597,9 @@ EOF`,
 
     run(
       'Apply manifest',
-      `oc process -f .openshift/${projectName}/${projectName}.sandbox.yml -p PROJECT=${sandboxProject} | oc apply -f -`,
+      `oc process -f ${manifestPath} -p PROJECT=${sandboxProject}` +
+        (imageTagIsParameter ? ` -p IMAGE_TAG=${imageTag}` : '') +
+        ` | oc apply -f -`,
       cwd,
     );
     run(
