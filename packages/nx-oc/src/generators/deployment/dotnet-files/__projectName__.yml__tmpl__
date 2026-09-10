@@ -28,6 +28,12 @@ parameters:
     displayName: Deploy Tag
     value: latest
     required: true
+<% } else { %>
+  - name: IMAGE_TAG
+    description: Image tag to deploy. Set by the sandbox executor's --imageTag.
+    displayName: Image Tag
+    value: sandbox
+    required: true
 <% } %>
 objects:
 <% if (!sandbox) { %>
@@ -103,7 +109,7 @@ objects:
           containers:
             - name: ${APP_NAME}
 <% if (sandbox) { %>
-              image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/<%= projectName %>:sandbox
+              image: image-registry.openshift-image-registry.svc:5000/${PROJECT}/<%= projectName %>:${IMAGE_TAG}
 <% } else { %>
               image: ${APP_NAME}:${DEPLOY_TAG}
 <% } %>

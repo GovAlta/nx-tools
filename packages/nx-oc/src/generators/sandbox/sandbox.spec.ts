@@ -71,7 +71,9 @@ describe('Sandbox Generator', () => {
     expect(host.exists('.openshift/test/test.yml')).toBeFalsy();
     const manifest = host.read('.openshift/test/test.sandbox.yml').toString();
     expect(manifest).toContain('imagePullPolicy: Always');
-    expect(manifest).not.toContain('ImageStream');
+    // `kind:`-qualified: the assertion is that the sandbox manifest declares no
+    // ImageStream object, not that the word never appears in it.
+    expect(manifest).not.toContain('kind: ImageStream');
     expect(manifest).not.toContain('DEPLOY_TAG');
     expect(manifest).toContain('sandbox');
     expect(manifest).toContain('deployment-mode: sandbox');
@@ -111,7 +113,9 @@ describe('Sandbox Generator', () => {
     expect(host.exists('.openshift/test/test.sandbox.yml')).toBeTruthy();
     const manifest = host.read('.openshift/test/test.sandbox.yml').toString();
     expect(manifest).toContain('imagePullPolicy: Always');
-    expect(manifest).not.toContain('ImageStream');
+    // `kind:`-qualified: the assertion is that the sandbox manifest declares no
+    // ImageStream object, not that the word never appears in it.
+    expect(manifest).not.toContain('kind: ImageStream');
     expect(manifest).toContain(
       'haproxy.router.openshift.io/rate-limit-connections',
     );

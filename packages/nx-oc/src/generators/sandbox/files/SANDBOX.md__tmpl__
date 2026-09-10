@@ -56,7 +56,7 @@ workspace-wide) and provisioned into GitHub Actions secrets by
 ```bash
 nx run <%= projectName %>:sandbox --skipBuild              # reuse the built image; re-push + import + roll out
 nx run <%= projectName %>:sandbox --skipBuild --skipPush   # reuse the pushed image; re-import + roll out only
-nx run <%= projectName %>:sandbox --imageTag=<tag>         # push/import under a different tag
+nx run <%= projectName %>:sandbox --imageTag=<tag>         # push, import and deploy a different tag
 nx run <%= projectName %>:sandbox --importRetries=8        # more import retries on a slow cluster
 nx run <%= projectName %>:sandbox --registerDirectory      # register in ADSP directory after rollout (opt-in)
 nx run <%= projectName %>:sandbox --dockerfile=Dockerfile  # build file elsewhere (e.g. a repo-root Dockerfile)

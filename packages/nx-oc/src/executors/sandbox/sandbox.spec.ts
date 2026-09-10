@@ -9,6 +9,7 @@ jest.mock('child_process', () => ({
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
   existsSync: jest.fn(),
+  readFileSync: jest.fn(),
 }));
 jest.mock('../../utils/oc-utils', () => ({ ensureOcLogin: jest.fn() }));
 jest.mock('@abgov/adsp-cli', () => ({
@@ -18,7 +19,29 @@ jest.mock('@abgov/adsp-cli', () => ({
 }));
 
 const { execSync } = require('child_process') as { execSync: jest.Mock };
-const { existsSync } = require('fs') as { existsSync: jest.Mock };
+const { existsSync, readFileSync } = require('fs') as {
+  existsSync: jest.Mock;
+  readFileSync: jest.Mock;
+};
+
+// A sandbox manifest that declares the IMAGE_TAG parameter, i.e. one generated
+// after the tag was parameterized. Only the parameter declaration matters to
+// the executor — it is what `oc process -p IMAGE_TAG=` requires.
+const MANIFEST_WITH_IMAGE_TAG = [
+  'parameters:',
+  '  - name: PROJECT',
+  '    required: true',
+  '  - name: IMAGE_TAG',
+  '    value: sandbox',
+  'objects:',
+].join('\n');
+
+const MANIFEST_WITHOUT_IMAGE_TAG = [
+  'parameters:',
+  '  - name: PROJECT',
+  '    required: true',
+  'objects:',
+].join('\n');
 
 /** Only the given workspace-relative paths exist. */
 function onlyTheseFilesExist(...paths: string[]) {
@@ -64,20 +87,30 @@ function commands(): string[] {
 beforeEach(() => {
   execSync.mockReset();
   existsSync.mockReset();
+  readFileSync.mockReset();
+  // Pre-parameterization manifest by default, so the existing cases exercise
+  // the back-compatible path.
+  readFileSync.mockReturnValue(MANIFEST_WITHOUT_IMAGE_TAG);
   // The generated default: the sandbox generator emits this path.
   onlyTheseFilesExist('.openshift/test/Dockerfile');
   execSync.mockImplementation(() => Buffer.from(''));
   adspCli.getAccessToken.mockReset();
-  adspCli.getAccessToken.mockResolvedValue({ status: 'ok', token: 'test-token' });
+  adspCli.getAccessToken.mockResolvedValue({
+    status: 'ok',
+    token: 'test-token',
+  });
   adspCli.getDirectoryServiceUrl.mockReset();
-  adspCli.getDirectoryServiceUrl.mockReturnValue('https://directory.adsp.alberta.ca');
+  adspCli.getDirectoryServiceUrl.mockReturnValue(
+    'https://directory.adsp.alberta.ca',
+  );
   adspCli.registerDirectoryService.mockReset();
   adspCli.registerDirectoryService.mockResolvedValue('registered');
 });
 
 describe('sandbox executor', () => {
   describe('container build file resolution', () => {
-    const buildCmd = () => commands().find((cmd) => cmd.startsWith('podman build'));
+    const buildCmd = () =>
+      commands().find((cmd) => cmd.startsWith('podman build'));
 
     it('defaults to the path the sandbox generator emits', async () => {
       await runExecutor(baseOptions, context());
@@ -101,14 +134,20 @@ describe('sandbox executor', () => {
 
     it('honours --dockerfile, e.g. the root Dockerfile the OpenShift container contract requires', async () => {
       onlyTheseFilesExist('Dockerfile');
-      await runExecutor({ ...baseOptions, dockerfile: 'Dockerfile' }, context());
+      await runExecutor(
+        { ...baseOptions, dockerfile: 'Dockerfile' },
+        context(),
+      );
       expect(buildCmd()).toContain('-f Dockerfile');
     });
 
     it('fails fast when --dockerfile points at nothing, naming the value given', async () => {
       onlyTheseFilesExist('.openshift/test/Dockerfile');
       await expect(
-        runExecutor({ ...baseOptions, dockerfile: 'build/Containerfile' }, context()),
+        runExecutor(
+          { ...baseOptions, dockerfile: 'build/Containerfile' },
+          context(),
+        ),
       ).resolves.toEqual({ success: false });
       expect(buildCmd()).toBeUndefined();
     });
@@ -394,7 +433,9 @@ describe('sandbox executor', () => {
       ).toBe(true);
       expect(cmds.some((c) => c.includes('test-db.yml'))).toBe(true);
       // No plain Deployment provisioning or shim resources
-      expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(false);
+      expect(cmds.some((c) => c.includes('sandbox-postgres-creds'))).toBe(
+        false,
+      );
       expect(cmds.some((c) => c.includes('sandbox-postgres.yml'))).toBe(false);
       // Database CR applied before the app rollout
       const dbCrIdx = cmds.findIndex((c) => c.includes('test-db.yml'));
@@ -437,9 +478,9 @@ describe('sandbox executor', () => {
       expect(cmds.some((c) => c.includes('sandbox-postgres-rw'))).toBe(true);
       // No CNPG-specific provisioning commands
       expect(cmds.some((c) => c.includes('add-scc-to-user'))).toBe(false);
-      expect(
-        cmds.some((c) => c.includes('sandbox-postgres-cnpg.yml')),
-      ).toBe(false);
+      expect(cmds.some((c) => c.includes('sandbox-postgres-cnpg.yml'))).toBe(
+        false,
+      );
 
       warn.mockRestore();
     });
@@ -470,10 +511,7 @@ describe('sandbox executor', () => {
         if (cmd.includes('oc api-resources')) {
           return Buffer.from('ok');
         }
-        if (
-          cmd.includes('oc describe resourcequota') &&
-          cmd.includes('grep')
-        ) {
+        if (cmd.includes('oc describe resourcequota') && cmd.includes('grep')) {
           return Buffer.from(
             'azure-disk.storageclass.storage.k8s.io/requests.storage  10Gi  10Gi',
           );
@@ -560,7 +598,8 @@ describe('sandbox executor', () => {
 
     it('registers the service when route resolves and tenant tag is present', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
       const result = await runExecutor(
@@ -579,11 +618,14 @@ describe('sandbox executor', () => {
 
     it('logs skip when the directory entry already exists (409)', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
       adspCli.registerDirectoryService.mockResolvedValue('exists');
-      const info = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+      const info = jest
+        .spyOn(logger, 'info')
+        .mockImplementation(() => undefined);
       const result = await runExecutor(
         { ...baseOptions, registerDirectory: true },
         context([TENANT_TAG]),
@@ -597,7 +639,9 @@ describe('sandbox executor', () => {
 
     it('warns and skips registration when the route cannot be resolved', async () => {
       // default execSync mock returns '' → no route host
-      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const warn = jest
+        .spyOn(logger, 'warn')
+        .mockImplementation(() => undefined);
       const result = await runExecutor(
         { ...baseOptions, registerDirectory: true },
         context([TENANT_TAG]),
@@ -612,10 +656,13 @@ describe('sandbox executor', () => {
 
     it('warns and skips registration when no ADSP tenant tag is present', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
-      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const warn = jest
+        .spyOn(logger, 'warn')
+        .mockImplementation(() => undefined);
       const result = await runExecutor(
         { ...baseOptions, registerDirectory: true },
         context(), // no tenant tag
@@ -630,11 +677,14 @@ describe('sandbox executor', () => {
 
     it('warns and skips registration when not authenticated to ADSP', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
       adspCli.getAccessToken.mockResolvedValue({ status: 'not-authenticated' });
-      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const warn = jest
+        .spyOn(logger, 'warn')
+        .mockImplementation(() => undefined);
       const result = await runExecutor(
         { ...baseOptions, registerDirectory: true },
         context([TENANT_TAG]),
@@ -649,13 +699,18 @@ describe('sandbox executor', () => {
 
     it('warns (non-fatal) when registerDirectoryService throws (e.g. 403)', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
       adspCli.registerDirectoryService.mockRejectedValue(
-        new Error("Not authorized to register services in namespace 'my-tenant'."),
+        new Error(
+          "Not authorized to register services in namespace 'my-tenant'.",
+        ),
       );
-      const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const warn = jest
+        .spyOn(logger, 'warn')
+        .mockImplementation(() => undefined);
       const result = await runExecutor(
         { ...baseOptions, registerDirectory: true },
         context([TENANT_TAG]),
@@ -669,7 +724,8 @@ describe('sandbox executor', () => {
 
     it('skips registration entirely for frontend app types', async () => {
       execSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('oc get route test')) return Buffer.from('test.apps.example.com');
+        if (cmd.includes('oc get route test'))
+          return Buffer.from('test.apps.example.com');
         return Buffer.from('');
       });
       const result = await runExecutor(
@@ -688,5 +744,82 @@ describe('sandbox executor', () => {
       expect(result.success).toBe(true);
       expect(adspCli.registerDirectoryService).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('--imageTag', () => {
+  // The defect this covers: the sandbox branch of the deployment templates baked
+  // the tag in as the literal `:sandbox`, so a non-default --imageTag pushed and
+  // imported one tag while the Deployment kept reading another — a deploy that
+  // silently ran the previously-imported image.
+  function manifestExists(content: string) {
+    onlyTheseFilesExist(
+      '.openshift/test/Dockerfile',
+      '.openshift/test/test.sandbox.yml',
+    );
+    readFileSync.mockReturnValue(content);
+  }
+
+  it('passes IMAGE_TAG to oc process when the manifest declares it', async () => {
+    manifestExists(MANIFEST_WITH_IMAGE_TAG);
+
+    const result = await runExecutor(
+      { ...baseOptions, imageTag: 'pr-42' },
+      context(),
+    );
+
+    expect(result).toEqual({ success: true });
+    const process = commands().find((c) => c.startsWith('oc process'));
+    expect(process).toContain('-p IMAGE_TAG=pr-42');
+    // The imagestream tag has to match, or the parameter points at nothing.
+    expect(commands()).toContainEqual(expect.stringContaining('test:pr-42'));
+  });
+
+  it('still passes IMAGE_TAG for the default tag, so the manifest has no second source of truth', async () => {
+    manifestExists(MANIFEST_WITH_IMAGE_TAG);
+
+    await runExecutor(baseOptions, context());
+
+    expect(commands().find((c) => c.startsWith('oc process'))).toContain(
+      '-p IMAGE_TAG=sandbox',
+    );
+  });
+
+  it('omits IMAGE_TAG on a pre-parameterization manifest, which oc process would reject', async () => {
+    manifestExists(MANIFEST_WITHOUT_IMAGE_TAG);
+
+    const result = await runExecutor(baseOptions, context());
+
+    expect(result).toEqual({ success: true });
+    expect(commands().find((c) => c.startsWith('oc process'))).not.toContain(
+      'IMAGE_TAG',
+    );
+  });
+
+  it('fails in the preflight when a non-default tag cannot reach the Deployment', async () => {
+    manifestExists(MANIFEST_WITHOUT_IMAGE_TAG);
+    const error = jest
+      .spyOn(logger, 'error')
+      .mockImplementation(() => undefined);
+
+    const result = await runExecutor(
+      { ...baseOptions, imageTag: 'pr-42' },
+      context(),
+    );
+
+    expect(result).toEqual({ success: false });
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('--imageTag=pr-42 cannot take effect'),
+    );
+    // Preflight, not partway through: nothing may have been built, pushed, or
+    // provisioned by the time this fails.
+    expect(commands()).not.toContainEqual(
+      expect.stringContaining('podman build'),
+    );
+    expect(commands()).not.toContainEqual(
+      expect.stringContaining('podman push'),
+    );
+    expect(commands()).not.toContainEqual(expect.stringContaining('oc apply'));
+    error.mockRestore();
   });
 });
