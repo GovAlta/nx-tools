@@ -89,14 +89,12 @@ A fix is tracked upstream at [semantic-release#4074](https://github.com/semantic
 
 ### Workarounds
 
-**Option 1 — Pin to the last unaffected version:**
+Pinning back to v24.2.6 — the last release before the regression — is **no longer an
+option**: `@abgov/nx-release` peers `semantic-release ^25.0.0`. Every v24 line from 24.2.7
+onward carries the regression anyway, so `^24` was not a way to avoid it either; the peer
+range was raised because v24's dependency on the npm CLI pulled in a vulnerable transitive
+tree, and v25 does not. Note that v25 requires Node `^22.14.0 || >= 24.10.0`.
 
-```json
-"semantic-release": "24.2.6"
-```
-
-v24.2.6 is the last version before the regression.
-
-**Option 2 — Ensure no two project tags share a commit on `next`:**
-
-Add a trivial commit between each project's release run so that every release tag lands on a distinct commit.
+If you release non-prerelease channels, ensure no two project tags share a commit on `next`
+— add a trivial commit between each project's release run so that every release tag lands on
+a distinct commit. Projects releasing only on prerelease channels need no workaround.
