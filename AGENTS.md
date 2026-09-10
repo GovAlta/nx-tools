@@ -205,10 +205,36 @@ nx run nx-release-e2e:e2e           # integration tests for nx-release
 npx nx test nx-adsp                 # test a single package
 npx nx test nx-adsp -- --update-snapshot  # update Jest snapshots
 npm run format:write                # run Prettier on all files
+npm run audit:emitted-deps          # audit the dependency ranges the generators emit
+npm run audit:nx-alignment          # check those pins against the delegated @nx/* generators
 ```
 
 Do not run `npm install`, `npx nx migrate`, or anything that modifies `nx.json`
 unless explicitly directed.
+
+---
+
+## Generated dependency versions
+
+The versions the generators write into a consuming workspace are string literals
+in generator bodies. None of those packages appear in a `package.json` here, so they
+are invisible to this repo's `npm audit` and to Dependabot and Renovate alike — both
+read manifests and lockfiles. `tools/audit-emitted-deps/` is what covers them; see its
+README. Two rules follow from how that tooling works:
+
+- **A pin's rationale belongs in `allowlist.json`, not only in a code comment.** A
+  comment freezes a point-in-time judgment and nothing re-checks it. `react-app`'s
+  react-router-dom comment was correct when written and stayed correct, but only by
+  luck — the allowlist entry carries a `reviewed` date, so the judgment gets revisited.
+- **Don't reason about what `@nx/*` writes by reading its `versions.js`.** An export
+  existing there doesn't mean the generator writes it. `@nx/angular` defaults
+  `zoneless` to true on Angular >= 21 and writes no `zone.js` entry, so nx-adsp's
+  `zone.js` pin is the sole source rather than an override — a name-matching comparison
+  reports overrides that don't exist. Run the generator and read the tree.
+
+The wider surface — react, vue, `@angular/*`, jest, playwright — is pinned inside the
+installed `@nx/*` package and moves with the consumer's Nx version, not with anything
+here. `nx migrate` in the consuming workspace is what keeps that layer current.
 
 ---
 
