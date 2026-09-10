@@ -154,14 +154,20 @@ export default async function (host: Tree, options: Schema) {
       '@reduxjs/toolkit': '^2.5.1',
       'keycloak-js': '^23.0.7',
       'react-redux': '^9.2.0',
-      // 6.30.4, not 6.30.3: GHSA-2j2x-hqr9-3h42 (moderate) — a same-origin
-      // redirect whose path starts with "//" was reinterpreted as a
-      // protocol-relative URL, causing an open redirect. Fixed in 6.30.4,
-      // the last 6.x release. Two other advisories affecting this line
-      // (GHSA-jjmj-jmhj-qwj2, GHSA-wrjc-x8rr-h8h6) have no 6.x fix at all —
-      // only React Router v7 (a breaking migration: v7 merges
-      // react-router-dom into react-router and changes several APIs).
-      'react-router-dom': '6.30.4',
+      // Pinned to the newest 6.x, which is not advisory-free — the 6 and 7
+      // lines differ in what they can fix, so the distinction matters:
+      //   GHSA-2j2x-hqr9-3h42, GHSA-jjmj-jmhj-qwj2 — open redirect, both
+      //     patched within 6.x (6.30.4 and 6.30.6 respectively).
+      //   GHSA-wrjc-x8rr-h8h6, GHSA-337j-9hxr-rhxg — vulnerable
+      //     >=6.0.0 <7.18.0, so no 6.x release clears them. Only React Router
+      //     v7 does, and v7 merges react-router-dom into react-router and
+      //     changes several APIs — a breaking migration for a generated app,
+      //     not a version bump. Accepted in
+      //     tools/audit-emitted-deps/allowlist.json, with a reviewed date.
+      // Check the patched version per advisory before assuming a 6.x bump is
+      // pointless: 6.30.6 does clear jjmj, which an earlier version of this
+      // comment claimed had no 6.x fix.
+      'react-router-dom': '6.30.6',
     },
     {
       '@axe-core/playwright': '^4.12.1',
