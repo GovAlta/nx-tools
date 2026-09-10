@@ -157,17 +157,21 @@ export default async function (host: Tree, options: AngularAppGeneratorSchema) {
   addDependenciesToPackageJson(
     host,
     {
-      '@abgov/angular-components': '5.3.0',
+      '@abgov/angular-components': '5.5.0',
       '@abgov/design-tokens': '2.12.8',
-      // Pin exact (not ^2.0.0): angular-components 5.3.0 imports symbols added in
-      // ui-components-common 2.3.0 (e.g. GoabWorkspaceLayoutScrollState), so a
-      // lower 2.x resolves and fails the build. Keep this in lockstep with the
-      // angular-components version above.
-      '@abgov/ui-components-common': '2.3.0',
-      '@abgov/web-components': '2.4.0',
+      // Pin exact (not ^2.0.0): angular-components 5.5.0 imports symbols added in
+      // ui-components-common 2.4.0 (e.g. GoabDropdownMultiselectOnChangeDetail,
+      // GoabIconButtonType), so a lower 2.x resolves and fails the build. Keep
+      // this in lockstep with the angular-components version above.
+      '@abgov/ui-components-common': '2.5.0',
+      '@abgov/web-components': '2.5.0',
       'keycloak-angular': '^19.0.2',
       'keycloak-js': '^23.0.7',
-      'zone.js': '~0.15.0',
+      // @nx/angular defaults `zoneless` to true on Angular >= 21, so it writes no
+      // zone.js entry of its own — but our main.ts and test-setup.ts import it.
+      // This pin is the only thing putting zone.js in package.json, not an
+      // override of Nx's choice. Angular 22 peers `~0.15.0 || ~0.16.0`.
+      'zone.js': '~0.16.2',
     },
     {
       '@axe-core/playwright': '^4.12.1',
