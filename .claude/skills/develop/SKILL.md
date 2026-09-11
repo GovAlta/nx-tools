@@ -1,7 +1,7 @@
 ---
 name: develop
 description: Implement an api-design/ux-design against real code, following the project's own generated recipe (its own AGENTS.md — the exact steps vary by stack), with a project-docs-ancestors code comment tying every new file back to the design it implements. Runs an inline gate battery — audit, secret scan, build, test, always blocking — plus an independent code review, every pass, advisory.
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
 argument-hint: "<api-design or ux-design slug to implement>"
 project-docs-ancestors: [skill-designs:develop-skill-lineage-plan-step]
 ---
