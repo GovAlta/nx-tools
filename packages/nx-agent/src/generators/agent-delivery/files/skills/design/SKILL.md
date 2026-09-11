@@ -1,7 +1,7 @@
 ---
 name: design
 description: Turn a requirement into a bounded context, domain model, and (when there's a UI consumer) a UX design followed by an API design driven by what that UX actually needs — resolving any open Questions along the way, since domain modeling is exactly where they get answered. Vocabulary and domain-model artifacts use real @abgov/nx-agent generators; UX/API design are hand-authored, matching those same conventions, until a generator exists for them.
-allowed-tools: Read, Write, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent
 argument-hint: "<requirement slug to design against>"
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: discover
 description: Frame a feature request into a service description and requirements with IDs seeded at birth. Two modes — intake (decompose a features:<slug> artifact) and refinement (example-map one requirement to closure) — same skill, branches on what it's given.
-allowed-tools: Read, Write, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent
 argument-hint: "<feature slug to decompose, or a requirement slug to refine>"
 ---
 
