@@ -214,14 +214,20 @@ unless explicitly directed.
 
 ## Code Style
 
-- **Formatter**: Prettier with `singleQuote: true` (`.prettierrc`)
-- **Linter**: ESLint with `@typescript-eslint`; `no-extra-semi` is an error
-- **Quotes**: single quotes in all TypeScript files — never double quotes
-- **Semicolons**: do not add semicolons at the end of statements
-- **Indentation**: 2 spaces (enforced by `.editorconfig`)
-- **Module boundaries**: `@nx/enforce-module-boundaries` is active; do not import
-  from one package into another unless a `tsconfig.base.json` alias already exists
-- **Final newline**: all files must end with a newline
+This section names the tools and the things they cannot tell you. It deliberately does **not**
+restate the values they enforce: a second copy of `.prettierrc` written in prose is a copy nothing
+executes, so it drifts, and the drift is invisible because every real consumer reads the config.
+
+- **Run `npm run format:write` before committing.** Prettier owns quoting, semicolons,
+  indentation and final newlines. **Formatting is not gated** — it runs in no CI job and no
+  pre-commit hook — so this command is the only thing that applies it. Don't hand-match a style
+  from memory; run the formatter and match what it produces.
+- **Lint with `npx nx lint <project>`.** The config is `eslint.config.mjs` at the root plus one
+  per package. Read those for which rules are on rather than assuming, including where a rule you
+  expect is explicitly disabled.
+- **Module boundaries**: `@nx/enforce-module-boundaries` is active, and importing across packages
+  needs a `tsconfig.base.json` alias to exist first. This one is worth stating because the lint
+  error does not tell you the remedy.
 
 ---
 
@@ -521,8 +527,7 @@ Key wiring to preserve when editing:
 - Do not commit generated `.openshift/` manifests unless adding new template files
 - Do not use `jest.config.js` — all configs use `jest.config.ts`
 - Do not remove the `snapshotFormat` block from `jest.preset.js`
-- Do not add semicolons at the end of statements
-- Do not use double quotes for strings in TypeScript files
+- Do not hand-match formatting from memory — run `npm run format:write` (see **Code Style**)
 - Do not push directly to `main` or `beta` branches
 - Do not run `npx nx migrate` without explicit instruction
 
