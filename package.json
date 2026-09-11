@@ -29,7 +29,7 @@
   "private": true,
   "dependencies": {
     "@abgov/adsp-cli": "^1.10.0",
-    "@angular/core": "22.0.8",
+    "@angular/core": "22.1.6",
     "@nx/devkit": "23.1.1",
     "json-schema-to-typescript": "^13.0.1",
     "marked": "~15.0.12",
