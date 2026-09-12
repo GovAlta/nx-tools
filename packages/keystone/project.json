@@ -1,0 +1,51 @@
+{
+  "name": "keystone",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/keystone/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/keystone/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/packages/keystone"],
+      "options": {
+        "jestConfig": "packages/keystone/jest.config.ts",
+        "passWithNoTests": false
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/keystone",
+        "tsConfig": "packages/keystone/tsconfig.lib.json",
+        "packageJson": "packages/keystone/package.json",
+        "main": "packages/keystone/src/index.ts",
+        "assets": ["packages/keystone/*.md"]
+      }
+    },
+    "release": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "node packages/keystone/verify-package.mjs",
+          "npx semantic-release -e ./packages/keystone/.releaserc.json"
+        ],
+        "parallel": false
+      }
+    },
+    "verify-package": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node packages/keystone/verify-package.mjs"
+      }
+    }
+  }
+}
