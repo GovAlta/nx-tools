@@ -1,0 +1,25 @@
+{
+  "extends": "../../.releaserc.json",
+  "tagFormat": "keystone-v${version}",
+  "plugins": [
+    [
+      "@abgov/nx-release",
+      {
+        "project": "keystone"
+      }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "pkgRoot": "dist/packages/keystone"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "releasedLabels": false,
+        "successComment": false
+      }
+    ]
+  ]
+}
