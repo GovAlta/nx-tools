@@ -1,0 +1,24 @@
+{
+  "name": "@abgov/keystone",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "main": "src/index.js",
+  "bin": {
+    "keystone": "./src/bin/keystone.js"
+  },
+  "description": "Government of Alberta - bootstrap installer that places the Keystone harness into a project.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GovAlta/nx-tools.git",
+    "directory": "packages/keystone"
+  },
+  "files": [
+    "src/**/*.js",
+    "src/**/*.d.ts",
+    "README.md",
+    "!src/**/*.spec.js",
+    "!src/**/*.spec.d.ts",
+    "!src/testing/**"
+  ],
+  "scripts": {}
+}
