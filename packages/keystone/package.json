@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "main": "src/index.js",
   "bin": {
-    "keystone": "./src/bin/keystone.js"
+    "keystone": "src/bin/keystone.js"
   },
   "description": "Government of Alberta - bootstrap installer that places the Keystone harness into a project.",
   "repository": {
