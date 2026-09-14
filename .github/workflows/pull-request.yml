@@ -39,3 +39,8 @@ jobs:
         run: npm run affected:build -- --base=origin/${{ github.base_ref }}
       - name: E2E
         run: npx nx affected --target e2e --base=origin/${{ github.base_ref }}
+      # Local and deterministic — runs the delegated @nx/* generators and compares
+      # what they write against the pins our own generators write afterwards. No
+      # registry access, so it belongs here rather than in the scheduled audit.
+      - name: Nx pin alignment
+        run: npm run audit:nx-alignment

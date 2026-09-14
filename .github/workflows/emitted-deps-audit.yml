@@ -1,0 +1,88 @@
+# Audits the dependency ranges the generators write into consuming workspaces.
+#
+# Separate from pull-request.yml on purpose. These ranges are string literals in
+# generator bodies, so they are invisible to this repo's own `npm audit` and to
+# Dependabot and Renovate alike — but they also go stale on the advisory
+# database's schedule, not on ours. A new advisory against a generated app's
+# dependency is nobody's PR to fix, so it opens an issue instead of failing a
+# contributor's build.
+name: Emitted Dependency Audit
+
+on:
+  schedule:
+    # Mondays, 13:00 UTC (early morning in Alberta).
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - name: Audit emitted dependency ranges
+        id: audit
+        # Captured rather than allowed to fail the step, so the report can go
+        # into the issue body below.
+        run: |
+          set +e
+          npm run --silent audit:emitted-deps > audit-report.txt 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat audit-report.txt
+      - name: Open or update an issue
+        if: steps.audit.outputs.exit_code != '0'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('audit-report.txt', 'utf8');
+            const title = 'Emitted dependency audit: findings need a decision';
+            const body = [
+              'The weekly audit of the dependency ranges the generators write found',
+              'something not covered by `tools/audit-emitted-deps/allowlist.json`.',
+              '',
+              'Each finding is either a pin to bump, or an accepted risk that needs an',
+              'allowlist entry with a reason and a reviewed date.',
+              '',
+              '```',
+              report.trim(),
+              '```',
+              '',
+              `[Workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
+
+            // One rolling issue rather than a new one each week — the findings
+            // change slowly, and a fresh issue every Monday trains people to
+            // ignore them.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dependencies',
+            });
+            const match = existing.data.find((issue) => issue.title === title);
+
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: match.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['dependencies'],
+              });
+            }
