@@ -1,6 +1,6 @@
 // project-docs-ancestors: cli-designs:keystone-init
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 // req-011. The expectation this package publishes against is a file in this repository, and these
@@ -39,6 +39,41 @@ describe('the published file list', () => {
   it('ships the binary the package declares, and a readme', () => {
     expect(expected).toContain('src/bin/keystone.js');
     expect(expected).toContain('README.md');
+  });
+
+  // The bug this exists for, found by installing the tarball rather than by reasoning: the
+  // workspace sets `importHelpers: true`, so TypeScript emitted `require("tslib")` — and this
+  // package declares zero dependencies by requirement. It worked in the monorepo because tslib is
+  // hoisted there, and failed for every consumer with "Cannot find module 'tslib'". Fixed by
+  // targeting a runtime that needs no helpers rather than by taking the dependency, because the
+  // zero-dependency rule has a security rationale: no transitive surface on the code path that
+  // handles a credential.
+  it('emits no helper imports, so zero dependencies is true of the output and not just the manifest', () => {
+    const root = join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'dist',
+      'packages',
+      'keystone',
+    );
+    if (!existsSync(root)) {
+      // Nothing built here; the publish-path check in verify-package.mjs covers this too.
+      return;
+    }
+
+    const offenders = expected
+      .filter((f) => f.endsWith('.js'))
+      .filter((f) => {
+        const path = join(root, f);
+        return (
+          existsSync(path) &&
+          /require\(["']tslib["']\)/.test(readFileSync(path, 'utf-8'))
+        );
+      });
+
+    expect(offenders).toEqual([]);
   });
 
   it('declares an expectation at all, which is what makes the check meaningful', () => {
