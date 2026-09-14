@@ -1,0 +1,23 @@
+{
+  "$comment": "Advisories knowingly accepted in the dependency ranges the generators emit. Every entry needs a reason and a reviewed date — an entry with no route to a fix is legitimate, an entry nobody has looked at in a year is not. Keyed by GHSA id.",
+  "advisories": [
+    {
+      "id": "GHSA-wrjc-x8rr-h8h6",
+      "package": "react-router",
+      "reason": "Vulnerable range is >=6.0.0 <7.18.0, so no 6.x release clears it. react-app pins react-router-dom at the newest 6.x (6.30.6); the only remediation is React Router 7, which merges react-router-dom into react-router and changes several APIs — a breaking migration for every generated app, not a version bump. Revisit when react-app moves to v7.",
+      "reviewed": "2026-09-10"
+    },
+    {
+      "id": "GHSA-337j-9hxr-rhxg",
+      "package": "react-router",
+      "reason": "Same 6.x/7.x split as GHSA-wrjc-x8rr-h8h6 above (vulnerable >=6.4.0 <7.18.0), and reached only through deserializeErrors() in SSR hydration, which the generated apps do not use — they are client-rendered behind nginx. Note this is not true of every react-router advisory: GHSA-jjmj-jmhj-qwj2 was patched in 6.30.6, so check the patched version per advisory rather than assuming the whole 6 line is unfixable.",
+      "reviewed": "2026-09-10"
+    },
+    {
+      "id": "GHSA-67mh-4wv8-2f99",
+      "package": "esbuild",
+      "reason": "Reached through drizzle-kit's deprecated @esbuild-kit/core-utils dependency, which pins an old esbuild. No 0.31.x release of drizzle-kit drops it; drizzle-kit 1.0 does, but is still beta. drizzle-kit is a dev-only migration CLI, and the advisory is a dev-server CORS issue that needs the developer to visit a hostile page while it runs. Revisit when drizzle-kit 1.0 is stable.",
+      "reviewed": "2026-09-10"
+    }
+  ]
+}
