@@ -65,6 +65,42 @@ if (helperRequires.length > 0) {
   process.exit(1);
 }
 
+// THE BIN SURVIVES PUBLISHING, which npm only warns about. A `bin` path written `./src/...` is
+// silently stripped at publish time — "script name src/bin/keystone.js was invalid and removed" —
+// leaving a package whose entire purpose is a binary with no binary, installed fine and
+// uninvokable. Measured: the `./` form auto-corrects, the bare form does not. npm's own warning
+// scrolls past in a wall of tarball notices, so it is asserted here instead.
+const manifest = JSON.parse(
+  readFileSync(join(PKG_ROOT, 'package.json'), 'utf-8'),
+);
+const binEntries = Object.entries(manifest.bin ?? {});
+if (binEntries.length === 0) {
+  console.error(
+    'verify-package: this package declares no bin, and it is a bin package.',
+  );
+  process.exit(1);
+}
+for (const [name, target] of binEntries) {
+  if (
+    typeof target !== 'string' ||
+    target.startsWith('./') ||
+    target.startsWith('/')
+  ) {
+    console.error(
+      `verify-package: bin["${name}"] is "${target}". npm strips a bin path written that way at\n` +
+        'publish time and only warns, so the published package would have no runnable binary.\n' +
+        `Write it relative with no leading "./" — "${String(target).replace(/^\.\//, '')}".`,
+    );
+    process.exit(1);
+  }
+  if (!actual.includes(target)) {
+    console.error(
+      `verify-package: bin["${name}"] points at "${target}", which is not in the packed files.`,
+    );
+    process.exit(1);
+  }
+}
+
 const expected = JSON.parse(readFileSync(EXPECTED, 'utf-8')).sort();
 const added = actual.filter((f) => !expected.includes(f));
 const removed = expected.filter((f) => !actual.includes(f));
