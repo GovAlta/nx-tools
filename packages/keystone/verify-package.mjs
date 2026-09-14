@@ -25,12 +25,17 @@ const PKG_ROOT = join(here, '../../dist/packages/keystone');
 const EXPECTED = join(here, 'expected-files.json');
 
 if (!existsSync(PKG_ROOT)) {
-  console.error(`verify-package: ${PKG_ROOT} does not exist — run \`nx build keystone\` first.`);
+  console.error(
+    `verify-package: ${PKG_ROOT} does not exist — run \`nx build keystone\` first.`,
+  );
   process.exit(2);
 }
 
 const packed = JSON.parse(
-  execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: PKG_ROOT, encoding: 'utf-8' }),
+  execFileSync('npm', ['pack', '--dry-run', '--json'], {
+    cwd: PKG_ROOT,
+    encoding: 'utf-8',
+  }),
 );
 const actual = packed[0].files.map((f) => f.path).sort();
 
@@ -38,6 +43,26 @@ if (process.argv.includes('--update')) {
   writeFileSync(EXPECTED, `${JSON.stringify(actual, null, 2)}\n`);
   console.log(`verify-package: recorded ${actual.length} expected file(s).`);
   process.exit(0);
+}
+
+// Zero dependencies has to be true of the OUTPUT, not just the manifest. The workspace sets
+// `importHelpers`, so a helper emitted into the build makes the package require `tslib` while
+// declaring nothing — which works in the monorepo, where tslib is hoisted, and fails for every
+// consumer. Found by installing the tarball; asserted here so the publish path catches it.
+const helperRequires = actual
+  .filter((f) => f.endsWith('.js'))
+  .filter((f) =>
+    /require\(["']tslib["']\)/.test(readFileSync(join(PKG_ROOT, f), 'utf-8')),
+  );
+if (helperRequires.length > 0) {
+  console.error(
+    'verify-package: these files require `tslib`, which this package does not declare:\n' +
+      helperRequires.map((f) => `  ${f}`).join('\n') +
+      '\n\nThe build emitted a TypeScript helper. Either target a runtime that needs none, or\n' +
+      'declare the dependency — the first keeps the zero-dependency rule the credential path\n' +
+      'relies on.',
+  );
+  process.exit(1);
 }
 
 const expected = JSON.parse(readFileSync(EXPECTED, 'utf-8')).sort();
@@ -49,9 +74,13 @@ if (added.length === 0 && removed.length === 0) {
   process.exit(0);
 }
 
-console.error('verify-package: the published contents are not what this package expects to ship.');
-for (const f of added) console.error(`  + ${f}   (would publish, not expected)`);
-for (const f of removed) console.error(`  - ${f}   (expected, would not publish)`);
+console.error(
+  'verify-package: the published contents are not what this package expects to ship.',
+);
+for (const f of added)
+  console.error(`  + ${f}   (would publish, not expected)`);
+for (const f of removed)
+  console.error(`  - ${f}   (expected, would not publish)`);
 console.error(
   '\nIf this is intended, re-run with --update and review the diff — the point of the check is\n' +
     'that widening the file list is a decision on the record rather than a side effect.',

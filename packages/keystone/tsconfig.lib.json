@@ -4,7 +4,14 @@
     "module": "commonjs",
     "outDir": "../../dist/out-tsc",
     "declaration": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "target": "es2022",
+    "lib": [
+      "es2022"
+    ],
+    "importHelpers": false
   },
   "exclude": [
     "**/*.spec.ts",
@@ -12,5 +19,7 @@
     "jest.config.ts",
     "src/testing/**"
   ],
-  "include": ["**/*.ts"]
+  "include": [
+    "**/*.ts"
+  ]
 }
