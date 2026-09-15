@@ -84,6 +84,49 @@ describe('wire', () => {
   });
 });
 
+// The blocker this exists for: when the floor generator failed, `wire()` threw, the target was
+// left with 519 files and NO hooksPath, no provenance record, no handoff — and exit 1, the status
+// whose contract promises an untouched target. The inert-hook outcome is the exact defect this
+// package exists to remove, and it was invisible.
+describe('wire, when deferring to the floor generator fails', () => {
+  // A REAL failure rather than a stubbed one, and a realistic one: a target shaped like a
+  // workspace (manifest + nx.json) with no node_modules, where `npx nx g` fails with "Could not
+  // find Nx modules". No PATH manipulation needed — Node resolves the real npx regardless.
+  function workspaceShapedTarget(): string {
+    const target = makeTarget();
+    writeFileSync(
+      join(target, 'package.json'),
+      JSON.stringify({ name: 'theirs' }),
+    );
+    writeFileSync(join(target, 'nx.json'), '{}');
+    return target;
+  }
+
+  it('wires the hook path itself rather than leaving the floor absent', () => {
+    const target = workspaceShapedTarget();
+
+    const result = wire(target);
+
+    expect(result.floor).toBe('wired-after-deferral-failed');
+    // THE point: an unwired hook path is not a degraded outcome, it is the defect this package
+    // exists to remove, and it is invisible until someone reaches the harness's ship boundary.
+    expect(git(['config', '--get', 'core.hooksPath'], target)).toBe('.husky');
+  });
+
+  it("relays the generator's own output instead of discarding it", () => {
+    const result = wire(workspaceShapedTarget());
+
+    // `stdio: 'ignore'` threw this away, so whatever the generator failed on was unavailable to
+    // the person who had to fix it.
+    expect(result.deferralFailure).toBeTruthy();
+    expect(result.deferralFailure?.length).toBeGreaterThan(10);
+  });
+
+  it('does not throw, so the caller is not handed a half-configured target', () => {
+    expect(() => wire(workspaceShapedTarget())).not.toThrow();
+  });
+});
+
 describe('checkHooksPath', () => {
   // req-009 rule 4: repository-wide and single-valued, so replacing it disables whatever check the
   // team already had.

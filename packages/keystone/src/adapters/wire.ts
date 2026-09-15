@@ -36,9 +36,11 @@ export function checkHooksPath(target: string): Refusal | null {
 }
 
 export interface WireResult {
-  readonly floor: 'deferred' | 'wired';
+  readonly floor: 'deferred' | 'wired' | 'wired-after-deferral-failed';
   readonly gitInitialised: boolean;
   readonly manifestWritten: boolean;
+  /** The floor generator's own output, when deferring to it failed and this wired it instead. */
+  readonly deferralFailure: string | null;
 }
 
 /**
@@ -63,23 +65,43 @@ export function wire(
 
   const action = floorAction(readTargetShape(target));
   let manifestWritten = false;
+  let deferralFailure: string | null = null;
 
   if (action === 'defer') {
     // The floor is defined by a generator in this suite, so it is invoked rather than
     // reimplemented — it also installs husky, which owns the same wiring.
-    execFileSync(
-      'npx',
-      ['nx', 'g', '@abgov/nx-agent:init', '--no-interactive'],
-      {
-        cwd: target,
-        stdio: 'ignore',
-      },
-    );
-  } else {
+    try {
+      execFileSync(
+        'npx',
+        ['nx', 'g', '@abgov/nx-agent:init', '--no-interactive'],
+        {
+          cwd: target,
+          // CAPTURED, not discarded. `stdio: 'ignore'` threw away the generator's own diagnosis, so
+          // whatever it failed on was unavailable to the person who has to fix it.
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf-8',
+        },
+      );
+    } catch (error) {
+      const e = error as { stdout?: string; stderr?: string; message?: string };
+      deferralFailure =
+        [e.stdout, e.stderr].filter(Boolean).join('\n').trim() ||
+        e.message ||
+        'the floor generator failed with no output';
+    }
+  }
+
+  // FALLING BACK RATHER THAN LEAVING THE FLOOR ABSENT, and this is the posture decision the
+  // deferral needs. An unwired hook path is not a degraded outcome, it is the exact defect this
+  // package exists to remove — a pre-commit hook that is present, executable and never runs — and
+  // it is invisible until someone reaches the harness's own ship boundary. So a failed deferral
+  // wires it here instead, and the run reports both facts rather than swallowing either.
+  if (action !== 'defer' || deferralFailure) {
     git(['config', 'core.hooksPath', HOOKS_PATH], target);
     manifestWritten = ensureManifest(
       target,
-      action === 'wire-and-write-manifest',
+      action === 'wire-and-write-manifest' ||
+        !existsSync(join(target, 'package.json')),
     );
   }
 
@@ -87,9 +109,15 @@ export function wire(
   // that — checking this copy and its environment, including that the tree is a git work tree —
   // so running it ourselves duplicated a harness capability. The handoff names it instead.
   return {
-    floor: action === 'defer' ? 'deferred' : 'wired',
+    floor:
+      action === 'defer' && !deferralFailure
+        ? 'deferred'
+        : action === 'defer'
+          ? 'wired-after-deferral-failed'
+          : 'wired',
     gitInitialised,
     manifestWritten,
+    deferralFailure,
   };
 }
 
