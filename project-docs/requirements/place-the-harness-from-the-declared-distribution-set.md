@@ -56,6 +56,16 @@ rules:
          Then: the placed file carries execute where the source had it and nothing wider, since the
          declaration is remote input and a placed hook runs on the developer's machine at every commit"
     questions: []
+  - rule: the placement can be reported without being performed
+    examples:
+      - "Given: a resolved source and an empty target;
+         When: init runs in plan mode;
+         Then: it reports the set it would write, the target and the resolved commit, and writes
+         nothing into the target"
+      - "Given: a target that would be refused;
+         When: init runs in plan mode;
+         Then: it reports the refusal and exits non-zero, rather than a plan it could not carry out"
+    questions: []
   - rule: init refuses a target that already carries the harness, and names upgrade instead of doing its job
     examples:
       - "Given: a target that already carries a harness directory;
@@ -76,11 +86,22 @@ depending on whose machine it is; a quarter-gigabyte dependency cache in a proje
 of it; and the project's own ignore rules silently bypassed, because a recursive filesystem copy is
 not ignore-aware.
 
-**A plan-without-writing rule was removed 2026-09-11**, having been added in Design's own pass to
-justify a `--dry-run` flag. Inspecting a placement before performing it is genuinely useful, but it
-was scope this installer invented rather than scope the capability needs, and it is the clearest
-instance of a pattern worth naming: "add the rule in Discover rather than invent scope in Design"
-is correct, and a one-way ratchet if nobody asks whether the rule should exist.
+**This rule went out and came back, and the round trip is the record worth keeping.** It was added
+2026-09-11 in Design's own pass, to justify a flag invented there — the clearest instance of "add
+the rule in Discover rather than invent scope in Design" being correct and a one-way ratchet when
+nobody asks whether the rule should exist. It was removed 2026-09-12 as exactly that kind of
+invented scope.
+
+It is back 2026-09-14, because a release-readiness audit of the published beta found the safety
+posture inverted relative to consequence: `upgrade` merges into an existing copy that git can
+restore and is plan-by-default, while `init` writes over five hundred files immediately, for a
+command whose own design says a placement into the wrong directory is not undoable. So the rule
+does serve the capability — the first removal read the flag as convenience and missed that it is
+the only check on the one irreversible mistake this command can make.
+
+What the removal got right, and stands: the flag is not the *default*. Planning by default would
+break the case this whole package exists for, where an empty directory and no options should just
+work.
 
 The intersection is also a leak control, not only a determinism and size fix: ignored files in a
 working clone are exactly where credentials sit, and a fetch credential is in play during the same

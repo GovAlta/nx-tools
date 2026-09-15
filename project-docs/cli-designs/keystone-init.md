@@ -40,7 +40,7 @@ the artifact that fits.
 
 ```
 keystone init [--target <dir>] [--ref <tag|branch|sha>] [--source <path>]
-              [--accept-local-source] [--setup] [--json]
+              [--accept-local-source] [--plan] [--setup] [--json]
 ```
 
 Both spellings of every value option are accepted — `--target <dir>` and `--target=<dir>` — and an

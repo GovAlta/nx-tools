@@ -1,7 +1,7 @@
 // project-docs-ancestors: cli-designs:keystone-init
 
 import { execFileSync } from 'child_process';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { Io, parse, run, UsageError } from './cli';
 import {
@@ -450,6 +450,90 @@ describe('keystone init', () => {
       expect(await run([flag], io)).toBe(0);
       expect(io.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
     }
+  });
+
+  // req-005 rule 9, restored after a release-readiness audit found the safety posture inverted:
+  // `upgrade` merges into a copy git can restore and is plan-by-default, while `init` writes over
+  // five hundred files immediately, for a command whose own design says a placement into the wrong
+  // directory is not undoable.
+  it('under --plan, reports the set and writes nothing at all', async () => {
+    const target = makeTarget();
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', makeSource(), '--plan'],
+      io,
+    );
+
+    expect(status).toBe(0);
+    expect(readdirSync(target)).toEqual([]);
+    expect(io.stdout).toMatch(/files would be placed into/);
+    expect(io.stdout).toMatch(/Nothing was written/);
+  });
+
+  it('under --plan, writes no git repository, provenance or manifest either', async () => {
+    const target = makeTarget();
+
+    await run(
+      ['init', '--target', target, '--source', makeSource(), '--plan'],
+      capture(),
+    );
+
+    // Not just the declared set: a plan must not wire the target or record anything about it.
+    expect(existsSync(join(target, '.git'))).toBe(false);
+    expect(existsSync(join(target, '.keystone/install.json'))).toBe(false);
+    expect(existsSync(join(target, 'package.json'))).toBe(false);
+  });
+
+  // A plan reports the outcome the REAL run would reach, so a target that would be refused is
+  // refused rather than given an optimistic plan it could not carry out.
+  it('under --plan, a refused target is refused rather than planned', async () => {
+    const target = makeTarget();
+    writeFileSync(join(target, 'AGENTS.md'), 'ours\n');
+    const io = capture();
+
+    const status = await run(
+      [
+        'init',
+        '--target',
+        target,
+        '--source',
+        makeSource(),
+        '--plan',
+        '--json',
+      ],
+      io,
+    );
+
+    expect(status).toBe(1);
+    expect(JSON.parse(io.stdout).refused).toBe('target-file-collision');
+  });
+
+  it('under --plan --json, marks the payload as not placed', async () => {
+    const io = capture();
+
+    await run(
+      [
+        'init',
+        '--target',
+        makeTarget(),
+        '--source',
+        makeSource(),
+        '--plan',
+        '--json',
+      ],
+      io,
+    );
+
+    const payload = JSON.parse(io.stdout);
+    expect(payload.placed).toBe(false);
+    expect(payload.written).toBe(0);
+    // The full set is still reported, which is the point of asking.
+    expect(payload.files.length).toBeGreaterThan(0);
+  });
+
+  it('refuses --plan together with --setup, which contradict each other', () => {
+    expect(() => parse(['--plan', '--setup'])).toThrow(UsageError);
   });
 
   it('exits 2 on a usage error, distinct from a refusal', async () => {
