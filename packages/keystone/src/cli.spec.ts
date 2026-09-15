@@ -4,7 +4,12 @@ import { execFileSync } from 'child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { Io, parse, run, UsageError } from './cli';
-import { makeSource, makeTarget, remoteOf } from './testing/fixture';
+import {
+  detachHead,
+  makeSource,
+  makeTarget,
+  remoteOf,
+} from './testing/fixture';
 
 // The command's own contract: the option surface, the exit status, and the payloads. The design
 // states that the literal refusal strings are asserted by a test, and until this file existed none
@@ -394,6 +399,57 @@ describe('keystone init', () => {
   it('carries --setup through as a boolean', () => {
     expect(parse(['--setup']).setup).toBe(true);
     expect(parse([]).setup).toBe(false);
+  });
+
+  // The blocker this exists for: a clone checked out at a release tag has a detached HEAD, so
+  // `@{u}` does not resolve — while the commit IS reachable from a remote ref. One conflated flag
+  // meant the reachability fallback set it true and a later `@{u}..HEAD` read then threw, and the
+  // throw was reported as "this is not a harness source". The most reproducible source shape there
+  // is was refused with a false diagnosis.
+  it('places from a source at a detached HEAD, and calls it reproducible', async () => {
+    const source = makeSource();
+    detachHead(source);
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', makeTarget(), '--source', source, '--json'],
+      io,
+    );
+
+    expect(status).toBe(0);
+    const payload = JSON.parse(io.stdout);
+    expect(payload.written).toBeGreaterThan(0);
+    // Not merely accepted — correctly NOT flagged, since a tagged checkout is reproducible.
+    expect(payload.unreproducibleSource).toBe(false);
+  });
+
+  // The other half: a git-state failure is no longer collapsed into "not a harness source", which
+  // sent the reader to check the wrong thing.
+  it('distinguishes a non-repository from a repository it cannot read', async () => {
+    const io = capture();
+
+    await run(
+      ['init', '--target', makeTarget(), '--source', makeTarget(), '--json'],
+      io,
+    );
+
+    expect(JSON.parse(io.stdout).refused).toBe('source-not-a-harness');
+  });
+
+  // Asking for help is not a usage error, and a binary that stamps its own version into the
+  // provenance record it writes should be able to print that version.
+  it('answers --help and --version on stdout with exit 0', async () => {
+    for (const flag of ['--help', '-h']) {
+      const io = capture();
+      expect(await run([flag], io)).toBe(0);
+      expect(io.stdout).toMatch(/usage: keystone/);
+      expect(io.stderr).toBe('');
+    }
+    for (const flag of ['--version', '-v']) {
+      const io = capture();
+      expect(await run([flag], io)).toBe(0);
+      expect(io.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+    }
   });
 
   it('exits 2 on a usage error, distinct from a refusal', async () => {

@@ -46,6 +46,11 @@ export type Refusal =
     }
   | { readonly condition: 'fetch-failed'; readonly detail: string }
   | { readonly condition: 'target-carries-no-harness'; readonly target: string }
+  | {
+      readonly condition: 'local-source-unreadable';
+      readonly path: string;
+      readonly detail: string;
+    }
   | { readonly condition: 'upgrade-refused'; readonly detail: string }
   | {
       readonly condition: 'target-configures-hooks-path';
@@ -108,6 +113,12 @@ export function describe(refusal: Refusal): string {
     // Already redacted by the diagnosis that produced it: this renders, it does not sanitise.
     case 'fetch-failed':
       return refusal.detail;
+    // Already redacted by the caller that produced it: this renders, it does not sanitise.
+    case 'local-source-unreadable':
+      return (
+        `${refusal.path} is a git repository but its state could not be read: ${refusal.detail}\n` +
+        `That is a problem with the clone rather than with whether it is a harness source.`
+      );
     case 'target-carries-no-harness':
       return (
         `${refusal.target} does not carry the harness, so there is nothing to upgrade. ` +

@@ -139,6 +139,16 @@ export function makeSource(
   return root;
 }
 
+/**
+ * Detach the source's HEAD, as a clone checked out at a release tag is.
+ *
+ * The suite had no fixture in this state, which is why it did not catch a source at a release tag
+ * being refused: every fixture commits on a branch, where `@{u}` resolves.
+ */
+export function detachHead(sourceRoot: string): void {
+  git(sourceRoot, ['checkout', '--quiet', '--detach', 'HEAD']);
+}
+
 /** The bare repository standing in for a remote, for a source made by `makeSource`. */
 export function remoteOf(sourceRoot: string): string {
   return `${sourceRoot}.git`;

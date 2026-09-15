@@ -14,7 +14,7 @@ import {
   SourceRefused,
   trackedPaths,
 } from './adapters/source';
-import { GitError, readLocalFacts } from './adapters/git';
+import { GitError, isGitRepository, readLocalFacts } from './adapters/git';
 import { fetchSource, FetchRedirected } from './adapters/fetch-source';
 import { diagnose } from './adapters/diagnose';
 import { checkHooksPath, wire } from './adapters/wire';
@@ -176,13 +176,32 @@ function locate(route: Route): { root: string; provenance: Provenance } {
 
     // A path git cannot read as a repository is not a harness source, because the declared set is
     // drawn from the source's index — so there is no universe to intersect.
+    //
+    // ONLY that condition, though. Collapsing every failure here into `source-not-a-harness` made a
+    // git-state problem report as "this is not Keystone" and sent the reader to check the wrong
+    // thing: a clone at a release tag was refused with that message while the tree was perfectly
+    // valid. Anything that is not "git cannot read this as a repository" is relayed honestly, which
+    // is what the fetch route's own diagnosis already does.
     let facts;
     try {
       facts = readLocalFacts(root);
-    } catch {
+    } catch (error) {
+      if (!isGitRepository(root)) {
+        throw new SourceRefused({
+          condition: 'source-not-a-harness',
+          path: route.path,
+        });
+      }
       throw new SourceRefused({
-        condition: 'source-not-a-harness',
+        condition: 'local-source-unreadable',
         path: route.path,
+        detail: redact(
+          error instanceof GitError
+            ? `${error.failure.command}: ${error.failure.output}`
+            : error instanceof Error
+              ? error.message
+              : String(error),
+        ),
       });
     }
 
@@ -196,7 +215,10 @@ function locate(route: Route): { root: string; provenance: Provenance } {
         // about provenance quality, and refusing on it was a policy this installer chose rather
         // than anything the job requires — three refusal conditions and a core module to decline a
         // placement the caller explicitly asked for. Saying so and proceeding is the smaller act.
-        unreproducible: facts.dirty || !facts.hasUpstream || facts.aheadBy > 0,
+        // Reachability is the question, so it reads `containedRemotely` rather than whether a
+        // tracking ref happens to exist: a detached checkout at a release tag is reproducible.
+        unreproducible:
+          facts.dirty || !facts.containedRemotely || facts.aheadBy > 0,
       },
     };
   }
@@ -337,7 +359,24 @@ async function init(options: Options, io: Io): Promise<number> {
     return 3;
   }
 
-  const wired = wire(options.target);
+  // INSIDE the same guard as `place()`, which it was not. Exit 3 exists because "preconditions
+  // passed, writing began, and it stopped part-way — distinct from a refusal precisely because 1
+  // promises an untouched target." `wire()` runs after 519 files have been written, so a throw
+  // escaping to the bin reported exit 1 on a target holding the entire harness: the one status
+  // that was a lie. Provenance and the handoff are in here too, so the path that writes them is
+  // the path whose failure is described honestly.
+  let wired;
+  try {
+    wired = wire(options.target);
+  } catch (error) {
+    io.err(
+      `Placed ${written} files into ${options.target}, then failed while making it a project: ` +
+        `${redact(error instanceof Error ? error.message : String(error))}\n` +
+        'The target holds the harness but is not wired. Remove it before retrying.\n',
+    );
+    return 3;
+  }
+
   writeProvenance(options.target, {
     repository: PINNED_REPOSITORY,
     ref: options.ref,
@@ -359,6 +398,7 @@ async function init(options: Options, io: Io): Promise<number> {
         ...(provenance.cache ? { cache: provenance.cache } : {}),
         unreproducibleSource: provenance.unreproducible,
         floor: wired.floor,
+        ...(wired.deferralFailure ? { floorGeneratorFailed: true } : {}),
         written,
         files,
       })}\n`,
@@ -370,11 +410,27 @@ async function init(options: Options, io: Io): Promise<number> {
   io.out(
     `Placed ${written} files into ${options.target}\n` +
       `  from ${provenance.source} at ${source.commit}${cacheLine}\n` +
-      `  floor: ${wired.floor === 'deferred' ? 'applied by @abgov/nx-agent:init' : 'hook path wired'}\n` +
+      `  floor: ${
+        wired.floor === 'deferred'
+          ? 'applied by @abgov/nx-agent:init'
+          : wired.floor === 'wired-after-deferral-failed'
+            ? 'hook path wired directly — the floor generator failed'
+            : 'hook path wired'
+      }\n` +
       `  ${Object.entries(groupByTopLevel(files))
         .map(([root, count]) => `${root} ${count}`)
         .join(', ')}\n`,
   );
+  // Reported, never swallowed: the floor was still wired, but the generator that owns it failed
+  // and its output is the only thing that says why.
+  if (wired.deferralFailure) {
+    io.err(
+      `The floor generator (@abgov/nx-agent:init) failed, so the hook path was wired directly\n` +
+        `instead. The floor is in place; run the generator yourself to get the rest of it.\n` +
+        `Its output was:\n${wired.deferralFailure}\n`,
+    );
+  }
+
   if (provenance.unreproducible) {
     io.err(
       `Note: ${provenance.source} has uncommitted or unpushed work, so the commit recorded for\n` +
@@ -463,6 +519,20 @@ const USAGE =
 /** Runs one invocation and returns its exit status. Never throws for a usage or refusal case. */
 export async function run(argv: readonly string[], io: Io): Promise<number> {
   const command = argv[0];
+
+  // Asking for help is not a usage error. Both of these printed the usage string to STDERR and
+  // returned the usage exit code, so `--help` looked like a failure to a shell and `--version`
+  // could not be read at all — from a binary that stamps its own version into the provenance
+  // record it writes. Stdout and exit 0, which is what every other CLI does.
+  if (command === '--help' || command === '-h' || command === 'help') {
+    io.out(`${USAGE}\n`);
+    return 0;
+  }
+  if (command === '--version' || command === '-v') {
+    io.out(`${installerVersion()}\n`);
+    return 0;
+  }
+
   if (command !== 'init' && command !== 'upgrade') {
     io.err(`${USAGE}\n`);
     return 2;

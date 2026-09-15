@@ -72,16 +72,41 @@ export function gitAvailable(): boolean {
 }
 
 /** Facts about a local source's reproducibility, all read from what is on disk. */
-export function readLocalFacts(root: string): {
-  dirty: boolean;
-  hasUpstream: boolean;
-  aheadBy: number;
-} {
+export interface LocalFacts {
+  readonly dirty: boolean;
+  /**
+   * A tracking ref exists for the current branch, so `@{u}` resolves.
+   *
+   * SPLIT FROM `containedRemotely`, because conflating them cost a real defect. One flag meant
+   * "this commit is fetchable from some remote ref" and was then consumed by a read that needs "a
+   * tracking ref exists" — so a clone checked out at a release tag, where the commit IS in a remote
+   * ref and `@{u}` does not resolve, set the flag true and then threw on `@{u}..HEAD`. Two facts,
+   * two names, and the read below can only take the one it needs.
+   */
+  readonly hasTrackingRef: boolean;
+  /** The commit is reachable from some remote-tracking ref, whether or not `@{u}` resolves. */
+  readonly containedRemotely: boolean;
+  /** Commits the tracking ref does not have. Zero when there is no tracking ref to compare with. */
+  readonly aheadBy: number;
+}
+
+/** Whether git can read this path as a repository at all — the one thing that means "not a source". */
+export function isGitRepository(root: string): boolean {
+  try {
+    git(['rev-parse', '--git-dir'], root);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readLocalFacts(root: string): LocalFacts {
   // An explicit repository probe rather than a commit read whose value nobody used. It still
   // throws for a path git cannot read as a repository, which is what the caller turns into a
   // refusal — but it says that is its purpose, and the commit comes from the resolved source so a
   // second copy of it here only invited a reader to use the wrong one.
   git(['rev-parse', '--git-dir'], root);
+
   // TRACKED changes only. `--porcelain` alone reports untracked files too, and an untracked file
   // cannot make a placement unreproducible: the declared set is drawn from the index, so untracked
   // content can never travel. Counting it would refuse every ordinary working clone — which is
@@ -89,33 +114,36 @@ export function readLocalFacts(root: string): {
   const dirty =
     git(['status', '--porcelain', '--untracked-files=no'], root).length > 0;
 
-  // Two ways a commit can be reachable by someone else, and only the first was checked. A clone
-  // checked out at a release tag has a DETACHED head, so `@{u}` fails — and such a clone is
-  // perfectly reproducible, so refusing it (and then recording it as "accepted with local
-  // modifications") was wrong on both counts. A commit contained in any remote-tracking ref is
-  // fetchable, whichever way the tree got there. Both reads are local; neither contacts a remote.
-  let hasUpstream = true;
+  let hasTrackingRef = true;
   try {
     git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], root);
   } catch {
-    let containedRemotely = false;
+    hasTrackingRef = false;
+  }
+
+  // A commit contained in any remote-tracking ref is fetchable by someone else, whichever way the
+  // tree arrived at it — which is what a detached checkout at a release tag looks like, and it is
+  // the most reproducible source shape there is.
+  let containedRemotely = hasTrackingRef;
+  if (!hasTrackingRef) {
     try {
       containedRemotely =
         git(['branch', '-r', '--contains', 'HEAD'], root).length > 0;
     } catch {
       containedRemotely = false;
     }
-    hasUpstream = containedRemotely;
   }
 
-  // Counted against the remote-tracking ref already present, never by contacting a remote: the
-  // local route's no-network property is what makes it the testable one.
-  const aheadBy = hasUpstream
+  // Gated on the TRACKING REF, not on reachability: `@{u}..HEAD` is only answerable when `@{u}`
+  // resolves. With no tracking ref there is nothing to be ahead of, and reachability is carried by
+  // `containedRemotely` instead. Counted locally, never by contacting a remote — the local route's
+  // no-network property is what makes it the testable one.
+  const aheadBy = hasTrackingRef
     ? Number.parseInt(
         git(['rev-list', '--count', '@{u}..HEAD'], root) || '0',
         10,
       )
     : 0;
 
-  return { dirty, hasUpstream, aheadBy };
+  return { dirty, hasTrackingRef, containedRemotely, aheadBy };
 }
