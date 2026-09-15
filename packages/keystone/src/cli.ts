@@ -43,6 +43,8 @@ export interface Options {
   readonly ref: string | null;
   readonly acceptLocalSource: boolean;
   readonly apply: boolean;
+  /** Report what a placement would do, and write nothing. */
+  readonly plan: boolean;
   readonly setup: boolean;
   readonly json: boolean;
 }
@@ -60,6 +62,7 @@ const VALUE_FLAGS = ['target', 'source', 'ref'] as const;
 const BOOLEAN_FLAGS = [
   'json',
   'apply',
+  'plan',
   'setup',
   'accept-local-source',
 ] as const;
@@ -129,12 +132,20 @@ export function parse(argv: readonly string[]): Options {
     values.set(name, value);
   }
 
+  if (flags.has('plan') && flags.has('setup')) {
+    throw new UsageError(
+      '--plan writes nothing and --setup starts a session in the placed project. ' +
+        'Pass one or the other.',
+    );
+  }
+
   return {
     target: resolve(values.get('target') ?? process.cwd()),
     source: values.get('source') ?? null,
     ref: values.get('ref') ?? null,
     acceptLocalSource: flags.has('accept-local-source'),
     apply: flags.has('apply'),
+    plan: flags.has('plan'),
     setup: flags.has('setup'),
     json: flags.has('json'),
   };
@@ -345,6 +356,43 @@ async function init(options: Options, io: Io): Promise<number> {
     return reportRefusal(hooks, options, io);
   }
 
+  // AFTER every precondition and before any write, so a plan reports the outcome the real run
+  // would reach rather than an optimistic one: a target that would be refused has already
+  // returned above.
+  //
+  // WHY init HAS THIS AND STILL WRITES BY DEFAULT. `upgrade` merges into a copy git can restore
+  // and is plan-by-default; `init` writes over five hundred files, and its own design says a
+  // placement into the wrong directory is not undoable — that asymmetry was backwards. But
+  // planning by DEFAULT would break the case this package exists for, where an empty directory
+  // and no options should just work. So the flag is the safety valve, not the posture.
+  if (options.plan) {
+    if (options.json) {
+      io.out(
+        `${JSON.stringify({
+          placed: false,
+          route: provenance.route,
+          source: provenance.source,
+          ref: options.ref,
+          commit: source.commit,
+          ...(provenance.cache ? { cache: provenance.cache } : {}),
+          unreproducibleSource: provenance.unreproducible,
+          written: 0,
+          files,
+        })}\n`,
+      );
+    } else {
+      io.out(
+        `${files.length} files would be placed into ${options.target}\n` +
+          `  from ${provenance.source} at ${source.commit}\n` +
+          `  ${Object.entries(groupByTopLevel(files))
+            .map(([root, count]) => `${root} ${count}`)
+            .join(', ')}\n` +
+          `\nNothing was written. Re-run without --plan to place it.\n`,
+      );
+    }
+    return 0;
+  }
+
   let written: number;
   try {
     written = place(request);
@@ -514,7 +562,7 @@ async function upgrade(options: Options, io: Io): Promise<number> {
 
 const USAGE =
   'usage: keystone <init|upgrade> [--target <dir>] [--ref <tag|branch|sha>] [--source <path>]\n' +
-  '                               [--accept-local-source] [--setup] [--apply] [--json]';
+  '                               [--accept-local-source] [--plan] [--setup] [--apply] [--json]';
 
 /** Runs one invocation and returns its exit status. Never throws for a usage or refusal case. */
 export async function run(argv: readonly string[], io: Io): Promise<number> {
