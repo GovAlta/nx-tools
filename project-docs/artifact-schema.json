@@ -10,22 +10,43 @@
     "expectedAncestorTypes": []
   },
   "requirements": {
-    "expectedAncestorTypes": ["product-briefs"]
+    "expectedAncestorTypes": [
+      "product-briefs"
+    ],
+    "digestFields": [
+      "rules"
+    ]
   },
   "bounded-contexts": {
     "expectedAncestorTypes": []
   },
   "domain-terms": {
-    "expectedAncestorTypes": ["bounded-contexts"]
+    "expectedAncestorTypes": [
+      "bounded-contexts"
+    ]
   },
   "domain-models": {
-    "expectedAncestorTypes": ["bounded-contexts", "domain-terms"]
+    "expectedAncestorTypes": [
+      "bounded-contexts",
+      "domain-terms"
+    ]
   },
   "skill-designs": {
-    "expectedAncestorTypes": ["domain-models"]
+    "expectedAncestorTypes": [
+      "domain-models"
+    ]
   },
   "iteration-retrospectives": {
     "expectedAncestorTypes": [],
     "terminal": true
+  },
+  "open-questions": {
+    "expectedAncestorTypes": [],
+    "tracksResolution": true
+  },
+  "cli-designs": {
+    "expectedAncestorTypes": [
+      "domain-models"
+    ]
   }
 }

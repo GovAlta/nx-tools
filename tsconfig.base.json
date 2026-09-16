@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@abgov/keystone": ["packages/keystone/src/index.ts"],
       "@abgov/nx-adsp": ["packages/nx-adsp/src/index.ts"],
       "@abgov/nx-agent": ["packages/nx-agent/src/index.ts"],
       "@abgov/nx-oc": ["packages/nx-oc/src/index.ts"],
