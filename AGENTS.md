@@ -374,7 +374,7 @@ with a migrate init container, `mongo` uses Mongoose), `vue-app`, `react-app`, `
 the peers for the generators it uses and gets a clean, no-`--legacy-peer-deps` install.
 
 Generators that call `getAdspConfiguration()` — the above app/service generators and
-`deployment` — perform a live OAuth browser login at generation time to
+`deployment` — perform a live ADSP OAuth login at generation time to
 retrieve tenant configuration from ADSP APIs. In unit tests these generators must be mocked:
 
 ```typescript
@@ -527,7 +527,7 @@ Key wiring to preserve when editing:
   skipped. Token comes from `getAccessToken()` — a `not-authenticated` result warns and skips (run
   `adsp login` first). A 403 from the directory service means the logged-in user lacks the
   `directory-admin` role — warn and skip, not a hard failure. Only runs for `node`/`dotnet` app
-  types; frontends are skipped unconditionally. Requires `@abgov/adsp-cli ^1.10.0`.
+  types; frontends are skipped unconditionally. Requires `@abgov/adsp-cli ^1.12.0`.
 - The generator unit tests assert the target/manifest shape; the executor tests mock `child_process`
   `execSync` and `@abgov/adsp-cli` and assert the command sequence/preflight/retry/registration.
 

@@ -23,8 +23,10 @@ backend track is ready to deploy doesn't wait on its frontend track, and vice ve
    Needs `--registry` explicitly too if the workspace has no git remote to derive one from.
    Requires ADSP sign-in:
    - **Interactive session**: `npx @abgov/adsp-cli login --env <env> --tenant <tenant> --scope
-     adsp-cli-admin` — a browser flow, the user does this themselves.
-   - **Headless/CI runner with no browser available**: `@abgov/adsp-cli` (1.7+) has a
+     adsp-cli-admin` — OOB flow (prints an authorization URL and prompts for the code Keycloak
+     shows; works in Dev Spaces and containers). Add `--local` for the seamless local-server
+     redirect instead. The user does this themselves.
+   - **Headless/CI runner with no interactive terminal**: `@abgov/adsp-cli` (1.7+) has a
      non-interactive client-credentials login — set `ADSP_CLIENT_ID`/`ADSP_CLIENT_SECRET` and
      `ADSP_TENANT_REALM` as environment variables, and `nx-oc`'s own token resolution
      (`ensureAdspToken`) picks them up automatically once `process.env.CI` is set (most CI
