@@ -17,6 +17,7 @@ import {
 import { GitError, isGitRepository, readLocalFacts } from './adapters/git';
 import { fetchSource, FetchRedirected } from './adapters/fetch-source';
 import { diagnose } from './adapters/diagnose';
+import { ensurePrereqs } from './adapters/prereqs';
 import { checkHooksPath, wire } from './adapters/wire';
 import { pinInstaller, writeProvenance } from './adapters/provenance';
 import { hasUpgradeTool, runUpgradeTool } from './adapters/upgrade';
@@ -181,7 +182,10 @@ function reportRefusal(refusal: Refusal, options: Options, io: Io): number {
  * Turn a route into a candidate tree on disk, plus what the run should report about how it got
  * there. The route's adapters do the I/O; core decides.
  */
-function locate(route: Route): { root: string; provenance: Provenance } {
+function locate(
+  route: Route,
+  io: Io,
+): { root: string; provenance: Provenance } {
   if (route.kind === 'local') {
     const root = resolve(route.path);
 
@@ -233,6 +237,8 @@ function locate(route: Route): { root: string; provenance: Provenance } {
       },
     };
   }
+
+  ensurePrereqs(io.err);
 
   try {
     const fetched = fetchSource({ ref: route.ref });
@@ -312,7 +318,7 @@ async function init(options: Options, io: Io): Promise<number> {
   let source;
   let provenance: Provenance;
   try {
-    const located = locate(route);
+    const located = locate(route, io);
     provenance = located.provenance;
     source = resolveSource(located.root);
   } catch (error) {
@@ -516,7 +522,7 @@ async function upgrade(options: Options, io: Io): Promise<number> {
 
   let source;
   try {
-    source = resolveSource(locate(route).root);
+    source = resolveSource(locate(route, io).root);
   } catch (error) {
     if (error instanceof SourceRefused) {
       return reportRefusal(error.refusal, options, io);
