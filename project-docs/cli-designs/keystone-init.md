@@ -1,5 +1,5 @@
 ---
-title: "keystone init: placement contract"
+title: 'keystone init: placement contract'
 project-docs-ancestors:
   - domain-models:harness-placement
   - domain-models:source-resolution
@@ -17,9 +17,9 @@ status, and the output, and every one of those is read by something that cannot 
 question.
 
 **This file is the package's contract, not one command's.** It covers `init` and `upgrade`, and
-what the published artifact may contain. It currently covers *placement*
-(`requirements:place-the-harness-from-the-declared-distribution-set`, req-005) and *source
-resolution* (`requirements:resolve-the-harness-source-from-a-local-path-or-a-fetched-ref`,
+what the published artifact may contain. It currently covers _placement_
+(`requirements:place-the-harness-from-the-declared-distribution-set`, req-005) and _source
+resolution_ (`requirements:resolve-the-harness-source-from-a-local-path-or-a-fetched-ref`,
 req-006), plus provenance (req-008), floor wiring (req-009) and the handoff (req-010) in interface
 points 8 to 10. Rules are cited as `req-NNN rule N`, never a bare rule number, because five
 requirements are in play and a bare number is ambiguous across them.
@@ -61,19 +61,19 @@ branch. That is the ordinary case and takes no options at all.
 
 ## Exit status
 
-| Status | Meaning |
-|---|---|
-| `0` | the placement completed |
-| `1` | **refused**, with the target not written to at all. Every row of every refusal table below, and every failure to resolve a source, exits `1` |
-| `2` | **usage error**: an unknown option, a missing value, a conflicting pair, or a command that is not `init`. Distinct from a refusal because nothing about the target or the source was examined |
-| `3` | **interrupted**: preconditions passed, writing began, and an I/O failure stopped it part-way. The target holds some of the declared set. Distinct from `1` precisely because `1` promises an untouched target and this cannot |
+| Status | Meaning                                                                                                                                                                                                                       |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`    | the placement completed                                                                                                                                                                                                       |
+| `1`    | **refused**, with the target not written to at all. Every row of every refusal table below, and every failure to resolve a source, exits `1`                                                                                  |
+| `2`    | **usage error**: an unknown option, a missing value, a conflicting pair, or a command that is not `init`. Distinct from a refusal because nothing about the target or the source was examined                                 |
+| `3`    | **interrupted**: preconditions passed, writing began, and an I/O failure stopped it part-way. The target holds some of the declared set. Distinct from `1` precisely because `1` promises an untouched target and this cannot |
 
 **The cache lives at a deterministic path**, `${XDG_CACHE_HOME:-~/.cache}/abgov-keystone/<owner>-<name>`,
 so req-006 rule 10's "the cache directory's identity is unchanged" is something a test can assert
 rather than an intention.
 
 **What a non-zero status guarantees, precisely**: every precondition is established before the
-first write, so a *refusal* never leaves a partially placed tree. It is not atomicity — an I/O
+first write, so a _refusal_ never leaves a partially placed tree. It is not atomicity — an I/O
 failure at file N of M leaves the first N written, is reported as such, and no rule requires
 otherwise. See invariant 6 of the domain model.
 
@@ -108,17 +108,17 @@ field per section with nothing reconciling them.
 }
 ```
 
-| Field | Always? | Meaning |
-|---|---|---|
-| `placed` | yes | `false` under `--plan`. What distinguishes a plan from a placement |
-| `route` | yes | `"local"` or `"fetch"`. What makes req-006 rule 2 observable: a run reporting `"local"` that contacted a remote is a contradiction a test can catch |
-| `source` | yes | the caller's path on the local route; the pinned repository on the fetch route |
-| `ref` | yes | the requested ref, `null` when none was given. Separate from `commit` because a ref moves |
-| `commit` | yes | the resolved commit, always a full hash, never a ref name |
-| `cache` | fetch route only | `"created"` or `"reused"` |
-| `acceptedLocalModifications` | yes | always present, `false` rather than absent, so the provenance record persists a decision rather than an absence |
-| `written` | yes | count of files written; `0` under `--plan` |
-| `files` | yes | the full sorted declared set, so membership is assertable |
+| Field                        | Always?          | Meaning                                                                                                                                             |
+| ---------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `placed`                     | yes              | `false` under `--plan`. What distinguishes a plan from a placement                                                                                  |
+| `route`                      | yes              | `"local"` or `"fetch"`. What makes req-006 rule 2 observable: a run reporting `"local"` that contacted a remote is a contradiction a test can catch |
+| `source`                     | yes              | the caller's path on the local route; the pinned repository on the fetch route                                                                      |
+| `ref`                        | yes              | the requested ref, `null` when none was given. Separate from `commit` because a ref moves                                                           |
+| `commit`                     | yes              | the resolved commit, always a full hash, never a ref name                                                                                           |
+| `cache`                      | fetch route only | `"created"` or `"reused"`                                                                                                                           |
+| `acceptedLocalModifications` | yes              | always present, `false` rather than absent, so the provenance record persists a decision rather than an absence                                     |
+| `written`                    | yes              | count of files written; `0` under `--plan`                                                                                                          |
+| `files`                      | yes              | the full sorted declared set, so membership is assertable                                                                                           |
 
 ### Refusals
 
@@ -126,7 +126,7 @@ field per section with nothing reconciling them.
 { "refused": "<code>", "message": "<the literal text>", "path": "<when the code names one>", "next": "<when a command applies>" }
 ```
 
-`refused` codes are a stable enumeration, because for the agent consumer the refusal payload *is*
+`refused` codes are a stable enumeration, because for the agent consumer the refusal payload _is_
 the API and a prose label is not one: `target-carries-harness`, `target-file-collision`,
 `path-escapes-target`, `source-declares-no-set`, `source-not-a-harness`,
 `source-identity-mismatch`, `source-exports-no-predicate`, `source-missing-declared-path`,
@@ -225,22 +225,22 @@ write. The message text is rendered by a pure function beside those predicates r
 command layer, so the literal strings below are asserted by a test; the command layer chooses only
 where to print and which status to exit with.
 
-| Condition | Message text |
-|---|---|
-| target carries the harness | `<target> already carries the harness. To update it, run: keystone upgrade --target <target>` |
-| target has a file at a declared path | `<target>/<path> already exists and this placement would overwrite it. Placement will not overwrite a file it did not place.` |
-| resolved source carries no declaration | `The source at <commit> declares no distribution set (version <version>), so there is nothing to place from it.` |
-| a declared path escapes the target | `The declared path <path> resolves outside <target>, and placement writes only inside the target.` |
-| source declares another repository | `The source declares itself to be <declared>, not <expected>. Placement reads only the pinned harness repository.` |
-| source carries no manifest | `<source> carries no harness manifest, so it is not a harness source.` |
-| source exports no predicate | `The source at <commit> exports no distribution predicate this installer can read, and it will not guess which of its files travel.` |
-| source is missing a declared path | `The source declares <path> but does not hold it, so its working tree is not the commit it reports. Placement reads a tree that matches its own index.` — **accepted by `--accept-local-source`**, since a locally deleted tracked file is a local modification and refusing it past that flag would contradict req-006 rule 3 |
-| source declares a symbolic link | `The source declares <path> as a symbolic link, which placement does not follow. Placement writes regular files inside the target only.` |
+| Condition                              | Message text                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| target carries the harness             | `<target> already carries the harness. To update it, run: keystone upgrade --target <target>`                                                                                                                                                                                                                                  |
+| target has a file at a declared path   | `<target>/<path> already exists and this placement would overwrite it. Placement will not overwrite a file it did not place.`                                                                                                                                                                                                  |
+| resolved source carries no declaration | `The source at <commit> declares no distribution set (version <version>), so there is nothing to place from it.`                                                                                                                                                                                                               |
+| a declared path escapes the target     | `The declared path <path> resolves outside <target>, and placement writes only inside the target.`                                                                                                                                                                                                                             |
+| source declares another repository     | `The source declares itself to be <declared>, not <expected>. Placement reads only the pinned harness repository.`                                                                                                                                                                                                             |
+| source carries no manifest             | `<source> carries no harness manifest, so it is not a harness source.`                                                                                                                                                                                                                                                         |
+| source exports no predicate            | `The source at <commit> exports no distribution predicate this installer can read, and it will not guess which of its files travel.`                                                                                                                                                                                           |
+| source is missing a declared path      | `The source declares <path> but does not hold it, so its working tree is not the commit it reports. Placement reads a tree that matches its own index.` — **accepted by `--accept-local-source`**, since a locally deleted tracked file is a local modification and refusing it past that flag would contradict req-006 rule 3 |
+| source declares a symbolic link        | `The source declares <path> as a symbolic link, which placement does not follow. Placement writes regular files inside the target only.`                                                                                                                                                                                       |
 
 The last three were added during implementation rather than specified up front, and each is a
 condition invariant 6 already implied — a precondition that is checkable before the first write and
 would otherwise surface as a partial placement or an unstructured crash. A symlink is refused rather
-than resolved because the write reads *through* a link, so following one would copy content from
+than resolved because the write reads _through_ a link, so following one would copy content from
 outside the source into the project; the harness declares none today (measured: zero tracked
 symlinks), so refusing costs nothing and resolving them would be a security surface added for no
 present purpose.
@@ -258,7 +258,7 @@ a sentence an agent cannot act on, and the second row exists precisely because a
 project is the case that gets clobbered.
 
 **`--json` covers refusals too**, and this is the reason it exists: for the agent consumer the
-refusal payload *is* the API, and a structured success beside an unstructured failure is the half
+refusal payload _is_ the API, and a structured success beside an unstructured failure is the half
 that gets parsed by regex. A refusal emits `{ refused: <condition>, message: <the text above>,
 path: <the specific path, where the condition names one>, next: <the command to run, where one
 applies> }`.
@@ -276,12 +276,12 @@ that cannot reach the pinned repository needs a route it can exercise.
 
 **Where**: the route decision is a pure function of the options; each route is an adapter.
 
-| Given | Route |
-|---|---|
-| `--source <path>` | that tree, no network contacted and no credential read |
-| neither `--source` nor `--ref` | fetch the pinned repository's default branch |
-| `--ref <tag\|branch\|sha>` | fetch that ref from the pinned repository |
-| `--source` **and** `--ref` | usage error, exit `2` — see req-006 rule 5's own example; the text is in the usage table below |
+| Given                          | Route                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `--source <path>`              | that tree, no network contacted and no credential read                                         |
+| neither `--source` nor `--ref` | fetch the pinned repository's default branch                                                   |
+| `--ref <tag\|branch\|sha>`     | fetch that ref from the pinned repository                                                      |
+| `--source` **and** `--ref`     | usage error, exit `2` — see req-006 rule 5's own example; the text is in the usage table below |
 
 There is no option naming the repository, on either route. `--source` names a tree; it does not
 redirect the fetch.
@@ -334,26 +334,25 @@ project needs the recorded commit to be one they can actually fetch.
 
 **Where**: `(dirty, unpushed, accepted) → refusal or null` is pure and needs no repository.
 
-| Condition | Message text |
-|---|---|
-| local source has uncommitted changes | `<path> has uncommitted changes, so the commit it reports is not the tree that would be placed. Re-run with --accept-local-source to place it anyway.` |
-| local source has unpushed commits | `<path> is <n> commit(s) ahead of its remote-tracking ref, so the provenance recorded for this project would name a commit nobody else can fetch. That is judged from what is on disk and may be out of date. Re-run with --accept-local-source to place it anyway.` |
-| local source has no upstream configured | `<path> has no upstream branch, so whether its commit is reachable by anyone else cannot be determined without contacting a remote, which this route does not do. Re-run with --accept-local-source to place it anyway.` |
+| Condition                               | Message text                                                                                                                                                                                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local source has uncommitted changes    | `<path> has uncommitted changes, so the commit it reports is not the tree that would be placed. Re-run with --accept-local-source to place it anyway.`                                                                                                               |
+| local source has unpushed commits       | `<path> is <n> commit(s) ahead of its remote-tracking ref, so the provenance recorded for this project would name a commit nobody else can fetch. That is judged from what is on disk and may be out of date. Re-run with --accept-local-source to place it anyway.` |
+| local source has no upstream configured | `<path> has no upstream branch, so whether its commit is reachable by anyone else cannot be determined without contacting a remote, which this route does not do. Re-run with --accept-local-source to place it anyway.`                                             |
 
 Both texts state their own **basis**, which invariant 5 of the model requires and an earlier draft
 of this table omitted: the judgement is made from what is on disk, so a stale remote-tracking ref
 gives a stale answer, and a message implying certainty would be the wrong kind of confident. A
-detached checkout at a release tag is *not* caught by the no-upstream row — a commit contained in
+detached checkout at a release tag is _not_ caught by the no-upstream row — a commit contained in
 any remote-tracking ref is fetchable by others, whichever way the tree arrived at it.
-
 
 ### Usage errors (exit 2)
 
-| Condition | Message text |
-|---|---|
+| Condition                       | Message text                                                                                                   |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `--source` and `--ref` together | `--ref selects a commit of the pinned repository and does not apply to a local source. Pass one or the other.` |
-| unknown option | `unknown option: --<name>` |
-| value option with no value | `--<name> needs a value` |
+| unknown option                  | `unknown option: --<name>`                                                                                     |
+| value option with no value      | `--<name> needs a value`                                                                                       |
 
 Accepting it is not silent: the JSON payload carries `acceptedLocalModifications: true` and the
 provenance record states it, so a copy placed from an unreproducible tree says so rather than
@@ -374,8 +373,13 @@ accident. Authentication is supplied per-operation by the machine's own git cred
 model records why that is a deliberate divergence from the token-reading pattern used elsewhere in
 this suite.
 
-So the fetch is attempted and a failure is **diagnosed** rather than pre-empted, in this order,
-stopping at the first that answers.
+Two cases are **pre-empted** before the fetch: if `gh` is present and authenticated, `gh auth
+setup-git` is run so git uses the same credentials; if `gh` is present but no account is
+authenticated and stdin is a terminal, `gh auth login` is launched interactively. Neither is fatal
+if it fails — the fetch still runs and a failure falls through to the diagnosis below.
+
+For everything else the fetch is attempted and a failure is **diagnosed** in this order, stopping at
+the first that answers.
 
 **One probe makes the diagnosis possible at all.** At the git layer, "no access", "no such
 repository" and "no such ref" are deliberately indistinguishable — GitHub returns the same thing for
@@ -384,20 +388,20 @@ authenticated API call, so when `gh` is available the diagnosis asks it
 (`gh api repos/<owner>/<name>` and, for a ref, `gh api repos/<owner>/<name>/commits/<ref>`); when it
 is not, the diagnosis says which rows it could not rule out rather than picking one.
 
-| Finding | Message text |
-|---|---|
-| `git` absent | `git is not on PATH, and the harness source is fetched with it. Install git, or pass --source <path> to place from a local clone.` |
+| Finding                                                                 | Message text                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `git` absent                                                            | `git is not on PATH, and the harness source is fetched with it. Install git, or pass --source <path> to place from a local clone.`                                                                                                                                             |
 | git has no credential helper covering github.com, and SSH keys reach it | `This machine reaches github.com over SSH, and this installer fetches over HTTPS so that it cannot be redirected by a rewritten remote. Run 'gh auth login' and 'gh auth setup-git' to add HTTPS credentials, or pass --source <path> to place from a clone you already have.` |
-| git has no credential helper covering github.com, and `gh` is absent | `Reaching the harness source needs git credentials for github.com. Install the GitHub CLI (https://cli.github.com), run 'gh auth login', then 'gh auth setup-git'.` |
-| `gh` authenticated but git is not wired to use it | `A GitHub account is authenticated but git is not configured to use it, so the fetch has no credentials. Run 'gh auth setup-git'.` — the case a token-only environment lands in, where `gh` works and git does not |
-| `gh` present, no account authenticated | `No GitHub account is authenticated. Run 'gh auth login' as an account with access to the harness source, then 'gh auth setup-git'.` |
-| authenticated, and the API says the repository is not visible | `The active GitHub account cannot see the harness source repository. Check which account is active with 'gh auth status' and switch with 'gh auth switch' — access to that repository is what this installer needs, and nothing else.` |
-| authenticated, repository visible, ref unknown to it | `The harness source has no ref '<ref>'. Check the tag or branch name — this is not an access problem.` |
-| credentials present but not supplied by `gh` | the failure, redacted, plus `Credentials for github.com come from a git credential helper this installer did not configure, so it cannot tell you which account is in use.` |
-| anything else | the failure, **redacted**, prefixed with what was being attempted |
+| git has no credential helper covering github.com, and `gh` is absent    | `Reaching the harness source needs git credentials for github.com. Install the GitHub CLI (https://cli.github.com), run 'gh auth login', then 'gh auth setup-git'.`                                                                                                            |
+| `gh` authenticated but git is not wired to use it                       | `A GitHub account is authenticated but git is not configured to use it, so the fetch has no credentials. Run 'gh auth setup-git'.` — the case a token-only environment lands in, where `gh` works and git does not                                                             |
+| `gh` present, no account authenticated                                  | `No GitHub account is authenticated. Run 'gh auth login' as an account with access to the harness source, then 'gh auth setup-git'.`                                                                                                                                           |
+| authenticated, and the API says the repository is not visible           | `The active GitHub account cannot see the harness source repository. Check which account is active with 'gh auth status' and switch with 'gh auth switch' — access to that repository is what this installer needs, and nothing else.`                                         |
+| authenticated, repository visible, ref unknown to it                    | `The harness source has no ref '<ref>'. Check the tag or branch name — this is not an access problem.`                                                                                                                                                                         |
+| credentials present but not supplied by `gh`                            | the failure, redacted, plus `Credentials for github.com come from a git credential helper this installer did not configure, so it cannot tell you which account is in use.`                                                                                                    |
+| anything else                                                           | the failure, **redacted**, prefixed with what was being attempted                                                                                                                                                                                                              |
 
 Three of these rows are drawn from lessons already paid for rather than invented. `gh auth status`
-succeeding proves only that *some* account is logged in, not that the **active** one has what is
+succeeding proves only that _some_ account is logged in, not that the **active** one has what is
 needed — an executor in this suite learned that, which is why the visible-repository row names
 `gh auth switch` and not just `gh auth login`. The account can also drift between runs, which is why
 it names how to check. And the `gh auth switch` advice is deliberately **absent** from the
@@ -429,11 +433,11 @@ exists to remove — and it is invisible, because the hook file is present and l
 **Where**: shape detection and the wiring are adapters; which shape implies which action is a pure
 function of two booleans.
 
-| Target shape | Action |
-|---|---|
-| package manifest **and** workspace config | invoke `nx g @abgov/nx-agent:init`; write no wiring of our own |
-| manifest, no workspace config | set `core.hooksPath`; add the re-apply step to the existing manifest |
-| neither | set `core.hooksPath`; write a minimal private manifest carrying the re-apply step |
+| Target shape                              | Action                                                                            |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| package manifest **and** workspace config | invoke `nx g @abgov/nx-agent:init`; write no wiring of our own                    |
+| manifest, no workspace config             | set `core.hooksPath`; add the re-apply step to the existing manifest              |
+| neither                                   | set `core.hooksPath`; write a minimal private manifest carrying the re-apply step |
 
 `git init` runs first where the target is not a repository, because `core.hooksPath` is repository
 configuration and there is nothing to set it on otherwise. No remote is added — that is a later,
@@ -562,13 +566,13 @@ the same refusals, the same diagnosis.
 **Where**: there is no core logic here beyond the target predicate. The merge rules belong to the
 harness and are read from it; this package contributes a spawn and a faithful exit status.
 
-| Behaviour | Contract |
-|---|---|
-| what performs the work | the resolved source's own upgrade tool, **spawned as a process**, with the target as its argument |
-| default | plan, writing nothing — the delegated tool's own default, read from it rather than restated. `--apply` performs it |
-| a refusal by the tool | exits `1`, and the target is unchanged. Its output is relayed **redacted**, since relaying is how a credential reaches a log |
-| target has no harness | exits `1` before the tool is spawned: `<target> does not carry the harness, so there is nothing to upgrade. To place it, run: keystone init --target <target>` |
-| provenance | **rewritten on success only.** A refused or planned run leaves it alone |
+| Behaviour              | Contract                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| what performs the work | the resolved source's own upgrade tool, **spawned as a process**, with the target as its argument                                                              |
+| default                | plan, writing nothing — the delegated tool's own default, read from it rather than restated. `--apply` performs it                                             |
+| a refusal by the tool  | exits `1`, and the target is unchanged. Its output is relayed **redacted**, since relaying is how a credential reaches a log                                   |
+| target has no harness  | exits `1` before the tool is spawned: `<target> does not carry the harness, so there is nothing to upgrade. To place it, run: keystone init --target <target>` |
+| provenance             | **rewritten on success only.** A refused or planned run leaves it alone                                                                                        |
 
 The provenance rewrite is the one thing this package writes during an upgrade, and it is a
 deliberate carve-out from rule 2: the record is this package's own artifact, not harness content.
