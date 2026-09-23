@@ -76,7 +76,7 @@ cd my-solution
 NXV=$(node -p "require('./node_modules/nx/package.json').version")
 npm i -D @abgov/nx-oc @abgov/nx-adsp "@nx/express@$NXV" "@nx/vue@$NXV" "@nx/node@$NXV" "@nx/js@$NXV" "@nx/eslint@$NXV"
 
-# 3. Sign in to ADSP once (opens a browser; token is cached for later generator runs)
+# 3. Sign in to ADSP once (OOB flow: prints an auth URL + prompts for the code; token is cached)
 npx @abgov/adsp-cli login --env test --tenant "<Your Tenant>" --scope adsp-cli-admin
 
 # 4. Scaffold a Postgres + Express + Vue + Node solution
@@ -389,8 +389,8 @@ npx nx g @abgov/nx-adsp:vue-intake-view my-app --name=application --resource=app
 
 Most generators call ADSP APIs during generation, which needs an ADSP access
 token. Sign-in is delegated to **[`@abgov/adsp-cli`](https://www.npmjs.com/package/@abgov/adsp-cli)** —
-log in once (interactive browser) and its cached token is reused across generator
-runs. There's no separate login built into this plugin.
+log in once and its cached token is reused across generator runs. There's no separate login built
+into this plugin.
 
 ```bash
 # Sign in once. --scope adsp-cli-admin grants the Keycloak-admin capability some
@@ -403,9 +403,10 @@ When you run a generator:
 - if a valid cached token exists, generation proceeds with no prompt;
 - if `ADSP_CLIENT_ID`/`ADSP_CLIENT_SECRET` are set (a CI service account — requires
   `@abgov/adsp-cli` ^1.7.0+ and the tenant's `adsp-cli-ci` Keycloak client enabled with credentials
-  generated), a fresh token is acquired non-interactively via that account, no browser and no prior
-  `adsp login` needed;
-- otherwise, an **interactive** run launches `adsp login` for you (browser); a **non-interactive**
+  generated), a fresh token is acquired non-interactively via that account, no login needed;
+- otherwise, an **interactive** run launches `adsp login` for you (OOB flow: prints an authorization
+  URL, tries to open it, then prompts you to paste the code Keycloak shows — works in Dev Spaces and
+  containers; pass `--local` to use the local-server redirect flow instead); a **non-interactive**
   run (`--no-interactive` / CI) fails with the exact `adsp login` command to run first, or the two
   env vars above to set instead.
 

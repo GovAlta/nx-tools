@@ -82,10 +82,10 @@ function adspCliBinPath(): string {
   return path.join(path.dirname(pkgJsonPath), binRel);
 }
 
-/** Drive the CLI's interactive browser login as a subprocess (the sanctioned way
+/** Drive the CLI's interactive OOB login as a subprocess (the sanctioned way
  *  to trigger it — the interactive flow is intentionally not a library export).
- *  stdio is inherited so the browser-open message and the no-args tenant picker
- *  are visible to the user, exactly like the previous inline flow. */
+ *  stdio is inherited so the OOB authorization URL, code-paste prompt, and the
+ *  no-args tenant picker are all visible to the user. */
 function runAdspLogin(options: {
   env: EnvironmentName;
   realm?: string;
@@ -103,13 +103,14 @@ function runAdspLogin(options: {
 
 /**
  * Obtain an ADSP access token via @abgov/adsp-cli. Fast path: a cached/refreshed
- * token from a prior `adsp login` (no browser) — or, since @abgov/adsp-cli
+ * token from a prior `adsp login` (no interaction) — or, since @abgov/adsp-cli
  * ^1.7.0, a fresh client_credentials token when ADSP_CLIENT_ID/ADSP_CLIENT_SECRET
  * are set (a CI service account; see the 'adsp-cli-ci' Keycloak client). If
- * neither works — and the run is interactive — drive `adsp login` (browser)
- * once, then read the fresh token. In a non-interactive run it never opens a
- * browser; it throws with the exact `adsp login` command to run instead (or
- * the CI env vars to set).
+ * neither works — and the run is interactive — drive `adsp login` (OOB flow:
+ * prints an authorization URL and prompts for the code Keycloak returns) once,
+ * then read the fresh token. In a non-interactive run it never opens a login
+ * flow; it throws with the exact `adsp login` command to run instead (or the
+ * CI env vars to set).
  *
  * When `scopes` (e.g. the admin scope) can't be satisfied even after a login —
  * a user who isn't a realm admin — it falls back to a base-scope token so
