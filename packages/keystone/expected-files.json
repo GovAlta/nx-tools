@@ -9,6 +9,8 @@
   "src/adapters/git.js",
   "src/adapters/place.d.ts",
   "src/adapters/place.js",
+  "src/adapters/prereqs.d.ts",
+  "src/adapters/prereqs.js",
   "src/adapters/provenance.d.ts",
   "src/adapters/provenance.js",
   "src/adapters/source.d.ts",
