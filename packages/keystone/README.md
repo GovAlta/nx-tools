@@ -55,7 +55,13 @@ A local `--source` path carries the caller's own authority and no more. The iden
 a wrong-path guard: the declaration is part of the tree being judged, so it cannot catch a hostile
 one.
 
-## Not yet implemented
+## Credentials
 
-Fetching (and with it `--ref`, the cache, and the auth-failure remediation), the update path, the
-provenance record, floor wiring and the handoff. `--source` is required until fetching lands.
+The installer fetches over HTTPS. If the GitHub CLI (`gh`) is present and authenticated, it runs
+`gh auth setup-git` before the fetch so that git uses the same credentials — this is the step most
+commonly missing in managed environments like Dev Spaces or Codespaces where `gh` is
+pre-authenticated but git's credential helper is not yet wired. If no account is authenticated and
+stdin is a terminal, it launches `gh auth login` interactively first.
+
+Both steps are non-fatal: if they cannot be applied the fetch proceeds as-is, and a failure names
+the access required rather than surfacing a raw transport error.
