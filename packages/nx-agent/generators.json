@@ -77,6 +77,11 @@
       "factory": "./src/generators/pin-ancestors/pin-ancestors",
       "schema": "./src/generators/pin-ancestors/schema.json",
       "description": "Records each resolved ancestor\u2019s current body digest on the project-docs-ancestors reference naming it, so project-docs-lineage can report when the ancestor is later revised. Human-invoked only \u2014 never from a hook or CI."
+    },
+    "archive": {
+      "factory": "./src/generators/archive/archive",
+      "schema": "./src/generators/archive/schema.json",
+      "description": "Moves a feature artifact and its transitive non-shared descendants from project-docs/ to project-docs/archive/, injecting an archive-reason frontmatter field. Shared Descendants (also reachable from another feature) are left in place. When archiveReason is 'completed', a completeness guard runs first."
     }
   }
 }

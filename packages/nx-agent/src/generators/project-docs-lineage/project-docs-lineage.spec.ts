@@ -336,6 +336,7 @@ describe('nx-agent project-docs-lineage generator', () => {
 
       const lineage = JSON.parse(host.read('.nx-agent/lineage.json', 'utf-8'));
       expect(Object.keys(lineage.integrity).sort()).toEqual([
+        'archiveKeyCollisions',
         'brokenRefs',
         'cycles',
         'schemaErrors',

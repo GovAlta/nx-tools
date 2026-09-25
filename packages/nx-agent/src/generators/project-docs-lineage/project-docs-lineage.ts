@@ -2,6 +2,7 @@ import { Tree } from '@nx/devkit';
 import { readArtifactSchema } from '../../utils/artifact-schema';
 import { ensureGitignoreEntries } from '../../utils/gitignore';
 import {
+  ArchiveKeyCollision,
   buildIndex,
   buildRegistry,
   computeFindings,
@@ -26,6 +27,8 @@ const INTEGRITY_FAILURES: Record<keyof Integrity, (count: number) => string> = {
   unparseableRefs: (n) => `${n} unparseable project-docs reference(s)`,
   yamlErrors: (n) => `${n} YAML parse error(s) in project-docs frontmatter`,
   cycles: (n) => `${n} project-docs-ancestors reference cycle(s)`,
+  archiveKeyCollisions: (n) =>
+    `${n} archive key collision(s) (active and archived file share the same registry key)`,
   schemaErrors: (n) =>
     `${n} unsatisfiable entry/entries in artifact-schema.json`,
 };
@@ -39,7 +42,8 @@ export default async function (host: Tree, options: Schema = {}) {
 
   const yamlErrors: YamlError[] = [];
   const unparseableRefs: UnparseableRef[] = [];
-  const registry = buildRegistry(host, yamlErrors, unparseableRefs);
+  const archiveKeyCollisions: ArchiveKeyCollision[] = [];
+  const registry = buildRegistry(host, yamlErrors, unparseableRefs, archiveKeyCollisions);
   const index = buildIndex(host, registry, unparseableRefs);
   const artifactSchema = readArtifactSchema(host);
   const { integrity, status } = computeFindings(
@@ -48,6 +52,7 @@ export default async function (host: Tree, options: Schema = {}) {
     artifactSchema,
     yamlErrors,
     unparseableRefs,
+    archiveKeyCollisions,
   );
 
   const payload = {
@@ -129,6 +134,13 @@ export default async function (host: Tree, options: Schema = {}) {
             `satisfy it as written.`;
       // eslint-disable-next-line no-console
       console.log(`[nx-agent] ${where}: ${detail}`);
+    }
+    for (const collision of integrity.archiveKeyCollisions) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[nx-agent] archive key collision: "${collision.key}" exists at both ` +
+          `${collision.activePath} and ${collision.archivePath} — remove one`,
+      );
     }
     for (const cycle of integrity.cycles) {
       // Closed back to the first node when printing, so the loop reads as one

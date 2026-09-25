@@ -180,6 +180,17 @@ for (const cycle of integrity.cycles ?? []) {
   });
 }
 
+for (const collision of integrity.archiveKeyCollisions ?? []) {
+  signals.push({
+    key: `archive-collision:${collision.key}`,
+    artifacts: null,
+    stage: 'unknown',
+    reason:
+      `Archive key collision: "${collision.key}" exists at both ${collision.activePath} and ` +
+      `${collision.archivePath}. Remove one — active wins in the registry until the collision is resolved.`,
+  });
+}
+
 for (const schemaError of integrity.schemaErrors ?? []) {
   // Keyed on all three of type/property/value: two bad values on one type are
   // two things to fix, and collapsing them would let stall detection read the
@@ -242,6 +253,7 @@ const FOUNDING_TYPES = ['requirements', 'service-descriptions'];
 const foundingArtifactsOf = (key) =>
   (index[key] ?? []).filter((e) => FOUNDING_TYPES.includes(e.type));
 for (const key of Object.keys(registry)) {
+  if (registry[key]?.archived) continue;
   if (!key.startsWith('features:')) continue;
   if (foundingArtifactsOf(key).length > 0) continue;
   signals.push({
@@ -279,6 +291,7 @@ for (const path of mdFilesIn('project-docs/requirements')) {
 
 // Domain model with no api-design/ux-design at all.
 for (const key of Object.keys(registry)) {
+  if (registry[key]?.archived) continue;
   if (!key.startsWith('domain-models:')) continue;
   if (designArtifactsOf(key).length === 0) {
     signals.push({
@@ -292,6 +305,7 @@ for (const key of Object.keys(registry)) {
 // api-design/ux-design with no implementing code, and no unresolved blocker/open-question naming it.
 const openKeys = status.resolution?.open ?? [];
 for (const key of Object.keys(registry)) {
+  if (registry[key]?.archived) continue;
   if (!isDesignKey(key)) continue;
   if (hasUntypedDescendant(key)) continue; // already has implementing code
   // refKeyOf, not a raw includes(): an ancestorRef may carry an @digest, and the
