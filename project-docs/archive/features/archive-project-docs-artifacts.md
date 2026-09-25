@@ -2,6 +2,7 @@
 title: archive project-docs artifacts
 project-docs-ancestors: []
 resolves: []
+archive-reason: completed
 ---
 
 The project-docs tree grows unboundedly as the DDDD loop progresses. Fully delivered features,

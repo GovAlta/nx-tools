@@ -1,7 +1,8 @@
 ---
-title: "develop skill: require implementation plan commitment before first write"
+title: 'develop skill: require implementation plan commitment before first write'
 project-docs-ancestors: []
 resolves: []
+archive-reason: completed
 ---
 
 The develop skill's step 1 reads the lineage graph and notes that a sibling resource may have
