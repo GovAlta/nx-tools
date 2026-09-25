@@ -235,6 +235,35 @@ describe('archive generator', () => {
     });
   });
 
+  describe('permanent vocabulary — schema permanent flag', () => {
+    it('leaves a permanent-type descendant in place even when sole ancestor is the archived feature', async () => {
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          features: { expectedAncestorTypes: [] },
+          requirements: { expectedAncestorTypes: ['features'] },
+          'bounded-contexts': { expectedAncestorTypes: [], permanent: true },
+          'iteration-retrospectives': { expectedAncestorTypes: [], terminal: true },
+        }),
+      );
+      writeArtifact(host, 'project-docs/features/foo.md');
+      writeArtifactWithAncestor(
+        host,
+        'project-docs/bounded-contexts/core.md',
+        'features:foo',
+      );
+
+      await generator(host, {
+        featurePath: 'project-docs/features/foo.md',
+        archiveReason: 'deferred',
+      });
+
+      expect(host.exists('project-docs/archive/features/foo.md')).toBe(true);
+      expect(host.exists('project-docs/bounded-contexts/core.md')).toBe(true);
+      expect(host.exists('project-docs/archive/bounded-contexts/core.md')).toBe(false);
+    });
+  });
+
   describe('completeness guard — req-007', () => {
     it('throws for completed when a non-shared descendant has no terminal artifact', async () => {
       writeArtifact(host, 'project-docs/features/foo.md');

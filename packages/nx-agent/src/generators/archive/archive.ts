@@ -176,12 +176,20 @@ export default async function (host: Tree, options: Schema) {
   const toArchive: string[] = [];
   const sharedLeft: string[] = [];
 
+  const permanentLeft: string[] = [];
+
   for (const key of subtreeKeys) {
     if (key === featureKey) {
       toArchive.push(key);
       continue;
     }
-    if (isSharedDescendant(key, subtreesByFeature) && featureSubtree.has(key)) {
+    const type = parseAncestorRef(key)?.type;
+    if (type && artifactSchema[type]?.permanent) {
+      permanentLeft.push(key);
+    } else if (
+      isSharedDescendant(key, subtreesByFeature) &&
+      featureSubtree.has(key)
+    ) {
       sharedLeft.push(key);
     } else {
       toArchive.push(key);
@@ -235,6 +243,13 @@ export default async function (host: Tree, options: Schema) {
     if (!entry) continue;
     // eslint-disable-next-line no-console
     console.log(`[nx-agent] left in place (shared): ${entry.path}`);
+  }
+
+  for (const key of permanentLeft) {
+    const entry = registry.get(key);
+    if (!entry) continue;
+    // eslint-disable-next-line no-console
+    console.log(`[nx-agent] left in place (permanent vocabulary): ${entry.path}`);
   }
 
   await formatFiles(host);

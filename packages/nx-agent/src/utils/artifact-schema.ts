@@ -16,6 +16,11 @@ export interface ArtifactTypeSchema {
   expectedAncestorTypes: string[];
   tracksResolution?: boolean;
   terminal?: boolean;
+  // Permanent vocabulary types (bounded-contexts, domain-terms, domain-models,
+  // product-briefs) that outlive any single feature and must never be swept
+  // into the archive as part of a subtree move. The archive generator leaves
+  // them in place regardless of how many features reference them.
+  permanent?: boolean;
   // Frontmatter fields that carry this type's *content* rather than bookkeeping,
   // and so belong in its digest alongside the body. A structural fact about
   // where a type keeps its meaning, not a policy switch: `requirements` declare
@@ -45,6 +50,7 @@ export function ensureArtifactSchemaEntry(
   options: {
     tracksResolution?: boolean;
     terminal?: boolean;
+    permanent?: boolean;
     digestFields?: string[];
   } = {},
 ): void {
@@ -55,6 +61,7 @@ export function ensureArtifactSchemaEntry(
       ? { tracksResolution: options.tracksResolution }
       : {}),
     ...(options.terminal ? { terminal: options.terminal } : {}),
+    ...(options.permanent ? { permanent: options.permanent } : {}),
     ...(options.digestFields?.length
       ? { digestFields: options.digestFields }
       : {}),
