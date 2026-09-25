@@ -12,6 +12,14 @@ New work enters the loop through two generators, not by hand-authoring a file:
   to investigate and fix directly (no new Design pass unless investigation finds the spec itself
   was wrong).
 
+Work leaves the loop through one generator:
+
+- `npx nx g @abgov/nx-agent:archive --featurePath project-docs/features/<id>.md --archiveReason completed|deferred` —
+  once a feature ships (confirmed by an `iteration-retrospective` terminal artifact) or is deferred,
+  archive it. Moves the feature subtree to `project-docs/archive/`, excluding shared descendants
+  and permanent vocabulary types (bounded contexts, domain terms, domain models, product briefs),
+  which stay in the active graph. Archived artifacts are invisible to all lineage signals.
+
 - `.claude/skills/discover/SKILL.md` — decompose a `feature` artifact into requirements with IDs
   seeded at birth, or example-map one requirement to closure.
 - `.claude/skills/design/SKILL.md` — turn a requirement into a domain model and (when there's a

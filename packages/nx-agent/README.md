@@ -410,6 +410,42 @@ Self-registers its own `project-docs/artifact-schema.json` entry as `terminal: t
 so it's excluded from the `unreferenced` report rather than flagged alongside a genuine dead-end. Re-adding a
 retrospective that already exists throws rather than silently overwriting or duplicating it.
 
+## `archive`
+
+Moves a completed or deferred feature — and all of its non-shared, non-permanent transitive
+descendants — to `project-docs/archive/`, injecting an `archive-reason` field into each file's
+frontmatter. Archived artifacts are excluded from all lineage signals and from the
+project-docs-report active view, keeping the in-progress graph clean as work finishes.
+
+```bash
+npx nx g @abgov/nx-agent:archive \
+  --featurePath=project-docs/features/submit-collision-report.md \
+  --archiveReason=completed
+```
+
+### Options
+
+| Option          | Default      | Description                                                                                                      |
+| --------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `featurePath`   | — (required) | Path to the `features/` artifact to archive — must be under a `project-docs/` tree, not already in the archive  |
+| `archiveReason` | — (required) | `completed` or `deferred`                                                                                        |
+
+### Archive behaviour
+
+- **Subtree scope**: the feature root plus every transitive descendant reachable from it.
+- **Shared descendants** (referenced by another active feature) are left in place.
+- **Permanent vocabulary types** (`bounded-contexts`, `domain-terms`, `domain-models`,
+  `product-briefs`) are left in place — vocabulary outlives any single feature. A type is
+  permanent when its `artifact-schema.json` entry carries `"permanent": true`. The four
+  built-in vocabulary generators write this flag automatically.
+- **Completeness guard** (`completed` only): refuses to archive if any non-shared descendant
+  still lacks a terminal artifact (an `iteration-retrospective`). Use `deferred` to bypass when
+  archiving unfinished work intentionally.
+- **Destination**: `project-docs/archive/<type>/<id>.md` (or `<prefix>/project-docs/archive/…`
+  for project-scoped paths).
+- **Integrity**: `project-docs-lineage --strict` reports a collision as an integrity failure if
+  the same key exists in both the active tree and the archive.
+
 ## `pin-ancestors`
 
 ```bash
