@@ -44,6 +44,13 @@ rules:
         when the generator runs, then it throws with a message that singular artifacts are not
         archivable"
     questions: []
+  - rule: archive-reason must be one of the allowed enum values (completed, deferred) and is validated before any file operation
+    examples:
+      - "Given archive-reason is completed, when the generator runs, then the value is written
+        as-is into frontmatter with no YAML escaping issues"
+      - "Given archive-reason is an arbitrary string not in the allowed set, when the generator
+        runs, then it rejects the value before touching any file"
+    questions: []
 questions: []
 ---
 

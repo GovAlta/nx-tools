@@ -4,11 +4,11 @@ id: req-006
 project-docs-ancestors: [product-briefs:agent-delivery-harness, features:archive-project-docs-artifacts]
 resolves: []
 rules:
-  - rule: when given a feature path the generator collects all lineage descendants of that feature
+  - rule: when given a feature path the generator collects all transitive lineage descendants of that feature (not just direct children)
     examples:
       - "Given a feature with two requirements each having a design artifact, when the generator
         runs, then all five artifacts (feature, 2 requirements, 2 designs) are candidates for
-        archiving"
+        archiving — the walk reaches designs even though they are two hops from the feature"
     questions: []
   - rule: descendants that appear in the lineage graph under more than one feature are excluded from the move and left in place
     examples:
@@ -22,11 +22,11 @@ rules:
       - "Given a feature with one requirement, when the generator runs, then the requirement is
         moved first and the feature artifact is moved last"
     questions: []
-  - rule: the generator reports which descendants were archived and which were left in place due to shared ancestry
+  - rule: the generator logs to stdout which descendants were archived and which were left in place due to shared ancestry
     examples:
       - "Given a feature with two requirements where one is shared, when the generator runs, then
-        the console output names the archived paths and identifies the shared requirement as left in
-        place with its reason"
+        stdout names each archived path and identifies the shared requirement with a message stating
+        it was left in place because it belongs to multiple features"
     questions: []
 questions: []
 ---

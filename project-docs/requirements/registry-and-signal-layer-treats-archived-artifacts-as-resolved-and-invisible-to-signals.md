@@ -1,5 +1,5 @@
 ---
-title: registry and signal layer treats archived artifacts as resolved and invisible to signals
+title: registry registers archived artifacts under their active key
 id: req-008
 project-docs-ancestors: [product-briefs:agent-delivery-harness, features:archive-project-docs-artifacts]
 resolves: []
@@ -7,43 +7,33 @@ rules:
   - rule: buildRegistry traverses project-docs/archive/ and registers archived artifacts under the same key as their active counterpart would use
     examples:
       - "Given project-docs/archive/features/foo.md exists, when buildRegistry runs, then
-        registry.get('features:foo') is defined"
-      - "Given project-docs/archive/features/foo.md exists, when buildRegistry runs, then the
-        registry entry for features:foo has archived: true"
+        registry.get('features:foo') is defined and has archived:true"
+      - "Given project-docs/archive/requirements/bar.md exists, when buildRegistry runs, then
+        registry.get('requirements:bar') is defined and has archived:true"
     questions: []
   - rule: an active artifact referencing an archived artifact produces no broken-ref violation
     examples:
       - "Given a bug artifact whose project-docs-ancestors includes features:foo, and features:foo
-        exists at project-docs/archive/features/foo.md, when project-docs-lineage runs, then no
-        broken-ref violation is reported"
+        exists at project-docs/archive/features/foo.md only, when project-docs-lineage runs, then
+        no broken-ref violation is reported for that reference"
     questions: []
-  - rule: archived artifacts are excluded from unreferenced, unscoped, and resolution.open signal outputs
+  - rule: when both an active and an archived file resolve to the same registry key the active file wins and project-docs-lineage reports an integrity violation naming both paths
     examples:
-      - "Given features:foo is archived with no descendants pointing to it from active artifacts,
-        when computeFindings runs, then features:foo does not appear in unreferenced"
-      - "Given an archived open-question artifact, when computeFindings runs, then it does not
-        appear in resolution.open"
-    questions: []
-  - rule: integrity findings (broken refs, YAML errors, cycles, schema errors) still apply to archived artifacts
-    examples:
-      - "Given project-docs/archive/features/foo.md contains malformed YAML frontmatter, when
-        project-docs-lineage runs, then a YAML error is reported for that file"
-    questions: []
-  - rule: task-identification.mjs skips archived artifacts in all signal-emission loops
-    examples:
-      - "Given a feature artifact exists at project-docs/archive/features/foo.md with no
-        descendants, when task-identification runs, then no signal is emitted for features:foo"
+      - "Given project-docs/features/foo.md and project-docs/archive/features/foo.md both exist,
+        when buildRegistry runs, then registry.get('features:foo') reflects the active file's
+        content and archived:false, and project-docs-lineage reports an integrity violation for
+        the duplicate key naming both paths"
     questions: []
 questions: []
 ---
 
 ## Rationale
 
-Once a feature is archived the loop must not keep scanning it for work to do. But archived
-artifacts still exist and may be referenced by active work (a bug against an archived feature,
-a new feature describing an iteration on prior art). The registry must know about them so that
-reference resolution works, while signal generation must never treat them as live work.
+Cross-references from active artifacts (e.g. a bug pointing to an archived feature) must resolve
+without producing broken-ref violations. Using the same registry key for active and archived
+artifacts is what makes this work without special-casing in every referencing artifact.
 
-The same registry key for active and archived artifacts (not `archive/features:foo` but
-`features:foo`) is what makes cross-references from active artifacts resolve cleanly without
-any special-casing in the referencing artifact.
+The key collision rule handles the case where both files exist simultaneously — which a Nx
+generator cannot produce (Tree writes are atomic) but a manual file operation can. Active wins
+because an active artifact is still live work; the integrity violation surfaces the collision so
+it can be cleaned up.
