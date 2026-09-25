@@ -3,7 +3,7 @@ capability: Agent Delivery Harness
 audience: [AI coding agents operating a DDDD workflow]
 known-platforms: []
 questions: []
-project-docs-ancestors: [features:develop-skill-lineage-plan-step]
+project-docs-ancestors: [features:develop-skill-lineage-plan-step, features:archive-project-docs-artifacts]
 ---
 
 The Agent Delivery Harness is the set of DDDD skills (Discover, Design, Develop, Deploy) and
