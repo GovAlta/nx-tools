@@ -402,25 +402,32 @@ function buildMermaidFlowchart(
     `classDef unreferenced fill:${TOKENS.interactive.bg},stroke:${TOKENS.interactive.border},color:${TOKENS.interactive.text}`,
     `classDef terminal fill:${TOKENS.background},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted}`,
     `classDef context fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted},stroke-dasharray: 4 4`,
+    `classDef archived fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.border},color:${TOKENS.border},stroke-dasharray: 2 2`,
   ];
 
   for (const key of renderedKeys) {
     const id = nodeIds.get(key);
     const isContext = !inScopeSet.has(key);
+    const isArchived = !!registry.get(key)?.archived;
     const isTerminal = isTerminalKey(key, artifactSchema);
-    const cls = isContext
-      ? 'context'
-      : resolvedKeys.has(key)
-        ? 'resolved'
-        : openKeys.has(key)
-          ? 'open'
-          : unreferencedKeys.has(key)
-            ? 'unreferenced'
-            : isTerminal
-              ? 'terminal'
-              : '';
-    const label =
-      isTerminal && !isContext ? `✓ ${sanitizeLabel(key)}` : sanitizeLabel(key);
+    const cls = isArchived
+      ? 'archived'
+      : isContext
+        ? 'context'
+        : resolvedKeys.has(key)
+          ? 'resolved'
+          : openKeys.has(key)
+            ? 'open'
+            : unreferencedKeys.has(key)
+              ? 'unreferenced'
+              : isTerminal
+                ? 'terminal'
+                : '';
+    const label = isArchived
+      ? `⊘ ${sanitizeLabel(key)}`
+      : isTerminal && !isContext
+        ? `✓ ${sanitizeLabel(key)}`
+        : sanitizeLabel(key);
     lines.push(`  ${id}["${label}"]${cls ? `:::${cls}` : ''}`);
   }
 
@@ -1116,11 +1123,13 @@ export default async function (host: Tree, options: Schema) {
   );
 
   const allKeys = [...registry.keys()];
-  const inScopeKeys = options.project
-    ? allKeys.filter(
-        (key) => parseAncestorRef(key)?.project === options.project,
-      )
-    : allKeys;
+  const inScopeKeys = (
+    options.project
+      ? allKeys.filter(
+          (key) => parseAncestorRef(key)?.project === options.project,
+        )
+      : allKeys
+  ).filter((key) => !registry.get(key)?.archived);
   const inScopeSet = new Set(inScopeKeys);
 
   const contextKeys = new Set<string>();
