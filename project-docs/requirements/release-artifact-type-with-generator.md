@@ -21,22 +21,27 @@ rules:
       - "Given `project-docs/releases/v1-0.md` already exists, When `nx g @abgov/nx-agent:release \"v1.0\"` is run, Then the generator throws an error naming the existing file and writes nothing to the tree"
     questions: []
   - id: rule-4
-    title: generator prompts for release-name in interactive sessions
+    title: schema.json declares x-prompt on the releaseName field
     examples:
-      - "Given no `--releaseName` argument is passed, When the generator is invoked interactively, Then the CLI displays `x-prompt` asking for the release name before proceeding"
+      - "Given the generator's `schema.json`, When the `releaseName` property is inspected, Then it has an `x-prompt` field so Nx's interactive mode presents the question to the caller"
     questions: []
+  - id: rule-5
+    title: archiving a release artifact removes it from the active scope
+    examples:
+      - "Given `project-docs/releases/v1-0.md` exists and is active, When the file is moved to `project-docs/archive/releases/v1-0.md` (by any means), Then `project-docs-lineage` no longer counts it as an active release and task-identification no longer includes its ancestors in Release Scope"
+    questions:
+      - "Can the existing `archive` generator handle a single-file non-feature artifact, or does archiving a release require a manual move or a dedicated archive path for releases?"
 questions: []
 ---
 
 ## Rationale
 
-The CI harness currently has no durable, committed boundary for which features are in scope for a
-given release. Every dispatch requires a human to set `artifact_scope` correctly; nothing in the
-repo records what the current release intends to deliver. This means a harness session started
-without careful `artifact_scope` input works the full backlog — the root cause of the keystone
-installer scope creep (52 rules/1,478 lines for a ~650-line job).
+The CI harness has no durable record of which features belong to a release. Every dispatch
+requires a human to set artifact_scope manually. A `releases` artifact type records the intent
+durably: which features constitute the release, expressed as a generator-authored file with a
+`release-name` identity field and a human-readable goal statement. The generator is the entry
+point — the same way `feature` and `requirement` generators bootstrap the convention rather than
+having authors hand-author files.
 
-A `releases` artifact type records the intent durably: which features constitute the release,
-expressed as a generator-authored file with a `release-name` identity field and a human-readable
-goal statement. The generator is the entry point — the same way `feature` and `requirement`
-generators bootstrap the convention rather than having authors hand-author files.
+A release artifact is active until archived — archiving is the exit signal that tells the harness
+the delivery cycle is complete, the same lifecycle pattern every other artifact in the graph uses.

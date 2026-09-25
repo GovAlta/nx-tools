@@ -22,9 +22,19 @@ rules:
       - "Given an active release artifact exists AND the workflow dispatch sets a non-empty `artifact_scope`, When task-identification runs, Then the explicit `artifact_scope` is used and the release-derived scope is ignored"
     questions: []
   - id: rule-4
-    title: task-identification logs which releases are active when scope is release-derived
+    title: task-identification logs active releases to stdout when scope is release-derived
     examples:
-      - "Given scope was derived from release artifacts, When task-identification completes its scope resolution, Then it emits a diagnostic line naming each active release file and which features it contributed to the scope"
+      - "Given scope was derived from release artifacts, When task-identification completes its scope resolution, Then it writes a line to stdout naming each active release file and which features it contributed to the scope"
+    questions: []
+  - id: rule-5
+    title: release referencing a non-existent feature slug emits a warning and skips that reference
+    examples:
+      - "Given a release artifact lists `features:nonexistent` in its `project-docs-ancestors`, When task-identification processes it, Then a warning is written to stdout naming the missing slug, and that reference contributes no entries to the Release Scope (it is not a hard failure)"
+    questions: []
+  - id: rule-6
+    title: a release file with invalid YAML frontmatter emits a warning and is skipped
+    examples:
+      - "Given `project-docs/releases/bad.md` has malformed YAML frontmatter, When task-identification processes release files, Then a warning naming `bad.md` is written to stdout and that file is skipped — the Release Scope is computed from the remaining valid releases (not silently treated as open scope)"
     questions: []
 questions: []
 ---
@@ -41,3 +51,7 @@ release artifacts and derives the eligible signal set from their `project-docs-a
 making the release file the durable, reviewed record of scope rather than a per-dispatch input.
 Explicit `artifact_scope` input still overrides when set, preserving the existing escape hatch for
 targeted investigations.
+
+Both error paths (dangling feature reference, malformed YAML) emit warnings rather than hard
+failures, so a misconfigured release file degrades gracefully instead of blocking the harness
+entirely.
