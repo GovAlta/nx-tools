@@ -117,7 +117,7 @@ function buildStyles(): string {
       white-space: nowrap;
     }
     .toggle-archived:hover { border-color: ${TOKENS.brand}; color: ${TOKENS.brand}; }
-    body:not(.show-archived) [data-archived] { display: none !important; }
+    body:not(.show-archived) .archived-section { display: none !important; }
     .app-main { max-width: 960px; margin: 0 auto; padding: 2rem; }
     .panel[hidden] { display: none !important; }
     .home-section { margin-bottom: 2.5rem; }
@@ -734,6 +734,7 @@ function miniCard(
 function buildHomePanel(params: {
   inScopeKeys: string[];
   inScopeSet: Set<string>;
+  archivedKeys: string[];
   registry: Registry;
   childrenMap: Map<string, string[]>;
   resolvedSet: Set<string>;
@@ -865,9 +866,42 @@ function buildHomePanel(params: {
   </div>
 </details>`;
 
+  let archivedSectionHtml = '';
+  if (params.archivedKeys.length > 0) {
+    const byType = new Map<string, string[]>();
+    for (const key of params.archivedKeys) {
+      const type = parseAncestorRef(key)?.type ?? '(untyped)';
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(key);
+    }
+    const groups = [...byType.entries()]
+      .map(([type, keys]) => {
+        const cards = keys
+          .map((k) =>
+            miniCard(
+              k,
+              params.registry,
+              params.childrenMap,
+              params.resolvedSet,
+              params.openSet,
+              params.unreferencedSet,
+              params.artifactSchema,
+            ),
+          )
+          .join('');
+        return `<div class="home-type-group"><div class="home-type-label">${escapeHtml(toDisplayName(type))}</div><div class="mini-card-grid">${cards}</div></div>`;
+      })
+      .join('');
+    archivedSectionHtml = `<div class="home-section archived-section">
+  <h2>Archived</h2>
+  ${groups}
+</div>`;
+  }
+
   return `<div id="home" class="panel" hidden>
 ${startingPointsHtml}
 ${closedOutHtml}
+${archivedSectionHtml}
 ${overviewHtml}
 </div>`;
 }
@@ -1261,6 +1295,7 @@ export default async function (host: Tree, options: Schema) {
   const homePanelHtml = buildHomePanel({
     inScopeKeys,
     inScopeSet,
+    archivedKeys,
     registry,
     childrenMap,
     resolvedSet: resolvedKeySet,
