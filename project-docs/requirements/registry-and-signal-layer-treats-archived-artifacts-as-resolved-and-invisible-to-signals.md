@@ -21,8 +21,8 @@ rules:
     examples:
       - "Given project-docs/features/foo.md and project-docs/archive/features/foo.md both exist,
         when buildRegistry runs, then registry.get('features:foo') reflects the active file's
-        content and archived:false, and project-docs-lineage reports an integrity violation for
-        the duplicate key naming both paths"
+        content with no archived field present (not archived:false), and project-docs-lineage
+        reports an integrity violation for the duplicate key naming both paths"
     questions: []
 questions: []
 ---

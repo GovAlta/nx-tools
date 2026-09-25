@@ -26,6 +26,7 @@ nx g @abgov/nx-agent:archive <featurePath> --archiveReason <reason>
 4. `archiveReason` is `completed` or `deferred`
 5. No archive destination already exists (none of the subtree's targets collide)
 6. If `archiveReason` is `completed`: completeness guard passes (all non-shared descendants have a Terminal Artifact)
+7. If `archiveReason` is `deferred`: completeness guard does not run — incompleteness is expected
 
 **On success**:
 - Each archivable descendant (transitive, leaves first) is moved to `project-docs/archive/<type>/<id>.md` with `archive-reason: <reason>` injected into its frontmatter

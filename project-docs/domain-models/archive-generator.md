@@ -4,6 +4,7 @@ project-docs-ancestors:
   - bounded-contexts:agent-delivery-harness
   - domain-terms:archive-reason
   - domain-terms:terminal-artifact
+  - domain-terms:shared-descendant
   - requirements:archive-generator-moves-an-artifact-to-the-archive-folder
   - requirements:archive-generator-walks-a-feature-subtree-and-archives-all-descendants
   - requirements:archive-generator-enforces-completeness-before-archiving-a-completed-feature
@@ -50,6 +51,12 @@ invocation.
 
 ## Archivable Subtree
 
+**Graph source**: the subtree walk and completeness guard both call `buildRegistry(host)` and
+`buildIndex(host, registry)` directly against the Nx `Tree` — not from `lineage.json` on disk.
+The Tree is always current at generation time; `lineage.json` may be stale. Reading the cached
+file would allow a shared-descendant or completeness check to run against an outdated graph,
+silently producing wrong results.
+
 Given a feature at `project-docs/features/<slug>.md`, the archivable subtree is:
 
 > All transitive descendants of `features:<slug>` in the lineage graph's index, excluding any
@@ -84,7 +91,7 @@ being archived — their state is irrelevant to this operation.
 
 ## CLI Schema
 
-`nx g @abgov/nx-agent:archive <featurePath> [--archiveReason <reason>]`
+`nx g @abgov/nx-agent:archive <featurePath> --archiveReason <reason>`
 
 | Option | Type | Required | Description |
 |---|---|---|---|
