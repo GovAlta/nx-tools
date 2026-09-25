@@ -9,8 +9,15 @@ to contain rather than from a declared artifact set, which is the single cause o
 defects. This package is that step, versioned.
 
 ```
+npx @abgov/keystone init [--ref <tag|branch|sha>] [--target <dir>] [--plan] [--json]
 npx @abgov/keystone init --source <path to a harness clone> [--target <dir>] [--plan] [--json]
 ```
+
+Without `--source`, the installer fetches from the constant upstream repository. `--ref` pins
+the fetch to a specific tag, branch, or commit SHA — useful for testing a pre-release, pinning
+to a known-good tag before promoting, or reproducing an issue against a specific commit. When
+`--ref` is omitted the upstream's default branch is used. `--ref` and `--source` are mutually
+exclusive.
 
 `--plan` reports what would be written and writes nothing. `--json` emits a machine-readable
 payload for both outcomes — including refusals, because for an agent consumer the refusal payload
