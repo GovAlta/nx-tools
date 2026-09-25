@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentRelease",
+  "title": "Add a release",
+  "description": "Creates one file for a release under project-docs/releases/, with a release-name identity field, project-docs-ancestors pointing at the features in scope, and a goal-statement placeholder body. This is how a delivery boundary enters the artifact graph — the CI harness reads active release artifacts to derive artifact_scope automatically.",
+  "type": "object",
+  "properties": {
+    "releaseName": {
+      "type": "string",
+      "description": "The release name (e.g. \"v1.0\", \"2025-Q4\"). Used as the release-name frontmatter field and to derive the file slug.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What is the release name (e.g. v1.0, 2025-Q4)?"
+    },
+    "project": {
+      "type": "string",
+      "description": "Scope this release to a specific project's project-docs/releases/ instead of the workspace root."
+    },
+    "projectDocsAncestors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to existing project-docs/features/*.md files that are in scope for this release."
+    }
+  },
+  "required": ["releaseName"],
+  "additionalProperties": false
+}

@@ -82,6 +82,11 @@
       "factory": "./src/generators/archive/archive",
       "schema": "./src/generators/archive/schema.json",
       "description": "Moves a feature artifact and its transitive non-shared descendants from project-docs/ to project-docs/archive/, injecting an archive-reason frontmatter field. Shared Descendants (also reachable from another feature) are left in place. When archiveReason is 'completed', a completeness guard runs first."
+    },
+    "release": {
+      "factory": "./src/generators/release/release",
+      "schema": "./src/generators/release/schema.json",
+      "description": "Adds one release under project-docs/releases/, with a release-name identity field, project-docs-ancestors pointing at the features in scope, and a goal-statement placeholder body. The CI harness reads active release artifacts automatically to derive artifact_scope for each iteration."
     }
   }
 }

@@ -29,10 +29,64 @@ const DESIGN_TYPES = ['api-designs', 'ux-designs'];
 
 // Declared here — before the lineage-missing early-exit — because composePrompt references
 // scopedPaths and these values only need process.env, not the registry.
+// project-docs-ancestors: cli-designs:task-identification-release-scope
 const rawScope = process.env.ARTIFACT_SCOPE ?? '';
 const openScope = rawScope === '*';
-const noScope = !openScope && rawScope === '';
-const scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+let noScope = !openScope && rawScope === '';
+let scopedPaths = openScope || noScope ? [] : rawScope.split(',').filter(Boolean);
+
+// When no explicit scope is set, derive scope from active release artifacts.
+// Active = files under project-docs/releases/ (not in archive). Explicit
+// ARTIFACT_SCOPE takes precedence and skips this block entirely.
+if (noScope) {
+  const releasesDir = 'project-docs/releases';
+  if (existsSync(releasesDir)) {
+    const releaseFiles = readdirSync(releasesDir).filter(
+      (f) => f.endsWith('.md') && f !== 'README.md',
+    );
+    const releaseFeatures = [];
+    for (const file of releaseFiles) {
+      const fullPath = join(releasesDir, file);
+      let parsed;
+      try {
+        const raw = readFileSync(fullPath, 'utf-8');
+        const block = /^---\n([\s\S]*?)\n---/.exec(raw);
+        parsed = block ? (parse(block[1]) ?? {}) : {};
+      } catch {
+        console.log(
+          `[scope] WARNING: malformed YAML frontmatter in ${fullPath}, skipping`,
+        );
+        continue;
+      }
+      const ancestors = parsed['project-docs-ancestors'] ?? [];
+      const featureRefs = (Array.isArray(ancestors) ? ancestors : [ancestors])
+        .map(String)
+        .filter((a) => a.startsWith('features:'));
+      const contributed = [];
+      for (const ref of featureRefs) {
+        const featureSlug = ref.replace(/^features:/, '');
+        const featurePath = `project-docs/features/${featureSlug}.md`;
+        if (!existsSync(featurePath)) {
+          console.log(
+            `[scope] WARNING: release ${file} references missing feature ${ref}, skipping`,
+          );
+        } else {
+          releaseFeatures.push(featurePath);
+          contributed.push(ref);
+        }
+      }
+      if (contributed.length > 0) {
+        console.log(
+          `[scope] active release ${file}: features ${contributed.join(', ')}`,
+        );
+      }
+    }
+    if (releaseFeatures.length > 0) {
+      scopedPaths = [...new Set(releaseFeatures)];
+      noScope = false;
+    }
+  }
+}
 
 const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---/;
 
@@ -404,7 +458,7 @@ if (scopedPaths.length > 0 && scopedKeys.size === 0) {
 
 function isInArtifactScope(signal) {
   if (openScope) return true;             // explicit * → unfiltered
-  if (noScope) return false;             // first commit touched no project-docs files → nothing in scope
+  if (noScope) return false;             // no explicit scope and no active releases → nothing in scope
   if (scopedKeys.size === 0) return true; // paths specified but unresolvable → fall back to unfiltered (warn already printed)
 
   function ancestorInScope(key, visited = new Set()) {

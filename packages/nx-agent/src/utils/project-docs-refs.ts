@@ -419,6 +419,7 @@ const REF_SOURCE_EXTENSIONS = [
   '.ts',
   '.tsx',
   '.js',
+  '.mjs',
   '.jsx',
   '.vue',
   '.cs',
