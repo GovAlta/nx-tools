@@ -144,8 +144,10 @@ npx nx g @abgov/nx-agent:project-docs-lineage --dry-run --strict
 
 - **Broken reference** always blocks — `--strict` is what makes it fail the command rather than
   just record the reference in the graph.
-- **`unscoped`** (an artifact missing one of its kind's expected ancestors) blocks the
-  Design→Develop transition — advisory while still mid-pass.
+- **`unscoped`** (an artifact missing one of its kind's expected ancestors) is advisory — `--strict`
+  never fails on status findings, only integrity ones. Treat a reported `unscoped` as a real gap
+  to address before handing off to Develop (a domain model with no bounded-context ancestor is
+  incomplete design, not just a missing link), but it won't cause the gate command to exit non-zero.
 
 ### Independent review — every pass
 
