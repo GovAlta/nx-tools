@@ -1,6 +1,13 @@
 ---
 name: Lineage Graph Metadata
-project-docs-ancestors: [bounded-contexts:lineage-graph, domain-terms:artifact-metadata, requirements:lineage-registry-entry-carries-non-structural-frontmatter-metadata, requirements:lineage-index-entry-carries-optional-frontmatter-metadata-for-registered-artifact-descendants, requirements:requirement-generator-scaffolds-correct-shape-with-collision-free-id-assignment]
+project-docs-ancestors:
+  - bounded-contexts:lineage-graph
+  - domain-terms:artifact-metadata
+  - requirements:lineage-registry-entry-carries-non-structural-frontmatter-metadata
+  - requirements:lineage-index-entry-carries-optional-frontmatter-metadata-for-registered-artifact-descendants
+  - requirements:requirement-generator-scaffolds-correct-shape-with-collision-free-id-assignment
+  - requirements:registry-and-signal-layer-treats-archived-artifacts-as-resolved-and-invisible-to-signals
+  - requirements:signal-layer-excludes-archived-artifacts-from-all-signal-outputs
 resolves: []
 ---
 
@@ -134,3 +141,64 @@ are development-workflow artifacts (requirements, domain models, service descrip
 business data, not user PII. `lineage.json` is committed to the repository in any case; the
 additional metadata fields add no novel exposure class beyond what the artifact files themselves
 already represent. Decision: accepted. No filtering mechanism is introduced.
+
+---
+
+## Extended `RegistryEntry` — `archived` flag
+
+`RegistryEntry` gains one new optional field: `archived?: boolean`.
+
+`archived` is `true` when the artifact's file path contains a `project-docs/archive/` segment.
+It is absent (not `false`) for active artifacts, so existing consumers that read `registry[key]`
+and don't check `archived` continue to work without change.
+
+`registerArtifact` (the internal function that writes each entry) accepts a new optional
+`archived` parameter and stamps it onto the entry when true. The parameter defaults to absent
+(active) so all existing call sites require no change.
+
+---
+
+## `buildRegistry` — archive traversal
+
+After processing the active `project-docs/` tree, `buildRegistry` checks for a `project-docs/archive/`
+directory. If present, it traverses it with the same one-level type-folder pattern used for the
+active tree (each subdirectory is a type; each `.md` file inside is an artifact), registering
+each artifact with `archived: true`.
+
+**Registry key**: identical to what the active artifact's key would be (`features:foo`, not
+`archive/features:foo`). This is what allows active artifacts referencing an archived ancestor
+to resolve without broken-ref violations.
+
+**Key collision**: if both `project-docs/features/foo.md` and
+`project-docs/archive/features/foo.md` exist, the active file wins (its entry is written last,
+overwriting the archived entry), and `computeFindings` records an integrity violation naming both
+paths. A Nx generator cannot produce this state (Tree writes are atomic), but a manual file
+operation can.
+
+---
+
+## `computeFindings` — archive exclusions
+
+Archived artifacts (registry entries with `archived: true`) are excluded from:
+- `unreferenced` — an archived artifact with no active descendants pointing to it is not reported
+  as unreferenced
+- `unscoped` — an archived artifact missing an expected ancestor type is not reported as unscoped
+- `resolution.open` — an archived open-question or blocker is not reported as unresolved
+
+Archived artifacts are **not** excluded from integrity findings: broken refs, YAML errors,
+cycles, and schema errors still apply. A YAML error in an archived artifact affects reference
+resolution for any active artifact pointing to it — the archive is not a blind graveyard.
+
+---
+
+## Signal layer — `task-identification.mjs`
+
+The generated `task-identification.mjs` script reads `lineage.json`'s registry. In each
+`Object.keys(registry)` loop that emits a signal, add a guard:
+
+```js
+if (registry[key].archived) continue;
+```
+
+This single guard, applied to every signal-emission loop, is sufficient. Archived artifacts
+appear in the registry (for reference resolution) but are never eligible as signal sources.
