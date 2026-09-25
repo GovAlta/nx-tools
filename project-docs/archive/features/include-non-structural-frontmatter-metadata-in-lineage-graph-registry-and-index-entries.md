@@ -2,6 +2,7 @@
 title: Include non-structural frontmatter metadata in lineage graph registry and index entries
 project-docs-ancestors: []
 resolves: []
+archive-reason: completed
 ---
 
 Extend `RegistryEntry` and `DescendantEntry` in the lineage graph so that all non-structural
