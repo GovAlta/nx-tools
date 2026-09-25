@@ -99,7 +99,7 @@ describe('nx-agent product-brief generator', () => {
     await generator(host, { name: 'Lineage Graph' })
 
     expect(readArtifactSchema(host)).toEqual({
-      'product-briefs': { expectedAncestorTypes: [] },
+      'product-briefs': { expectedAncestorTypes: [], permanent: true },
     })
   })
 

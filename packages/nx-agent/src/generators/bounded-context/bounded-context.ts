@@ -66,7 +66,7 @@ export default async function (host: Tree, options: Schema) {
     );
 
   ensureContainerReadme(host, containerDir, !!options.project);
-  ensureArtifactSchemaEntry(host, 'bounded-contexts', []);
+  ensureArtifactSchemaEntry(host, 'bounded-contexts', [], { permanent: true });
 
   const content = [
     '---',
