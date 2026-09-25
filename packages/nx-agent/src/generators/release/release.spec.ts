@@ -45,7 +45,7 @@ describe('nx-agent release generator', () => {
 
     expect(readArtifactSchema(host)).toEqual(
       expect.objectContaining({
-        releases: { expectedAncestorTypes: ['features'] },
+        releases: { expectedAncestorTypes: ['features'], terminal: true, permanent: true },
       }),
     )
   })
@@ -55,7 +55,7 @@ describe('nx-agent release generator', () => {
     await generator(host, { releaseName: 'v2.0' })
 
     const schema = readArtifactSchema(host)
-    expect(schema['releases']).toEqual({ expectedAncestorTypes: ['features'] })
+    expect(schema['releases']).toEqual({ expectedAncestorTypes: ['features'], terminal: true, permanent: true })
   })
 
   it('throws and writes nothing when the release file already exists (req-013 rule-3)', async () => {
