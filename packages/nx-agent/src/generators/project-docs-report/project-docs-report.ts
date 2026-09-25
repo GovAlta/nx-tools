@@ -106,6 +106,18 @@ function buildStyles(): string {
     }
     .app-meta { font-size: 0.8125rem; color: ${TOKENS.textMuted}; }
     .app-date { font-size: 0.8125rem; color: ${TOKENS.textMuted}; margin-left: auto; }
+    .toggle-archived {
+      font-size: 0.8125rem;
+      color: ${TOKENS.textMuted};
+      background: none;
+      border: 1px solid ${TOKENS.border};
+      border-radius: 4px;
+      padding: 0.25rem 0.625rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .toggle-archived:hover { border-color: ${TOKENS.brand}; color: ${TOKENS.brand}; }
+    body:not(.show-archived) [data-archived] { display: none !important; }
     .app-main { max-width: 960px; margin: 0 auto; padding: 2rem; }
     .panel[hidden] { display: none !important; }
     .home-section { margin-bottom: 2.5rem; }
@@ -898,9 +910,12 @@ function buildArtifactDetails(
         })
         .join('');
 
-      const contextNote = !inScopeSet.has(key)
-        ? `<div class="context-note">This artifact is outside the current scope — shown as context for in-scope descendants.</div>`
-        : '';
+      const isArchived = !!registry.get(key)?.archived;
+      const contextNote = isArchived
+        ? `<div class="context-note">This artifact has been archived (${registry.get(key)?.metadata?.['archive-reason'] ?? 'reason unset'}).</div>`
+        : !inScopeSet.has(key)
+          ? `<div class="context-note">This artifact is outside the current scope — shown as context for in-scope descendants.</div>`
+          : '';
 
       const content = host.read(entry.path, 'utf-8') ?? '';
       const body = stripFrontmatter(content);
@@ -1023,7 +1038,7 @@ function buildArtifactDetails(
           ? `<div class="related-grid">${relatedSections.join('\n')}</div>`
           : '';
 
-      return `<div id="${toAnchorId(key)}" class="panel" hidden>
+      return `<div id="${toAnchorId(key)}" class="panel" hidden${isArchived ? ' data-archived="true"' : ''}>
   <div class="panel-back"><a href="#home">← Home</a>${parentLinks}</div>
   ${contextNote}
   <div class="artifact-type">${escapeHtml(toDisplayName(type))}</div>
@@ -1042,11 +1057,16 @@ function buildHtml(params: {
   title: string;
   generatedAt: string;
   counts: StatusCounts;
+  archivedCount: number;
   homePanelHtml: string;
   detailPanelsHtml: string;
   mermaidBundle: string;
 }): string {
   const totalLabel = `${params.counts.totalArtifacts} artifact${params.counts.totalArtifacts === 1 ? '' : 's'}`;
+  const toggleBtn =
+    params.archivedCount > 0
+      ? `<button class="toggle-archived" id="toggle-archived" aria-pressed="false">Show archived (${params.archivedCount})</button>`
+      : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1058,6 +1078,7 @@ function buildHtml(params: {
 <header class="app-header">
   <a href="#home" class="app-title">${escapeHtml(params.title)}</a>
   <span class="app-meta">${totalLabel} · ${params.counts.open} open</span>
+  ${toggleBtn}
   <span class="app-date">${escapeHtml(params.generatedAt)}</span>
 </header>
 <main class="app-main">
@@ -1094,6 +1115,16 @@ ${params.detailPanelsHtml}
       if (!overview.open || overview.dataset.done) return;
       overview.dataset.done = '1';
       mermaid.run();
+    });
+  }
+  var toggleBtn = document.getElementById('toggle-archived');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function() {
+      var showing = document.body.classList.toggle('show-archived');
+      toggleBtn.setAttribute('aria-pressed', String(showing));
+      toggleBtn.textContent = showing
+        ? toggleBtn.textContent.replace('Show', 'Hide')
+        : toggleBtn.textContent.replace('Hide', 'Show');
     });
   }
 })();
@@ -1151,7 +1182,14 @@ export default async function (host: Tree, options: Schema) {
       }
     }
   }
-  const renderedKeys = [...inScopeKeys, ...contextKeys];
+  const archivedKeys = allKeys.filter((key) => {
+    if (!registry.get(key)?.archived) return false;
+    if (options.project) {
+      return parseAncestorRef(key)?.project === options.project;
+    }
+    return true;
+  });
+  const renderedKeys = [...inScopeKeys, ...contextKeys, ...archivedKeys];
 
   const resolvedKeySet = new Set(status.resolution.resolved);
   const openKeySet = new Set(status.resolution.open);
@@ -1262,6 +1300,7 @@ export default async function (host: Tree, options: Schema) {
       : 'Project docs report',
     generatedAt: new Date().toISOString(),
     counts,
+    archivedCount: archivedKeys.length,
     homePanelHtml,
     detailPanelsHtml,
     mermaidBundle: readMermaidBundle(),
