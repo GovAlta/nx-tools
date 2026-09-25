@@ -1,6 +1,6 @@
 ---
 title: keystone install ref
-project-docs-ancestors: [product-briefs:keystone-installer]
+project-docs-ancestors: []
 resolves: []
 ---
 
