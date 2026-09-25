@@ -3,7 +3,9 @@ capability: Keystone installer
 audience: [developers bootstrapping a new Keystone project, AI coding agents doing the same on their behalf]
 known-platforms: [npm, github, nx]
 questions: []
-project-docs-ancestors: [features:keystone-bootstrap-installer]
+project-docs-ancestors:
+  - features:keystone-bootstrap-installer
+  - features:keystone-install-ref
 resolves: []
 ---
 
@@ -20,7 +22,7 @@ a declared file list closes that class by construction.
 It is a **provider, not a dependency**: deleting it from a project leaves a working harness. It is
 needed to place or update the harness, never to run it — nothing the harness runs imports from it.
 
-That invariant is about what the harness *needs*, not about what the project *records*. The project
+That invariant is about what the harness _needs_, not about what the project _records_. The project
 does name this package in its own manifest, because that is where a version belongs and what puts
 the provenance in a lockfile; removing that entry still leaves a working harness, which is the
 property to protect.
@@ -31,7 +33,7 @@ is configured once placed, which is a judgment step run in the project's own ses
 source transformation, which needs a workspace toolchain and is a later, separate capability.
 
 Operating context. **npm** is the distribution channel — this scope's packages resolve from the
-public registry with no *registry* credential, and this one must not be the exception that needs
+public registry with no _registry_ credential, and this one must not be the exception that needs
 one. That is a separate credential from the source access below, and only the first is what the
 "no credential" claim covers.
 **GitHub** is where the harness source lives and where the fetch credential comes from; the source

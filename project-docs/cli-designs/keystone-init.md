@@ -3,6 +3,7 @@ title: 'keystone init: placement contract'
 project-docs-ancestors:
   - domain-models:harness-placement
   - domain-models:source-resolution
+  - requirements:resolve-the-harness-source-from-a-local-path-or-a-fetched-ref
   - requirements:record-the-placed-harness-provenance-in-the-project
   - requirements:wire-the-organizational-floor-by-deferring-to-the-workspace-generator
   - requirements:end-bootstrap-at-a-handoff-without-running-a-harness-command
