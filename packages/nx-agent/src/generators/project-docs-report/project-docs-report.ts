@@ -106,6 +106,18 @@ function buildStyles(): string {
     }
     .app-meta { font-size: 0.8125rem; color: ${TOKENS.textMuted}; }
     .app-date { font-size: 0.8125rem; color: ${TOKENS.textMuted}; margin-left: auto; }
+    .toggle-archived {
+      font-size: 0.8125rem;
+      color: ${TOKENS.textMuted};
+      background: none;
+      border: 1px solid ${TOKENS.border};
+      border-radius: 4px;
+      padding: 0.25rem 0.625rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .toggle-archived:hover { border-color: ${TOKENS.brand}; color: ${TOKENS.brand}; }
+    body:not(.show-archived) .archived-section { display: none !important; }
     .app-main { max-width: 960px; margin: 0 auto; padding: 2rem; }
     .panel[hidden] { display: none !important; }
     .home-section { margin-bottom: 2.5rem; }
@@ -402,25 +414,32 @@ function buildMermaidFlowchart(
     `classDef unreferenced fill:${TOKENS.interactive.bg},stroke:${TOKENS.interactive.border},color:${TOKENS.interactive.text}`,
     `classDef terminal fill:${TOKENS.background},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted}`,
     `classDef context fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.textMuted},color:${TOKENS.textMuted},stroke-dasharray: 4 4`,
+    `classDef archived fill:${TOKENS.backgroundSubtle},stroke:${TOKENS.border},color:${TOKENS.border},stroke-dasharray: 2 2`,
   ];
 
   for (const key of renderedKeys) {
     const id = nodeIds.get(key);
     const isContext = !inScopeSet.has(key);
+    const isArchived = !!registry.get(key)?.archived;
     const isTerminal = isTerminalKey(key, artifactSchema);
-    const cls = isContext
-      ? 'context'
-      : resolvedKeys.has(key)
-        ? 'resolved'
-        : openKeys.has(key)
-          ? 'open'
-          : unreferencedKeys.has(key)
-            ? 'unreferenced'
-            : isTerminal
-              ? 'terminal'
-              : '';
-    const label =
-      isTerminal && !isContext ? `✓ ${sanitizeLabel(key)}` : sanitizeLabel(key);
+    const cls = isArchived
+      ? 'archived'
+      : isContext
+        ? 'context'
+        : resolvedKeys.has(key)
+          ? 'resolved'
+          : openKeys.has(key)
+            ? 'open'
+            : unreferencedKeys.has(key)
+              ? 'unreferenced'
+              : isTerminal
+                ? 'terminal'
+                : '';
+    const label = isArchived
+      ? `⊘ ${sanitizeLabel(key)}`
+      : isTerminal && !isContext
+        ? `✓ ${sanitizeLabel(key)}`
+        : sanitizeLabel(key);
     lines.push(`  ${id}["${label}"]${cls ? `:::${cls}` : ''}`);
   }
 
@@ -715,6 +734,7 @@ function miniCard(
 function buildHomePanel(params: {
   inScopeKeys: string[];
   inScopeSet: Set<string>;
+  archivedKeys: string[];
   registry: Registry;
   childrenMap: Map<string, string[]>;
   resolvedSet: Set<string>;
@@ -846,9 +866,42 @@ function buildHomePanel(params: {
   </div>
 </details>`;
 
+  let archivedSectionHtml = '';
+  if (params.archivedKeys.length > 0) {
+    const byType = new Map<string, string[]>();
+    for (const key of params.archivedKeys) {
+      const type = parseAncestorRef(key)?.type ?? '(untyped)';
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(key);
+    }
+    const groups = [...byType.entries()]
+      .map(([type, keys]) => {
+        const cards = keys
+          .map((k) =>
+            miniCard(
+              k,
+              params.registry,
+              params.childrenMap,
+              params.resolvedSet,
+              params.openSet,
+              params.unreferencedSet,
+              params.artifactSchema,
+            ),
+          )
+          .join('');
+        return `<div class="home-type-group"><div class="home-type-label">${escapeHtml(toDisplayName(type))}</div><div class="mini-card-grid">${cards}</div></div>`;
+      })
+      .join('');
+    archivedSectionHtml = `<div class="home-section archived-section">
+  <h2>Archived</h2>
+  ${groups}
+</div>`;
+  }
+
   return `<div id="home" class="panel" hidden>
 ${startingPointsHtml}
 ${closedOutHtml}
+${archivedSectionHtml}
 ${overviewHtml}
 </div>`;
 }
@@ -891,9 +944,12 @@ function buildArtifactDetails(
         })
         .join('');
 
-      const contextNote = !inScopeSet.has(key)
-        ? `<div class="context-note">This artifact is outside the current scope — shown as context for in-scope descendants.</div>`
-        : '';
+      const isArchived = !!registry.get(key)?.archived;
+      const contextNote = isArchived
+        ? `<div class="context-note">This artifact has been archived (${registry.get(key)?.metadata?.['archive-reason'] ?? 'reason unset'}).</div>`
+        : !inScopeSet.has(key)
+          ? `<div class="context-note">This artifact is outside the current scope — shown as context for in-scope descendants.</div>`
+          : '';
 
       const content = host.read(entry.path, 'utf-8') ?? '';
       const body = stripFrontmatter(content);
@@ -1016,7 +1072,7 @@ function buildArtifactDetails(
           ? `<div class="related-grid">${relatedSections.join('\n')}</div>`
           : '';
 
-      return `<div id="${toAnchorId(key)}" class="panel" hidden>
+      return `<div id="${toAnchorId(key)}" class="panel" hidden${isArchived ? ' data-archived="true"' : ''}>
   <div class="panel-back"><a href="#home">← Home</a>${parentLinks}</div>
   ${contextNote}
   <div class="artifact-type">${escapeHtml(toDisplayName(type))}</div>
@@ -1035,11 +1091,16 @@ function buildHtml(params: {
   title: string;
   generatedAt: string;
   counts: StatusCounts;
+  archivedCount: number;
   homePanelHtml: string;
   detailPanelsHtml: string;
   mermaidBundle: string;
 }): string {
   const totalLabel = `${params.counts.totalArtifacts} artifact${params.counts.totalArtifacts === 1 ? '' : 's'}`;
+  const toggleBtn =
+    params.archivedCount > 0
+      ? `<button class="toggle-archived" id="toggle-archived" aria-pressed="false">Show archived (${params.archivedCount})</button>`
+      : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1051,6 +1112,7 @@ function buildHtml(params: {
 <header class="app-header">
   <a href="#home" class="app-title">${escapeHtml(params.title)}</a>
   <span class="app-meta">${totalLabel} · ${params.counts.open} open</span>
+  ${toggleBtn}
   <span class="app-date">${escapeHtml(params.generatedAt)}</span>
 </header>
 <main class="app-main">
@@ -1089,6 +1151,16 @@ ${params.detailPanelsHtml}
       mermaid.run();
     });
   }
+  var toggleBtn = document.getElementById('toggle-archived');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function() {
+      var showing = document.body.classList.toggle('show-archived');
+      toggleBtn.setAttribute('aria-pressed', String(showing));
+      toggleBtn.textContent = showing
+        ? toggleBtn.textContent.replace('Show', 'Hide')
+        : toggleBtn.textContent.replace('Hide', 'Show');
+    });
+  }
 })();
 </script>
 </body>
@@ -1116,11 +1188,13 @@ export default async function (host: Tree, options: Schema) {
   );
 
   const allKeys = [...registry.keys()];
-  const inScopeKeys = options.project
-    ? allKeys.filter(
-        (key) => parseAncestorRef(key)?.project === options.project,
-      )
-    : allKeys;
+  const inScopeKeys = (
+    options.project
+      ? allKeys.filter(
+          (key) => parseAncestorRef(key)?.project === options.project,
+        )
+      : allKeys
+  ).filter((key) => !registry.get(key)?.archived);
   const inScopeSet = new Set(inScopeKeys);
 
   const contextKeys = new Set<string>();
@@ -1142,7 +1216,14 @@ export default async function (host: Tree, options: Schema) {
       }
     }
   }
-  const renderedKeys = [...inScopeKeys, ...contextKeys];
+  const archivedKeys = allKeys.filter((key) => {
+    if (!registry.get(key)?.archived) return false;
+    if (options.project) {
+      return parseAncestorRef(key)?.project === options.project;
+    }
+    return true;
+  });
+  const renderedKeys = [...inScopeKeys, ...contextKeys, ...archivedKeys];
 
   const resolvedKeySet = new Set(status.resolution.resolved);
   const openKeySet = new Set(status.resolution.open);
@@ -1214,6 +1295,7 @@ export default async function (host: Tree, options: Schema) {
   const homePanelHtml = buildHomePanel({
     inScopeKeys,
     inScopeSet,
+    archivedKeys,
     registry,
     childrenMap,
     resolvedSet: resolvedKeySet,
@@ -1253,6 +1335,7 @@ export default async function (host: Tree, options: Schema) {
       : 'Project docs report',
     generatedAt: new Date().toISOString(),
     counts,
+    archivedCount: archivedKeys.length,
     homePanelHtml,
     detailPanelsHtml,
     mermaidBundle: readMermaidBundle(),

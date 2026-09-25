@@ -152,7 +152,7 @@ describe('nx-agent domain-term generator', () => {
     await generator(host, { term: 'Case' });
 
     expect(readArtifactSchema(host)).toEqual({
-      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'] },
+      'domain-terms': { expectedAncestorTypes: ['bounded-contexts'], permanent: true },
     });
   });
 

@@ -131,7 +131,7 @@ describe('nx-agent bounded-context generator', () => {
     await generator(host, { name: 'Collision Reporting' });
 
     expect(readArtifactSchema(host)).toEqual({
-      'bounded-contexts': { expectedAncestorTypes: [] },
+      'bounded-contexts': { expectedAncestorTypes: [], permanent: true },
     });
   });
 

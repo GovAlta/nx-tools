@@ -147,6 +147,7 @@ describe('nx-agent domain-model generator', () => {
     expect(readArtifactSchema(host)).toEqual({
       'domain-models': {
         expectedAncestorTypes: ['bounded-contexts', 'domain-terms'],
+        permanent: true,
       },
     });
   });

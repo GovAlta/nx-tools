@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "id": "NxAgentArchive",
+  "title": "Archive a feature and its descendants",
+  "description": "Moves a feature artifact and its transitive descendants from project-docs/ to project-docs/archive/, injecting an archive-reason frontmatter field. Shared Descendants (reachable from another feature) are left in place. When archiveReason is 'completed', a completeness guard runs first.",
+  "type": "object",
+  "properties": {
+    "featurePath": {
+      "type": "string",
+      "description": "Path to the feature artifact to archive (e.g. project-docs/features/my-feature.md).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Path to the feature artifact to archive (e.g. project-docs/features/my-feature.md)?"
+    },
+    "archiveReason": {
+      "type": "string",
+      "enum": ["completed", "deferred"],
+      "description": "Archive reason. 'completed' runs a completeness guard (all non-shared descendants must have a terminal artifact). 'deferred' skips the guard.",
+      "x-prompt": "Archive reason? (completed / deferred)"
+    }
+  },
+  "required": ["featurePath", "archiveReason"],
+  "additionalProperties": false
+}

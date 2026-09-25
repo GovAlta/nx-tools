@@ -55,7 +55,21 @@ rather than a hard rule — an artifact of a scoped type missing one of its expe
 "unscoped." The same file also supports `"terminal": true` for a type meant purely as a close-out
 record (a retrospective, for instance) — nothing is ever expected to derive from it, so it's excluded
 from the `unreferenced` report (zero descendants) that would otherwise flag it identically to a
-domain-model nobody's built on yet.
+domain-model nobody's built on yet. And `"permanent": true` marks vocabulary types (bounded
+contexts, domain terms, domain models, product briefs) whose meaning outlives any single feature —
+the archive generator leaves them in place rather than sweeping them in as part of a feature
+subtree. The four built-in vocabulary generators write this flag automatically; hand-authored or
+custom generators should do the same.
+
+**Archiving completed or deferred features.** `nx g @abgov/nx-agent:archive --featurePath
+project-docs/features/<id>.md --archiveReason completed|deferred` moves a feature and all its
+non-shared, non-permanent descendants to `project-docs/archive/`, injecting an `archive-reason`
+field into each file's frontmatter. Archived artifacts are excluded from all lineage signals
+(unreferenced, unscoped, stale, open resolution) and from the project-docs-report in-scope view,
+keeping the active graph clean as work is finished. A "Show archived" toggle in the report reveals
+them when needed. Use `completed` once an `iteration-retrospective` confirms the feature shipped;
+use `deferred` for work that won't land in the current release. The generator refuses `completed`
+if any non-shared descendant still lacks a terminal artifact.
 
 **Two kinds of finding, and only one of them blocks.** `project-docs-lineage` splits what it reports
 into `integrity` — a reference whose target doesn't exist, a token that isn't a reference at all,

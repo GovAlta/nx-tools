@@ -7,7 +7,8 @@
     "expectedAncestorTypes": []
   },
   "product-briefs": {
-    "expectedAncestorTypes": []
+    "expectedAncestorTypes": [],
+    "permanent": true
   },
   "requirements": {
     "expectedAncestorTypes": [
@@ -18,18 +19,21 @@
     ]
   },
   "bounded-contexts": {
-    "expectedAncestorTypes": []
+    "expectedAncestorTypes": [],
+    "permanent": true
   },
   "domain-terms": {
     "expectedAncestorTypes": [
       "bounded-contexts"
-    ]
+    ],
+    "permanent": true
   },
   "domain-models": {
     "expectedAncestorTypes": [
       "bounded-contexts",
       "domain-terms"
-    ]
+    ],
+    "permanent": true
   },
   "skill-designs": {
     "expectedAncestorTypes": [

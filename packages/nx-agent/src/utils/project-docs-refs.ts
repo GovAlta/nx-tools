@@ -381,6 +381,10 @@ export interface RegistryEntry {
   // artifact with no parseable frontmatter block has metadata: {}. Excludes
   // project-docs-ancestors and resolves (already in ancestorRefs/resolves).
   metadata: Record<string, unknown>;
+  // Present and true when this artifact lives under project-docs/archive/.
+  // Absent (not false) for active artifacts so existing consumers that don't
+  // check this field continue to work without change.
+  archived?: true;
 }
 
 export type Registry = Map<string, RegistryEntry>;
@@ -486,12 +490,22 @@ function recordUnparseable(
 // Every project-docs/ artifact in the workspace, keyed by its canonical
 // reference string, recording its own ancestor refs (chained artifacts —
 // e.g. a domain term deriving from a bounded context).
+export interface ArchiveKeyCollision {
+  key: string;
+  activePath: string;
+  archivePath: string;
+}
+
 export function buildRegistry(
   host: Tree,
   yamlErrors: YamlError[] = [],
   unparseableRefs: UnparseableRef[] = [],
+  archiveKeyCollisions: ArchiveKeyCollision[] = [],
 ): Registry {
   const registry: Registry = new Map();
+  // Collect archive-sourced keys (path included) so the active-tree pass can
+  // detect collisions: active wins, collision recorded as integrity violation.
+  const fromArchive = new Map<string, string>();
 
   for (const docsRoot of projectDocsRoots(host)) {
     const rootSegments = docsRoot.split('/');
@@ -506,13 +520,56 @@ export function buildRegistry(
       }
     }
 
+    // Archive traversal — same type-folder pattern as the active tree.
+    // Registered before the active pass so that when both exist the active
+    // entry overwrites the archived one (active wins).
+    const archiveRoot = `${docsRoot}/archive`;
+    if (host.exists(archiveRoot) && !host.isFile(archiveRoot)) {
+      for (const typeDir of host.children(archiveRoot)) {
+        const typePath = `${archiveRoot}/${typeDir}`;
+        if (host.isFile(typePath)) {
+          continue;
+        }
+        for (const file of host.children(typePath)) {
+          const filePath = `${typePath}/${file}`;
+          if (
+            !host.isFile(filePath) ||
+            !file.endsWith('.md') ||
+            file === 'README.md'
+          ) {
+            continue;
+          }
+          const id = file.replace(/\.md$/, '');
+          registerArtifact(
+            host,
+            registry,
+            filePath,
+            { project, type: typeDir, id },
+            yamlErrors,
+            unparseableRefs,
+            true,
+          );
+          fromArchive.set(refKey({ project, type: typeDir, id }), filePath);
+        }
+      }
+    }
+
     for (const child of host.children(docsRoot)) {
+      // Skip the archive subdirectory — already handled above.
+      if (child === 'archive') {
+        continue;
+      }
       const childPath = `${docsRoot}/${child}`;
       if (host.isFile(childPath)) {
         if (!child.endsWith('.md') || child === 'README.md') {
           continue;
         }
         const type = child.replace(/\.md$/, '');
+        const key = refKey({ project, type });
+        const archivePath = fromArchive.get(key);
+        if (archivePath) {
+          archiveKeyCollisions.push({ key, activePath: childPath, archivePath });
+        }
         registerArtifact(
           host,
           registry,
@@ -532,6 +589,15 @@ export function buildRegistry(
             continue;
           }
           const id = file.replace(/\.md$/, '');
+          const key = refKey({ project, type: child, id });
+          const archivePath = fromArchive.get(key);
+          if (archivePath) {
+            archiveKeyCollisions.push({
+              key,
+              activePath: filePath,
+              archivePath,
+            });
+          }
           registerArtifact(
             host,
             registry,
@@ -555,6 +621,7 @@ function registerArtifact(
   ref: Pick<AncestorRef, 'project' | 'type' | 'id'>,
   yamlErrors: YamlError[],
   unparseableRefs: UnparseableRef[],
+  archived?: true,
 ): void {
   const key = refKey(ref);
   // An artifact whose own key can't be parsed back is still registered — it
@@ -587,6 +654,7 @@ function registerArtifact(
         ancestorRefs: [],
         resolves: [],
         metadata: {},
+        ...(archived ? { archived } : {}),
       });
       return;
     }
@@ -597,6 +665,7 @@ function registerArtifact(
     ancestorRefs: extractFrontmatterAncestorRefs(content, path),
     resolves: extractFrontmatterField(content, 'resolves', path),
     metadata: extractFrontmatterMetadata(content, path),
+    ...(archived ? { archived } : {}),
   });
 }
 
@@ -673,6 +742,10 @@ export interface Integrity {
   // ['a', 'b'] means a derives from b and b derives from a. A single-element
   // cycle is an artifact naming itself.
   cycles: string[][];
+  // An artifact whose key exists in both the active tree and the archive. The
+  // active entry wins in the registry (its archived flag is absent); the
+  // archived copy is unreachable until one is removed.
+  archiveKeyCollisions: ArchiveKeyCollision[];
   // A declaration in artifact-schema.json that can never do what it says.
   // `problem` discriminates: 'misspelled' names a value differing from a real
   // one only by pluralization or case, so `didYouMean` is always present;
@@ -798,6 +871,7 @@ export function computeFindings(
   artifactSchema: ArtifactSchema = {},
   yamlErrors: YamlError[] = [],
   unparseableRefs: UnparseableRef[] = [],
+  archiveKeyCollisions: ArchiveKeyCollision[] = [],
 ): Findings {
   const brokenRefs: Integrity['brokenRefs'] = [];
   for (const [key, entries] of index) {
@@ -814,6 +888,9 @@ export function computeFindings(
   // reported as one, so it isn't second-guessed here.
   const stale: Status['stale'] = [];
   for (const [key, entry] of registry) {
+    if (entry.archived) {
+      continue;
+    }
     for (const raw of entry.ancestorRefs) {
       const parsed = parseAncestorRef(raw);
       if (!parsed?.digest) {
@@ -847,6 +924,9 @@ export function computeFindings(
   // correct looks like, not neglect, so it's excluded from unreferenced rather
   // than reported alongside a domain-model nobody's designed against yet.
   const unreferenced = [...registry.keys()].filter((key) => {
+    if (registry.get(key)?.archived) {
+      return false;
+    }
     if (index.has(key)) {
       return false;
     }
@@ -967,6 +1047,9 @@ export function computeFindings(
 
   const unscoped: string[] = [];
   for (const [key, entry] of registry) {
+    if (entry.archived) {
+      continue;
+    }
     const parsedKey = parseAncestorRef(key);
     const declared =
       parsedKey && artifactSchema[parsedKey.type]?.expectedAncestorTypes;
@@ -1011,7 +1094,10 @@ export function computeFindings(
     open: [],
     resolved: [],
   };
-  for (const key of registry.keys()) {
+  for (const [key, entry] of registry) {
+    if (entry.archived) {
+      continue;
+    }
     const parsedKey = parseAncestorRef(key);
     if (!parsedKey || !artifactSchema[parsedKey.type]?.tracksResolution) {
       continue;
@@ -1025,6 +1111,7 @@ export function computeFindings(
       unparseableRefs,
       yamlErrors,
       cycles: findCycles(registry),
+      archiveKeyCollisions,
       schemaErrors,
     },
     status: { resolution, unreferenced, unscoped, stale },

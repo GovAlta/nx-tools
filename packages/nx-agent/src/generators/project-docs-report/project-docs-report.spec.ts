@@ -236,6 +236,48 @@ describe('nx-agent project-docs-report generator', () => {
       expect(html).not.toContain('shipping/domain-terms:shipment');
     });
 
+    it('excludes archived artifacts from in-scope counts and shows them as archived context nodes when referenced', async () => {
+      // An active billing artifact references an archived one from billing
+      host.write(
+        'project-docs/artifact-schema.json',
+        JSON.stringify({
+          features: { expectedAncestorTypes: [] },
+          requirements: { expectedAncestorTypes: ['features'] },
+        }),
+      );
+      host.write(
+        'apps/billing/project-docs/archive/features/old-feature.md',
+        [
+          '---',
+          'title: Old Feature',
+          'project-docs-ancestors: []',
+          'resolves: []',
+          'archive-reason: completed',
+          '---',
+        ].join('\n'),
+      );
+      host.write(
+        'apps/billing/project-docs/requirements/new-req.md',
+        [
+          '---',
+          'title: New Req',
+          'project-docs-ancestors: [billing/features:old-feature]',
+          'resolves: []',
+          '---',
+        ].join('\n'),
+      );
+
+      await generator(host, { project: 'billing', noSynthesis: true });
+      const html = host.read('apps/billing/project-docs/report.html', 'utf-8');
+
+      // Archived artifact must not be counted as active work
+      expect(html).not.toMatch(/class="count">\s*1\s*<\/div>\s*<div class="label">features/);
+      // Archived ancestor appears as a ⊘-prefixed node in the flowchart
+      expect(html).toContain('⊘');
+      // The archived classDef is present
+      expect(html).toContain('classDef archived');
+    });
+
     it('does not misclassify a cross-project reference as unreferenced', async () => {
       await generator(host, { project: 'billing', noSynthesis: true });
       const html = host.read('apps/billing/project-docs/report.html', 'utf-8');
