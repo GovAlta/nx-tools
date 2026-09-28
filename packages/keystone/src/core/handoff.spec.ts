@@ -28,6 +28,32 @@ describe('buildHandoff', () => {
     }
   });
 
+  // F9: when files were overwritten, the reconcile step appears before the commit step so the
+  // operator reviews the diff while it is still recoverable via `git checkout`.
+  it('prepends a reconcile step when files were overwritten', () => {
+    const text = buildHandoff('/tmp/project', [CONFIGURATION_STEP], {
+      overwritten: 2,
+    }).text;
+
+    expect(text).toMatch(/Review overwritten files/);
+    expect(text).toMatch(/git diff/);
+    expect(text).toMatch(/git checkout/);
+    expect(text).toMatch(/Commit this placement/);
+    // Reconcile is step 1, commit is step 2 — review comes first.
+    expect(text.indexOf('Review overwritten')).toBeLessThan(
+      text.indexOf('Commit this placement'),
+    );
+  });
+
+  it('omits the reconcile step when nothing was overwritten', () => {
+    const text = buildHandoff('/tmp/project', [CONFIGURATION_STEP], {
+      overwritten: 0,
+    }).text;
+
+    expect(text).not.toMatch(/Review overwritten/);
+    expect(text).toMatch(/Commit this placement/);
+  });
+
   // req-010 rule 4, and the defect this whole mechanism exists for: the hand-written installer
   // printed a command that had not existed for three months, because the name was in prose that
   // nothing checked.

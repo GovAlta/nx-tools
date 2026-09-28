@@ -450,7 +450,8 @@ async function init(options: Options, io: Io): Promise<number> {
   });
   pinInstaller(options.target, installerVersion());
 
-  const handoff = buildHandoff(options.target, source.declaredSteps);
+  const overwritten = allCollisions.length - dirty.length;
+  const handoff = buildHandoff(options.target, source.declaredSteps, { overwritten });
 
   if (options.json) {
     io.out(
