@@ -147,3 +147,49 @@ export function readLocalFacts(root: string): LocalFacts {
 
   return { dirty, hasTrackingRef, containedRemotely, aheadBy };
 }
+
+/**
+ * Returns the subset of paths that have uncommitted changes in the target, including untracked
+ * files. A path with uncommitted changes cannot be safely overwritten — git has no record to
+ * restore from.
+ *
+ * Uses `git status --porcelain` filtered to the given paths. A path absent from the output is
+ * tracked and clean, so overwriting it is recoverable via `git checkout`.
+ *
+ * Does NOT use the `git()` helper: `git status --porcelain` output is positional (`XY path`)
+ * and the helper's `.trim()` strips the leading status character from the first line for the
+ * common `' M path'` (unstaged modification) case, corrupting the path.
+ */
+export function dirtyInTarget(
+  target: string,
+  paths: readonly string[],
+): string[] {
+  if (paths.length === 0) return [];
+  let output: string;
+  try {
+    output = execFileSync(
+      'git',
+      [...FORCED_CONFIG, 'status', '--porcelain', '--', ...paths],
+      {
+        cwd: target,
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: nonInteractiveEnv(),
+      },
+    );
+  } catch {
+    return [];
+  }
+  if (!output.trim()) return [];
+  const dirtySet = new Set<string>();
+  for (const line of output.split('\n')) {
+    // Porcelain format: `XY path` (2-char status + space + path). Match each declared path
+    // by suffix to avoid position arithmetic — a space-stripped line still ends with the path.
+    for (const p of paths) {
+      if (line.endsWith(p)) {
+        dirtySet.add(p);
+      }
+    }
+  }
+  return paths.filter((p) => dirtySet.has(p));
+}

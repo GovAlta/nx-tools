@@ -53,9 +53,9 @@ export type Refusal =
     }
   | { readonly condition: 'upgrade-refused'; readonly detail: string }
   | {
-      readonly condition: 'target-configures-hooks-path';
+      readonly condition: 'target-dirty';
       readonly target: string;
-      readonly value: string;
+      readonly paths: readonly string[];
     }
   | {
       readonly condition: 'fetch-remote-redirected';
@@ -130,11 +130,11 @@ export function describe(refusal: Refusal): string {
     // Already redacted by the relay that produced it: this renders, it does not sanitise.
     case 'upgrade-refused':
       return refusal.detail;
-    case 'target-configures-hooks-path':
+    case 'target-dirty':
       return (
-        `${refusal.target} already configures core.hooksPath as '${refusal.value}'. Placement ` +
-        `will not replace it, because it is repository-wide and would disable whatever check is ` +
-        `already there.`
+        `These paths in ${refusal.target} have uncommitted changes and would be overwritten.\n` +
+        `Commit or stash them, then re-run:\n` +
+        refusal.paths.map((p) => `  ${p}`).join('\n')
       );
     case 'fetch-remote-redirected':
       return (

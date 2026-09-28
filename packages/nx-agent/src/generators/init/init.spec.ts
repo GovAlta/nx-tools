@@ -1,5 +1,6 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
 import { Tree, logger, readJson } from '@nx/devkit';
+import { join } from 'path';
 import generator, { checkHooksPathWired } from './init';
 
 describe('nx-agent init generator', () => {
@@ -542,9 +543,22 @@ Old secret-scan wording.
     warnSpy.mockRestore();
   });
 
-  it('F5: does not warn when git core.hooksPath is .husky', () => {
+  it('F5: does not warn when pre-commit is reachable under hooksPath (.husky)', () => {
     const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
-    checkHooksPathWired(host.root, () => '.husky\n');
+    const mockExists = jest.fn(
+      (p: string) => p === join(host.root, '.husky', 'pre-commit'),
+    );
+    checkHooksPathWired(host.root, () => '.husky\n', mockExists);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('F5: does not warn when core.hooksPath is .husky/_ and hook exists there (Husky v9)', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+    const mockExists = jest.fn(
+      (p: string) => p === join(host.root, '.husky/_', 'pre-commit'),
+    );
+    checkHooksPathWired(host.root, () => '.husky/_\n', mockExists);
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
@@ -560,9 +574,10 @@ Old secret-scan wording.
     warnSpy.mockRestore();
   });
 
-  it('F5: warns when core.hooksPath is set to something other than .husky', () => {
+  it('F5: warns when hooksPath is set but no pre-commit exists under it', () => {
     const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
-    checkHooksPathWired(host.root, () => '.git/hooks\n');
+    // existsFn returns false for all paths (hook file absent)
+    checkHooksPathWired(host.root, () => '.git/hooks\n', () => false);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("'.git/hooks'"));
     warnSpy.mockRestore();
   });

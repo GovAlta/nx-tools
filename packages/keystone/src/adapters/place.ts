@@ -26,16 +26,6 @@ export interface PlacementRequest {
    * requirement that the flag exists to satisfy. Absent, it is a refusal.
    */
   readonly acceptLocalModifications?: boolean;
-  /**
-   * Paths the caller wants to skip — the project's copy wins (`upgrade.preserve` policy).
-   * Listed in the declared set but not written.
-   */
-  readonly skipFiles?: ReadonlySet<string>;
-  /**
-   * Paths to merge rather than overwrite, keyed by declared merge strategy.
-   * The only current strategy is `line-union`, which combines lines from both files.
-   */
-  readonly mergeFiles?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -159,36 +149,6 @@ export function unconfined(request: PlacementRequest): Refusal | null {
 }
 
 /**
- * Union two text files line by line: keep the existing content, append unique non-blank
- * non-comment lines from incoming that are not already present (trimmed comparison).
- *
- * Designed for `.gitignore` and similar line-oriented policy files where each meaningful line
- * is a self-contained rule. Comments (lines starting with `#`) from the incoming file are
- * dropped since they would duplicate context or reference harness-specific rationale; the
- * patterns themselves are what the project needs.
- */
-function lineUnion(existing: string, incoming: string): string {
-  const existingLines = existing.split('\n');
-  const presentPatterns = new Set(
-    existingLines.map((l) => l.trim()).filter((l) => l && !l.startsWith('#')),
-  );
-
-  const toAdd = incoming
-    .split('\n')
-    .filter((l) => {
-      const t = l.trim();
-      return t && !t.startsWith('#') && !presentPatterns.has(t);
-    });
-
-  if (toAdd.length === 0) {
-    return existing.endsWith('\n') ? existing : existing + '\n';
-  }
-
-  const base = existing.endsWith('\n') ? existing : existing + '\n';
-  return base + toAdd.join('\n') + '\n';
-}
-
-/**
  * Write the declared set into the target.
  *
  * Called only after every precondition above has been established, which is what makes a refusal
@@ -198,11 +158,6 @@ function lineUnion(existing: string, incoming: string): string {
 export function place(request: PlacementRequest): number {
   let written = 0;
   for (const file of request.files) {
-    // preserve policy: the project's copy wins, this path is intentionally skipped.
-    if (request.skipFiles?.has(file)) {
-      continue;
-    }
-
     const from = join(request.sourceRoot, file);
     // Skipped rather than failed only where the caller accepted local modifications; without that
     // flag `unconfined` has already refused, so this cannot silently drop a file.
@@ -211,25 +166,13 @@ export function place(request: PlacementRequest): number {
     }
     const to = join(request.target, file);
     mkdirSync(dirname(to), { recursive: true });
-
-    const strategy = request.mergeFiles?.get(file);
-    if (strategy === 'line-union' && existsSync(to)) {
-      const merged = lineUnion(
-        readFileSync(to, 'utf-8'),
-        readFileSync(from, 'utf-8'),
-      );
-      const mode = placementMode(lstatSync(from).mode);
-      writeFileSync(to, merged, { mode });
-      chmodSync(to, mode);
-    } else {
-      // Written with its final mode rather than copied and then narrowed: copyFileSync propagates
-      // the source's mode, so a wide source file existed world-writable for one syscall — on the
-      // hook that runs at every commit, which is the whole reason the bound exists. The explicit
-      // chmod follows because writeFileSync's mode is subject to umask.
-      const mode = placementMode(lstatSync(from).mode);
-      writeFileSync(to, readFileSync(from), { mode });
-      chmodSync(to, mode);
-    }
+    // Written with its final mode rather than copied and then narrowed: copyFileSync propagates
+    // the source's mode, so a wide source file existed world-writable for one syscall — on the
+    // hook that runs at every commit, which is the whole reason the bound exists. The explicit
+    // chmod follows because writeFileSync's mode is subject to umask.
+    const mode = placementMode(lstatSync(from).mode);
+    writeFileSync(to, readFileSync(from), { mode });
+    chmodSync(to, mode);
     written += 1;
   }
   return written;
