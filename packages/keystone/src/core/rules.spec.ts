@@ -3,10 +3,7 @@
 import {
   assessTarget,
   chooseRoute,
-  classifyCollisions,
   declaredSet,
-  EMPTY_UPGRADE_POLICY,
-  floorAction,
   MODE_EXECUTABLE,
   MODE_REGULAR,
   placementMode,
@@ -132,6 +129,8 @@ describe('assessTarget', () => {
       target: '/tmp/project',
       carriesHarness: true,
       collisions: [],
+      isGitRepository: false,
+      dirtyCollisions: [],
     });
 
     if (!refusal) {
@@ -146,11 +145,13 @@ describe('assessTarget', () => {
 
   // req-005 rule 6: placement refuses rather than overwriting a file it did not place, and the
   // message names THAT FILE rather than the condition — an agent cannot act on "target not empty".
-  it('refuses on a collision and names the colliding path', () => {
+  it('refuses on a collision in a non-git target and names the colliding path', () => {
     const refusal = assessTarget({
       target: '/tmp/project',
       carriesHarness: false,
       collisions: ['AGENTS.md'],
+      isGitRepository: false,
+      dirtyCollisions: [],
     });
 
     if (!refusal) {
@@ -164,12 +165,14 @@ describe('assessTarget', () => {
     expect(nextCommand(refusal)).toBeNull();
   });
 
-  // F2: all uncovered collisions are reported at once, not just the first alphabetically.
+  // F2: all collisions are reported at once in a non-git target, not just the first alphabetically.
   it('carries all colliding paths on the refusal, not only the first', () => {
     const refusal = assessTarget({
       target: '/tmp/project',
       carriesHarness: false,
       collisions: ['README.md', '.gitignore', 'AGENTS.md'],
+      isGitRepository: false,
+      dirtyCollisions: [],
     });
 
     if (!refusal || refusal.condition !== 'target-file-collision') {
@@ -190,8 +193,34 @@ describe('assessTarget', () => {
         target: '/tmp/project',
         carriesHarness: false,
         collisions: [],
+        isGitRepository: false,
+        dirtyCollisions: [],
       }),
     ).toBeNull();
+  });
+
+  it('permits a git target with clean collisions (recoverable via git)', () => {
+    expect(
+      assessTarget({
+        target: '/tmp/project',
+        carriesHarness: false,
+        collisions: ['AGENTS.md'],
+        isGitRepository: true,
+        dirtyCollisions: [],
+      }),
+    ).toBeNull();
+  });
+
+  it('refuses a git target with dirty collisions (uncommitted changes would be lost)', () => {
+    const refusal = assessTarget({
+      target: '/tmp/project',
+      carriesHarness: false,
+      collisions: ['AGENTS.md'],
+      isGitRepository: true,
+      dirtyCollisions: ['AGENTS.md'],
+    });
+
+    expect(refusal?.condition).toBe('target-dirty');
   });
 
   it('reports the harness before a collision, since that target belongs to the update path', () => {
@@ -199,93 +228,11 @@ describe('assessTarget', () => {
       target: '/tmp/project',
       carriesHarness: true,
       collisions: ['AGENTS.md'],
+      isGitRepository: false,
+      dirtyCollisions: [],
     });
 
     expect(refusal?.condition).toBe('target-carries-harness');
   });
 });
 
-describe('classifyCollisions', () => {
-  it('puts everything in uncovered when the policy is empty', () => {
-    const result = classifyCollisions(
-      ['.gitignore', 'README.md', 'AGENTS.md'],
-      EMPTY_UPGRADE_POLICY,
-    );
-
-    expect(result.uncovered).toEqual(['.gitignore', 'README.md', 'AGENTS.md']);
-    expect(result.preserve).toEqual([]);
-    expect(result.regenerate).toEqual([]);
-    expect(result.merge).toEqual([]);
-  });
-
-  it('routes each path to its declared bucket', () => {
-    const policy = {
-      preserve: ['README.md'],
-      regenerate: ['CLAUDE.md'],
-      merge: [{ '.gitignore': 'line-union' }],
-    };
-
-    const result = classifyCollisions(
-      ['.gitignore', 'README.md', 'CLAUDE.md', 'AGENTS.md'],
-      policy,
-    );
-
-    expect(result.preserve).toEqual(['README.md']);
-    expect(result.regenerate).toEqual(['CLAUDE.md']);
-    expect(result.merge).toEqual([{ path: '.gitignore', strategy: 'line-union' }]);
-    expect(result.uncovered).toEqual(['AGENTS.md']);
-  });
-
-  it('returns empty buckets when there are no collisions', () => {
-    const result = classifyCollisions([], {
-      preserve: ['README.md'],
-      regenerate: [],
-      merge: [],
-    });
-
-    expect(result.uncovered).toEqual([]);
-    expect(result.preserve).toEqual([]);
-  });
-
-  it('handles a path in the policy that is not colliding', () => {
-    // The policy names paths in the declared set; only colliding paths are classified.
-    const result = classifyCollisions(
-      ['.gitignore'],
-      { preserve: ['README.md'], regenerate: [], merge: [{ '.gitignore': 'line-union' }] },
-    );
-
-    expect(result.merge).toEqual([{ path: '.gitignore', strategy: 'line-union' }]);
-    expect(result.preserve).toEqual([]);
-  });
-});
-
-describe('floorAction', () => {
-  // req-009 rule 1: a workspace has the generator that DEFINES the floor, so it is invoked rather
-  // than reimplemented.
-  it('defers to the suite generator where the target is a workspace', () => {
-    expect(floorAction({ hasManifest: true, hasWorkspaceConfig: true })).toBe(
-      'defer',
-    );
-  });
-
-  // req-009 rule 2: the case an earlier version of the requirement missed entirely, because it
-  // keyed on a conjunction and its full negation — an ordinary npm repository matched neither.
-  it('wires into an existing manifest where there is no workspace', () => {
-    expect(floorAction({ hasManifest: true, hasWorkspaceConfig: false })).toBe(
-      'wire-existing-manifest',
-    );
-  });
-
-  // req-009 rule 3: no generator can run here at all, which is why this is a published binary.
-  it('wires and writes a manifest where there is neither', () => {
-    expect(floorAction({ hasManifest: false, hasWorkspaceConfig: false })).toBe(
-      'wire-and-write-manifest',
-    );
-  });
-
-  it('treats a workspace config with no manifest as not a workspace, since nx needs both', () => {
-    expect(floorAction({ hasManifest: false, hasWorkspaceConfig: true })).toBe(
-      'wire-and-write-manifest',
-    );
-  });
-});

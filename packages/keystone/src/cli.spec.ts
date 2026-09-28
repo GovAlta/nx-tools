@@ -1,11 +1,11 @@
 // project-docs-ancestors: cli-designs:keystone-init
 
-import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { Io, parse, run, UsageError } from './cli';
 import {
   detachHead,
+  git,
   makeSource,
   makeTarget,
   remoteOf,
@@ -288,11 +288,6 @@ describe('keystone init', () => {
 
     expect(status).toBe(0);
     expect(existsSync(join(target, '.git'))).toBe(true);
-    expect(
-      execFileSync('git', ['-C', target, 'config', '--get', 'core.hooksPath'], {
-        encoding: 'utf-8',
-      }).trim(),
-    ).toBe('.husky');
 
     const record = JSON.parse(
       readFileSync(join(target, '.keystone/install.json'), 'utf-8'),
@@ -531,68 +526,49 @@ describe('keystone init', () => {
     expect(payload.paths).toContain('.husky/pre-commit');
   });
 
-  // F1: a collision that the source's declared upgrade policy covers is resolved rather than refused.
-  it('places into a target with a preserve-policy collision without refusing', async () => {
+  // Clean-tree assertion: a git target with colliding but uncommitted changes is refused.
+  it('refuses when colliding paths have uncommitted changes in the target', async () => {
     const target = makeTarget();
-    writeFileSync(join(target, 'AGENTS.md'), "the project's own agents\n");
-    const source = makeSource({ upgrade: { preserve: ['AGENTS.md'] } });
+    git(target, ['init', '-q', '-b', 'main']);
+    git(target, ['config', 'user.email', 'test@example.invalid']);
+    git(target, ['config', 'user.name', 'Test']);
+    writeFileSync(join(target, 'AGENTS.md'), 'committed version\n');
+    git(target, ['add', 'AGENTS.md']);
+    git(target, ['commit', '-qm', 'initial']);
+    writeFileSync(join(target, 'AGENTS.md'), 'modified, uncommitted\n');
     const io = capture();
 
     const status = await run(
-      ['init', '--target', target, '--source', source, '--json'],
+      ['init', '--target', target, '--source', makeSource(), '--plan', '--json'],
+      io,
+    );
+
+    expect(status).toBe(1);
+    const payload = JSON.parse(io.stdout);
+    expect(payload.refused).toBe('target-dirty');
+    expect(payload.paths).toContain('AGENTS.md');
+  });
+
+  // Clean-tree assertion: a git target with colliding but committed (clean) files proceeds.
+  it('places into a git target with committed colliding files (clean tree)', async () => {
+    const target = makeTarget();
+    git(target, ['init', '-q', '-b', 'main']);
+    git(target, ['config', 'user.email', 'test@example.invalid']);
+    git(target, ['config', 'user.name', 'Test']);
+    writeFileSync(join(target, 'AGENTS.md'), 'committed version\n');
+    git(target, ['add', 'AGENTS.md']);
+    git(target, ['commit', '-qm', 'initial']);
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', makeSource(), '--json'],
       io,
     );
 
     expect(status).toBe(0);
     const payload = JSON.parse(io.stdout);
     expect(payload.placed).toBe(true);
-    // The project's copy was not overwritten.
-    expect(readFileSync(join(target, 'AGENTS.md'), 'utf-8')).toBe(
-      "the project's own agents\n",
-    );
-    // Other files in the declared set were still placed.
     expect(payload.written).toBeGreaterThan(0);
-  });
-
-  // F1: a line-union collision merges the two files rather than refusing or overwriting.
-  it('merges a line-union collision rather than refusing', async () => {
-    const target = makeTarget();
-    writeFileSync(join(target, 'AGENTS.md'), 'project-rule\n');
-    const sourceRoot = makeSource({ upgrade: { merge: [{ 'AGENTS.md': 'line-union' }] } });
-    // Override source AGENTS.md with a non-comment line so the union has observable content.
-    writeFileSync(join(sourceRoot, 'AGENTS.md'), 'harness-rule\n');
-    const io = capture();
-
-    const status = await run(
-      ['init', '--target', target, '--source', sourceRoot, '--json'],
-      io,
-    );
-
-    expect(status).toBe(0);
-    const result = readFileSync(join(target, 'AGENTS.md'), 'utf-8');
-    // Both the project's line and the harness's content appear.
-    expect(result).toContain('project-rule');
-    expect(result).toContain('harness-rule');
-  });
-
-  // F1: regenerate policy — the harness's copy wins; the colliding file is overwritten.
-  it('overwrites a regenerate-policy collision with the harness copy', async () => {
-    const target = makeTarget();
-    writeFileSync(join(target, 'AGENTS.md'), "the project's own agents\n");
-    const sourceRoot = makeSource({ upgrade: { regenerate: ['AGENTS.md'] } });
-    writeFileSync(join(sourceRoot, 'AGENTS.md'), 'harness-agents\n');
-    const io = capture();
-
-    const status = await run(
-      ['init', '--target', target, '--source', sourceRoot, '--json'],
-      io,
-    );
-
-    expect(status).toBe(0);
-    // The project's copy was overwritten by the harness's copy.
-    expect(readFileSync(join(target, 'AGENTS.md'), 'utf-8')).toBe(
-      'harness-agents\n',
-    );
   });
 
   it('under --plan --json, marks the payload as not placed', async () => {

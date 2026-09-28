@@ -7,7 +7,6 @@ import { describe, nextCommand, Refusal } from './core/refusal';
 import {
   assessTarget,
   chooseRoute,
-  classifyCollisions,
   declaredSet,
   Route,
 } from './core/rules';
@@ -20,11 +19,16 @@ import {
   SourceRefused,
   trackedPaths,
 } from './adapters/source';
-import { GitError, isGitRepository, readLocalFacts } from './adapters/git';
+import {
+  dirtyInTarget,
+  GitError,
+  isGitRepository,
+  readLocalFacts,
+} from './adapters/git';
 import { fetchSource, FetchRedirected } from './adapters/fetch-source';
 import { diagnose } from './adapters/diagnose';
 import { ensurePrereqs } from './adapters/prereqs';
-import { checkHooksPath, wire } from './adapters/wire';
+import { wire } from './adapters/wire';
 import { pinInstaller, writeProvenance } from './adapters/provenance';
 import { hasUpgradeTool, runUpgradeTool } from './adapters/upgrade';
 
@@ -337,15 +341,18 @@ async function init(options: Options, io: Io): Promise<number> {
 
   const files = declaredSet(trackedPaths(source.root), source.travels);
 
-  // F1: Classify collisions using the source's declared upgrade policy. Only paths that the
-  // source has not declared a policy for cause a refusal — the rest are handled per their policy.
   const allCollisions = collisions(options.target, files);
-  const resolution = classifyCollisions(allCollisions, source.upgradePolicy);
+  const isGit = isGitRepository(options.target);
+  const dirty = isGit ? dirtyInTarget(options.target, allCollisions) : [];
 
   const targetRefusal = assessTarget({
     target: options.target,
-    carriesHarness: existsSync(resolve(options.target, HARNESS_DIRECTORY)),
-    collisions: resolution.uncovered,
+    carriesHarness: existsSync(
+      resolve(options.target, HARNESS_DIRECTORY, 'inventory.json'),
+    ),
+    collisions: allCollisions,
+    isGitRepository: isGit,
+    dirtyCollisions: dirty,
   });
   if (targetRefusal) {
     // Re-running reprints the handoff, which is what makes a closed session recoverable.
@@ -360,20 +367,11 @@ async function init(options: Options, io: Io): Promise<number> {
     sourceRoot: source.root,
     target: options.target,
     files,
-    skipFiles: new Set(resolution.preserve),
-    mergeFiles: new Map(resolution.merge.map((m) => [m.path, m.strategy])),
     acceptLocalModifications: options.acceptLocalSource,
   };
   const escaping = unconfined(request);
   if (escaping) {
     return reportRefusal(escaping, options, io);
-  }
-
-  // Refused before anything is written: replacing a hook path would disable whatever check the
-  // team already had, and a refusal must leave an untouched target.
-  const hooks = checkHooksPath(options.target);
-  if (hooks) {
-    return reportRefusal(hooks, options, io);
   }
 
   // AFTER every precondition and before any write, so a plan reports the outcome the real run
@@ -465,8 +463,6 @@ async function init(options: Options, io: Io): Promise<number> {
         commit: source.commit,
         ...(provenance.cache ? { cache: provenance.cache } : {}),
         unreproducibleSource: provenance.unreproducible,
-        floor: wired.floor,
-        ...(wired.deferralFailure ? { floorGeneratorFailed: true } : {}),
         written,
         files,
       })}\n`,
@@ -478,26 +474,10 @@ async function init(options: Options, io: Io): Promise<number> {
   io.out(
     `Placed ${written} files into ${options.target}\n` +
       `  from ${provenance.source} at ${source.commit}${cacheLine}\n` +
-      `  floor: ${
-        wired.floor === 'deferred'
-          ? 'applied by @abgov/nx-agent:init'
-          : wired.floor === 'wired-after-deferral-failed'
-            ? 'hook path wired directly — the floor generator failed'
-            : 'hook path wired'
-      }\n` +
       `  ${Object.entries(groupByTopLevel(files))
         .map(([root, count]) => `${root} ${count}`)
         .join(', ')}\n`,
   );
-  // Reported, never swallowed: the floor was still wired, but the generator that owns it failed
-  // and its output is the only thing that says why.
-  if (wired.deferralFailure) {
-    io.err(
-      `The floor generator (@abgov/nx-agent:init) failed, so the hook path was wired directly\n` +
-        `instead. The floor is in place; run the generator yourself to get the rest of it.\n` +
-        `Its output was:\n${wired.deferralFailure}\n`,
-    );
-  }
 
   if (provenance.unreproducible) {
     io.err(
@@ -526,7 +506,7 @@ async function init(options: Options, io: Io): Promise<number> {
 async function upgrade(options: Options, io: Io): Promise<number> {
   const route = resolveRoute(options);
 
-  if (!existsSync(resolve(options.target, HARNESS_DIRECTORY))) {
+  if (!existsSync(resolve(options.target, HARNESS_DIRECTORY, 'inventory.json'))) {
     return reportRefusal(
       { condition: 'target-carries-no-harness', target: options.target },
       options,

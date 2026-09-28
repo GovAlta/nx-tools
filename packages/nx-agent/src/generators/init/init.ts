@@ -414,10 +414,11 @@ export function checkHooksPathWired(
 ): void {
   try {
     const hooksPath = execFn().trim();
-    if (hooksPath !== '.husky') {
+    if (!existsFn(join(root, hooksPath, 'pre-commit'))) {
       logger.warn(
-        `[nx-agent] git core.hooksPath is set to '${hooksPath}', not '.husky' — ` +
-          `the pre-commit hook will not run. Fix with: git config core.hooksPath .husky`,
+        `[nx-agent] core.hooksPath is '${hooksPath}' but no pre-commit hook exists under it — ` +
+          `the hook will not run. Run npm install to complete the husky setup, ` +
+          `or check that the hook file is at ${hooksPath}/pre-commit.`,
       );
     }
   } catch {
@@ -425,8 +426,7 @@ export function checkHooksPathWired(
     if (!existsFn(join(root, '.git', 'hooks', 'pre-commit'))) {
       logger.warn(
         `[nx-agent] git core.hooksPath is not set — the pre-commit hook will not run. ` +
-          `If npm install did not complete, run it first. ` +
-          `Fix with: git config core.hooksPath .husky`,
+          `Run npm install to complete the husky setup.`,
       );
     }
   }
