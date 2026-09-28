@@ -1,7 +1,7 @@
 // project-docs-ancestors: cli-designs:keystone-init
 
 import { execFileSync } from 'child_process';
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { Io, parse, run, UsageError } from './cli';
 import {
@@ -507,6 +507,72 @@ describe('keystone init', () => {
 
     expect(status).toBe(1);
     expect(JSON.parse(io.stdout).refused).toBe('target-file-collision');
+  });
+
+  // F2: the refusal reports ALL uncovered collisions at once, not just the first alphabetically.
+  it('under --plan --json, reports all colliding paths at once (not just the first)', async () => {
+    const target = makeTarget();
+    // Both files must be in the declared set — use two tracked files from the fixture.
+    writeFileSync(join(target, 'AGENTS.md'), 'ours\n');
+    mkdirSync(join(target, '.husky'), { recursive: true });
+    writeFileSync(join(target, '.husky/pre-commit'), '#!/bin/sh\n');
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', makeSource(), '--plan', '--json'],
+      io,
+    );
+
+    expect(status).toBe(1);
+    const payload = JSON.parse(io.stdout);
+    expect(payload.refused).toBe('target-file-collision');
+    expect(payload.paths).toHaveLength(2);
+    expect(payload.paths).toContain('AGENTS.md');
+    expect(payload.paths).toContain('.husky/pre-commit');
+  });
+
+  // F1: a collision that the source's declared upgrade policy covers is resolved rather than refused.
+  it('places into a target with a preserve-policy collision without refusing', async () => {
+    const target = makeTarget();
+    writeFileSync(join(target, 'AGENTS.md'), "the project's own agents\n");
+    const source = makeSource({ upgrade: { preserve: ['AGENTS.md'] } });
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', source, '--json'],
+      io,
+    );
+
+    expect(status).toBe(0);
+    const payload = JSON.parse(io.stdout);
+    expect(payload.placed).toBe(true);
+    // The project's copy was not overwritten.
+    expect(readFileSync(join(target, 'AGENTS.md'), 'utf-8')).toBe(
+      "the project's own agents\n",
+    );
+    // Other files in the declared set were still placed.
+    expect(payload.written).toBeGreaterThan(0);
+  });
+
+  // F1: a line-union collision merges the two files rather than refusing or overwriting.
+  it('merges a line-union collision rather than refusing', async () => {
+    const target = makeTarget();
+    writeFileSync(join(target, 'AGENTS.md'), 'project-rule\n');
+    const sourceRoot = makeSource({ upgrade: { merge: [{ 'AGENTS.md': 'line-union' }] } });
+    // Override source AGENTS.md with a non-comment line so the union has observable content.
+    writeFileSync(join(sourceRoot, 'AGENTS.md'), 'harness-rule\n');
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', sourceRoot, '--json'],
+      io,
+    );
+
+    expect(status).toBe(0);
+    const result = readFileSync(join(target, 'AGENTS.md'), 'utf-8');
+    // Both the project's line and the harness's content appear.
+    expect(result).toContain('project-rule');
+    expect(result).toContain('harness-rule');
   });
 
   it('under --plan --json, marks the payload as not placed', async () => {
