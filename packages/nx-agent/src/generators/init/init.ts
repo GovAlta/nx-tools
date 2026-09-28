@@ -7,7 +7,8 @@ import {
   updateJson,
   writeJson,
 } from '@nx/devkit';
-import { readFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
   mergeManagedSection,
@@ -22,8 +23,8 @@ const HUSKY_VERSION = '^9.0.0';
 const SECRETLINT_VERSION = '^13.0.0';
 const PRE_COMMIT_PATH = '.husky/pre-commit';
 const SECRETLINT_CONFIG_PATH = '.secretlintrc.json';
-const AFFECTED_CHECK_MARKER = 'npx nx affected';
-const SECRETLINT_MARKER = 'npx secretlint';
+const HOOK_FENCE_AFFECTED = 'nx-agent:affected';
+const HOOK_FENCE_SECRETLINT = 'nx-agent:secretlint';
 // Deliberately excludes bare `.env` — it's dual-purpose (plain workspace
 // config as well as secrets; nx-tools' own root .env is a real example of
 // the former), so a blanket rule would be a false positive on legitimate use.
@@ -179,19 +180,36 @@ function addPrepareScript(host: Tree): void {
   });
 }
 
-// Appends an independent, idempotent block to .husky/pre-commit. Each block
-// must end its own failure path (e.g. `|| exit 1`) — blocks run sequentially
-// and are not aware of each other's exit status, so each is responsible for
-// stopping the commit on its own failure rather than relying on a combined
-// exit-code scheme that would need rewriting every time a block is added.
-function appendHookBlock(host: Tree, marker: string, block: string): void {
+// Upserts a fenced block in .husky/pre-commit. Fences are prose-proof markers
+// (cannot appear in a comment describing the command) that also allow block
+// REPLACEMENT rather than only skip-if-present — so a re-run with different
+// targets updates the affected line instead of leaving the old one behind.
+// Each block must end its own failure path (e.g. `|| exit 1`) — blocks run
+// sequentially and are not aware of each other's exit status.
+function upsertFencedBlock(host: Tree, id: string, content: string): void {
+  const open = `# >>> ${id} >>>`;
+  const close = `# <<< ${id} <<<`;
+  const block = `${open}\n${content}\n${close}`;
+
   if (!host.exists(PRE_COMMIT_PATH)) {
     host.write(PRE_COMMIT_PATH, `${block}\n`);
     return;
   }
 
   const existing = host.read(PRE_COMMIT_PATH).toString();
-  if (existing.includes(marker)) {
+  const openIdx = existing.indexOf(open);
+
+  if (openIdx !== -1) {
+    const closeIdx = existing.indexOf(close, openIdx);
+    if (closeIdx !== -1) {
+      const before = existing.slice(0, openIdx);
+      const after = existing.slice(closeIdx + close.length);
+      host.write(PRE_COMMIT_PATH, `${before}${block}${after}`);
+    } else {
+      // Malformed fence (open without matching close): replace from open to end.
+      const before = existing.slice(0, openIdx).replace(/\n+$/, '');
+      host.write(PRE_COMMIT_PATH, `${before}\n\n${block}\n`);
+    }
     return;
   }
 
@@ -201,7 +219,7 @@ function appendHookBlock(host: Tree, marker: string, block: string): void {
 
 function addPreCommitHook(host: Tree, targets: string[]): void {
   const checkLine = `git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t ${targets.join(',')} --stdin || exit 1`;
-  appendHookBlock(host, AFFECTED_CHECK_MARKER, checkLine);
+  upsertFencedBlock(host, HOOK_FENCE_AFFECTED, checkLine);
 }
 
 // One step today; the next nx-agent capability gets its own step function
@@ -245,7 +263,7 @@ function addSecretScanHook(host: Tree): void {
 if [ -n "$secretlint_files" ]; then
   echo "$secretlint_files" | xargs npx secretlint || exit 1
 fi`;
-  appendHookBlock(host, SECRETLINT_MARKER, block);
+  upsertFencedBlock(host, HOOK_FENCE_SECRETLINT, block);
 }
 
 function applySecretScanStep(host: Tree): void {
@@ -358,6 +376,37 @@ function applyAgentGuidance(host: Tree, options: NormalizedSchema): void {
   ensureClaudeMdImportsAgentsMd(host);
 }
 
+// F5: after npm install → husky → git config, verify the hook is actually wired.
+// Exported for unit testing (injectable exec/exists so tests need no module-level mock).
+export function checkHooksPathWired(
+  root: string,
+  execFn: () => string = () =>
+    execFileSync('git', ['config', '--get', 'core.hooksPath'], {
+      cwd: root,
+      encoding: 'utf-8',
+    }) as string,
+  existsFn: (p: string) => boolean = existsSync,
+): void {
+  try {
+    const hooksPath = execFn().trim();
+    if (hooksPath !== '.husky') {
+      logger.warn(
+        `[nx-agent] git core.hooksPath is set to '${hooksPath}', not '.husky' — ` +
+          `the pre-commit hook will not run. Fix with: git config core.hooksPath .husky`,
+      );
+    }
+  } catch {
+    // core.hooksPath unset (git config --get exits 1) or git unavailable.
+    if (!existsFn(join(root, '.git', 'hooks', 'pre-commit'))) {
+      logger.warn(
+        `[nx-agent] git core.hooksPath is not set — the pre-commit hook will not run. ` +
+          `If npm install did not complete, run it first. ` +
+          `Fix with: git config core.hooksPath .husky`,
+      );
+    }
+  }
+}
+
 export default async function (host: Tree, rawOptions: Schema) {
   const options = normalizeOptions(rawOptions);
 
@@ -370,5 +419,6 @@ export default async function (host: Tree, rawOptions: Schema) {
 
   return () => {
     installPackagesTask(host);
+    checkHooksPathWired(host.root);
   };
 }
