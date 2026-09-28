@@ -431,9 +431,8 @@ async function init(options: Options, io: Io): Promise<number> {
   // escaping to the bin reported exit 1 on a target holding the entire harness: the one status
   // that was a lie. Provenance and the handoff are in here too, so the path that writes them is
   // the path whose failure is described honestly.
-  let wired;
   try {
-    wired = wire(options.target);
+    wire(options.target);
   } catch (error) {
     io.err(
       `Placed ${written} files into ${options.target}, then failed while making it a project: ` +
