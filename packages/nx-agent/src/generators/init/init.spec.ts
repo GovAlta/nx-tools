@@ -434,7 +434,42 @@ Old secret-scan wording.
     expect(claudeMd.split('@AGENTS.md').length - 1).toBe(1);
   });
 
-  // F4: fenced markers replace substring matching — two failure directions fixed
+  // F4: fenced markers replace substring matching — two failure directions fixed,
+  // plus migration from old-format workspaces without duplication
+
+  it('F4 migration: strips the old unfenced affected block and replaces with a fenced one', async () => {
+    // Simulates a workspace init'd by the old generator (bare command, no fence).
+    host.write(
+      '.husky/pre-commit',
+      'git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test,build --stdin || exit 1\n',
+    );
+
+    await generator(host, {});
+
+    const preCommit = host.read('.husky/pre-commit').toString();
+    // Old bare command is gone; only the fenced copy remains.
+    expect(preCommit.split('npx nx affected').length - 1).toBe(1);
+    expect(preCommit).toContain('# >>> nx-agent:affected >>>');
+  });
+
+  it('F4 migration: strips the old unfenced secretlint block and replaces with a fenced one', async () => {
+    host.write(
+      '.husky/pre-commit',
+      [
+        'secretlint_files=$(git diff --cached --name-only --diff-filter=ACMR)',
+        'if [ -n "$secretlint_files" ]; then',
+        '  echo "$secretlint_files" | xargs npx secretlint || exit 1',
+        'fi',
+        '',
+      ].join('\n'),
+    );
+
+    await generator(host, {});
+
+    const preCommit = host.read('.husky/pre-commit').toString();
+    expect(preCommit.split('npx secretlint').length - 1).toBe(1);
+    expect(preCommit).toContain('# >>> nx-agent:secretlint >>>');
+  });
 
   it('F4: a comment containing the command does not suppress the affected block', async () => {
     // Old substring match on 'npx nx affected' would have treated this as already-present and
@@ -475,6 +510,24 @@ Old secret-scan wording.
     expect(preCommit).not.toContain('-t lint,test --stdin');
     expect(preCommit).toContain('-t lint,test,build --stdin');
     expect(preCommit.split('# >>> nx-agent:affected >>>').length - 1).toBe(1);
+  });
+
+  it('F4: warns and recovers when the fence open marker exists without a close marker', async () => {
+    host.write(
+      '.husky/pre-commit',
+      '# >>> nx-agent:affected >>>\ngit diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test --stdin || exit 1\n',
+    );
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+
+    await generator(host, {});
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('without a matching'),
+    );
+    const preCommit = host.read('.husky/pre-commit').toString();
+    expect(preCommit).toContain('# >>> nx-agent:affected >>>');
+    expect(preCommit).toContain('# <<< nx-agent:affected <<<');
+    warnSpy.mockRestore();
   });
 
   // F5: postcondition check — warn when git will not run the hook

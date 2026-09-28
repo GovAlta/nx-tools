@@ -575,6 +575,26 @@ describe('keystone init', () => {
     expect(result).toContain('harness-rule');
   });
 
+  // F1: regenerate policy — the harness's copy wins; the colliding file is overwritten.
+  it('overwrites a regenerate-policy collision with the harness copy', async () => {
+    const target = makeTarget();
+    writeFileSync(join(target, 'AGENTS.md'), "the project's own agents\n");
+    const sourceRoot = makeSource({ upgrade: { regenerate: ['AGENTS.md'] } });
+    writeFileSync(join(sourceRoot, 'AGENTS.md'), 'harness-agents\n');
+    const io = capture();
+
+    const status = await run(
+      ['init', '--target', target, '--source', sourceRoot, '--json'],
+      io,
+    );
+
+    expect(status).toBe(0);
+    // The project's copy was overwritten by the harness's copy.
+    expect(readFileSync(join(target, 'AGENTS.md'), 'utf-8')).toBe(
+      'harness-agents\n',
+    );
+  });
+
   it('under --plan --json, marks the payload as not placed', async () => {
     const io = capture();
 

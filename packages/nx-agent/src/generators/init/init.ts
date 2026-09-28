@@ -25,6 +25,13 @@ const PRE_COMMIT_PATH = '.husky/pre-commit';
 const SECRETLINT_CONFIG_PATH = '.secretlintrc.json';
 const HOOK_FENCE_AFFECTED = 'nx-agent:affected';
 const HOOK_FENCE_SECRETLINT = 'nx-agent:secretlint';
+// Legacy bare-command patterns written by the old appendHookBlock implementation.
+// Stripped on first re-run so existing workspaces upgrade cleanly rather than
+// accumulating a duplicate unfenced block alongside the new fenced one.
+const LEGACY_AFFECTED_PATTERN =
+  /git diff --cached --name-only --diff-filter=ACMR \| npx nx affected -t [^\n]+ --stdin \|\| exit 1/;
+const LEGACY_SECRETLINT_PATTERN =
+  /secretlint_files=\$\(git diff --cached --name-only --diff-filter=ACMR\)\nif \[ -n "\$secretlint_files" \]; then\n {2}echo "\$secretlint_files" \| xargs npx secretlint \|\| exit 1\nfi/;
 // Deliberately excludes bare `.env` — it's dual-purpose (plain workspace
 // config as well as secrets; nx-tools' own root .env is a real example of
 // the former), so a blanket rule would be a false positive on legitimate use.
@@ -186,7 +193,14 @@ function addPrepareScript(host: Tree): void {
 // targets updates the affected line instead of leaving the old one behind.
 // Each block must end its own failure path (e.g. `|| exit 1`) — blocks run
 // sequentially and are not aware of each other's exit status.
-function upsertFencedBlock(host: Tree, id: string, content: string): void {
+// legacyPattern: if supplied, the old unfenced block is stripped before the
+// fence search so that existing workspaces upgrade without duplication.
+function upsertFencedBlock(
+  host: Tree,
+  id: string,
+  content: string,
+  legacyPattern?: RegExp,
+): void {
   const open = `# >>> ${id} >>>`;
   const close = `# <<< ${id} <<<`;
   const block = `${open}\n${content}\n${close}`;
@@ -196,7 +210,13 @@ function upsertFencedBlock(host: Tree, id: string, content: string): void {
     return;
   }
 
-  const existing = host.read(PRE_COMMIT_PATH).toString();
+  let existing = host.read(PRE_COMMIT_PATH).toString();
+
+  // Strip the old unfenced block on first upgrade (fence not yet present).
+  if (legacyPattern && !existing.includes(open)) {
+    existing = existing.replace(legacyPattern, '').replace(/\n{3,}/g, '\n\n');
+  }
+
   const openIdx = existing.indexOf(open);
 
   if (openIdx !== -1) {
@@ -206,7 +226,12 @@ function upsertFencedBlock(host: Tree, id: string, content: string): void {
       const after = existing.slice(closeIdx + close.length);
       host.write(PRE_COMMIT_PATH, `${before}${block}${after}`);
     } else {
-      // Malformed fence (open without matching close): replace from open to end.
+      // Malformed fence (open without matching close): warn, then replace from
+      // the open marker to end-of-file with the corrected block.
+      logger.warn(
+        `[nx-agent] .husky/pre-commit has '${open}' without a matching '${close}' — ` +
+          `content after the open marker has been replaced. Check the file for commands that may have been lost.`,
+      );
       const before = existing.slice(0, openIdx).replace(/\n+$/, '');
       host.write(PRE_COMMIT_PATH, `${before}\n\n${block}\n`);
     }
@@ -219,7 +244,7 @@ function upsertFencedBlock(host: Tree, id: string, content: string): void {
 
 function addPreCommitHook(host: Tree, targets: string[]): void {
   const checkLine = `git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t ${targets.join(',')} --stdin || exit 1`;
-  upsertFencedBlock(host, HOOK_FENCE_AFFECTED, checkLine);
+  upsertFencedBlock(host, HOOK_FENCE_AFFECTED, checkLine, LEGACY_AFFECTED_PATTERN);
 }
 
 // One step today; the next nx-agent capability gets its own step function
@@ -263,7 +288,7 @@ function addSecretScanHook(host: Tree): void {
 if [ -n "$secretlint_files" ]; then
   echo "$secretlint_files" | xargs npx secretlint || exit 1
 fi`;
-  upsertFencedBlock(host, HOOK_FENCE_SECRETLINT, block);
+  upsertFencedBlock(host, HOOK_FENCE_SECRETLINT, block, LEGACY_SECRETLINT_PATTERN);
 }
 
 function applySecretScanStep(host: Tree): void {
