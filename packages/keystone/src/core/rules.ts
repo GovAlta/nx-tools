@@ -84,6 +84,85 @@ export function chooseRoute(options: {
 
 // ---------------------------------------------------------------- may we place here
 
+/**
+ * The source's declared collision policy, read from `distribution.upgrade` in the harness
+ * manifest. Each field names the paths assigned to that resolution:
+ *
+ *   preserve   — the project's copy wins; the path is skipped on init
+ *   regenerate — the harness's copy wins; the path is (over)written as normal
+ *   merge      — combine both copies by the named strategy
+ *
+ * A path absent from all three lists is undeclared: init refuses rather than guessing.
+ */
+export interface UpgradePolicy {
+  readonly preserve: readonly string[];
+  readonly regenerate: readonly string[];
+  readonly merge: ReadonlyArray<Readonly<Record<string, string>>>;
+}
+
+export interface MergeSpec {
+  readonly path: string;
+  readonly strategy: string;
+}
+
+export interface CollisionResolution {
+  /** Paths where the project's copy wins — skip writing. */
+  readonly preserve: readonly string[];
+  /** Paths where the harness's copy wins — write normally. */
+  readonly regenerate: readonly string[];
+  /** Paths to combine via the named strategy. */
+  readonly merge: readonly MergeSpec[];
+  /** Paths with no declared policy — refuse. */
+  readonly uncovered: readonly string[];
+}
+
+export const EMPTY_UPGRADE_POLICY: UpgradePolicy = {
+  preserve: [],
+  regenerate: [],
+  merge: [],
+};
+
+/**
+ * Classify a set of colliding paths against the source's declared upgrade policy.
+ *
+ * Every collision ends up in exactly one bucket. The `uncovered` bucket is the one that causes
+ * a refusal — it means the source has not stated what to do with the path, so the installer
+ * cannot act without guessing.
+ */
+export function classifyCollisions(
+  collisions: readonly string[],
+  policy: UpgradePolicy,
+): CollisionResolution {
+  const preserveSet = new Set(policy.preserve);
+  const regenerateSet = new Set(policy.regenerate);
+  const mergeMap = new Map<string, string>();
+  for (const entry of policy.merge) {
+    for (const [path, strategy] of Object.entries(entry)) {
+      mergeMap.set(path, strategy);
+    }
+  }
+
+  const preserve: string[] = [];
+  const regenerate: string[] = [];
+  const merge: MergeSpec[] = [];
+  const uncovered: string[] = [];
+
+  for (const path of collisions) {
+    if (preserveSet.has(path)) {
+      preserve.push(path);
+    } else if (regenerateSet.has(path)) {
+      regenerate.push(path);
+    } else if (mergeMap.has(path)) {
+      const strategy = mergeMap.get(path) ?? 'line-union';
+      merge.push({ path, strategy });
+    } else {
+      uncovered.push(path);
+    }
+  }
+
+  return { preserve, regenerate, merge, uncovered };
+}
+
 export interface TargetFacts {
   readonly target: string;
   readonly carriesHarness: boolean;
@@ -91,6 +170,9 @@ export interface TargetFacts {
    * Declared paths that already exist in the target. Collision is what decides a refusal, path by
    * path — NOT whether the target is empty. A target with files of its own is a legitimate
    * placement target until one of them sits where the declared set would write.
+   *
+   * Pass only the UNCOVERED collisions (those with no declared upgrade policy) — the caller
+   * classifies before calling here.
    */
   readonly collisions: readonly string[];
 }
@@ -103,7 +185,7 @@ export function assessTarget(facts: TargetFacts): Refusal | null {
     return {
       condition: 'target-file-collision',
       target: facts.target,
-      path: [...facts.collisions].sort()[0],
+      paths: [...facts.collisions].sort(),
     };
   }
   return null;

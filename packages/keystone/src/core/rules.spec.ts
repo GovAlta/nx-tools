@@ -3,7 +3,9 @@
 import {
   assessTarget,
   chooseRoute,
+  classifyCollisions,
   declaredSet,
+  EMPTY_UPGRADE_POLICY,
   floorAction,
   MODE_EXECUTABLE,
   MODE_REGULAR,
@@ -162,6 +164,24 @@ describe('assessTarget', () => {
     expect(nextCommand(refusal)).toBeNull();
   });
 
+  // F2: all uncovered collisions are reported at once, not just the first alphabetically.
+  it('carries all colliding paths on the refusal, not only the first', () => {
+    const refusal = assessTarget({
+      target: '/tmp/project',
+      carriesHarness: false,
+      collisions: ['README.md', '.gitignore', 'AGENTS.md'],
+    });
+
+    if (!refusal || refusal.condition !== 'target-file-collision') {
+      throw new Error('expected a target-file-collision refusal');
+    }
+    expect(refusal.paths).toEqual(['.gitignore', 'AGENTS.md', 'README.md']);
+    expect(render(refusal)).toMatch(/These paths already exist/);
+    expect(render(refusal)).toMatch(/\.gitignore/);
+    expect(render(refusal)).toMatch(/AGENTS\.md/);
+    expect(render(refusal)).toMatch(/README\.md/);
+  });
+
   // The third target state is keyed on collision, not on the directory being non-empty: a project
   // with files of its own is a legitimate placement target until one of them is in the way.
   it('permits a target that has files of its own but none in the way', () => {
@@ -182,6 +202,60 @@ describe('assessTarget', () => {
     });
 
     expect(refusal?.condition).toBe('target-carries-harness');
+  });
+});
+
+describe('classifyCollisions', () => {
+  it('puts everything in uncovered when the policy is empty', () => {
+    const result = classifyCollisions(
+      ['.gitignore', 'README.md', 'AGENTS.md'],
+      EMPTY_UPGRADE_POLICY,
+    );
+
+    expect(result.uncovered).toEqual(['.gitignore', 'README.md', 'AGENTS.md']);
+    expect(result.preserve).toEqual([]);
+    expect(result.regenerate).toEqual([]);
+    expect(result.merge).toEqual([]);
+  });
+
+  it('routes each path to its declared bucket', () => {
+    const policy = {
+      preserve: ['README.md'],
+      regenerate: ['CLAUDE.md'],
+      merge: [{ '.gitignore': 'line-union' }],
+    };
+
+    const result = classifyCollisions(
+      ['.gitignore', 'README.md', 'CLAUDE.md', 'AGENTS.md'],
+      policy,
+    );
+
+    expect(result.preserve).toEqual(['README.md']);
+    expect(result.regenerate).toEqual(['CLAUDE.md']);
+    expect(result.merge).toEqual([{ path: '.gitignore', strategy: 'line-union' }]);
+    expect(result.uncovered).toEqual(['AGENTS.md']);
+  });
+
+  it('returns empty buckets when there are no collisions', () => {
+    const result = classifyCollisions([], {
+      preserve: ['README.md'],
+      regenerate: [],
+      merge: [],
+    });
+
+    expect(result.uncovered).toEqual([]);
+    expect(result.preserve).toEqual([]);
+  });
+
+  it('handles a path in the policy that is not colliding', () => {
+    // The policy names paths in the declared set; only colliding paths are classified.
+    const result = classifyCollisions(
+      ['.gitignore'],
+      { preserve: ['README.md'], regenerate: [], merge: [{ '.gitignore': 'line-union' }] },
+    );
+
+    expect(result.merge).toEqual([{ path: '.gitignore', strategy: 'line-union' }]);
+    expect(result.preserve).toEqual([]);
   });
 });
 
