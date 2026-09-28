@@ -1,6 +1,6 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import { Tree, readJson } from '@nx/devkit';
-import generator from './init';
+import { Tree, logger, readJson } from '@nx/devkit';
+import generator, { checkHooksPathWired } from './init';
 
 describe('nx-agent init generator', () => {
   let host: Tree;
@@ -432,5 +432,85 @@ Old secret-scan wording.
 
     const claudeMd = host.read('CLAUDE.md').toString();
     expect(claudeMd.split('@AGENTS.md').length - 1).toBe(1);
+  });
+
+  // F4: fenced markers replace substring matching — two failure directions fixed
+
+  it('F4: a comment containing the command does not suppress the affected block', async () => {
+    // Old substring match on 'npx nx affected' would have treated this as already-present and
+    // skipped writing the block. Fences use a marker that prose cannot produce.
+    host.write(
+      '.husky/pre-commit',
+      '#!/bin/sh\n# To run manually: git diff --cached --name-only | npx nx affected -t lint,test,build --stdin\n',
+    );
+
+    await generator(host, {});
+
+    const preCommit = host.read('.husky/pre-commit').toString();
+    expect(preCommit).toContain('# >>> nx-agent:affected >>>');
+    expect(preCommit).toContain(
+      'git diff --cached --name-only --diff-filter=ACMR | npx nx affected -t lint,test,build --stdin || exit 1',
+    );
+  });
+
+  it('F4: a different secretlint invocation form does not duplicate the secretlint block', async () => {
+    // Old substring match on 'npx secretlint' missed 'npx --package secretlint ...' (no match)
+    // and then appended a second secretlint block. Fences look for the open marker only.
+    host.write(
+      '.husky/pre-commit',
+      'npx --package secretlint --package @secretlint/secretlint-rule-preset-recommend -- secretlint "**/*"\n',
+    );
+
+    await generator(host, {});
+
+    const preCommit = host.read('.husky/pre-commit').toString();
+    expect(preCommit.split('# >>> nx-agent:secretlint >>>').length - 1).toBe(1);
+  });
+
+  it('F4: re-run with different targets updates the affected block rather than leaving the old one', async () => {
+    await generator(host, { targets: ['lint', 'test'] });
+    await generator(host, { targets: ['lint', 'test', 'build'] });
+
+    const preCommit = host.read('.husky/pre-commit').toString();
+    expect(preCommit).not.toContain('-t lint,test --stdin');
+    expect(preCommit).toContain('-t lint,test,build --stdin');
+    expect(preCommit.split('# >>> nx-agent:affected >>>').length - 1).toBe(1);
+  });
+
+  // F5: postcondition check — warn when git will not run the hook
+
+  it('F5: warns when git core.hooksPath is not set and no legacy hook exists', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+    checkHooksPathWired(
+      host.root,
+      () => { throw new Error('exit code 1'); },
+    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('core.hooksPath'));
+    warnSpy.mockRestore();
+  });
+
+  it('F5: does not warn when git core.hooksPath is .husky', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+    checkHooksPathWired(host.root, () => '.husky\n');
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('F5: does not warn when hooksPath is unset but a legacy .git/hooks/pre-commit exists', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+    checkHooksPathWired(
+      host.root,
+      () => { throw new Error('exit code 1'); },
+      () => true,
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('F5: warns when core.hooksPath is set to something other than .husky', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockReturnValue(undefined as never);
+    checkHooksPathWired(host.root, () => '.git/hooks\n');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("'.git/hooks'"));
+    warnSpy.mockRestore();
   });
 });
