@@ -17,7 +17,7 @@ export type Refusal =
   | {
       readonly condition: 'target-file-collision';
       readonly target: string;
-      readonly path: string;
+      readonly paths: readonly string[];
     }
   | {
       readonly condition: 'source-declares-no-set';
@@ -71,10 +71,13 @@ export function describe(refusal: Refusal): string {
         `To update it, run: keystone upgrade --target ${refusal.target}`
       );
     case 'target-file-collision':
-      return (
-        `${refusal.target}/${refusal.path} already exists and this placement would overwrite it. ` +
-        `Placement will not overwrite a file it did not place.`
-      );
+      return refusal.paths.length === 1
+        ? `${refusal.target}/${refusal.paths[0]} already exists and this placement would overwrite it. ` +
+          `Placement will not overwrite a file it did not place.`
+        : `These paths already exist in ${refusal.target} and this placement would overwrite them — ` +
+          `it did not place them:\n` +
+          refusal.paths.map((p) => `  ${p}`).join('\n') +
+          `\nPlacement will not overwrite files it did not place.`;
     case 'source-declares-no-set':
       return (
         `The source at ${refusal.commit} declares no distribution set ` +

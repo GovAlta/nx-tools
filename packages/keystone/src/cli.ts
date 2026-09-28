@@ -4,7 +4,13 @@ import { spawnSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { describe, nextCommand, Refusal } from './core/refusal';
-import { assessTarget, chooseRoute, declaredSet, Route } from './core/rules';
+import {
+  assessTarget,
+  chooseRoute,
+  classifyCollisions,
+  declaredSet,
+  Route,
+} from './core/rules';
 import { buildHandoff } from './core/handoff';
 import { redact } from './core/redact';
 import { collisions, place, unconfined } from './adapters/place';
@@ -169,6 +175,7 @@ function reportRefusal(refusal: Refusal, options: Options, io: Io): number {
         refused: refusal.condition,
         message: describe(refusal),
         ...('path' in refusal ? { path: refusal.path } : {}),
+        ...('paths' in refusal ? { paths: refusal.paths } : {}),
         ...(next ? { next } : {}),
       })}\n`,
     );
@@ -330,10 +337,15 @@ async function init(options: Options, io: Io): Promise<number> {
 
   const files = declaredSet(trackedPaths(source.root), source.travels);
 
+  // F1: Classify collisions using the source's declared upgrade policy. Only paths that the
+  // source has not declared a policy for cause a refusal — the rest are handled per their policy.
+  const allCollisions = collisions(options.target, files);
+  const resolution = classifyCollisions(allCollisions, source.upgradePolicy);
+
   const targetRefusal = assessTarget({
     target: options.target,
     carriesHarness: existsSync(resolve(options.target, HARNESS_DIRECTORY)),
-    collisions: collisions(options.target, files),
+    collisions: resolution.uncovered,
   });
   if (targetRefusal) {
     // Re-running reprints the handoff, which is what makes a closed session recoverable.
@@ -348,6 +360,8 @@ async function init(options: Options, io: Io): Promise<number> {
     sourceRoot: source.root,
     target: options.target,
     files,
+    skipFiles: new Set(resolution.preserve),
+    mergeFiles: new Map(resolution.merge.map((m) => [m.path, m.strategy])),
     acceptLocalModifications: options.acceptLocalSource,
   };
   const escaping = unconfined(request);

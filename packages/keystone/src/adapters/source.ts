@@ -4,6 +4,7 @@ import { execFileSync, spawnSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Refusal } from '../core/refusal';
+import { EMPTY_UPGRADE_POLICY, UpgradePolicy } from '../core/rules';
 
 /**
  * The one harness repository this installer reads. A CONSTANT, with no option that redirects it:
@@ -53,6 +54,8 @@ export interface ResolvedSource {
   readonly declaredSteps: readonly string[];
   /** The source's own answer to "does this path reach a project". */
   readonly travels: (relPath: string) => boolean;
+  /** The source's declared collision policy for `distribution.upgrade`. */
+  readonly upgradePolicy: UpgradePolicy;
 }
 
 /**
@@ -174,11 +177,22 @@ export function resolveSource(root: string): ResolvedSource {
         .filter((id: unknown): id is string => typeof id === 'string')
     : [];
 
+  const upgrade = manifest?.distribution?.upgrade;
+  const upgradePolicy: UpgradePolicy =
+    upgrade && typeof upgrade === 'object'
+      ? {
+          preserve: Array.isArray(upgrade.preserve) ? upgrade.preserve : [],
+          regenerate: Array.isArray(upgrade.regenerate) ? upgrade.regenerate : [],
+          merge: Array.isArray(upgrade.merge) ? upgrade.merge : [],
+        }
+      : EMPTY_UPGRADE_POLICY;
+
   return {
     root,
     commit,
     version,
     declaredSteps,
     travels: (p: string) => travelling.has(p),
+    upgradePolicy,
   };
 }

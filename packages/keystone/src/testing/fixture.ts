@@ -25,6 +25,12 @@ export function makeSource(
     withDistribution?: boolean;
     withUpstream?: boolean;
     withSkills?: boolean;
+    /** Upgrade policy to add to `distribution.upgrade` in the manifest. */
+    upgrade?: {
+      preserve?: string[];
+      regenerate?: string[];
+      merge?: Array<Record<string, string>>;
+    };
   } = {},
 ): string {
   const root = mkdtempSync(join(tmpdir(), 'keystone-source-'));
@@ -50,6 +56,7 @@ export function makeSource(
       include: ['.claude', 'template', '.husky', 'AGENTS.md'],
       exclude: ['.claude/refs/'],
       except: ['.claude/refs/donor/'],
+      ...(options.upgrade ? { upgrade: options.upgrade } : {}),
     };
   }
   writeFileSync(
