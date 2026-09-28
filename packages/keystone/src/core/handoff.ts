@@ -7,7 +7,19 @@ const BARE_IDENTIFIER = /^[A-Za-z0-9_-]+$/;
 export const CONFIGURATION_STEP = 'setup';
 
 /**
- * Committing is step one, and it is not housekeeping advice.
+ * The reconcile step, emitted only when the placement overwrote at least one existing file.
+ *
+ * Overwritten files are visible via `git diff` and recoverable via `git checkout <path>` only
+ * while uncommitted. Once committed the pre-image moves behind HEAD~1, so the operator must
+ * review before committing — not after.
+ */
+const RECONCILE_STEP =
+  '1. Review overwritten files with `git diff`. Recover the original content\n' +
+  '   with `git checkout <path>` for any path you want to restore — this is\n' +
+  '   only available before you commit.';
+
+/**
+ * Committing is always a required step, and it is not housekeeping advice.
  *
  * Placement leaves every placed file untracked, and the harness's own upgrade tool refuses a tree
  * with uncommitted changes — because an upgrade overwrites files and a clean tree is what makes it
@@ -15,9 +27,12 @@ export const CONFIGURATION_STEP = 'setup';
  * refusal tells a caller to run) will not run. The two commands did not compose, and only a real
  * run against the real harness found it: a fixture-based test cannot, because a fixture commits.
  */
-const COMMIT_STEP =
-  '1. Commit this placement. Every placed file is untracked until you do, and an upgrade\n' +
-  '   needs a clean tree to be reversible — so `keystone upgrade` will refuse until then.';
+function commitStep(n: number): string {
+  return (
+    `${n}. Commit this placement. Every placed file is untracked until you do, and an upgrade\n` +
+    `   needs a clean tree to be reversible — so \`keystone upgrade\` will refuse until then.`
+  );
+}
 
 export type Handoff =
   | { readonly kind: 'step'; readonly step: string; readonly text: string }
@@ -38,16 +53,23 @@ export type Handoff =
 export function buildHandoff(
   target: string,
   declaredSteps: readonly string[],
+  options: { overwritten?: number } = {},
 ): Handoff {
   const found = declaredSteps.find((step) => step === CONFIGURATION_STEP);
+  const hasOverwrites = (options.overwritten ?? 0) > 0;
+
+  const steps = hasOverwrites
+    ? `${RECONCILE_STEP}\n${commitStep(2)}`
+    : commitStep(1);
+  const sessionStep = hasOverwrites ? 3 : 2;
 
   if (!found || !BARE_IDENTIFIER.test(found)) {
     return {
       kind: 'no-step',
       text:
         `Placed the harness into ${target}.\n\n` +
-        `${COMMIT_STEP}\n` +
-        `2. Open a new session rooted in ${target}. This source declares no configuration step\n` +
+        `${steps}\n` +
+        `${sessionStep}. Open a new session rooted in ${target}. This source declares no configuration step\n` +
         `   this installer recognises, so read its own documentation for what to run first.\n`,
     };
   }
@@ -57,8 +79,8 @@ export function buildHandoff(
     step: found,
     text:
       `Placed the harness into ${target}.\n\n` +
-      `${COMMIT_STEP}\n` +
-      `2. Open a new session rooted in ${target}, then run /${found}.\n` +
+      `${steps}\n` +
+      `${sessionStep}. Open a new session rooted in ${target}, then run /${found}.\n` +
       `   It must be a new session rooted there — the harness's own commands resolve against\n` +
       `   this project's configuration and hooks, which bind only to a session started in it.\n`,
   };
