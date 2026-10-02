@@ -100,8 +100,8 @@ export default async function (host: Tree, options: Schema) {
     skipFormat: true,
     skipPackageJson: false,
     linter: Linter.EsLint,
-    unitTestRunner: 'jest',
-    e2eTestRunner: 'jest',
+    unitTestRunner: 'jest' as const,
+    e2eTestRunner: 'jest' as const,
     js: false,
     directory: normalizedOptions.projectRoot,
   };

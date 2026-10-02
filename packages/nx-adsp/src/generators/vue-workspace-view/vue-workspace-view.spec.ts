@@ -46,6 +46,11 @@ describe('Vue Workspace View Generator', () => {
 
   beforeEach(() => {
     host = createTreeWithEmptyWorkspace({ layout: 'apps-libs' });
+    // Nx 23.2.1 adds .oxfmtrc.json to the empty workspace tree, which makes
+    // formatFiles switch to oxfmt. oxfmt is not installed, so formatting is
+    // skipped and tests that assert formatted output fail. Restore prettier.
+    host.delete('.oxfmtrc.json');
+    host.write('.prettierrc', JSON.stringify({ singleQuote: true }));
     addProjectConfiguration(host, 'test', { root: 'apps/test' });
     host.write('apps/test/src/router/index.ts', ROUTER_FIXTURE);
     host.write('apps/test/src/App.vue', APP_VUE_INTERNAL_FIXTURE);
